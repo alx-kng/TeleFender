@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/active_layout"
+    android:layout_width="match_parent"
+    android:layout_height="64dp"
+    android:padding="0dp" >
+    <!--android:background="@color/notificationGreen"-->
+
+    <TextView
+        android:id="@+id/active_notification_title"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_marginStart="10dp"
+        android:layout_weight="1"
+        android:text="Placeholder Title"
+        android:textSize="16dp"/>
+
+    <TextView
+        android:id="@+id/active_notification_text"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_marginTop="24dp"
+        android:layout_marginStart="20dp"
+        android:layout_weight="1"
+        android:text="Placeholder Text"
+        />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_marginTop="3dp"
+        android:layout_marginRight="50dp"
+        android:orientation="horizontal"
+        >
+
+        <ImageButton
+            android:id="@+id/speaker_button"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:background="@drawable/circle"
+            android:src="@drawable/ic_baseline_volume_up_24"
+            android:textColor="#fff"
+            />
+
+        <ImageButton
+            android:id="@+id/mute_button"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:layout_marginLeft="10dp"
+            android:background="@drawable/circle"
+            android:src="@drawable/ic_baseline_mic_off_24"
+            android:textColor="#fff"
+            />
+
+        <ImageButton
+            android:id="@+id/hangup_button"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:layout_marginLeft="10dp"
+            android:background="@drawable/white_circle"
+            android:src="@drawable/ic_baseline_call_end_24"
+            android:textColor="#fff"
+            />
+    </LinearLayout>
+</RelativeLayout>
