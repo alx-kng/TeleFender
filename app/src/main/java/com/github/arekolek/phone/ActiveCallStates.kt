@@ -19,10 +19,9 @@ import java.security.AccessController.getContext
 @SuppressLint("StaticFieldLeak")
 object ActiveCallStates {
 
-    val speaker_status: MutableLiveData<Boolean> = MutableLiveData(false)
-
     //var speaker_status: Boolean = false
-    var mute_status = false
+    val speaker_status: MutableLiveData<Boolean> = MutableLiveData(false)
+    val mute_status : MutableLiveData<Boolean> = MutableLiveData(false)
     var callServiceContext: InCallService? = null //tiny imperceptible small not a problem memory leak?
 
     fun adjustMuteAudio(context: Context?, setMute: Boolean) {

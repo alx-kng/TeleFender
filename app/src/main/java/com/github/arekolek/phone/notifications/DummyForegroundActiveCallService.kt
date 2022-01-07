@@ -24,7 +24,8 @@ class DummyForegroundActiveCallService: Service() {
 
     private val CHANNEL_ID = "alxkng5737"
     private val NOTIFICATION_ID = 12345678
-    private val _speakerToggle = MutableLiveData<MutableLiveData<Boolean>> (ActiveCallStates.speaker_status)
+    private val _speakerToggle = MutableLiveData (ActiveCallStates.speaker_status)
+    private val _muteToggle = MutableLiveData (ActiveCallStates.mute_status)
     //var speakerToggle: LiveData<Boolean> = ActiveCallStates.speaker_status
     val observer = Observer<LiveData<Boolean>> { this.updateNotification() }
 
@@ -36,12 +37,15 @@ class DummyForegroundActiveCallService: Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForeground(NOTIFICATION_ID, notificationCreator().build())
 
+        _muteToggle.observeForever{ observer }
         _speakerToggle.observeForever { observer }
         return super.onStartCommand(intent, flags, startId)
     }
 
     override fun onDestroy() {
         super.onDestroy()
+
+        _muteToggle.removeObserver(observer)
         _speakerToggle.removeObserver(observer)
         stopForeground(true)
     }

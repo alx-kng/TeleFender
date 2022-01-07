@@ -21,8 +21,9 @@ class ActiveNotificationActionReceiver : BroadcastReceiver() {
                 context?.stopService(dummyActiveServiceIntent)
             }
             "mute" -> {
-                ActiveCallStates.mute_status = ActiveCallStates.mute_status == false
-                ActiveCallStates.adjustMuteAudio(context, ActiveCallStates.mute_status)
+                ActiveCallStates.mute_status.value = ActiveCallStates.mute_status.value == false
+                ActiveCallStates.adjustMuteAudio(context, ActiveCallStates.mute_status.value!!)
+                Log.i("MUTE STATUS: ", ActiveCallStates.mute_status.toString())
             }
             "speaker" -> {
                 ActiveCallStates.speaker_status.value = ActiveCallStates.speaker_status.value == false
