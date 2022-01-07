@@ -1,9 +1,8 @@
-package com.github.arekolek.phone
+package com.github.arekolek.phone.call_related
 
 import android.Manifest.permission.CALL_PHONE
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -13,13 +12,11 @@ import android.telecom.TelecomManager.ACTION_CHANGE_DEFAULT_DIALER
 import android.telecom.TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat.requestPermissions
-import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
 import androidx.core.content.PermissionChecker.PERMISSION_GRANTED
 import androidx.core.content.PermissionChecker.checkSelfPermission
 import androidx.core.net.toUri
 import androidx.core.view.isVisible
-import kotlinx.android.synthetic.main.activity_call.*
+import com.github.arekolek.phone.R
 import kotlinx.android.synthetic.main.activity_dialer.*
 
 

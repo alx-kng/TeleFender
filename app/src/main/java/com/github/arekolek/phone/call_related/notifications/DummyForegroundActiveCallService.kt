@@ -1,23 +1,21 @@
-package com.github.arekolek.phone.notifications
+package com.github.arekolek.phone.call_related.notifications
 
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.content.Context
 import android.content.Intent
 import android.os.IBinder
 import android.telecom.Call
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
-import com.github.arekolek.phone.ActiveCallStates
-import com.github.arekolek.phone.CallActivity
-import com.github.arekolek.phone.OngoingCall
+import com.github.arekolek.phone.call_related.ActiveCallStates
+import com.github.arekolek.phone.call_related.CallActivity
+import com.github.arekolek.phone.call_related.OngoingCall
 import com.github.arekolek.phone.R
 
 class DummyForegroundActiveCallService: Service() {

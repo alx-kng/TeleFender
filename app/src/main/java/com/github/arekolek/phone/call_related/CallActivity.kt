@@ -1,4 +1,4 @@
-package com.github.arekolek.phone
+package com.github.arekolek.phone.call_related
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -15,15 +15,18 @@ import java.util.concurrent.TimeUnit
 import android.view.WindowManager
 import android.app.KeyguardManager
 import android.os.Build
+import android.util.Log
 import androidx.core.content.ContextCompat
-import com.github.arekolek.phone.notifications.DummyForegroundActiveCallService
+import com.github.arekolek.phone.R
+import com.github.arekolek.phone.asString
+import com.github.arekolek.phone.call_related.notifications.DummyForegroundActiveCallService
 
 
 class CallActivity : AppCompatActivity() {
 
     private val disposables = CompositeDisposable()
 
-    private lateinit var number: String
+    private lateinit var incomingNumber: String
 
     private val CHANNEL_ID = "alxkng5737"
     private val NOTIFICATION_ID = 12345678
@@ -72,14 +75,21 @@ class CallActivity : AppCompatActivity() {
             }*/*/
 
         super.onCreate(savedInstanceState)
-        setContentView(com.github.arekolek.phone.R.layout.activity_call)
-        number = intent.data.schemeSpecificPart
+        setContentView(R.layout.activity_call)
 
+        // Gets the incoming number string from the intent data,
+        // but could be null in some cases (I think)
+        incomingNumber = intent.data?.schemeSpecificPart ?: "No number"
+
+        Log.i("THIS NUMBER THING: ", incomingNumber)
+
+        // TODO Fix CallActivity from showing over lockscreen when the call
+        //  when the user presses powerbutton after already accepting call
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
             setTurnScreenOn(true)
             val keyguardManager = getSystemService(KEYGUARD_SERVICE) as KeyguardManager
-            keyguardManager?.requestDismissKeyguard(this, null)
+            keyguardManager.requestDismissKeyguard(this, null)
         } else {
             window.addFlags(
                 WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
@@ -126,7 +136,7 @@ class CallActivity : AppCompatActivity() {
 
     @SuppressLint("SetTextI18n")
     private fun updateUi(state: Int) {
-        callInfo.text = "${state.asString().toLowerCase().capitalize()}\n$number"
+        callInfo.text = "${state.asString().lowercase().capitalize()}\n$incomingNumber"
 
         answer.isVisible = state == Call.STATE_RINGING
         hangup.isVisible = state in listOf(

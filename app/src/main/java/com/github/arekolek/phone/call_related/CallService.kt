@@ -1,4 +1,4 @@
-package com.github.arekolek.phone
+package com.github.arekolek.phone.call_related
 
 import android.content.Context
 import android.content.Intent
@@ -9,8 +9,9 @@ import android.os.Build
 import android.os.Handler
 import android.util.Log
 import androidx.core.content.ContextCompat
-import com.github.arekolek.phone.notifications.DummyForegroundActiveCallService
-import com.github.arekolek.phone.notifications.DummyForegroundIncomingCallService
+import com.github.arekolek.phone.RuleChecker
+import com.github.arekolek.phone.call_related.notifications.DummyForegroundActiveCallService
+import com.github.arekolek.phone.call_related.notifications.DummyForegroundIncomingCallService
 
 
 class CallService : InCallService() {

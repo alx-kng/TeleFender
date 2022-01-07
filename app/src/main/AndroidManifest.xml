@@ -14,8 +14,9 @@
         android:theme="@style/AppTheme"
         >
         <activity
-            android:name=".DialerActivity"
+            android:name=".call_related.DialerActivity"
             android:windowSoftInputMode="stateAlwaysVisible|adjustResize"
+            android:exported="true"
             >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -41,7 +42,7 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".CallActivity" />
+        <activity android:name=".call_related.CallActivity" />
         <activity
             android:name=".TestActivity"
             android:exported="true"
@@ -49,32 +50,33 @@
             android:theme="@style/AppTheme.NoActionBar"
             />
         <receiver
-            android:name=".notifications.IncomingNotificationActionReceiver"
+            android:name="com.github.arekolek.phone.call_related.notifications.IncomingNotificationActionReceiver"
             android:enabled="true"
             android:exported="true"
             />
 
         <receiver
-            android:name=".notifications.ActiveNotificationActionReceiver"
+            android:name="com.github.arekolek.phone.call_related.notifications.ActiveNotificationActionReceiver"
             android:enabled="true"
             android:exported="true"
             />
 
         <service
-            android:name=".notifications.DummyForegroundIncomingCallService"
+            android:name="com.github.arekolek.phone.call_related.notifications.DummyForegroundIncomingCallService"
             android:enabled="true"
             android:exported="true"
             />
 
         <service
-            android:name=".notifications.DummyForegroundActiveCallService"
+            android:name="com.github.arekolek.phone.call_related.notifications.DummyForegroundActiveCallService"
             android:enabled="true"
             android:exported="true"
             />
 
         <service
-            android:name=".CallService"
+            android:name=".call_related.CallService"
             android:permission="android.permission.BIND_INCALL_SERVICE"
+            android:exported="true"
             >
             <intent-filter>
                 <action android:name="android.telecom.InCallService" />

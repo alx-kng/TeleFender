@@ -1,4 +1,4 @@
-package com.github.arekolek.phone
+package com.github.arekolek.phone.call_related
 
 import android.telecom.Call
 import android.telecom.VideoProfile

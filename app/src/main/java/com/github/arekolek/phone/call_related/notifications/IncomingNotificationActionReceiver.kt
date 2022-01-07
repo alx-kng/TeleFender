@@ -1,10 +1,10 @@
-package com.github.arekolek.phone.notifications
+package com.github.arekolek.phone.call_related.notifications
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.github.arekolek.phone.OngoingCall
+import com.github.arekolek.phone.call_related.OngoingCall
 
 class IncomingNotificationActionReceiver : BroadcastReceiver() {
 
@@ -12,7 +12,7 @@ class IncomingNotificationActionReceiver : BroadcastReceiver() {
         var dummyIncomingServiceIntent = Intent(context, DummyForegroundIncomingCallService::class.java)
 
         var answer_action = intent?.getStringExtra("answer_value")
-        Log.i("MESSAGE FROM INCOMING NOTIFICATION RECEIVER", answer_action)
+        Log.i("MESSAGE FROM INCOMING NOTIFICATION RECEIVER", answer_action!!)
         when (answer_action) {
             "answer" -> {
                 OngoingCall.answer()

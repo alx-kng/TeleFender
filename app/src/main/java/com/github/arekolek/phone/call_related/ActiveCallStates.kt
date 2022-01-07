@@ -1,19 +1,13 @@
-package com.github.arekolek.phone
+package com.github.arekolek.phone.call_related
 
 import android.annotation.SuppressLint
 import android.content.Context
 import android.media.AudioManager
 import android.os.Build
-import android.telecom.Call
 import android.util.Log
-import androidx.core.content.ContextCompat.getSystemService
-import io.reactivex.subjects.BehaviorSubject
-import timber.log.Timber
 import android.telecom.CallAudioState
 import android.telecom.InCallService
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import java.security.AccessController.getContext
 
 
 @SuppressLint("StaticFieldLeak")

@@ -1,4 +1,4 @@
-package com.github.arekolek.phone.notifications
+package com.github.arekolek.phone.call_related.notifications
 
 import android.app.PendingIntent
 import android.app.Service
@@ -8,8 +8,8 @@ import android.telecom.Call
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import com.github.arekolek.phone.CallActivity
-import com.github.arekolek.phone.OngoingCall
+import com.github.arekolek.phone.call_related.CallActivity
+import com.github.arekolek.phone.call_related.OngoingCall
 import com.github.arekolek.phone.R
 
 class DummyForegroundIncomingCallService : Service() {

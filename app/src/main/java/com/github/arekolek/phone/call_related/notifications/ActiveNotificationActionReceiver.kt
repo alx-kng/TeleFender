@@ -1,11 +1,11 @@
-package com.github.arekolek.phone.notifications
+package com.github.arekolek.phone.call_related.notifications
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.github.arekolek.phone.ActiveCallStates
-import com.github.arekolek.phone.OngoingCall
+import com.github.arekolek.phone.call_related.ActiveCallStates
+import com.github.arekolek.phone.call_related.OngoingCall
 
 class ActiveNotificationActionReceiver : BroadcastReceiver() {
 
@@ -13,7 +13,7 @@ class ActiveNotificationActionReceiver : BroadcastReceiver() {
         var dummyActiveServiceIntent = Intent(context, DummyForegroundActiveCallService::class.java)
 
         var button_action = intent?.getStringExtra("button_value")
-        Log.i("ACTIVE_NOTIFICATION", button_action)
+        Log.i("ACTIVE_NOTIFICATION", button_action!!)
 
         when (button_action) {
             "hangup" -> {
