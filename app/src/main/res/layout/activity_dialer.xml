@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".call_related.DialerActivity"
+    tools:context="com.dododial.phone.DialerActivity"
     >
 
     <com.google.android.material.textfield.TextInputLayout

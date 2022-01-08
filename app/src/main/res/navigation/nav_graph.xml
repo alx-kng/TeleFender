@@ -9,7 +9,7 @@
 
     <fragment
         android:id="@+id/FirstFragment"
-        android:name="com.github.arekolek.phone.FirstFragment"
+        android:name="com.dododial.phone.FirstFragment"
         android:label="@string/first_fragment_label"
         tools:layout="@layout/fragment_first"
         >
@@ -21,7 +21,7 @@
     </fragment>
     <fragment
         android:id="@+id/SecondFragment"
-        android:name="com.github.arekolek.phone.SecondFragment"
+        android:name="com.dododial.phone.SecondFragment"
         android:label="@string/second_fragment_label"
         tools:layout="@layout/fragment_second"
         >
