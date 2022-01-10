@@ -41,6 +41,8 @@ public abstract class ClientDatabase : RoomDatabase() {
     abstract fun keyStorageDao() : KeyStorageDao
     abstract fun queueToExecuteDao() : QueueToExecuteDao
     abstract fun queueToUploadDao() : QueueToUploadDao
+    abstract fun contactDao() : ContactDao
+    abstract fun contactNumbersDao() : ContactNumbersDao
 
     private class ClientDatabaseCallback(
         private val scope: CoroutineScope,

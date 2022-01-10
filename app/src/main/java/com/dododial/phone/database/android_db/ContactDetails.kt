@@ -32,6 +32,7 @@ object ContactDetailsHelper {
         val projection = arrayOf(
             Phone.CONTACT_ID,
             Phone.NUMBER,
+            Phone.DISPLAY_NAME_PRIMARY,
             Phone.DATA_VERSION
         )
         var cur: Cursor? = null

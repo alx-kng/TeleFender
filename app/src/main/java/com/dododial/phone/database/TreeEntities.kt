@@ -39,6 +39,7 @@ data class Contact(
 data class ContactNumbers(
     val CID: String,
     val number : String,
+    val name : String?, // Repeated from Contact table for ease of sync
     val versionNumber: Int = 0
 )
 

@@ -13,17 +13,20 @@ interface ContactNumbersDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertContactNumbers(vararg contactNumbers: ContactNumbers)
 
-    @Query("UPDATE contact_numbers SET number = :number WHERE CID = :CID AND number = :oldNumber")
-    suspend fun updateContactNumbers(CID: String, oldNumber: String, number: String)
+    @Query("""
+        UPDATE contact_numbers SET number = :number AND name = :name AND versionNumber = :versionNumber
+            WHERE CID = :CID AND number = :oldNumber
+        """)
+    suspend fun updateContactNumbers(CID: String, oldNumber: String, number: String, name: String?, versionNumber: Int)
 
     @Query("SELECT * FROM contact_numbers WHERE CID = :CID AND number = :number")
-    suspend fun getContactNumbersRow(CID: String, number: String): ContactNumbers
+    suspend fun getContactNumbersRow(CID: String, number: String): ContactNumbers?
 
     @Query("SELECT * FROM contact_numbers WHERE CID = :CID")
     suspend fun getContactNumbers_CID(CID: String): List<ContactNumbers>
 
     @Query("SELECT * FROM contact_numbers WHERE CID IN (SELECT CID FROM contact WHERE parentNumber = :parentNumber)")
-    suspend fun getContactNumbers_ParentNumber(parentNumber: String): List<ChangeLog>
+    suspend fun getContactNumbers_ParentNumber(parentNumber: String): List<ContactNumbers>
 
     @Query("SELECT * FROM contact_numbers")
     suspend fun getAllContactNumbers(): List<ContactNumbers>

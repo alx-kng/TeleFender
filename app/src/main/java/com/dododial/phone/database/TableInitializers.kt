@@ -146,7 +146,8 @@ object TableInitializers {
         val changeTime = Instant.now().toEpochMilli().toString()
         val CID = UUID.nameUUIDFromBytes(cursor.getString(0).toByteArray()).toString()
         val number = cursor.getString(1)
-        val versionNumber = cursor.getString(2).toInt()
+        val name: String? = cursor.getString(2)
+        val versionNumber = cursor.getString(3).toInt()
 
         // To insert into ContactNumbers table
         database.changeAgentDao().changeFromClient(
@@ -155,7 +156,7 @@ object TableInitializers {
             changeTime,
             CHANGELOG_TYPE_CONTACT_NUMBER_INSERT,
             CID,
-            null, // Still pass in name for clarity even though it's not used in CN table
+            name,
             null,
             number,
             null,

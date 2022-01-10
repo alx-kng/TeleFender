@@ -40,7 +40,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
     }
 
     @Transaction
-    open suspend fun executeFirstTransaction(
+    suspend fun executeFirstTransaction(
         changeID: String,
         instanceNumber: String?,
         changeTime: String,
@@ -58,8 +58,8 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
             CHANGELOG_TYPE_CONTACT_INSERT -> cInsert(CID, parentNumber, name)
             CHANGELOG_TYPE_CONTACT_UPDATE -> cUpdate(CID, name)
             CHANGELOG_TYPE_CONTACT_DELETE -> cDelete(CID)
-            CHANGELOG_TYPE_CONTACT_NUMBER_INSERT -> cnInsert(CID, number, counterValue)
-            CHANGELOG_TYPE_CONTACT_NUMBER_UPDATE -> cnUpdate(CID, oldNumber, number)
+            CHANGELOG_TYPE_CONTACT_NUMBER_INSERT -> cnInsert(CID, number, name, counterValue)
+            CHANGELOG_TYPE_CONTACT_NUMBER_UPDATE -> cnUpdate(CID, oldNumber, number, name, counterValue)
             CHANGELOG_TYPE_CONTACT_NUMBER_DELETE -> cnDelete(CID, number)
             CHANGELOG_TYPE_INSTANCE_INSERT -> insInsert(instanceNumber)
             CHANGELOG_TYPE_INSTANCE_DELETE -> insDelete(number)
@@ -122,12 +122,12 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
         }
     }
 
-    suspend fun cnInsert(CID: String?, number: String?, versionNumber: Int?){
+    suspend fun cnInsert(CID: String?, number: String?, name: String?, versionNumber: Int?){
         try {
             if (CID == null || number == null || versionNumber == null) {
                 throw NullPointerException("CID, number, or versionNumber was null for cnInsert")
             } else {
-                val contactNumber = ContactNumbers(CID, number, versionNumber)
+                val contactNumber = ContactNumbers(CID, number, name, versionNumber)
 
                 insertContactNumbers(contactNumber)
                 insertTrustedNumbers(number)
@@ -137,12 +137,12 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
         }
     }
 
-    suspend fun cnUpdate(CID: String?, oldNumber: String?, number: String?) {
+    suspend fun cnUpdate(CID: String?, oldNumber: String?, number: String?, name: String?, versionNumber: Int?) {
         try {
-            if (CID == null || oldNumber == null || number == null) {
+            if (CID == null || oldNumber == null || number == null || versionNumber == null) {
                 throw NullPointerException("oldNumber or number was null for cnUpdate")
             } else {
-                updateContactNumbers(CID, oldNumber, number)
+                updateContactNumbers(CID, oldNumber, number, name, versionNumber)
                 updateTrustedNumbers(oldNumber, number)
             }
         } catch (e: Exception) {
