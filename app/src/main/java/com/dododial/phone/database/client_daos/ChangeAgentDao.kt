@@ -13,6 +13,10 @@ import com.dododial.phone.database.QueueToUpload
 @Dao
 abstract class ChangeAgentDao: ChangeLogDao, QueueToExecuteDao, QueueToUploadDao {
 
+    /**
+     * Function to handle a change (in the form of a ChangeLog's argument) from Server.
+     * Adds change to the ChangeLog and QueueToExecute.
+     */
     @RequiresApi(Build.VERSION_CODES.R)
     @Transaction
     open suspend fun changeFromServer(
@@ -39,6 +43,10 @@ abstract class ChangeAgentDao: ChangeLogDao, QueueToExecuteDao, QueueToUploadDao
         return RESPONSE_OK
     }
 
+    /**
+     * Function to handle a change (in the form of a ChangeLog's arguments) from Client.
+     * Adds change to the ChangeLog and QueueToUpload.
+     */
     @Transaction
     open suspend fun changeFromClient(
         changeID : String,
@@ -57,7 +65,6 @@ abstract class ChangeAgentDao: ChangeLogDao, QueueToExecuteDao, QueueToUploadDao
         val changeLog = ChangeLog(changeID, instanceNumber, changeTime, type,
             CID, name, oldNumber, number, parentNumber, trustability, counterValue)
 
-        //Log.i("DODODEBUG ChangeAgentDAO WATCH", "inserting changelog: " + changeLog.toString())
         val execLog = QueueToExecute(changeID, changeTime)
 
         val upLog = QueueToUpload(changeID, changeTime)
@@ -65,7 +72,6 @@ abstract class ChangeAgentDao: ChangeLogDao, QueueToExecuteDao, QueueToUploadDao
         insertChangeLog(changeLog)
         insertQTE(execLog)
         insertQTU(upLog)
-        //Log.i("DODODEBUG ChangeAgentDAO", "finished ChangeFromClient() Call (changeLog inserted into database hopefully)")
     }
 
 

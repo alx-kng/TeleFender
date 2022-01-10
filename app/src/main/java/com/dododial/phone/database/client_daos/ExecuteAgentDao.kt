@@ -16,6 +16,10 @@ import com.dododial.phone.database.ClientDBConstants.CHANGELOG_TYPE_INSTANCE_INS
 interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
     ChangeLogDao, QueueToExecuteDao, QueueToUploadDao, TrustedNumbersDao {
 
+    /**
+     * Finds first task to execute and passes it's corresponding ChangeLog to
+     * helper function executeFirstTransaction.
+     */
     suspend fun executeFirst() {
 
         val firstJob = getFirstQTE()
@@ -39,8 +43,13 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
         )
     }
 
+    /**
+     * Takes ChangeLog arguments and executes the corresponding database function in a single
+     * transaction based on the type of change (eg instance insert), then deletes the task from
+     * the QueueToExecute.
+     */
     @Transaction
-    suspend fun executeFirstTransaction(
+    open suspend fun executeFirstTransaction(
         changeID: String,
         instanceNumber: String?,
         changeTime: String,
@@ -58,8 +67,8 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
             CHANGELOG_TYPE_CONTACT_INSERT -> cInsert(CID, parentNumber, name)
             CHANGELOG_TYPE_CONTACT_UPDATE -> cUpdate(CID, name)
             CHANGELOG_TYPE_CONTACT_DELETE -> cDelete(CID)
-            CHANGELOG_TYPE_CONTACT_NUMBER_INSERT -> cnInsert(CID, number, name, counterValue)
-            CHANGELOG_TYPE_CONTACT_NUMBER_UPDATE -> cnUpdate(CID, oldNumber, number, name, counterValue)
+            CHANGELOG_TYPE_CONTACT_NUMBER_INSERT -> cnInsert(CID, number, counterValue)
+            CHANGELOG_TYPE_CONTACT_NUMBER_UPDATE -> cnUpdate(CID, oldNumber, number)
             CHANGELOG_TYPE_CONTACT_NUMBER_DELETE -> cnDelete(CID, number)
             CHANGELOG_TYPE_INSTANCE_INSERT -> insInsert(instanceNumber)
             CHANGELOG_TYPE_INSTANCE_DELETE -> insDelete(number)
@@ -70,7 +79,10 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
     }
 
     // TODO check if TrustedNumbers changes are correct
-    
+    /**
+     * Inserts contact given CID, parentNumber, and Name. Higher level function than the corresponding
+     * DAO function as it also verifies arguments are not Null and catches exceptions.
+     */
     suspend fun cInsert(CID: String?, parentNumber: String?, name: String?) {
         try {
             if (CID == null || parentNumber == null) {
@@ -82,9 +94,12 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
         } catch (e: Exception) {
             e.printStackTrace()
         }
-
     }
 
+    /**
+     * Updates contact given CID and new name. Higher level function than the corresponding
+     * DAO function as it also verifies arguments are not Null and catches exceptions.
+     */
     suspend fun cUpdate(CID: String?, name: String?) {
         try {
             if (CID == null || name == null) {
@@ -95,9 +110,13 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
         } catch (e: Exception) {
             e.printStackTrace()
         }
-
     }
 
+    /**
+     * Deletes Contact given CID. Higher level function than the corresponding
+     * DAO function as it also iterates through contact's corresponding ContactNumbers and deletes those
+     * as well, verifies arguments are not Null, and catches exceptions.
+     */
     suspend fun cDelete(CID: String?) {
         try {
             if (CID == null) {
@@ -122,12 +141,17 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
         }
     }
 
-    suspend fun cnInsert(CID: String?, number: String?, name: String?, versionNumber: Int?){
+    /**
+     * Inserts ContactNumber given CID, number, and versionNumber. Higher level function than the corresponding
+     * DAO function as it also inserts number into TrustedNumbers, verifies arguments are not Null,
+     * and catches exceptions.
+     */
+    suspend fun cnInsert(CID: String?, number: String?, versionNumber: Int?){
         try {
             if (CID == null || number == null || versionNumber == null) {
                 throw NullPointerException("CID, number, or versionNumber was null for cnInsert")
             } else {
-                val contactNumber = ContactNumbers(CID, number, name, versionNumber)
+                val contactNumber = ContactNumbers(CID, number, versionNumber)
 
                 insertContactNumbers(contactNumber)
                 insertTrustedNumbers(number)
@@ -137,12 +161,16 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
         }
     }
 
-    suspend fun cnUpdate(CID: String?, oldNumber: String?, number: String?, name: String?, versionNumber: Int?) {
+    /**
+     * Updates ContactNumber given CID, oldNumber, and new number. Higher level function than the corresponding
+     * DAO function as it also updates TrustedNumbers, verifies arguments are not Null, and catches exceptions.
+     */
+    suspend fun cnUpdate(CID: String?, oldNumber: String?, number: String?) {
         try {
-            if (CID == null || oldNumber == null || number == null || versionNumber == null) {
+            if (CID == null || oldNumber == null || number == null) {
                 throw NullPointerException("oldNumber or number was null for cnUpdate")
             } else {
-                updateContactNumbers(CID, oldNumber, number, name, versionNumber)
+                updateContactNumbers(CID, oldNumber, number)
                 updateTrustedNumbers(oldNumber, number)
             }
         } catch (e: Exception) {
@@ -150,6 +178,11 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
         }
     }
 
+    /**
+     * Deletes ContactNumber given CID and number. Higher level function than the corresponding
+     * DAO function as it also deletes corresponding TrustedNumber, verifies arguments are not Null,
+     * and catches exceptions.
+     */
     suspend fun cnDelete(CID: String?, number: String?) {
         try {
             if (CID == null || number == null) {
@@ -163,6 +196,10 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
         }
     }
 
+    /**
+     * Inserts Instance given instanceNumber. Higher level function than the corresponding
+     * DAO function as it also inserts number into TrustedNumbers, verifies arguments are not Null and catches exceptions.
+     */
     suspend fun insInsert(instanceNumber: String?) {
         try {
             if (instanceNumber == null) {
@@ -178,6 +215,11 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
         }
     }
 
+    /**
+     * Deletes Instance given instanceNumber. Higher level function than the corresponding
+     * DAO function as it also deletes number from TrustedNumbers, verifies arguments are not Null,
+     * and catches exceptions.
+     */
     suspend fun insDelete(instanceNumber: String?) {
         try {
             if (instanceNumber == null) {

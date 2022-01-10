@@ -18,6 +18,9 @@ import java.io.UnsupportedEncodingException
 
 object UploadHelpers {
 
+    /**
+     * Takes ChangeLog object and returns its JSON representation
+     */
     fun changelogToJson(changeLog : ChangeLog) : String {
         val moshi : Moshi = Moshi.Builder().build()
         val adapter : JsonAdapter<ChangeLog> = moshi.adapter(ChangeLog::class.java)
@@ -26,6 +29,9 @@ object UploadHelpers {
         return json
     }
 
+    /**
+     * Takes JSON representation of ChangeLog object and returns its corresponding ChangeLog object
+     */
     fun jsonToChangeLog(jsonIn : String) : ChangeLog? {
         val moshi : Moshi = Moshi.Builder().build()
         val adapter : JsonAdapter<ChangeLog> = moshi.adapter(ChangeLog::class.java)
@@ -33,6 +39,10 @@ object UploadHelpers {
         return adapter.fromJson(jsonIn)
     }
 
+    /**
+     * Sends post request containing the string requestString to the server at url url.
+     * Returns whether or not post was successfull
+     */
     @RequiresApi(Build.VERSION_CODES.N)
     fun sendPostRequest(requestString: String, url: String, context: Context) {
 
@@ -49,6 +59,9 @@ object UploadHelpers {
                 }
 
                 @Throws(AuthFailureError::class)
+                /**
+                 * TODO what does this do
+                 */
                 override fun getBody(): ByteArray? {
                     try {
                         return if (requestBody == null) null else requestBody.toByteArray(charset("utf-8"))
@@ -62,6 +75,9 @@ object UploadHelpers {
                     }
                 }
 
+                /**
+                 * TODO what does this do
+                 */
                 override fun parseNetworkResponse(response: NetworkResponse): Response<String> {
                     var responseString = ""
                     if (response != null) {
@@ -78,10 +94,5 @@ object UploadHelpers {
         } catch (e: JSONException) {
             e.printStackTrace()
         }
-
-    fun changesSinceTime(time : String?) {
-        
-
     }
-}
 }

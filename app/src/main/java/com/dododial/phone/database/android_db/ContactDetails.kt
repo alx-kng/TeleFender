@@ -17,7 +17,7 @@ import java.util.ArrayList
 data class Contacts(
     val defaultCID: String,
     val name: String
-) {}
+)
 
 data class ContactNumbers(
     val CID: String,
@@ -26,6 +26,10 @@ data class ContactNumbers(
 
 object ContactDetailsHelper {
 
+    /**
+     * Returns a cursor containing all numbers in Android's Phone table.
+     * Also contains data_version column for syncing
+     */
     fun getContactNumberCursor(
         contactHelper: ContentResolver
     ): Cursor? {
@@ -51,6 +55,9 @@ object ContactDetailsHelper {
         return cur
     }
 
+    /**
+     * Returns a cursor containing all aggregate column rows in Android's Contact table
+     */
     fun getContactCursor(
         contactHelper: ContentResolver
     ): Cursor? {

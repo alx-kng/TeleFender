@@ -13,7 +13,9 @@ import com.dododial.phone.DialerActivity
 
 
 object PermissionsRequester {
-    
+    /**
+     * Starts dialer to request permissions in PERMISSIONS array, using hasPermissions as a helper.
+     */
     fun multiplePermissions(context: Context?, activity: Activity) {
         Log.i("DODODEBUG", "multiple permissions called")
         // The request code is used in ActivityCompat.requestPermissions()
@@ -29,6 +31,9 @@ object PermissionsRequester {
         } 
     }
 
+    /**
+     * Returns whether or not App has all the permissions in provided permission array
+     */
     fun hasPermissions(context: Context?, permissions: Array<String>): Boolean {
         if (context != null && permissions != null) {
             for (permission in permissions) {

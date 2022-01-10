@@ -7,6 +7,10 @@ import androidx.room.Transaction
 interface UploadAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
     ChangeLogDao, QueueToExecuteDao, QueueToUploadDao {
 
+    /**
+     * Finds first task to upload and passes it's corresponding ChangeLog to
+     * helper function uploadToServer.
+     */
     suspend fun uploadFirst() {
 
         val firstJob = getFirstQTU()
@@ -29,7 +33,9 @@ interface UploadAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
             changeLog.counterValue
         )
     }
-
+    /**
+     * Takes ChangeLog arguments and uploads to server, then (TODO) deletes from QTU
+     */
     suspend fun uploadToServer(
         changeID: String,
         instanceNumber: String?,
