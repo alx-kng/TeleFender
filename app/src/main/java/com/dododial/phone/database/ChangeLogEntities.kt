@@ -3,7 +3,9 @@ package com.dododial.phone.database
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
+import com.squareup.moshi.JsonClass
 
+@JsonClass(generateAdapter = true)
 @Entity(tableName = "change_log")
 data class ChangeLog(
     @PrimaryKey val changeID: String,
@@ -21,7 +23,7 @@ data class ChangeLog(
 ) {
 
     override fun toString(): String {
-        return ("instanceNumber: " + this.instanceNumber +
+        return ("DODODEBUG: TYPE: " + this.type + " instanceNumber: " + this.instanceNumber +
             " changeTime: " + this.changeTime + " CID: " + this.CID + " name: " +
             this.name + " number: " + this.number + " parentNumber: " + this.parentNumber)           
     }
@@ -38,7 +40,11 @@ data class QueueToUpload(
     @PrimaryKey val changeID: String,
     val createTime: String,
     val errorCounter: Int = 0
-)
+) {
+    override fun toString() : String {
+        return ("DODODEBUG: changeID: " + this.changeID + " createTime: " + this.createTime + " errorCounter: " + this.errorCounter)
+    }
+}
 
 @Entity(tableName = "queue_to_execute",
    foreignKeys = [ForeignKey(
@@ -51,4 +57,8 @@ data class QueueToExecute(
     @PrimaryKey val changeID: String,
     val createTime : String,
     val errorCounter : Int = 0
-)
+) {
+    override fun toString() : String {
+        return ("DODODEBUG: changeID: " + this.changeID + " createTime: " + this.createTime + " errorCounter: " + this.errorCounter)
+    }
+}

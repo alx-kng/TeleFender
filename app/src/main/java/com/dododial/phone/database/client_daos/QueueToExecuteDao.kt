@@ -9,7 +9,7 @@ import com.dododial.phone.database.QueueToExecute
 @Dao
 interface QueueToExecuteDao {
 
-    @Insert(onConflict = OnConflictStrategy.ABORT)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertQTE(vararg queuetoexecute: QueueToExecute)
 
     @Query("UPDATE queue_to_execute SET errorCounter = errorCounter + :counterDelta WHERE changeID = :changeID")

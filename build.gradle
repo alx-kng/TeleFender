@@ -29,16 +29,28 @@ task clean(type: Delete) {
 }
 
 ext {
+    // Core
     activityVersion = '1.4.0'
     appCompatVersion = '1.4.0'
-    constraintLayoutVersion = '2.1.2'
-    coreTestingVersion = '2.1.0'
     coroutines = '1.6.0'
+
+    // UI and Lifecycle
+    constraintLayoutVersion = '2.1.2'
     lifecycleVersion = '2.4.0'
     materialVersion = '1.4.0'
+
+    // Room
     roomVersion = '2.4.0'
-    // testing
+
+    // Moshi
+    moshiVersion = '1.13.0'
+
+    // Volley
+    volleyVersion = '1.2.1'
+
+    // Testing
     junitVersion = '4.13.2'
     espressoVersion = '3.1.0'
     androidxJunitVersion = '1.1.2'
+    coreTestingVersion = '2.1.0'
 }

@@ -33,11 +33,13 @@ data class Contact(
             entity = Contact::class,
             parentColumns = arrayOf("CID"),
             childColumns = arrayOf("CID"),
-            onDelete = ForeignKey.CASCADE
-       )])
+            onDelete = ForeignKey.CASCADE 
+            ),
+    ])
 data class ContactNumbers(
     val CID: String,
     val number : String,
+    val versionNumber: Int = 0
 )
 
 @Entity(tableName = "trusted_numbers")

@@ -6,7 +6,7 @@ import com.dododial.phone.database.KeyStorage
 @Dao
 interface KeyStorageDao {
 
-    @Insert(onConflict = OnConflictStrategy.ABORT)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertKey(vararg keyStorage : KeyStorage)
 
     @Query("UPDATE key_storage SET clientKey = :clientKey WHERE number = :number")

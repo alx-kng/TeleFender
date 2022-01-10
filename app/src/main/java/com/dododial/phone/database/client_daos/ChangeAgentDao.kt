@@ -57,7 +57,7 @@ abstract class ChangeAgentDao: ChangeLogDao, QueueToExecuteDao, QueueToUploadDao
         val changeLog = ChangeLog(changeID, instanceNumber, changeTime, type,
             CID, name, oldNumber, number, parentNumber, trustability, counterValue)
 
-        Log.i("DODODEBUG ChangeAgentDAO WATCH", "inserting changelog: " + changeLog.toString())
+        //Log.i("DODODEBUG ChangeAgentDAO WATCH", "inserting changelog: " + changeLog.toString())
         val execLog = QueueToExecute(changeID, changeTime)
 
         val upLog = QueueToUpload(changeID, changeTime)

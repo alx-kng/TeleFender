@@ -58,7 +58,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
             CHANGELOG_TYPE_CONTACT_INSERT -> cInsert(CID, parentNumber, name)
             CHANGELOG_TYPE_CONTACT_UPDATE -> cUpdate(CID, name)
             CHANGELOG_TYPE_CONTACT_DELETE -> cDelete(CID)
-            CHANGELOG_TYPE_CONTACT_NUMBER_INSERT -> cnInsert(CID, number)
+            CHANGELOG_TYPE_CONTACT_NUMBER_INSERT -> cnInsert(CID, number, counterValue)
             CHANGELOG_TYPE_CONTACT_NUMBER_UPDATE -> cnUpdate(CID, oldNumber, number)
             CHANGELOG_TYPE_CONTACT_NUMBER_DELETE -> cnDelete(CID, number)
             CHANGELOG_TYPE_INSTANCE_INSERT -> insInsert(instanceNumber)
@@ -122,12 +122,12 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
         }
     }
 
-    suspend fun cnInsert(CID: String?, number: String?){
+    suspend fun cnInsert(CID: String?, number: String?, versionNumber: Int?){
         try {
-            if (CID == null || number == null) {
-                throw NullPointerException("CID or number was null for cnInsert")
+            if (CID == null || number == null || versionNumber == null) {
+                throw NullPointerException("CID, number, or versionNumber was null for cnInsert")
             } else {
-                val contactNumber = ContactNumbers(CID, number)
+                val contactNumber = ContactNumbers(CID, number, versionNumber)
 
                 insertContactNumbers(contactNumber)
                 insertTrustedNumbers(number)

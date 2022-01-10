@@ -50,7 +50,6 @@ class DialerActivity : AppCompatActivity() {
     var fromDialer = false
     private val CHANNEL_ID = "alxkng5737"
 
-
     @SuppressLint("LogNotTimber")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,28 +58,19 @@ class DialerActivity : AppCompatActivity() {
         go_back_to_call.isVisible = false
         notificationChannelCreator()
 
+        /**
+         * Offers to replace default dialer, automatically makes requesting permissions
+         * separately unnecessary
+         */
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val rm = getSystemService(Context.ROLE_SERVICE) as RoleManager
             startActivityForResult(rm.createRequestRoleIntent(RoleManager.ROLE_DIALER), 120)
         } else {
             offerReplacingDefaultDialer()
         }
-        PermissionsRequester.multiplePermissions(this, this)
 
-        /**
-         * Repository / database needs to call a query first in order to initialize database,
-         * in which the ClientDatabase getDatabase is called
-         */
-        val repository: ClientRepository? = (application as App).repository
-
-        val job = (application as App).applicationScope.launch {
-            repository?.dummyQuery()
-        }
-
-        runBlocking {
-            job.join()
-            Log.i("DODODEBUG: ", "REPOSITORY IS NULL = " + (repository == null))
-        }
+        //PermissionsRequester.multiplePermissions(this, this)
 
         //val database = ClientDatabase.getDatabase(this, (application as App).applicationScope, contentResolver)
     }
@@ -104,6 +94,21 @@ class DialerActivity : AppCompatActivity() {
                 }
         } else {
             go_back_to_call.isVisible = false
+        }
+
+        /**
+         * Repository / database needs to call a query first in order to initialize database,
+         * in which the ClientDatabase getDatabase is called
+         */
+        val repository: ClientRepository? = (application as App).repository
+
+        val job = (application as App).applicationScope.launch {
+            repository?.dummyQuery()
+        }
+
+        runBlocking {
+            job.join()
+            Log.i("DODODEBUG: ", "REPOSITORY IS NULL = " + (repository == null))
         }
     }
 

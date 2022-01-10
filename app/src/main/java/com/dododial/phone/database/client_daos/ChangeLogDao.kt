@@ -9,10 +9,13 @@ import com.dododial.phone.database.ChangeLog
 @Dao
 interface ChangeLogDao {
 
+    /**
+     * To initialize repository in DialerActivity (MainActivity)
+     */
     @Query("SELECT changeID FROM change_log LIMIT 0")
     suspend fun dummyQuery(): String?
 
-    @Insert(onConflict = OnConflictStrategy.ABORT)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertChangeLog(vararg changeLog: ChangeLog)
     
     @Query("DELETE FROM change_log WHERE changeID = :changeID")
@@ -23,7 +26,10 @@ interface ChangeLogDao {
 
     @Query("DELETE FROM change_log WHERE changeTime = :changeTime")
     suspend fun deleteChangeLog_Date(changeTime: String)
-    
+
+    @Query("SELECT changeTime FROM change_log ORDER BY changeTime DESC LIMIT 1")
+    suspend fun getLatestChangeLogTime() : String?
+
     @Query("SELECT * FROM change_log WHERE changeID = :changeID")
     suspend fun getChangeLogRow(changeID: String) : ChangeLog
     

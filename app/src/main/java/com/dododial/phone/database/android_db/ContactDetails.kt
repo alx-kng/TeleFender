@@ -26,68 +26,20 @@ data class ContactNumbers(
 
 object ContactDetailsHelper {
 
-    fun getContactCursor(
-        contactHelper: ContentResolver,
-        startsWith: String?
-    ): Cursor? {
-        val projection = arrayOf(
-            Phone.CONTACT_ID,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB)
-                Phone.DISPLAY_NAME_PRIMARY
-            else
-                Phone.DISPLAY_NAME,
-            Phone.NUMBER
-        )
-        var cur: Cursor? = null
-        try {
-            if (startsWith != null && startsWith != "") {
-                cur = contactHelper.query(
-                    Phone.CONTENT_URI,
-                    projection,
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB)
-                        Phone.DISPLAY_NAME_PRIMARY
-                    else
-                        Phone.DISPLAY_NAME
-                        + " like \"" + startsWith + "%\"", null, (
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB)
-                            Phone.DISPLAY_NAME_PRIMARY
-                        else
-                            Phone.DISPLAY_NAME
-                            + " ASC")
-                )
-            } else {
-                cur = contactHelper.query(
-                    Phone.CONTENT_URI,
-                    projection, null, null, (
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB)
-                            Phone.DISPLAY_NAME_PRIMARY
-                        else
-                            Phone.DISPLAY_NAME
-                            + " ASC")
-                )
-            }
-            cur!!.moveToFirst()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        return cur
-    }
-
-
-    fun getContactCursor2(
+    fun getContactNumberCursor(
         contactHelper: ContentResolver
     ): Cursor? {
         val projection = arrayOf(
             Phone.CONTACT_ID,
-            Phone.DISPLAY_NAME_PRIMARY,
-            Phone.NUMBER
+            Phone.NUMBER,
+            Phone.DATA_VERSION
         )
         var cur: Cursor? = null
         try {
             cur = contactHelper.query(
                 Phone.CONTENT_URI,
                 projection, null, null, (
-                    Phone.DISPLAY_NAME_PRIMARY
+                    Phone.CONTACT_ID
                         + " ASC")
             )
 
@@ -97,6 +49,35 @@ object ContactDetailsHelper {
         }
         return cur
     }
+
+    fun getContactCursor(
+        contactHelper: ContentResolver
+    ): Cursor? {
+        val projection = arrayOf(
+            ContactsContract.Contacts._ID,
+            ContactsContract.Contacts.DISPLAY_NAME_PRIMARY,
+        )
+        var cur: Cursor? = null
+        try {
+            cur = contactHelper.query(
+                ContactsContract.Contacts.CONTENT_URI,
+                projection, null, null, (
+                    ContactsContract.Contacts.DISPLAY_NAME_PRIMARY
+                        + " ASC")
+            )
+
+            cur!!.moveToFirst()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return cur
+    }
+
+
+
+
+
+
 
     private fun getContactID(
         contactHelper: ContentResolver,

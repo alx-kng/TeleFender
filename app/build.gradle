@@ -28,12 +28,21 @@ android {
 }
 
 dependencies {
+
+    // Dependencies for working with Architecture components
+    // You'll probably have to update the version numbers in build.gradle (Project)
+
+    // Core components
     implementation "androidx.appcompat:appcompat:$rootProject.appCompatVersion"
     implementation "androidx.activity:activity-ktx:$rootProject.activityVersion"
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 
-    // Dependencies for working with Architecture components
-    // You'll probably have to update the version numbers in build.gradle (Project)
+    // Moshi components
+    implementation("com.squareup.moshi:moshi:$rootProject.moshiVersion")
+    kapt("com.squareup.moshi:moshi-kotlin-codegen:$rootProject.moshiVersion")
+    
+    // Volley components
+    implementation("com.android.volley:volley:$rootProject.volleyVersion")
 
     // Room components
     implementation "androidx.room:room-ktx:$rootProject.roomVersion"

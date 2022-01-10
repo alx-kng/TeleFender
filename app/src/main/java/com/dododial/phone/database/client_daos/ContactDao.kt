@@ -9,7 +9,7 @@ import com.dododial.phone.database.Contact
 @Dao
 interface ContactDao {
     
-    @Insert(onConflict = OnConflictStrategy.ABORT)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertContact(vararg contact: Contact)
 
     @Query("UPDATE contact SET name = :name WHERE CID = :CID")
@@ -35,4 +35,5 @@ interface ContactDao {
 
     @Query("DELETE FROM contact")
     suspend fun deleteAllContacts()
+    
 }

@@ -9,7 +9,7 @@ import com.dododial.phone.database.QueueToUpload
 @Dao
 interface QueueToUploadDao {
 
-    @Insert(onConflict = OnConflictStrategy.ABORT)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertQTU(vararg queueToUpload: QueueToUpload)
 
     @Query("UPDATE queue_to_upload SET errorCounter = errorCounter + :counterDelta WHERE changeID = :changeID")

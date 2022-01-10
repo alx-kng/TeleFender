@@ -6,7 +6,7 @@ import com.dododial.phone.database.Instance
 @Dao
 interface InstanceDao {
 
-    @Insert(onConflict = OnConflictStrategy.ABORT)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertInstanceNumbers(vararg instances: Instance)
 
     @Query("UPDATE instance SET number = :newNumber WHERE number = :oldNumber")

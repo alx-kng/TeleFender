@@ -4,12 +4,13 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import com.dododial.phone.database.ChangeLog
 import com.dododial.phone.database.ContactNumbers
 
 @Dao
 interface ContactNumbersDao {
 
-    @Insert(onConflict = OnConflictStrategy.ABORT)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertContactNumbers(vararg contactNumbers: ContactNumbers)
 
     @Query("UPDATE contact_numbers SET number = :number WHERE CID = :CID AND number = :oldNumber")
@@ -20,6 +21,9 @@ interface ContactNumbersDao {
 
     @Query("SELECT * FROM contact_numbers WHERE CID = :CID")
     suspend fun getContactNumbers_CID(CID: String): List<ContactNumbers>
+
+    @Query("SELECT * FROM contact_numbers WHERE CID IN (SELECT CID FROM contact WHERE parentNumber = :parentNumber)")
+    suspend fun getContactNumbers_ParentNumber(parentNumber: String): List<ChangeLog>
 
     @Query("SELECT * FROM contact_numbers")
     suspend fun getAllContactNumbers(): List<ContactNumbers>
