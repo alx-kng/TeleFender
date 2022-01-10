@@ -109,6 +109,10 @@ public abstract class ClientDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: ClientDatabase? = null
 
+        /**
+         * Either creates new database instance if there is no initialized one available or returns
+         * the initialized instance that already exists.
+         */
         fun getDatabase(
             context: Context,
             scope: CoroutineScope,

@@ -22,7 +22,10 @@ object TableInitializers {
     //  somewhere separate
 
     /**
-     * Inserts user's call logs into CallLogs table
+     * Called once to initialize the CallLog table for the first time during database initialization.
+     *
+     * Inserts user's call logs into CallLogs table using CallDetailHelper.getCallDetails()
+     * to retrieve all logs and callLogDao().insertLog() to insert the log into the callLog table.
      */
     @RequiresApi(Build.VERSION_CODES.O)
     suspend fun initCallLog(context: Context, database: ClientDatabase) {
@@ -44,14 +47,16 @@ object TableInitializers {
     }
 
     /**
-     * Inserts users number as a row to the instance table
+     * Called once to initialize the Instance table for the first time during database initialization.
+     *
+     * Calls changeFromClient() to insert the instance insert change into QueueToExecute and ChangeLog
      */
     @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("MissingPermission")
     suspend fun initInstance(context: Context, database: ClientDatabase) {
         val tMgr = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
 
-        val changeID = UUID.randomUUID().toString() // create a new UUID
+        val changeID = UUID.randomUUID().toString() // create a new UUID TODO should this be random or based on bytearray of args for easy recreation?
         val instanceNumber = tMgr.line1Number // get phone # of user
         val changeTime = Instant.now().toEpochMilli().toString() // get epoch time
         val type = "insInsert"
@@ -72,7 +77,11 @@ object TableInitializers {
     }
 
     /**
-     * For each contact on device, create ChangeLog for cInsert
+     * Called once to initialize the Contact table for the first time during database initialization.
+     *
+     * Uses getContactCursor() to get all Contacts from Android database and calls cursContactInsert
+     * for every item in the cursor, which adds the change to the QueueToExecute and ChangeLog using
+     * changeFromClient()
      */
     @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("LogNotTimber")
@@ -92,7 +101,11 @@ object TableInitializers {
     }
 
     /**
-     * For each contact number on device, create ChangeLog for cnInsert
+     * Called once to initialize the ContactNumber table for the first time during database initialization.
+     *
+     * Uses getContactNumberCursor() to get all ContactNumbers from Android database and calls
+     * cursContactNumberInsert() for every item in the cursor, which adds the change to the QueuetoExecute
+     * and ChangeLog using changeFromClient()
      */
     @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("LogNotTimber")
@@ -111,6 +124,11 @@ object TableInitializers {
         }
     }
 
+    /**
+     * Helper function to initContact(), adds current cursor item's Contact to QueueToExecute and
+     * ChangeLog using changeFromClient(), also responsible for generating changeID, changeTime, and CID.
+     * changeID is random, but CID is based on the ByteArray of the original Contact's ID
+     */
     @SuppressLint("MissingPermission")
     @RequiresApi(Build.VERSION_CODES.O)
     suspend fun cursContactInsert(cursor: Cursor, context : Context, database: ClientDatabase) {
@@ -138,6 +156,11 @@ object TableInitializers {
         )
     }
 
+    /**
+     * Helper function to initContactNumber(), adds current cursor item's ContactNumber to QueueToExecute and
+     * ChangeLog using changeFromClient(), also responsible for generating changeID, changeTime, and CID.
+     * changeID is random, but CID is based on the ByteArray of the original ContactNumbers ID
+     */
     @SuppressLint("MissingPermission")
     @RequiresApi(Build.VERSION_CODES.O)
     suspend fun cursContactNumberInsert(cursor: Cursor, context : Context, database: ClientDatabase) {

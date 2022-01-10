@@ -18,6 +18,9 @@ class ClientRepository(
     private val queueToUploadDao : QueueToUploadDao,
     ) {
 
+    /**
+     * This Query does nothing but is called in order to initialize database
+     */
     @WorkerThread
     suspend fun dummyQuery(): String? {
         return changeLogDao.dummyQuery()
@@ -86,6 +89,8 @@ class ClientRepository(
 
     /**
      * changeFromServer() should be called to handle changes that come from the server
+     *
+     * See documentation for changeAgentDao.changeFromServer()
      */
     @RequiresApi(Build.VERSION_CODES.R)
     @WorkerThread
@@ -119,6 +124,8 @@ class ClientRepository(
 
     /**
      * changeFromClient() should be called to handle changes that come from the client
+     *
+     * See documentation for changeAgentDao.changeFromClient()
      */
     @WorkerThread
     suspend fun changeFromClient(
@@ -149,14 +156,16 @@ class ClientRepository(
         }
 
     /**
-     * getQTEErrorLogs() and getQTUErrorLogs() get all logs with error counters > 0
-     * in the QueueToExecute and QueueToUpload tables respectively
+     * Returns all QueueToExecutes with error counter > 0
      */
     @WorkerThread
     suspend fun getQTEErrorLogs() : List<String> {
         return queueToExecuteDao.getQTEErrorLogs()
     }
 
+    /**
+     * Returns all QueueToUploads with error counter > 0
+     */
     @WorkerThread
     suspend fun getQTUErrorLogs() : List<String> {
         return queueToUploadDao.getQTUErrorLogs()

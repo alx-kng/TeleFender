@@ -14,10 +14,21 @@ data class CallDetails(
     val callDuration: String,
     val callLocation: String?,
     val callDirection: String?
-) {}
+) {
+    override fun toString() : String {
+        return this.number + " callType: " + this.callType + " callEpochDate: " +
+            this.callEpochDate + " callDuration: " + this.callDuration + " callLocation: " +
+            this.callLocation.toString() + " callDirection: " + this.callDirection.toString()
+
+    }
+
+}
 
 object CallDetailHelper{
-    
+
+    /**
+     * Returns list of CallDetails (call log) objects using contentResolver.query()
+     */
     @RequiresApi(Build.VERSION_CODES.O)
     fun getCallDetails(context: Context): MutableList<CallDetails> {
 
@@ -53,13 +64,14 @@ object CallDetailHelper{
         }
         return calls
     }
-
+    /**
+     * Writes all Call logs to LogCat console
+     */
     @RequiresApi(Build.VERSION_CODES.O)
     fun callsLogCat(context: Context) {
         var calls = getCallDetails(context)
         for (call in calls) {
-            Log.i("CALL LOG: ", call.number + " " + call.callType + " " + call.callDuration + " "
-                    + call.callEpochDate + " " + call.callDirection + " " + call.callLocation)
+            Log.i("CALL LOG: ", call.toString())
         }
     }
 }
