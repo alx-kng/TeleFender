@@ -71,8 +71,6 @@ class DialerActivity : AppCompatActivity() {
         }
 
         //PermissionsRequester.multiplePermissions(this, this)
-
-        //val database = ClientDatabase.getDatabase(this, (application as App).applicationScope, contentResolver)
     }
 
     @RequiresApi(Build.VERSION_CODES.O)

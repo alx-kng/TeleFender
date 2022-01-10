@@ -73,6 +73,29 @@ object TableSynchronizer {
                     )
                 }
 
+                /**
+                 * If no ContactNumbers have the same CID and Number (PK), that means the corresponding
+                 * contact number doesn't exist and thus needs to be inserted into the ContactNumbers table
+                 */
+                if (matchCN == null) {
+                    val changeID = UUID.randomUUID().toString()
+                    val changeTime = Instant.now().toEpochMilli().toString()
+
+                    database.changeAgentDao().changeFromClient(
+                        changeID,
+                        null,
+                        changeTime,
+                        ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_INSERT,
+                        defCID,
+                        defName,
+                        null,
+                        defNumber,
+                        null,
+                        null,
+                        defVersionNumber
+                    )
+                }
+
                 val contactNumber = ContactNumbers(
                     defCID,
                     defNumber,
@@ -85,5 +108,7 @@ object TableSynchronizer {
                 curs.moveToNext()
             }
         }
+
+        val dodoCN: List<ContactNumbers> = database.contactDao()
     }
 }
