@@ -1,4 +1,4 @@
-package com.dododial.phone.database
+package com.dododial.phone.database.entities
 
 import androidx.room.Entity
 import androidx.room.ForeignKey

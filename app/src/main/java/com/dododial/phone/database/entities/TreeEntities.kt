@@ -1,4 +1,4 @@
-package com.dododial.phone.database
+package com.dododial.phone.database.entities
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
@@ -25,6 +25,10 @@ data class Contact(
     @PrimaryKey val CID: String,
     val parentNumber : String,
     val name : String?) {
+
+    override fun toString() : String {
+        return "CONTACT -  CID: " + this.CID  +  " parentNumber: " + this.parentNumber + " name: " + this.name
+    }
 }
 
 @Entity(tableName = "contact_numbers",
@@ -41,7 +45,18 @@ data class ContactNumbers(
     val number : String,
     val name : String?, // Repeated from Contact table for ease of sync
     val versionNumber: Int = 0
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (other is ContactNumbers) {
+            return (this.CID == other.CID && this.number == other.number)
+        } else {
+            return false
+        }
+    }
+    override fun toString() : String {
+        return "CONTACTNUMBER -  CID: " + this.CID  +  " number: " + this.number + " name: " + this.name + " versionNumber: " + this.versionNumber
+    }
+}
 
 @Entity(tableName = "trusted_numbers")
 data class TrustedNumbers(

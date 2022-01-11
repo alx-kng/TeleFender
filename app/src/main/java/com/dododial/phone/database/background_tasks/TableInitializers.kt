@@ -1,4 +1,4 @@
-package com.dododial.phone.database
+package com.dododial.phone.database.background_tasks
 
 import android.annotation.SuppressLint
 import android.content.ContentResolver
@@ -9,9 +9,11 @@ import android.os.Build
 import android.telephony.TelephonyManager
 import android.util.Log
 import androidx.annotation.RequiresApi
+import com.dododial.phone.database.entities.CallLog
 import com.dododial.phone.database.ClientDBConstants.CHANGELOG_TYPE_CONTACT_INSERT
 import com.dododial.phone.database.ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_INSERT
-import com.dododial.phone.database.android_db.CallDetailHelper
+import com.dododial.phone.database.ClientDatabase
+import com.dododial.phone.database.android_db.CallLogHelper
 import com.dododial.phone.database.android_db.ContactDetailsHelper
 import java.time.Instant
 import java.util.*
@@ -30,7 +32,7 @@ object TableInitializers {
     @RequiresApi(Build.VERSION_CODES.O)
     suspend fun initCallLog(context: Context, database: ClientDatabase) {
 
-        val calls = CallDetailHelper.getCallDetails(context)
+        val calls = CallLogHelper.getCallDetails(context)
 
         for (call in calls) {
             val log = CallLog(
@@ -56,7 +58,7 @@ object TableInitializers {
     suspend fun initInstance(context: Context, database: ClientDatabase) {
         val tMgr = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
 
-        val changeID = UUID.randomUUID().toString() // create a new UUID TODO should this be random or based on bytearray of args for easy recreation?
+        val changeID = UUID.randomUUID().toString() // create a new changeLog
         val instanceNumber = tMgr.line1Number // get phone # of user
         val changeTime = Instant.now().toEpochMilli().toString() // get epoch time
         val type = "insInsert"
@@ -98,6 +100,7 @@ object TableInitializers {
                 curs.moveToNext()
             }
         }
+        curs?.close()
     }
 
     /**
@@ -122,6 +125,7 @@ object TableInitializers {
                 curs.moveToNext()
             }
         }
+        curs?.close()
     }
 
     /**

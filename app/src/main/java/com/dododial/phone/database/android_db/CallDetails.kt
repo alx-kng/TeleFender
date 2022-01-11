@@ -7,61 +7,43 @@ import android.provider.CallLog
 import android.util.Log
 import androidx.annotation.RequiresApi
 
-data class CallDetails(
-    val number: String,
-    val callType: String,
-    val callEpochDate: String,
-    val callDuration: String,
-    val callLocation: String?,
-    val callDirection: String?
-) {
-    override fun toString() : String {
-        return this.number + " callType: " + this.callType + " callEpochDate: " +
-            this.callEpochDate + " callDuration: " + this.callDuration + " callLocation: " +
-            this.callLocation.toString() + " callDirection: " + this.callDirection.toString()
-
-    }
-
-}
-
-object CallDetailHelper{
+object CallLogHelper{
 
     /**
-     * Returns list of CallDetails (call log) objects using contentResolver.query()
+     * Returns list of CallLog objects using contentResolver.query()
      */
     @RequiresApi(Build.VERSION_CODES.O)
-    fun getCallDetails(context: Context): MutableList<CallDetails> {
+    fun getCallDetails(context: Context): MutableList<com.dododial.phone.database.entities.CallLog> {
 
-        val managedCursor: Cursor =
-            context.contentResolver.query(CallLog.Calls.CONTENT_URI, null, null, null)!!
+        val projection = arrayOf(
+            CallLog.Calls.NUMBER,
+            CallLog.Calls.TYPE,
+            CallLog.Calls.DATE,
+            CallLog.Calls.DURATION,
+            CallLog.Calls.GEOCODED_LOCATION
+            )
 
-        val number: Int = managedCursor.getColumnIndex(CallLog.Calls.NUMBER)
-        val type: Int = managedCursor.getColumnIndex(CallLog.Calls.TYPE)
-        val date: Int = managedCursor.getColumnIndex(CallLog.Calls.DATE)
-        val duration: Int = managedCursor.getColumnIndex(CallLog.Calls.DURATION)
-        val location: Int = managedCursor.getColumnIndex(CallLog.Calls.GEOCODED_LOCATION)
-        //sb.append("Call Details :")
+        val curs: Cursor = context.contentResolver.query(CallLog.Calls.CONTENT_URI, projection, null, null)!!
 
-        var calls: MutableList<CallDetails> = mutableListOf()
-        while (managedCursor.moveToNext()) {
-            val phNumber: String = managedCursor.getString(number)
-            val callType: String = managedCursor.getString(type)
-            val callEpochDate: String = managedCursor.getString(date)
-            //val callDayTime = Date(Long.valueOf(callDate))
-            val callDuration: String = managedCursor.getString(duration)
-            val callLocation: String? = managedCursor.getString(location) ?: "Unknown location"
+        var calls: MutableList<com.dododial.phone.database.entities.CallLog> = mutableListOf()
+        while (curs.moveToNext()) {
+                val number = curs.getString(0)
+                val type = curs.getInt(1).toString()
+                val date = curs.getString(2)
+                val duration = curs.getString(3)
+                val location = curs.getString(4)
             var dir: String? = null
-            val dircode = callType.toInt()
+            val dircode = type.toInt()
             when (dircode) {
                 CallLog.Calls.OUTGOING_TYPE -> dir = "OUTGOING"
                 CallLog.Calls.INCOMING_TYPE -> dir = "INCOMING"
                 CallLog.Calls.MISSED_TYPE -> dir = "MISSED"
             }
 
-            var callDetails =
-                CallDetails(phNumber, callType, callEpochDate, callDuration, callLocation, dir)
-            calls.add(callDetails)
+            var callLog = com.dododial.phone.database.entities.CallLog(number, type, date, duration, location, dir)
+            calls.add(callLog)
         }
+        curs.close()
         return calls
     }
     /**

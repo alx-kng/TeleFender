@@ -3,8 +3,11 @@ package com.dododial.phone.database
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.annotation.WorkerThread
+import androidx.work.WorkInfo
 import com.dododial.phone.database.client_daos.ChangeAgentDao
 import com.dododial.phone.database.client_daos.*
+import com.dododial.phone.database.entities.ChangeLog
+import com.dododial.phone.database.entities.CallLog
 import kotlinx.coroutines.flow.Flow
 
 class ClientRepository(
@@ -25,6 +28,7 @@ class ClientRepository(
     suspend fun dummyQuery(): String? {
         return changeLogDao.dummyQuery()
     }
+
     /*
     TODO: perhaps add the data analysis queries to the CallLogDao and create an
      updateMiscellaneous() function (and perhaps an update call logs function), which will be called when the an observer
@@ -86,7 +90,16 @@ class ClientRepository(
     suspend fun executeFirst() {
         executeAgentDao.executeFirst()
     }
-
+    
+    @WorkerThread
+    suspend fun executeAll() {
+        executeAgentDao.executeAll()
+    }
+    
+    @WorkerThread
+    suspend fun hasQTEs() : Boolean {
+        return executeAgentDao.hasQTEs()
+    }
     /**
      * changeFromServer() should be called to handle changes that come from the server
      *

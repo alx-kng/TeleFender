@@ -4,7 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.OnConflictStrategy
-import com.dododial.phone.database.ChangeLog
+import com.dododial.phone.database.entities.ChangeLog
 
 @Dao
 interface ChangeLogDao {
@@ -33,7 +33,7 @@ interface ChangeLogDao {
     @Query("SELECT * FROM change_log WHERE changeID = :changeID")
     suspend fun getChangeLogRow(changeID: String) : ChangeLog
     
-    @Query("SELECT * FROM change_log")
+    @Query("SELECT * FROM change_log ORDER BY changeTime ASC")
     suspend fun getAllChangeLogs() : List<ChangeLog>
 
     @Query("SELECT errorCounter FROM change_log WHERE changeID = :changeID ")

@@ -4,7 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import com.dododial.phone.database.QueueToExecute
+import com.dododial.phone.database.entities.QueueToExecute
 
 @Dao
 interface QueueToExecuteDao {
@@ -18,13 +18,13 @@ interface QueueToExecuteDao {
     @Query("UPDATE queue_to_execute SET errorCounter = :errorCounter WHERE changeID = :changeID")
     suspend fun updateQTEErrorCounter_Absolute(changeID: String, errorCounter : Int)
 
-    @Query("SELECT * FROM queue_to_execute WHERE createTime = (SELECT min(createTime) from queue_to_execute) LIMIT 1")
+    @Query("SELECT * FROM queue_to_execute ORDER BY createTime ASC LIMIT 1")
     suspend fun getFirstQTE() : QueueToExecute
 
     @Query("SELECT * FROM queue_to_execute WHERE changeID = :changeID")
     suspend fun getQTERow(changeID: String) : QueueToExecute
     
-    @Query("SELECT * FROM queue_to_execute")
+    @Query("SELECT * FROM queue_to_execute ORDER BY createTime ASC")
     suspend fun getAllQTEs() : List<QueueToExecute>
 
     @Query("SELECT errorCounter FROM queue_to_execute WHERE changeID = :changeID ")
@@ -32,6 +32,9 @@ interface QueueToExecuteDao {
 
     @Query("SELECT changeID FROM queue_to_execute WHERE errorCounter > 0")
     suspend fun getQTEErrorLogs() : List<String>
+
+    @Query("SELECT EXISTS (SELECT * FROM queue_to_execute LIMIT 1)")
+    suspend fun hasQTEs() : Boolean
 
     @Query("DELETE FROM queue_to_execute WHERE changeID = :changeID")
     suspend fun deleteQTE_ChangeID(changeID: String)

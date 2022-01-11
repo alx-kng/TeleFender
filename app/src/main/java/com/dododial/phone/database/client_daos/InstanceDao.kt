@@ -1,7 +1,7 @@
 package com.dododial.phone.database.client_daos
 
 import androidx.room.*
-import com.dododial.phone.database.Instance
+import com.dododial.phone.database.entities.Instance
 
 @Dao
 interface InstanceDao {

@@ -4,7 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import com.dododial.phone.database.QueueToUpload
+import com.dododial.phone.database.entities.QueueToUpload
 
 @Dao
 interface QueueToUploadDao {

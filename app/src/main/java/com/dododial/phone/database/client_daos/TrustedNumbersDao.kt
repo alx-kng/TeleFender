@@ -1,14 +1,15 @@
 package com.dododial.phone.database.client_daos
 
 import androidx.room.Dao
+import androidx.room.Insert
 import androidx.room.Query
-import com.dododial.phone.database.TrustedNumbers
+import com.dododial.phone.database.entities.TrustedNumbers
 
 @Dao
 interface TrustedNumbersDao {
     
-    @Query("INSERT INTO trusted_numbers (number) VALUES (:number)")
-    suspend fun insertTrustedNumbersHelper(number: String)
+    @Insert
+    suspend fun insertTrustedNumbersHelper(trustedNumber: TrustedNumbers)
 
     @Query("UPDATE trusted_numbers SET number = :newNum WHERE number = :oldNum")
     suspend fun updateTrustedNumbersHelper(oldNum: String, newNum : String)
@@ -39,7 +40,8 @@ interface TrustedNumbersDao {
             updateCounterTrustedNumbers(num, 1)
         }
         else {
-            insertTrustedNumbersHelper(num)
+            val trustedNumber = TrustedNumbers(num)
+            insertTrustedNumbersHelper(trustedNumber)
         }
     }
 

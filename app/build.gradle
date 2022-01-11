@@ -60,6 +60,26 @@ dependencies {
     api "org.jetbrains.kotlinx:kotlinx-coroutines-android:$rootProject.coroutines"
     implementation 'androidx.core:core-ktx:1.7.0'
 
+    // WorkManager components
+
+    // (Java only)
+    implementation "androidx.work:work-runtime:$rootProject.work_version"
+
+    // Kotlin + coroutines
+    implementation "androidx.work:work-runtime-ktx:$rootProject.work_version"
+
+    // optional - RxJava2 support
+    implementation "androidx.work:work-rxjava2:$rootProject.work_version"
+
+    // optional - GCMNetworkManager support
+    implementation "androidx.work:work-gcm:$rootProject.work_version"
+
+    // optional - Test helpers
+    androidTestImplementation "androidx.work:work-testing:$rootProject.work_version"
+
+    // optional - Multiprocess support
+    implementation "androidx.work:work-multiprocess:$rootProject.work_version"
+
     // UI
     implementation "androidx.constraintlayout:constraintlayout:$rootProject.constraintLayoutVersion"
     implementation "com.google.android.material:material:$rootProject.materialVersion"

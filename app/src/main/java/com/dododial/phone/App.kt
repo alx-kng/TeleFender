@@ -1,6 +1,8 @@
 package com.dododial.phone
 
 import android.app.Application
+import android.os.Build
+import androidx.annotation.RequiresApi
 import com.dododial.phone.database.ClientDatabase
 import com.dododial.phone.database.ClientRepository
 import kotlinx.coroutines.CoroutineScope
@@ -12,6 +14,7 @@ import kotlinx.coroutines.SupervisorJob
 
 import timber.log.Timber
 
+@RequiresApi(Build.VERSION_CODES.O)
 class App : Application() {
 
     val applicationScope = CoroutineScope(SupervisorJob())

@@ -1,4 +1,4 @@
-package com.dododial.phone.database
+package com.dododial.phone.database.background_tasks
 
 import android.content.Context
 import android.os.Build
@@ -11,6 +11,7 @@ import com.android.volley.VolleyLog
 import com.android.volley.toolbox.HttpHeaderParser
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
+import com.dododial.phone.database.entities.ChangeLog
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import org.json.JSONException

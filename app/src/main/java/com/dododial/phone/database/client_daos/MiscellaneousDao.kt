@@ -2,7 +2,7 @@ package com.dododial.phone.database.client_daos
 
 import androidx.room.Dao
 import androidx.room.Query
-import com.dododial.phone.database.Miscellaneous
+import com.dododial.phone.database.entities.Miscellaneous
 
 @Dao
 interface MiscellaneousDao {

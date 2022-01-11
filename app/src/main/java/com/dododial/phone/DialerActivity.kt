@@ -28,7 +28,7 @@ import android.app.role.RoleManager
 import android.content.Context
 import android.content.pm.PackageManager
 import androidx.annotation.RequiresApi
-import com.dododial.phone.database.ChangeLog
+import com.dododial.phone.database.entities.ChangeLog
 import com.dododial.phone.database.ClientDBConstants.CHANGELOG_TYPE_CONTACT_INSERT
 import com.dododial.phone.database.android_db.ContactDetailsHelper
 import java.time.Instant
@@ -78,6 +78,21 @@ class DialerActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
 
+        /**
+         * Repository / database needs to call a query first in order to initialize database,
+         * in which the ClientDatabase getDatabase is called
+         */
+        val repository: ClientRepository? = (application as App).repository
+
+        val job = (application as App).applicationScope.launch {
+            repository?.dummyQuery()
+        }   
+
+        runBlocking {
+            job.join()
+            Log.i("DODODEBUG: ", "REPOSITORY IS NULL = " + (repository == null))
+        }
+
         phoneNumberInput.setOnEditorActionListener { _, _, _ ->
             makeCall()
             true
@@ -94,20 +109,6 @@ class DialerActivity : AppCompatActivity() {
             go_back_to_call.isVisible = false
         }
 
-        /**
-         * Repository / database needs to call a query first in order to initialize database,
-         * in which the ClientDatabase getDatabase is called
-         */
-        val repository: ClientRepository? = (application as App).repository
-
-        val job = (application as App).applicationScope.launch {
-            repository?.dummyQuery()
-        }
-
-        runBlocking {
-            job.join()
-            Log.i("DODODEBUG: ", "REPOSITORY IS NULL = " + (repository == null))
-        }
     }
 
     private fun makeCall() {

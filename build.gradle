@@ -38,6 +38,9 @@ ext {
     constraintLayoutVersion = '2.1.2'
     lifecycleVersion = '2.4.0'
     materialVersion = '1.4.0'
+    
+    // Work
+    work_version = "2.7.1"
 
     // Room
     roomVersion = '2.4.0'

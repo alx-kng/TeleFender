@@ -5,10 +5,10 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.room.Dao
 import androidx.room.Transaction
-import com.dododial.phone.database.ChangeLog
+import com.dododial.phone.database.entities.ChangeLog
 import com.dododial.phone.database.ClientDBConstants.RESPONSE_OK
-import com.dododial.phone.database.QueueToExecute
-import com.dododial.phone.database.QueueToUpload
+import com.dododial.phone.database.entities.QueueToExecute
+import com.dododial.phone.database.entities.QueueToUpload
 
 @Dao
 abstract class ChangeAgentDao: ChangeLogDao, QueueToExecuteDao, QueueToUploadDao {
