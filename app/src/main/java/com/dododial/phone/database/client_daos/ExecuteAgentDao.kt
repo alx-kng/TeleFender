@@ -155,7 +155,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
     suspend fun cnInsert(CID: String?, number: String?, name: String?, versionNumber: Int?){
         try {
             if (CID == null || number == null || versionNumber == null) {
-                throw NullPointerException("CID, number, name, or versionNumber was null for cnInsert")
+                throw NullPointerException("CID, number, or versionNumber was null for cnInsert")
             } else {
                 val contactNumber = ContactNumbers(CID, number, name, versionNumber)
 

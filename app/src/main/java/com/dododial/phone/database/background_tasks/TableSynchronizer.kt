@@ -11,6 +11,8 @@ import androidx.annotation.RequiresApi
 import com.dododial.phone.database.entities.CallLog
 import com.dododial.phone.database.ClientDBConstants
 import com.dododial.phone.database.ClientDatabase
+import com.dododial.phone.database.MiscHelpers
+import com.dododial.phone.database.MiscHelpers.cleanNumber
 import com.dododial.phone.database.entities.ContactNumbers
 import com.dododial.phone.database.android_db.ContactDetailsHelper
 import java.time.Instant
@@ -22,7 +24,7 @@ object TableSynchronizer {
     * Syncs our CallLog database with Android's CallLog database
     */
     @RequiresApi(Build.VERSION_CODES.O)
-    suspend fun syncCallLogs(context : Context, database : ClientDatabase, contentResolver : ContentResolver) {
+    suspend fun syncCallLogs(database : ClientDatabase, contentResolver : ContentResolver) {
 
         val mostRecentCallLogDate = database.callLogDao().getMostRecentCallLogDate() ?: "0"
         val projection = arrayOf(
@@ -37,7 +39,7 @@ object TableSynchronizer {
 
         if (curs != null) {
             while (curs.moveToNext()) {
-                val number = curs.getString(0)
+                val number = cleanNumber(curs.getString(0))!!
                 val type = curs.getInt(1).toString()
                 val date = curs.getString(2)
                 val duration = curs.getString(3)
@@ -70,10 +72,10 @@ object TableSynchronizer {
     * well as returning a HashMap of all ContactNumbers for use in checking for updates and deletes
     */
     @RequiresApi(Build.VERSION_CODES.O)
-    @SuppressLint("MissingPermission")
+    @SuppressLint("MissingPermission", "LogNotTimber")
     suspend fun checkForInserts(context: Context, database: ClientDatabase, contentResolver : ContentResolver) : HashMap<String, MutableList<ContactNumbers>> {
         val tMgr = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-        val parentNumber = tMgr.line1Number
+        val parentNumber = MiscHelpers.cleanNumber(tMgr.line1Number)
 
         val curs: Cursor? = ContactDetailsHelper.getContactNumberCursor(contentResolver)
 
@@ -92,8 +94,8 @@ object TableSynchronizer {
                  * Need to turn default CID into UUID version of CID since default CID is not the
                  * same as the CIDs we store in our Contacts / ContactNumbers tables
                  */
-                val defCID = UUID.nameUUIDFromBytes(curs.getString(0).toByteArray()).toString()
-                val defNumber = curs.getString(1)
+                val defCID = UUID.nameUUIDFromBytes((curs.getString(0) + parentNumber).toByteArray()).toString()
+                val defNumber = cleanNumber(curs.getString(1))!!
                 val defName = curs.getString(2)
                 val defVersionNumber = curs.getString(3).toInt()
 
@@ -156,15 +158,23 @@ object TableSynchronizer {
                     defVersionNumber
                 )
 
-                defaultContactHashMap.get(curs.getString(0))?.add(contactNumber)
+                // get may return null if key doesn't yet have a list initialized with it
+                if (defaultContactHashMap.get(defCID) == null) {
+                    defaultContactHashMap.put(defCID, mutableListOf(contactNumber))
+                } else {
+                    defaultContactHashMap.get(defCID)!!.add(contactNumber)
+                }
 
                 curs.moveToNext()
             }
             curs.close()
         }
+
+        // Now all CIDs and there lists of contact numbers from their database (in our format)
         return defaultContactHashMap
     }
 
+    @SuppressLint("LogNotTimber")
     @RequiresApi(Build.VERSION_CODES.O)
     suspend fun checkForUpdatesAndDeletes(database: ClientDatabase, defaultContactHashMap: HashMap<String, MutableList<ContactNumbers>>)  {
         val dodoCN: List<ContactNumbers> = database.contactNumbersDao().getAllContactNumbers()
@@ -217,9 +227,9 @@ object TableSynchronizer {
                         changeTime,
                         ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_DELETE,
                         dodoCID,
+                        null,
+                        null,
                         contactNumbers.number,
-                        null,
-                        null,
                         null,
                         null,
                         null

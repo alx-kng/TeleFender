@@ -35,6 +35,9 @@ interface QueueToExecuteDao {
 
     @Query("SELECT EXISTS (SELECT * FROM queue_to_execute LIMIT 1)")
     suspend fun hasQTEs() : Boolean
+    
+    @Query("SELECT COUNT(changeID) FROM queue_to_execute")
+    suspend fun getQueueToExecuteSize() : Int?
 
     @Query("DELETE FROM queue_to_execute WHERE changeID = :changeID")
     suspend fun deleteQTE_ChangeID(changeID: String)

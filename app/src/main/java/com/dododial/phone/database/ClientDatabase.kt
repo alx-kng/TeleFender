@@ -15,9 +15,9 @@ import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.work.WorkInfo
 import com.dododial.phone.database.background_tasks.TableInitializers
-import com.dododial.phone.database.background_tasks.TableSynchronizer
-import com.dododial.phone.database.background_tasks.WorkScheduler
 import com.dododial.phone.database.background_tasks.WorkerStates
+import com.dododial.phone.database.background_tasks.background_workers.ExecuteScheduler
+import com.dododial.phone.database.background_tasks.background_workers.SyncScheduler
 import com.dododial.phone.database.client_daos.*
 import com.example.actualfinaldatabase.permissions.PermissionsRequester
 import kotlinx.coroutines.CoroutineScope
@@ -42,6 +42,7 @@ import java.util.*
 ), version = 1, exportSchema = false)
 public abstract class ClientDatabase : RoomDatabase() {
 
+    abstract fun instanceDao() : InstanceDao
     abstract fun callLogDao() : CallLogDao
     abstract fun changeAgentDao() : ChangeAgentDao
     abstract fun uploadAgentDao() : UploadAgentDao
@@ -83,60 +84,36 @@ public abstract class ClientDatabase : RoomDatabase() {
                     // Goes through contact numbers and inserts numbers into db
                     TableInitializers.initContactNumber(context, database, contentResolver)
 
+                    Log.i("DODODEBUG", "BEFORE EXECUTE")
+                    //DatabaseLogFunctions.logContacts(instanceTemp)
+                    //DatabaseLogFunctions.logContactNumbers(instanceTemp)
+                    DatabaseLogFunctions.logChangeLogs(database)
+                    DatabaseLogFunctions.logExecuteLogs(database)
+                    //DatabaseLogFunctions.logUploadLogs(instanceTemp)
+
                     // Initialize other tables
+                    WorkerStates.oneTimeExecState = WorkInfo.State.RUNNING
+                    ExecuteScheduler.initiateOneTimeExecuteWorker(context)
 
-                    WorkScheduler.initiateOneTimeExecuteWorker(context)
-                    while(WorkerStates.initExecState != WorkInfo.State.SUCCEEDED) {
-
-                        if (WorkerStates.initExecState == WorkInfo.State.FAILED
-                            || WorkerStates.initExecState == WorkInfo.State.CANCELLED
-                            || WorkerStates.initExecState == WorkInfo.State.BLOCKED) {
+                    while(WorkerStates.oneTimeExecState != WorkInfo.State.SUCCEEDED) {
+                        if (WorkerStates.oneTimeExecState == WorkInfo.State.FAILED
+                            || WorkerStates.oneTimeExecState == WorkInfo.State.CANCELLED
+                            || WorkerStates.oneTimeExecState == WorkInfo.State.BLOCKED) {
                             Log.i("DODODEBUG: ", "WORKER STATE BAD")
                             break
                         }
                         delay(500)
-                        Log.i("DODODEBUG: ", "WORK STATE: " + WorkerStates.initExecState.toString())
+                        Log.i("DODODEBUG: ", "WORK STATE: " + WorkerStates.oneTimeExecState.toString())
                     }
+                    WorkerStates.oneTimeExecState = null
 
-                    val contacts = database.contactDao().getAllContacts()
-                    Log.i("DODODEBUG: CONTACT SIZE: ", contacts.size.toString())
-                    for (contact in contacts) {
-                        Log.i("DODODEBUG: ", contact.toString())
-                    }
+                    //DatabaseLogFunctions.logContacts(instanceTemp)
+                    //DatabaseLogFunctions.logContactNumbers(instanceTemp)
+                    DatabaseLogFunctions.logChangeLogs(database)
+                    DatabaseLogFunctions.logExecuteLogs(database)
+                    //DatabaseLogFunctions.logUploadLogs(instanceTemp)
 
-                    val contactNumbers : List<ContactNumbers> = database.contactNumbersDao().getAllContactNumbers()
-                    Log.i("DODODEBUG: CONTACT NUMBERS SIZE: ", contactNumbers.size.toString())
-                    for (contactNumber in contactNumbers) {
-                        Log.i("DODODEBUG: ", contactNumber.toString())
-                    }
-
-                    val changeLogs = database.changeLogDao().getAllChangeLogs()
-                    Log.d("DODODEBUG: CHANGE LOG SIZE: ", changeLogs.size.toString())
-//                    for (changeLog : ChangeLog in changeLogs) {
-//                        Log.d("DODODEBUG: CHANGE LOG: ", changeLog.toString())
-//
-//                    }
-//
-                    val executeLogs = database.queueToExecuteDao().getAllQTEs()
-                    Log.d("DODODEBUG: EXECUTE LOG SIZE: ", executeLogs.size.toString())
-//                    for (executeLog : QueueToExecute in executeLogs) {
-//                        Log.d("DODODEBUG: EXECUTE LOG: ",database.changeLogDao().getChangeLogRow(executeLog.changeID).toString())
-//
-//                    }
-//                    val uploadLogs = database.queueToUploadDao().getAllQTU()
-//                    Log.d("DODODEBUG: UPLOAD LOG SIZE: ", uploadLogs.size.toString())
-//                    for (uploadLog : QueueToUpload in uploadLogs) {
-//                        Log.d("DODODEBUG: UPLOAD LOG: ", uploadLog.toString())
-//
-//                    }
-//
-                    val callLogs = database.callLogDao().getCallLogs()
-                    for (callLog: CallLog in callLogs) {
-                        Log.i("DODODEBUG: CALL LOG: ", callLog.number + " " + callLog.callType + " "
-                            + callLog.callEpochDate + " " + callLog.callDirection + " " + callLog.callLocation)
-                    }
                     Log.i("DODODEBUG: ", "INITIALIZED")
-                    initialized = true
                 }
             }
         }
@@ -148,8 +125,6 @@ public abstract class ClientDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: ClientDatabase? = null
 
-        private var initialized = false
-
         /**
          * Either creates new database instance if there is no initialized one available or returns
          * the initialized instance that already exists.
@@ -160,7 +135,6 @@ public abstract class ClientDatabase : RoomDatabase() {
             scope: CoroutineScope,
             contentResolver: ContentResolver
         ): ClientDatabase {
-
 
             // if the INSTANCE is not null, then return it,
             // if it is, then create the database
@@ -175,20 +149,42 @@ public abstract class ClientDatabase : RoomDatabase() {
                 instance
             }
 
+
             runBlocking {
                 scope.launch {
-                    while (initialized != true) {
+                    var isInitialized = !instanceTemp.executeAgentDao().hasQTEs()
+                        && instanceTemp.instanceDao().hasInstance()
+                    while (!isInitialized) {
                         delay(500)
-                        Log.i("DODODEBUG: ", "INSIDE SYNC COROUTINE NOT INITIALIZED")
+                        Log.i("DODODEBUG: ", "INSIDE GET DATABASE COROUTINE. DATABASE INITIALIZED = " + isInitialized)
+
+                        isInitialized = !instanceTemp.executeAgentDao().hasQTEs()
+                            && instanceTemp.instanceDao().hasInstance()
                     }
-                    if (!instanceTemp.executeAgentDao().hasQTEs()) {
-                        Log.i("DODODEBUG:", "SYNC STARTED")
-                        TableSynchronizer.syncContacts(context, instanceTemp, contentResolver)
-                        TableSynchronizer.syncCallLogs(context, instanceTemp, contentResolver)
-                        Log.i("DODODEBUG:", "SYNC ENDED")
+
+                    WorkerStates.oneTimeSyncState = WorkInfo.State.RUNNING
+                    SyncScheduler.initiateOneTimeSyncWorker(context)
+                    while(WorkerStates.oneTimeSyncState != WorkInfo.State.SUCCEEDED) {
+                        if (WorkerStates.oneTimeSyncState == WorkInfo.State.FAILED
+                            || WorkerStates.oneTimeSyncState == WorkInfo.State.CANCELLED
+                            || WorkerStates.oneTimeSyncState == WorkInfo.State.BLOCKED) {
+                            Log.i("DODODEBUG: ", "WORKER STATE BAD")
+                            break
+                        }
+                        delay(500)
+                        Log.i("DODODEBUG: ", "WORK STATE: " + WorkerStates.oneTimeSyncState.toString())
                     }
+                    WorkerStates.oneTimeSyncState = null
+
+                    Log.i("DODODEBUG", "After SYNC")
+                    DatabaseLogFunctions.logContacts(instanceTemp)
+                    DatabaseLogFunctions.logContactNumbers(instanceTemp)
+                    DatabaseLogFunctions.logChangeLogs(instanceTemp)
+                    DatabaseLogFunctions.logExecuteLogs(instanceTemp)
+                    DatabaseLogFunctions.logUploadLogs(instanceTemp)
                 }
             }
+
 
             // TODO something with periodic work
 
@@ -198,6 +194,3 @@ public abstract class ClientDatabase : RoomDatabase() {
     }
 }
 
-private fun <T> LiveData<T>.observe(coroutineScope: CoroutineScope, observer: Observer) {
-
-}

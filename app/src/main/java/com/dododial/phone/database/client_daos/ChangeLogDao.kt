@@ -36,6 +36,9 @@ interface ChangeLogDao {
     @Query("SELECT * FROM change_log ORDER BY changeTime ASC")
     suspend fun getAllChangeLogs() : List<ChangeLog>
 
+    @Query("SELECT COUNT(changeID) FROM change_log")
+    suspend fun getChangeLogSize() : Int?
+
     @Query("SELECT errorCounter FROM change_log WHERE changeID = :changeID ")
     suspend fun getChgLogErrorCounter(changeID: String) : Int
 

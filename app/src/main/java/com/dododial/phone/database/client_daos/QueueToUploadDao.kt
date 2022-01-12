@@ -33,6 +33,9 @@ interface QueueToUploadDao {
     @Query("SELECT changeID FROM queue_to_upload WHERE errorCounter > 0")
     suspend fun getQTUErrorLogs() : List<String>
 
+    @Query("SELECT EXISTS (SELECT * FROM queue_to_upload LIMIT 1)")
+    suspend fun hasQTUs() : Boolean
+
     @Query("DELETE FROM queue_to_upload WHERE changeID = :changeID")
     suspend fun deleteQTU_ChangeID(changeID: String)
 

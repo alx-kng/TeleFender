@@ -31,7 +31,8 @@ class App : Application() {
             database.executeAgentDao(),
             database.keyStorageDao(),
             database.queueToExecuteDao(),
-            database.queueToUploadDao()   
+            database.queueToUploadDao(),
+            database.instanceDao()
         )
     }
 

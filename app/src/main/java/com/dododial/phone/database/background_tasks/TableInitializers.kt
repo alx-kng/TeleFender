@@ -13,6 +13,7 @@ import com.dododial.phone.database.entities.CallLog
 import com.dododial.phone.database.ClientDBConstants.CHANGELOG_TYPE_CONTACT_INSERT
 import com.dododial.phone.database.ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_INSERT
 import com.dododial.phone.database.ClientDatabase
+import com.dododial.phone.database.MiscHelpers
 import com.dododial.phone.database.android_db.CallLogHelper
 import com.dododial.phone.database.android_db.ContactDetailsHelper
 import java.time.Instant
@@ -59,7 +60,7 @@ object TableInitializers {
         val tMgr = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
 
         val changeID = UUID.randomUUID().toString() // create a new changeLog
-        val instanceNumber = tMgr.line1Number // get phone # of user
+        val instanceNumber = MiscHelpers.cleanNumber(tMgr.line1Number) // get phone # of user
         val changeTime = Instant.now().toEpochMilli().toString() // get epoch time
         val type = "insInsert"
 
@@ -115,34 +116,34 @@ object TableInitializers {
     suspend fun initContactNumber(context: Context, database: ClientDatabase, contentResolver: ContentResolver) {
 
         val curs: Cursor? = ContactDetailsHelper.getContactNumberCursor(contentResolver)
-
         if (curs == null) {
             Log.i("DODODEBUG: ", "Contact Number cursor is null; BAD")
         } else {
             while (!curs.isAfterLast) {
                 cursContactNumberInsert(curs, context, database)
-
                 curs.moveToNext()
             }
         }
         curs?.close()
     }
 
+    // TODO Two different users might create same UUID CID from default CID
     /**
      * Helper function to initContact(), adds current cursor item's Contact to QueueToExecute and
      * ChangeLog using changeFromClient(), also responsible for generating changeID, changeTime, and CID.
-     * changeID is random, but CID is based on the ByteArray of the original Contact's ID
+     * changeID is random, but CID is based on the ByteArray of the original Contact's ID along with parentNumber
      */
     @SuppressLint("MissingPermission")
     @RequiresApi(Build.VERSION_CODES.O)
     suspend fun cursContactInsert(cursor: Cursor, context : Context, database: ClientDatabase) {
         val tMgr = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
+        val parentNumber = MiscHelpers.cleanNumber(tMgr.line1Number)
+
 
         val cChangeID = UUID.randomUUID().toString()
         val changeTime = Instant.now().toEpochMilli().toString()
-        val CID = UUID.nameUUIDFromBytes(cursor.getString(0).toByteArray()).toString()
+        val CID = UUID.nameUUIDFromBytes((cursor.getString(0) + parentNumber).toByteArray()).toString()
         val name = cursor.getString(1)
-        val parentNumber = tMgr.line1Number
 
         // To insert into Contacts table
         database.changeAgentDao().changeFromClient(
@@ -160,18 +161,21 @@ object TableInitializers {
         )
     }
 
+    // TODO format numbers to get rid of the parentheses and extra spaces
     /**
      * Helper function to initContactNumber(), adds current cursor item's ContactNumber to QueueToExecute and
      * ChangeLog using changeFromClient(), also responsible for generating changeID, changeTime, and CID.
-     * changeID is random, but CID is based on the ByteArray of the original ContactNumbers ID
+     * changeID is random, but CID is based on the ByteArray of the original ContactNumbers ID and parentNumber
      */
     @SuppressLint("MissingPermission")
     @RequiresApi(Build.VERSION_CODES.O)
     suspend fun cursContactNumberInsert(cursor: Cursor, context : Context, database: ClientDatabase) {
+        val tMgr = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
+        val parentNumber = MiscHelpers.cleanNumber(tMgr.line1Number)
 
         val cnChangeID = UUID.randomUUID().toString()
         val changeTime = Instant.now().toEpochMilli().toString()
-        val CID = UUID.nameUUIDFromBytes(cursor.getString(0).toByteArray()).toString()
+        val CID = UUID.nameUUIDFromBytes((cursor.getString(0) + parentNumber).toByteArray()).toString()
         val number = cursor.getString(1)
         val name: String? = cursor.getString(2)
         val versionNumber = cursor.getString(3).toInt()

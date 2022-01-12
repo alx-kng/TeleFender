@@ -42,6 +42,9 @@ interface ContactNumbersDao {
     @Query("SELECT * FROM contact_numbers")
     suspend fun getAllContactNumbers(): List<ContactNumbers>
 
+    @Query("SELECT COUNT(CID) FROM contact_numbers")
+    suspend fun getContactNumberSize() : Int?
+
     @Query("DELETE FROM contact_numbers WHERE CID = :CID AND number = :number")
     suspend fun deleteContactNumbers_PK(CID: String, number: String)
 
@@ -50,4 +53,6 @@ interface ContactNumbersDao {
 
     @Query("DELETE FROM contact_numbers")
     suspend fun deleteAllContactNumbers()
+
+
 }

@@ -23,7 +23,7 @@ data class ChangeLog(
 ) {
 
     override fun toString(): String {
-        return ("DODODEBUG: TYPE: " + this.type + " instanceNumber: " + this.instanceNumber +
+        return ("CHANGELOG: TYPE: " + this.type + " instanceNumber: " + this.instanceNumber +
             " changeTime: " + this.changeTime + " CID: " + this.CID + " name: " +
             this.name + " number: " + this.number + " parentNumber: " + this.parentNumber)           
     }
@@ -42,7 +42,7 @@ data class QueueToUpload(
     val errorCounter: Int = 0
 ) {
     override fun toString() : String {
-        return ("DODODEBUG: changeID: " + this.changeID + " createTime: " + this.createTime + " errorCounter: " + this.errorCounter)
+        return ("UPLOADLOG: changeID: " + this.changeID + " createTime: " + this.createTime + " errorCounter: " + this.errorCounter)
     }
 }
 
@@ -59,6 +59,6 @@ data class QueueToExecute(
     val errorCounter : Int = 0
 ) {
     override fun toString() : String {
-        return ("DODODEBUG: changeID: " + this.changeID + " createTime: " + this.createTime + " errorCounter: " + this.errorCounter)
+        return ("EXECUTELOG: changeID: " + this.changeID + " createTime: " + this.createTime + " errorCounter: " + this.errorCounter)
     }
 }

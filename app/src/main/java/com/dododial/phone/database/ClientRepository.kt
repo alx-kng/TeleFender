@@ -1,5 +1,6 @@
 package com.dododial.phone.database
 
+import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.annotation.WorkerThread
@@ -19,6 +20,7 @@ class ClientRepository(
     private val keyStorageDao : KeyStorageDao,
     private val queueToExecuteDao : QueueToExecuteDao,
     private val queueToUploadDao : QueueToUploadDao,
+    private val instanceDao : InstanceDao
     ) {
 
     /**
@@ -77,11 +79,17 @@ class ClientRepository(
      * uploadFirst() is called to upload the first log within QueueToUpload to the server
      * Should be scheduled async and done when possible / there are logs left
      */
+    @RequiresApi(Build.VERSION_CODES.N)
     @WorkerThread
-    suspend fun uploadFirst() {
-        uploadAgentDao.uploadFirst()
+    suspend fun uploadFirst(context : Context) {
+        uploadAgentDao.uploadFirst(context)
     }
 
+    @RequiresApi(Build.VERSION_CODES.N)
+    @WorkerThread
+    suspend fun uploadAll(context : Context) {
+        uploadAgentDao.uploadAll(context)
+    }
     /**
      * executeFirst() is called to execute the first log within QueueToExecute
      * Should be scheduled async and done when possible / there are logs left
@@ -99,6 +107,11 @@ class ClientRepository(
     @WorkerThread
     suspend fun hasQTEs() : Boolean {
         return executeAgentDao.hasQTEs()
+    }
+
+    @WorkerThread
+    suspend fun hasInstance() : Boolean {
+        return instanceDao.hasInstance()
     }
     /**
      * changeFromServer() should be called to handle changes that come from the server

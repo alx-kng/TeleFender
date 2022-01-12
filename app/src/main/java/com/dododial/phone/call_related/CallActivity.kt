@@ -33,47 +33,6 @@ class CallActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
 
-        /*//modify window flags so as to display it on lock screen
-        /*val window: Window = window
-        with(window) {
-            addFlags(
-                    R.attr.showWhenLocked or
-                        R.attr.turnScreenOn or
-                    WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
-            )
-        }*/
-
-        window.addFlags(
-            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
-                WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
-                R.attr.showWhenLocked or
-                R.attr.turnScreenOn
-        )
-
-        /*if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            var km = getSystemService(KEYGUARD_SERVICE) as KeyguardManager
-            var keyguard = km.newKeyguardLock("simple-phone app")
-            keyguard.disableKeyguard()
-            //requestDismissKeyguard(this, null)
-        }*/
-
-        // to wake up screen
-        val pm = applicationContext.getSystemService(POWER_SERVICE) as PowerManager
-        var wakeFlags = PowerManager.FULL_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP
-        /*if (Build.VERSION.SDK_INT <= 15) {
-            wakeFlags = wakeFlags or PowerManager.SCREEN_BRIGHT_WAKE_LOCK
-        }*/
-
-        val wakeLock = pm.newWakeLock(wakeFlags, "Simple Phone:Call")
-        wakeLock.acquire() //wakelock
-
-        /*val wakeLock: PowerManager.WakeLock =
-            (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
-                newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Simple Phone::MyWakelockTag").apply {
-                    acquire(4000)
-                }
-            }*/*/
-
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_call)
 

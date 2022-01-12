@@ -22,7 +22,7 @@ object UploadHelpers {
     /**
      * Takes ChangeLog object and returns its JSON representation
      */
-    fun changelogToJson(changeLog : ChangeLog) : String {
+    fun changeLogToJson(changeLog : ChangeLog) : String {
         val moshi : Moshi = Moshi.Builder().build()
         val adapter : JsonAdapter<ChangeLog> = moshi.adapter(ChangeLog::class.java)
 

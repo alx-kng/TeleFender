@@ -44,6 +44,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
+// TODO we need to make a custom notification for initiating a call
 
 class DialerActivity : AppCompatActivity() {
 
@@ -111,6 +112,11 @@ class DialerActivity : AppCompatActivity() {
 
     }
 
+    // TODO : Warning
+    //  In the odd case that making a call through the dialer requires that you choose
+    //  a different app to "complete an action" either notify users choose the default
+    //  phone app as always or see if we can bypass that in the first place
+
     private fun makeCall() {
         if (checkSelfPermission(this, CALL_PHONE) == PERMISSION_GRANTED) {
             val uri = "tel:${phoneNumberInput.text}".toUri()
@@ -135,9 +141,16 @@ class DialerActivity : AppCompatActivity() {
 
     private fun offerReplacingDefaultDialer() {
         if (getSystemService(TelecomManager::class.java).defaultDialerPackage != packageName) {
-            Intent(ACTION_CHANGE_DEFAULT_DIALER)
-                .putExtra(EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, packageName)
-                .let(::startActivity)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val roleManager : RoleManager = getSystemService(Context.ROLE_SERVICE) as RoleManager
+                val intent : Intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_DIALER)
+                    intent.putExtra(EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, packageName)
+                    .let(::startActivity)
+            } else {
+                Intent(ACTION_CHANGE_DEFAULT_DIALER)
+                    .putExtra(EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, packageName)
+                    .let(::startActivity)
+            }
         }
     }
 

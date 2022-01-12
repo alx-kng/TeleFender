@@ -7,6 +7,7 @@ import androidx.room.Dao
 import androidx.room.Transaction
 import com.dododial.phone.database.entities.ChangeLog
 import com.dododial.phone.database.ClientDBConstants.RESPONSE_OK
+import com.dododial.phone.database.MiscHelpers
 import com.dododial.phone.database.entities.QueueToExecute
 import com.dododial.phone.database.entities.QueueToUpload
 
@@ -17,6 +18,7 @@ abstract class ChangeAgentDao: ChangeLogDao, QueueToExecuteDao, QueueToUploadDao
      * Function to handle a change (in the form of a ChangeLog's argument) from Server.
      * Adds change to the ChangeLog and QueueToExecute.
      */
+
     @RequiresApi(Build.VERSION_CODES.R)
     @Transaction
     open suspend fun changeFromServer(
@@ -32,8 +34,24 @@ abstract class ChangeAgentDao: ChangeLogDao, QueueToExecuteDao, QueueToUploadDao
         trustability: Int?,
         counterValue: Int?
     ) : Int {
-        val changeLog = ChangeLog(changeID, instanceNumber, changeTime, type,
-            CID, name, oldNumber, number, parentNumber, trustability, counterValue)
+
+        val cleanInstanceNumber = MiscHelpers.cleanNumber(instanceNumber)
+        val cleanOldNumber = MiscHelpers.cleanNumber(oldNumber)
+        val cleanNumber = MiscHelpers.cleanNumber(number)
+        val cleanParentNumber = MiscHelpers.cleanNumber(parentNumber)
+
+        val changeLog = ChangeLog(
+            changeID,
+            cleanInstanceNumber,
+            changeTime,
+            type,
+            CID,
+            name,
+            cleanOldNumber,
+            cleanNumber,
+            cleanParentNumber,
+            trustability,
+            counterValue)
 
         val execLog = QueueToExecute(changeID, changeTime)
 
@@ -61,9 +79,25 @@ abstract class ChangeAgentDao: ChangeLogDao, QueueToExecuteDao, QueueToUploadDao
         trustability: Int?,
         counterValue: Int?,
     ) {
+
+        val cleanInstanceNumber = MiscHelpers.cleanNumber(instanceNumber)
+        val cleanOldNumber = MiscHelpers.cleanNumber(oldNumber)
+        val cleanNumber = MiscHelpers.cleanNumber(number)
+        val cleanParentNumber = MiscHelpers.cleanNumber(parentNumber)
+        
         //Log.i("DODODEBUG ChangeAgentDAO", "recieved changeFromClient() call")
-        val changeLog = ChangeLog(changeID, instanceNumber, changeTime, type,
-            CID, name, oldNumber, number, parentNumber, trustability, counterValue)
+        val changeLog = ChangeLog(
+            changeID,
+            cleanInstanceNumber,
+            changeTime,
+            type,
+            CID,
+            name,
+            cleanOldNumber,
+            cleanNumber,
+            cleanParentNumber,
+            trustability,
+            counterValue)
 
         val execLog = QueueToExecute(changeID, changeTime)
 
