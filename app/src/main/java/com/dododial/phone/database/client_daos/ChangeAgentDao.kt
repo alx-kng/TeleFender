@@ -18,8 +18,6 @@ abstract class ChangeAgentDao: ChangeLogDao, QueueToExecuteDao, QueueToUploadDao
      * Function to handle a change (in the form of a ChangeLog's argument) from Server.
      * Adds change to the ChangeLog and QueueToExecute.
      */
-
-    @RequiresApi(Build.VERSION_CODES.R)
     @Transaction
     open suspend fun changeFromServer(
         changeID : String,
@@ -32,7 +30,8 @@ abstract class ChangeAgentDao: ChangeLogDao, QueueToExecuteDao, QueueToUploadDao
         number: String?,
         parentNumber: String?,
         trustability: Int?,
-        counterValue: Int?
+        counterValue: Int?,
+        serverChangeID: Int
     ) : Int {
 
         val cleanInstanceNumber = MiscHelpers.cleanNumber(instanceNumber)
@@ -51,7 +50,9 @@ abstract class ChangeAgentDao: ChangeLogDao, QueueToExecuteDao, QueueToUploadDao
             cleanNumber,
             cleanParentNumber,
             trustability,
-            counterValue)
+            counterValue,
+            serverChangeID
+        )
 
         val execLog = QueueToExecute(changeID, changeTime)
 

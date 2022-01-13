@@ -9,6 +9,7 @@ import com.dododial.phone.database.client_daos.ChangeAgentDao
 import com.dododial.phone.database.client_daos.*
 import com.dododial.phone.database.entities.ChangeLog
 import com.dododial.phone.database.entities.CallLog
+import com.dododial.phone.database.entities.QueueToUpload
 import kotlinx.coroutines.flow.Flow
 
 class ClientRepository(
@@ -60,7 +61,11 @@ class ClientRepository(
     suspend fun getClientKey(userNumber: String): String {
         return keyStorageDao.getCredKey(userNumber)
     }
-
+    
+    @WorkerThread
+    suspend fun getLastChangeID() : Int? {
+        return changeLogDao.getLastChangeID()
+    }
     /**
      * getChangeLog() and getAllChangeLogs() for monitoring changes
      */
@@ -74,6 +79,10 @@ class ClientRepository(
         return changeLogDao.getAllChangeLogs()
     }
 
+    @WorkerThread
+    suspend fun getAllQTU() : List<QueueToUpload> {
+        return queueToUploadDao.getAllQTU()
+    }
 
     /**
      * uploadFirst() is called to upload the first log within QueueToUpload to the server
@@ -82,13 +91,13 @@ class ClientRepository(
     @RequiresApi(Build.VERSION_CODES.N)
     @WorkerThread
     suspend fun uploadFirst(context : Context) {
-        uploadAgentDao.uploadFirst(context)
+        uploadAgentDao.uploadFirst(context, this)
     }
 
     @RequiresApi(Build.VERSION_CODES.N)
     @WorkerThread
     suspend fun uploadAll(context : Context) {
-        uploadAgentDao.uploadAll(context)
+        uploadAgentDao.uploadAll(context, this)
     }
     /**
      * executeFirst() is called to execute the first log within QueueToExecute
@@ -108,17 +117,31 @@ class ClientRepository(
     suspend fun hasQTEs() : Boolean {
         return executeAgentDao.hasQTEs()
     }
+    
+    @WorkerThread
+    suspend fun hasQTUs() : Boolean {
+        return queueToExecuteDao.hasQu
+    }
 
     @WorkerThread
     suspend fun hasInstance() : Boolean {
         return instanceDao.hasInstance()
+    }
+    
+    @WorkerThread
+    suspend fun getChangeLogRow(changeID : String) : ChangeLog {
+        return changeLogDao.getChangeLogRow(changeID)
+    }
+
+    @WorkerThread
+    suspend fun deleteQTU(changeID: String) {
+        uploadAgentDao.deleteQTU(changeID)
     }
     /**
      * changeFromServer() should be called to handle changes that come from the server
      *
      * See documentation for changeAgentDao.changeFromServer()
      */
-    @RequiresApi(Build.VERSION_CODES.R)
     @WorkerThread
     suspend fun changeFromServer(
         changeID : String,
@@ -131,7 +154,8 @@ class ClientRepository(
         number: String?,
         parentNumber: String?,
         trustability: Int?,
-        counterValue: Int?
+        counterValue: Int?,
+        serverChangeID: Int
     ) {
         changeAgentDao.changeFromServer(
             changeID,
@@ -144,7 +168,8 @@ class ClientRepository(
             number,
             parentNumber,
             trustability,
-            counterValue
+            counterValue,
+            serverChangeID
         )
     }
 

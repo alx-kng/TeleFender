@@ -46,6 +46,10 @@ import kotlinx.coroutines.runBlocking
 
 // TODO we need to make a custom notification for initiating a call
 
+// TODO Go through all uses of runBlocking{} and see if we can just use scope.launch if run blocking
+//  isn't necessary (more for optimization if app is running slow OR closer to production)
+
+
 class DialerActivity : AppCompatActivity() {
 
     var fromDialer = false
@@ -87,11 +91,6 @@ class DialerActivity : AppCompatActivity() {
 
         val job = (application as App).applicationScope.launch {
             repository?.dummyQuery()
-        }   
-
-        runBlocking {
-            job.join()
-            Log.i("DODODEBUG: ", "REPOSITORY IS NULL = " + (repository == null))
         }
 
         phoneNumberInput.setOnEditorActionListener { _, _, _ ->

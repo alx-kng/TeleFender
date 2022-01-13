@@ -48,11 +48,11 @@ object SyncScheduler{
     fun initiatePeriodicSyncWorker(context : Context) : UUID {
         val syncRequest = PeriodicWorkRequestBuilder<CoroutineSyncWorker>(1, TimeUnit.HOURS)
             .setInputData(workDataOf("variableName" to "periodicSyncState", "notificationID" to "6666"))
-            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             .setBackoffCriteria(
                 BackoffPolicy.LINEAR,
                 PeriodicWorkRequest.MIN_BACKOFF_MILLIS,
                 TimeUnit.MILLISECONDS)
+            .setInitialDelay(10, TimeUnit.SECONDS)
             .addTag(syncPeriodTag)
             .build()
 
@@ -80,10 +80,12 @@ class CoroutineSyncWorker(
         stateVarString = inputData.getString("variableName")
         NOTIFICATION_ID = inputData.getString("notificationID")?.toInt()
 
-        try {
-            setForeground(getForegroundInfo())
-        } catch(e: Exception) {
-            Log.i("DODODEBUG: ", e.message!!)
+        if (stateVarString == "oneTimeSyncState") {
+            try {
+                setForeground(getForegroundInfo())
+            } catch(e: Exception) {
+                Log.i("DODODEBUG: ", e.message!!)
+            }
         }
 
         val repository: ClientRepository? = (applicationContext as App).repository

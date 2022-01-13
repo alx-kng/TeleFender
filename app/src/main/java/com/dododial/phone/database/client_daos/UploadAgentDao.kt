@@ -5,9 +5,8 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.room.Dao
 import androidx.room.Transaction
+import com.dododial.phone.database.ClientRepository
 import com.dododial.phone.database.MiscHelpers
-import com.dododial.phone.database.background_tasks.UploadHelpers.changeLogToJson
-import com.dododial.phone.database.background_tasks.UploadHelpers.sendPostRequest
 import com.dododial.phone.database.entities.ChangeLog
 
 @Dao
@@ -15,9 +14,9 @@ interface UploadAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
     ChangeLogDao, QueueToExecuteDao, QueueToUploadDao {
 
     @RequiresApi(Build.VERSION_CODES.N)
-    suspend fun uploadAll(context : Context) {
+    suspend fun uploadAll(context : Context, repository: ClientRepository) {
         while (hasQTUs()) {
-            uploadFirst(context)
+            uploadFirst(context, repository)
         }
     }
     /**
@@ -25,7 +24,7 @@ interface UploadAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
      * helper function uploadToServer.
      */
     @RequiresApi(Build.VERSION_CODES.N)
-    suspend fun uploadFirst(context: Context) {
+    suspend fun uploadFirst(context: Context, repository: ClientRepository) {
 
         val firstJob = getFirstQTU()
         val firstID = firstJob.changeID
@@ -45,12 +44,12 @@ interface UploadAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
             changeLog.parentNumber,
             changeLog.trustability,
             changeLog.counterValue,
-
-            context
+            context, 
+            repository
         )
     }
     /**
-     * Takes ChangeLog arguments and uploads to server, then (TODO) deletes from QTU
+     * Takes ChangeLog arguments and uploads to server, deletes QTU if result code is success
      */
     @RequiresApi(Build.VERSION_CODES.N)
     suspend fun uploadToServer(
@@ -65,8 +64,8 @@ interface UploadAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
         parentNumber : String?,
         trustability : Int?,
         counterValue : Int?,
-
-        context : Context
+        context : Context,
+        repository: ClientRepository
     ) {
 
         val cleanInstanceNumber = MiscHelpers.cleanNumber(instanceNumber)
@@ -74,7 +73,6 @@ interface UploadAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
         val cleanNumber = MiscHelpers.cleanNumber(number)
         val cleanParentNumber = MiscHelpers.cleanNumber(parentNumber)
 
-        // TODO convert to json of data and call some function to upload data to server
         val changeLog = ChangeLog(
             changeID,
             cleanInstanceNumber,
@@ -89,15 +87,17 @@ interface UploadAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
             counterValue
         )
 
-        val changeLogAsJson = changeLogToJson(changeLog)
+        //val changeLogAsJson = changeLogToJson(changeLog)
         val url = " " // TODO url?
-        sendPostRequest(changeLogAsJson, url, context)
-
+        //uploadPostRequest(changeLogAsJson, url, context, repository)
+        
+        // TODO get result code from post to server so we can delete corresponding QTU
     }
 
     @Transaction
     open suspend fun deleteQTU(changeID : String) {
         deleteQTU_ChangeID(changeID)
+
     }
 }
 

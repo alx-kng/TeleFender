@@ -9,12 +9,16 @@ import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.work.*
+import com.dododial.phone.App
 import com.dododial.phone.DialerActivity
+import com.dododial.phone.database.ClientRepository
 import com.dododial.phone.database.background_tasks.WorkerStates
+import com.dododial.phone.database.background_tasks.server_related.ServerHelpers
+import java.lang.Exception
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-object DownLoadScheduler {
+object DownloadScheduler {
 
     val downloadOneTag = "oneTimeDownloadWorker"
     val downloadPeriodTag = "periodicDownloadWorker"
@@ -40,7 +44,6 @@ object DownLoadScheduler {
     fun initiatePeriodicDownloadWorker(context : Context) : UUID {
         val downloadRequest = PeriodicWorkRequestBuilder<CoroutineDownloadWorker>(1, TimeUnit.HOURS)
             .setInputData(workDataOf("variableName" to "periodicDownloadState", "notificationID" to "8888"))
-            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             .setBackoffCriteria(
                 BackoffPolicy.LINEAR,
                 PeriodicWorkRequest.MIN_BACKOFF_MILLIS,
@@ -61,21 +64,30 @@ class CoroutineDownloadWorker(
     context: Context,
     params: WorkerParameters
 ) : CoroutineWorker(context, params) {
+
     var NOTIFICATION_ID : Int? = -1
     val CHANNEL_ID = "alxkng5737"
     var stateVarString: String? = null
+    var context = context
 
     override suspend fun doWork() : Result {
         stateVarString = inputData.getString("variableName")
         NOTIFICATION_ID = inputData.getString("notificationID")?.toInt()
 
-        try {
-            setForeground(getForegroundInfo())
-        } catch(e: Exception) {
-            Log.i("DODODEBUG: ", e.message!!)
+        if (stateVarString == "oneTimeDownloadState") {
+            try {
+                setForeground(getForegroundInfo())
+            } catch(e: Exception) {
+                Log.i("DODODEBUG: ", e.message!!)
+            }
         }
 
-        // TODO put in download stuff
+        val repository: ClientRepository? = (applicationContext as App).repository
+        if (repository != null) {
+            ServerHelpers.downloadPostRequest(context, repository, (applicationContext as App).applicationScope)
+        } else {
+            return Result.retry()
+        }
 
         when (stateVarString) {
             "oneTimeDownloadState" ->  WorkerStates.oneTimeDownloadState = WorkInfo.State.SUCCEEDED

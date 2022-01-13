@@ -16,8 +16,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.work.WorkInfo
 import com.dododial.phone.database.background_tasks.TableInitializers
 import com.dododial.phone.database.background_tasks.WorkerStates
-import com.dododial.phone.database.background_tasks.background_workers.ExecuteScheduler
-import com.dododial.phone.database.background_tasks.background_workers.SyncScheduler
+import com.dododial.phone.database.background_tasks.background_workers.*
 import com.dododial.phone.database.client_daos.*
 import com.example.actualfinaldatabase.permissions.PermissionsRequester
 import kotlinx.coroutines.CoroutineScope
@@ -67,10 +66,12 @@ public abstract class ClientDatabase : RoomDatabase() {
             Log.i("DODODEBUG: ", "INSIDE DATABASE CALLBACK")
             INSTANCE?.let { database ->
                 scope.launch {
+                    Log.i("DODODEBUG: ", "initializaiiang tables")
                     while (context.getSystemService(TelecomManager::class.java).defaultDialerPackage != context.packageName
                         || !PermissionsRequester.hasPermissions(context, arrayOf(Manifest.permission.READ_CALL_LOG))) {
-                        delay(500)
                         Log.i("DODODEBUG: ", "INSIDE COROUTINE | HAS CALL LOG PERMISSION: "  + PermissionsRequester.hasPermissions(context, arrayOf(Manifest.permission.READ_CALL_LOG)))
+                        delay(500)
+                        Log.i("dododeobug past ", "delay")
                     }
                     // Goes through each call log and inserts to db
                     TableInitializers.initCallLog(context, database)
@@ -84,36 +85,10 @@ public abstract class ClientDatabase : RoomDatabase() {
                     // Goes through contact numbers and inserts numbers into db
                     TableInitializers.initContactNumber(context, database, contentResolver)
 
-                    Log.i("DODODEBUG", "BEFORE EXECUTE")
-                    //DatabaseLogFunctions.logContacts(instanceTemp)
-                    //DatabaseLogFunctions.logContactNumbers(instanceTemp)
-                    DatabaseLogFunctions.logChangeLogs(database)
-                    DatabaseLogFunctions.logExecuteLogs(database)
-                    //DatabaseLogFunctions.logUploadLogs(instanceTemp)
-
                     // Initialize other tables
-                    WorkerStates.oneTimeExecState = WorkInfo.State.RUNNING
                     ExecuteScheduler.initiateOneTimeExecuteWorker(context)
 
-                    while(WorkerStates.oneTimeExecState != WorkInfo.State.SUCCEEDED) {
-                        if (WorkerStates.oneTimeExecState == WorkInfo.State.FAILED
-                            || WorkerStates.oneTimeExecState == WorkInfo.State.CANCELLED
-                            || WorkerStates.oneTimeExecState == WorkInfo.State.BLOCKED) {
-                            Log.i("DODODEBUG: ", "WORKER STATE BAD")
-                            break
-                        }
-                        delay(500)
-                        Log.i("DODODEBUG: ", "WORK STATE: " + WorkerStates.oneTimeExecState.toString())
-                    }
-                    WorkerStates.oneTimeExecState = null
-
-                    //DatabaseLogFunctions.logContacts(instanceTemp)
-                    //DatabaseLogFunctions.logContactNumbers(instanceTemp)
-                    DatabaseLogFunctions.logChangeLogs(database)
-                    DatabaseLogFunctions.logExecuteLogs(database)
-                    //DatabaseLogFunctions.logUploadLogs(instanceTemp)
-
-                    Log.i("DODODEBUG: ", "INITIALIZED")
+                    Log.i("DODODEBUG: ", "tales initialized and onetimeexecuteworker initiated")
                 }
             }
         }
@@ -149,11 +124,15 @@ public abstract class ClientDatabase : RoomDatabase() {
                 instance
             }
 
+            Log.i("DODODEBUG: ", "GET DATABASE CALLED!")
 
             runBlocking {
                 scope.launch {
+
+                    // Checks if database is fully initialized
                     var isInitialized = !instanceTemp.executeAgentDao().hasQTEs()
                         && instanceTemp.instanceDao().hasInstance()
+
                     while (!isInitialized) {
                         delay(500)
                         Log.i("DODODEBUG: ", "INSIDE GET DATABASE COROUTINE. DATABASE INITIALIZED = " + isInitialized)
@@ -162,31 +141,36 @@ public abstract class ClientDatabase : RoomDatabase() {
                             && instanceTemp.instanceDao().hasInstance()
                     }
 
-                    WorkerStates.oneTimeSyncState = WorkInfo.State.RUNNING
+                    Log.i("DODODEBUG: ", "BEFORE ONE TIMES")
                     SyncScheduler.initiateOneTimeSyncWorker(context)
-                    while(WorkerStates.oneTimeSyncState != WorkInfo.State.SUCCEEDED) {
-                        if (WorkerStates.oneTimeSyncState == WorkInfo.State.FAILED
-                            || WorkerStates.oneTimeSyncState == WorkInfo.State.CANCELLED
-                            || WorkerStates.oneTimeSyncState == WorkInfo.State.BLOCKED) {
+                    // TODO put in Download worker
+                    ExecuteScheduler.initiateOneTimeExecuteWorker(context)
+                    // TODO put in Upload worker
+
+                    while(WorkerStates.oneTimeExecState != WorkInfo.State.SUCCEEDED) {
+                        if (WorkerStates.oneTimeExecState == WorkInfo.State.FAILED
+                            || WorkerStates.oneTimeExecState == WorkInfo.State.CANCELLED
+                            || WorkerStates.oneTimeExecState == WorkInfo.State.BLOCKED) {
                             Log.i("DODODEBUG: ", "WORKER STATE BAD")
                             break
                         }
                         delay(500)
-                        Log.i("DODODEBUG: ", "WORK STATE: " + WorkerStates.oneTimeSyncState.toString())
+                        Log.i("DODODEBUG: ", "WORK STATE: " + WorkerStates.oneTimeExecState.toString())
                     }
-                    WorkerStates.oneTimeSyncState = null
+                    WorkerStates.oneTimeExecState = null
 
-                    Log.i("DODODEBUG", "After SYNC")
+                    Log.i("DODODEBUG: ", "AFTER ONE TIMES")
+
                     DatabaseLogFunctions.logContacts(instanceTemp)
                     DatabaseLogFunctions.logContactNumbers(instanceTemp)
                     DatabaseLogFunctions.logChangeLogs(instanceTemp)
                     DatabaseLogFunctions.logExecuteLogs(instanceTemp)
                     DatabaseLogFunctions.logUploadLogs(instanceTemp)
+
+                    // Initialize Omega Periodic Worker (sync, download, execute, upload)
+                    OmegaPeriodicScheduler.initiatePeriodicOmegaWorker(context)
                 }
             }
-
-
-            // TODO something with periodic work
 
             return instanceTemp
 

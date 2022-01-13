@@ -19,7 +19,8 @@ data class ChangeLog(
     val parentNumber : String?,
     val trustability : Int?,
     val counterValue : Int?,
-    val errorCounter : Int = 0
+    val errorCounter : Int = 0,
+    val serverChangeID : Int? = null
 ) {
 
     override fun toString(): String {

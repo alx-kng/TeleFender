@@ -15,6 +15,7 @@ import com.dododial.phone.App
 import com.dododial.phone.DialerActivity
 import com.dododial.phone.database.ClientRepository
 import com.dododial.phone.database.background_tasks.WorkerStates
+import java.lang.Exception
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -45,7 +46,6 @@ object ExecuteScheduler {
     fun initiatePeriodicExecuteWorker(context : Context) : UUID {
         val executeRequest = PeriodicWorkRequestBuilder<CoroutineExecuteWorker>(1, TimeUnit.HOURS)
             .setInputData(workDataOf("variableName" to "periodicExecState", "notificationID" to "2222"))
-            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             .setBackoffCriteria(
                 BackoffPolicy.LINEAR,
                 PeriodicWorkRequest.MIN_BACKOFF_MILLIS,
@@ -72,19 +72,17 @@ class CoroutineExecuteWorker(
     val CHANNEL_ID = "alxkng5737"
     var stateVarString: String? = null
 
-    private val notificationManager =
-        context.getSystemService(Context.NOTIFICATION_SERVICE) as
-            NotificationManager
-
     @SuppressLint("LogNotTimber")
     override suspend fun doWork(): Result {
         stateVarString = inputData.getString("variableName")
         NOTIFICATION_ID = inputData.getString("notificationID")?.toInt()
 
-        try {
-            setForeground(getForegroundInfo())
-        } catch(e: Exception) {
-            Log.i("DODODEBUG: ", e.message!!)
+        if (stateVarString == "oneTimeExecState") {
+            try {
+                setForeground(getForegroundInfo())
+            } catch(e: Exception) {
+                Log.i("DODODEBUG: ", e.message!!)
+            }
         }
 
         val repository: ClientRepository? = (applicationContext as App).repository

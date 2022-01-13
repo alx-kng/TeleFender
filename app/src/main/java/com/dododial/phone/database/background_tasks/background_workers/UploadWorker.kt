@@ -9,8 +9,12 @@ import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.work.*
+import com.dododial.phone.App
 import com.dododial.phone.DialerActivity
+import com.dododial.phone.database.ClientRepository
 import com.dododial.phone.database.background_tasks.WorkerStates
+import com.dododial.phone.database.background_tasks.server_related.ServerHelpers
+import java.lang.Exception
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -40,13 +44,11 @@ object UploadScheduler {
     fun initiatePeriodicUploadWorker(context : Context) : UUID {
         val uploadRequest = PeriodicWorkRequestBuilder<CoroutineUploadWorker>(1, TimeUnit.HOURS)
             .setInputData(workDataOf("variableName" to "periodicUploadState", "notificationID" to "4444"))
-            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             .setBackoffCriteria(
                 BackoffPolicy.LINEAR,
                 PeriodicWorkRequest.MIN_BACKOFF_MILLIS,
                 TimeUnit.MILLISECONDS)
             .addTag(uploadPeriodTag)
-            //.setInitialDelay(30, TimeUnit.SECONDS)
             .build()
 
         WorkManager
@@ -65,18 +67,32 @@ class CoroutineUploadWorker(
     var NOTIFICATION_ID : Int? = -1
     val CHANNEL_ID = "alxkng5737"
     var stateVarString: String? = null
+    val context = context
 
     override suspend fun doWork() : Result {
         stateVarString = inputData.getString("variableName")
         NOTIFICATION_ID = inputData.getString("notificationID")?.toInt()
 
-        try {
-            setForeground(getForegroundInfo())
-        } catch(e: Exception) {
-            Log.i("DODODEBUG: ", e.message!!)
+        if (stateVarString == "oneTimeUploadState") {
+            try {
+                setForeground(getForegroundInfo())
+            } catch(e: Exception) {
+                Log.i("DODODEBUG: ", e.message!!)
+            }
         }
 
-        // TODO put in uploading work
+        val repository: ClientRepository? = (applicationContext as App).repository
+        if (repository != null && repository.hasQTUs()) {
+            ServerHelpers.uploadPostRequest(context, repository, (applicationContext as App).applicationScope)
+        } else {
+            
+            if (repository?.hasQTUs() == false) {
+                return Result.success()
+            } else {
+                return Result.retry()
+            }
+        }
+
         when (stateVarString) {
             "oneTimeUploadState" ->  WorkerStates.oneTimeUploadState = WorkInfo.State.SUCCEEDED
             "periodicUploadState" -> WorkerStates.periodicUploadState = WorkInfo.State.SUCCEEDED

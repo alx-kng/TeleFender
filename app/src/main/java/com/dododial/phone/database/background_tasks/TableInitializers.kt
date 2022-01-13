@@ -127,7 +127,6 @@ object TableInitializers {
         curs?.close()
     }
 
-    // TODO Two different users might create same UUID CID from default CID
     /**
      * Helper function to initContact(), adds current cursor item's Contact to QueueToExecute and
      * ChangeLog using changeFromClient(), also responsible for generating changeID, changeTime, and CID.
@@ -161,7 +160,6 @@ object TableInitializers {
         )
     }
 
-    // TODO format numbers to get rid of the parentheses and extra spaces
     /**
      * Helper function to initContactNumber(), adds current cursor item's ContactNumber to QueueToExecute and
      * ChangeLog using changeFromClient(), also responsible for generating changeID, changeTime, and CID.
