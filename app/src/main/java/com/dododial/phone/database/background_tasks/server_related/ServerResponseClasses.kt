@@ -1,4 +1,4 @@
-package com.dododial.phone.database.background_tasks.server_related
+    package com.dododial.phone.database.background_tasks.server_related
 
 import com.dododial.phone.database.entities.ChangeLog
 import com.squareup.moshi.JsonAdapter
@@ -14,6 +14,22 @@ open class DefaultResponse (
         return "RESPONSE - status: " + this.status + " error: " + this.error
     }
 }
+
+@JsonClass(generateAdapter = true)
+class SessionResponse(
+    status : String,
+    error : String?,
+    val sessionID : String?
+) : DefaultResponse(status, error) {
+    override fun toString() : String {
+        return super.toString() + " sessionID: " + this.sessionID
+    }
+}
+
+//class SessionJsonAdapter {
+//    @FromJson
+//    fun sessionFromJson(sessionJson)
+//}
 
 @JsonClass(generateAdapter = true)
 class KeyResponse(
@@ -43,13 +59,26 @@ class ChangeResponse(
 
 }
 
+@JsonClass(generateAdapter = true)
+class UploadResponse(
+    status : String,
+    error : String?,
+    val lastUploadRow : Int
+) : DefaultResponse(status, error) {
+
+    override fun toString() : String {
+        return super.toString() + " lastUploadRow: " + this.lastUploadRow
+    }
+}
+
+
 object ResponseHelpers {
 
     fun jsonToDefaultResponse(jsonIn : String) : DefaultResponse? {
         val moshi : Moshi = Moshi.Builder().build()
         val adapter : JsonAdapter<DefaultResponse> = moshi.adapter(DefaultResponse::class.java)
 
-        return adapter.serializeNulls().fromJson(jsonIn)
+       return adapter.serializeNulls().fromJson(jsonIn)
     }
 
     fun jsonToKeyResponse(jsonIn : String) : KeyResponse? {
@@ -62,6 +91,20 @@ object ResponseHelpers {
     fun jsonToChangeResponse(jsonIn : String) : ChangeResponse? {
         val moshi : Moshi = Moshi.Builder().build()
         val adapter : JsonAdapter<ChangeResponse> = moshi.adapter(ChangeResponse::class.java)
+
+        return adapter.serializeNulls().fromJson(jsonIn)
+    }
+
+    fun jsonToSessionResponse(jsonIn : String) : SessionResponse? {
+        val moshi : Moshi = Moshi.Builder().build()
+        val adapter : JsonAdapter<SessionResponse> = moshi.adapter(SessionResponse::class.java)
+
+        return adapter.serializeNulls().fromJson(jsonIn)
+    }
+
+    fun jsonToUploadResponse(jsonIn : String) : UploadResponse? {
+        val moshi : Moshi = Moshi.Builder().build()
+        val adapter : JsonAdapter<UploadResponse> = moshi.adapter(UploadResponse::class.java)
 
         return adapter.serializeNulls().fromJson(jsonIn)
     }

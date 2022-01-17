@@ -7,7 +7,7 @@ import androidx.room.PrimaryKey
 data class CallLog(
     val number: String,
     val callType: String,
-    val callEpochDate: String,
+    val callEpochDate: Long,
     val callDuration: String,
     val callLocation: String?,
     val callDirection: String?) {

@@ -9,6 +9,7 @@ import com.dododial.phone.database.ClientRepository
 import com.dododial.phone.database.MiscHelpers
 import com.dododial.phone.database.entities.ChangeLog
 
+@Deprecated("UploadAgentDao shouldn't be used. Use ServerHelpers")
 @Dao
 interface UploadAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
     ChangeLogDao, QueueToExecuteDao, QueueToUploadDao {
@@ -55,7 +56,7 @@ interface UploadAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
     suspend fun uploadToServer(
         changeID: String,
         instanceNumber: String?,
-        changeTime: String,
+        changeTime: Long,
         type: String,
         CID : String?,
         name : String?,

@@ -9,8 +9,11 @@ import com.dododial.phone.database.client_daos.ChangeAgentDao
 import com.dododial.phone.database.client_daos.*
 import com.dododial.phone.database.entities.ChangeLog
 import com.dododial.phone.database.entities.CallLog
+import com.dododial.phone.database.entities.KeyStorage
 import com.dododial.phone.database.entities.QueueToUpload
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class ClientRepository(
     private val callLogDao : CallLogDao,
@@ -23,6 +26,24 @@ class ClientRepository(
     private val queueToUploadDao : QueueToUploadDao,
     private val instanceDao : InstanceDao
     ) {
+
+    /**
+     * Mutex locks to prevent conflicting access to same table
+     * Makes our database thread safe (even if Room supposedly thread safe)
+     */
+    private val mutexExecute = Mutex()
+    private val mutexUpload = Mutex()
+    private val mutexChange = Mutex()
+
+    private val mutexKey = Mutex()
+    private val mutexInstance = Mutex()
+    private val mutexContact = Mutex()
+    private val mutexContactNumbers = Mutex()
+    private val mutexTrustedNumbers = Mutex()
+    private val mutexOrganizations = Mutex()
+    private val mutexMiscellaneous = Mutex()
+
+    private val mutexCall = Mutex()
 
     /**
      * This Query does nothing but is called in order to initialize database
@@ -38,104 +59,154 @@ class ClientRepository(
      detects a change to the call logs. NEEDS TO BE FROM ACTUAL CALL LOGS
      */
     /**
-     * flowCallLogs and updateMiscNumbers() to monitor changes to call logs and update
-     * the Miscellaneous table with new analysed numbers
-     *
      * getCallLogs() as an extra function just in case
      */
-    val flowCallLogs: Flow<List<CallLog>> = callLogDao.getFlowCallLogs()
-
     @WorkerThread
     suspend fun updateMiscNumbers() {
     }
 
     @WorkerThread
     suspend fun getCallLogs(): List<CallLog> {
-        return callLogDao.getCallLogs()
+        val result : List<CallLog>
+        mutexCall.withLock {
+            result = callLogDao.getCallLogs()
+        }
+        return result
     }
 
     /**
      * getClientKey() for retrieve UUID key to push and pull changes to / from server
      */
     @WorkerThread
-    suspend fun getClientKey(userNumber: String): String {
-        return keyStorageDao.getCredKey(userNumber)
+    suspend fun getClientKey(userNumber: String): String? {
+        val result : String?
+        mutexKey.withLock {
+            result = keyStorageDao.getCredKey(userNumber)
+        }
+        return result
     }
     
     @WorkerThread
     suspend fun getLastChangeID() : Int? {
-        return changeLogDao.getLastChangeID()
+        val result : Int?
+        mutexChange.withLock {
+            result = changeLogDao.getLastChangeID()
+        }
+        return result
     }
     /**
      * getChangeLog() and getAllChangeLogs() for monitoring changes
      */
     @WorkerThread
     suspend fun getChangeLog(changeID: String): ChangeLog {
-        return changeLogDao.getChangeLogRow(changeID)
+        val result : ChangeLog
+        mutexChange.withLock {
+            result = changeLogDao.getChangeLogRow(changeID)
+        }
+        return result
     }
 
     @WorkerThread
     suspend fun getAllChangeLogs(): List<ChangeLog> {
-        return changeLogDao.getAllChangeLogs()
+        val result : List<ChangeLog>
+        mutexChange.withLock {
+            result = changeLogDao.getAllChangeLogs()
+        }
+        return result
     }
 
     @WorkerThread
     suspend fun getAllQTU() : List<QueueToUpload> {
-        return queueToUploadDao.getAllQTU()
+        val result : List<QueueToUpload>
+        mutexUpload.withLock {
+            result = queueToUploadDao.getAllQTU()
+        }
+        return result
     }
 
     /**
-     * uploadFirst() is called to upload the first log within QueueToUpload to the server
+     * executeAll() is called to execute the logs within QueueToExecute
      * Should be scheduled async and done when possible / there are logs left
      */
-    @RequiresApi(Build.VERSION_CODES.N)
-    @WorkerThread
-    suspend fun uploadFirst(context : Context) {
-        uploadAgentDao.uploadFirst(context, this)
-    }
-
-    @RequiresApi(Build.VERSION_CODES.N)
-    @WorkerThread
-    suspend fun uploadAll(context : Context) {
-        uploadAgentDao.uploadAll(context, this)
-    }
-    /**
-     * executeFirst() is called to execute the first log within QueueToExecute
-     * Should be scheduled async and done when possible / there are logs left
-     */
-    @WorkerThread
-    suspend fun executeFirst() {
-        executeAgentDao.executeFirst()
-    }
-    
     @WorkerThread
     suspend fun executeAll() {
-        executeAgentDao.executeAll()
+        executeAgentDao.executeAll(
+            mutexExecute,
+            mutexChange,
+            mutexKey,
+            mutexInstance,
+            mutexContact,
+            mutexContactNumbers,
+            mutexTrustedNumbers,
+            mutexOrganizations,
+            mutexMiscellaneous,
+        )
     }
     
     @WorkerThread
     suspend fun hasQTEs() : Boolean {
-        return executeAgentDao.hasQTEs()
+        val result : Boolean
+        mutexExecute.withLock {
+            result = executeAgentDao.hasQTEs()
+        }
+        return result
     }
     
     @WorkerThread
     suspend fun hasQTUs() : Boolean {
-        return queueToExecuteDao.hasQu
+        val result : Boolean
+        mutexUpload.withLock {
+            result = queueToUploadDao.hasQTUs()
+        }
+        return result
     }
 
     @WorkerThread
     suspend fun hasInstance() : Boolean {
-        return instanceDao.hasInstance()
+        val result : Boolean
+        mutexInstance.withLock {
+            result = instanceDao.hasInstance()
+        }
+        return result
     }
-    
+
     @WorkerThread
     suspend fun getChangeLogRow(changeID : String) : ChangeLog {
-        return changeLogDao.getChangeLogRow(changeID)
+        val result : ChangeLog
+        mutexChange.withLock {
+            result = changeLogDao.getChangeLogRow(changeID)
+        }
+        return result
     }
 
     @WorkerThread
     suspend fun deleteQTU(changeID: String) {
-        uploadAgentDao.deleteQTU(changeID)
+        mutexUpload.withLock {
+            uploadAgentDao.deleteQTU(changeID)
+        }
+    }
+
+    @WorkerThread
+    suspend fun insertKey(keyStorage : KeyStorage) {
+        mutexKey.withLock {
+            keyStorageDao.insertKey(keyStorage)
+        }
+    }
+
+    @WorkerThread
+    suspend fun updateKey(number : String, clientKey : String?) {
+        mutexKey.withLock {
+            keyStorageDao.updateKey(number, clientKey)
+        }
+    }
+
+    @WorkerThread
+    suspend fun getSessionID(number: String) : String {
+        var sessionID : String
+        mutexKey.withLock {
+            sessionID = keyStorageDao.getSessionID(number)
+        }
+        return sessionID
     }
     /**
      * changeFromServer() should be called to handle changes that come from the server
@@ -146,7 +217,7 @@ class ClientRepository(
     suspend fun changeFromServer(
         changeID : String,
         instanceNumber : String?,
-        changeTime: String,
+        changeTime: Long,
         type: String,
         CID: String?,
         name: String?,
@@ -182,7 +253,7 @@ class ClientRepository(
     suspend fun changeFromClient(
         changeID : String,
         instanceNumber : String?,
-        changeTime: String,
+        changeTime: Long,
         type: String,
         CID: String?,
         name: String?,
@@ -211,7 +282,11 @@ class ClientRepository(
      */
     @WorkerThread
     suspend fun getQTEErrorLogs() : List<String> {
-        return queueToExecuteDao.getQTEErrorLogs()
+        val result : List<String>
+        mutexExecute.withLock {
+            result = queueToExecuteDao.getQTEErrorLogs()
+        }
+        return result
     }
 
     /**
@@ -219,6 +294,33 @@ class ClientRepository(
      */
     @WorkerThread
     suspend fun getQTUErrorLogs() : List<String> {
-        return queueToUploadDao.getQTUErrorLogs()
-    }        
+        val result : List<String>
+        mutexUpload.withLock {
+            result = queueToUploadDao.getQTUErrorLogs()
+        }
+        return result
+    }
+
+    @WorkerThread
+    suspend fun deleteUploadInclusive(rowID : Int) {
+        mutexUpload.withLock {
+            queueToUploadDao.deleteUploadInclusive(rowID)
+        }
+    }
+
+    @WorkerThread
+    suspend fun deleteUploadExclusive(rowID : Int) {
+        mutexUpload.withLock {
+            queueToUploadDao.deleteUploadInclusive(rowID)
+        }
+    }
+
+    @WorkerThread
+    suspend fun getAllQTUByRowID() : List<QueueToUpload> {
+        val result : List<QueueToUpload>
+        mutexUpload.withLock {
+            result = queueToUploadDao.getAllQTU_rowID()
+        }
+        return result
+    }
 }

@@ -27,6 +27,9 @@ interface QueueToUploadDao {
     @Query("SELECT * FROM queue_to_upload")
     suspend fun getAllQTU() : List<QueueToUpload>
 
+    @Query("SELECT * FROM queue_to_upload ORDER BY rowID ASC")
+    suspend fun getAllQTU_rowID() : List<QueueToUpload>
+
     @Query("SELECT errorCounter FROM queue_to_upload WHERE changeID = :changeID ")
     suspend fun getQTUErrorCounter(changeID: String) : Int
 
@@ -40,8 +43,14 @@ interface QueueToUploadDao {
     suspend fun deleteQTU_ChangeID(changeID: String)
 
     @Query("DELETE FROM queue_to_upload WHERE createTime = :createTime")
-    suspend fun deleteQTU_Date(createTime: String)
+    suspend fun deleteQTU_Date(createTime: Long)
 
     @Query("DELETE FROM queue_to_upload")
     suspend fun deleteAllQTUs()
+    
+    @Query("DELETE FROM queue_to_upload WHERE rowID <= :rowID")
+    suspend fun deleteUploadInclusive(rowID : Int)
+
+    @Query("DELETE FROM queue_to_upload WHERE rowID < :rowID")
+    suspend fun deleteUploadExclusive(rowID : Int)
 }

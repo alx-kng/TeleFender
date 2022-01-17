@@ -20,7 +20,7 @@ interface CallLogDao {
     suspend fun getCallLogs(): List<CallLog>
 
     @Query("SELECT callEpochDate FROM call_log ORDER BY callEpochDate DESC LIMIT 1")
-    suspend fun getMostRecentCallLogDate() : String?
+    suspend fun getMostRecentCallLogDate() : Long?
 
     @Query("DELETE FROM call_log")
     suspend fun deleteAllLog()

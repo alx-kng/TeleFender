@@ -9,11 +9,20 @@ interface KeyStorageDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertKey(vararg keyStorage : KeyStorage)
 
-    @Query("UPDATE key_storage SET clientKey = :clientKey WHERE number = :number")
-    suspend fun updateKey(clientKey: String, number: String)
-
     @Query("SELECT clientKey FROM key_storage WHERE number = :number")
-    suspend fun getCredKey(number: String): String
+    suspend fun getCredKey(number: String): String?
+    
+    @Query("SELECT sessionID FROM key_storage WHERE number = :number")
+    suspend fun getSessionID(number: String): String
+
+    @Query("""UPDATE key_storage SET clientKey =
+        CASE
+            WHEN :clientKey IS NOT NULL
+                THEN :clientKey
+            ELSE clientKey
+        END
+        WHERE number = :number""")
+    suspend fun updateKey(number: String, clientKey: String?)
 
     @Delete
     suspend fun deleteKey(vararg keyStorage: KeyStorage)

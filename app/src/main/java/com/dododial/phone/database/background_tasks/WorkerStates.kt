@@ -12,5 +12,10 @@ internal object WorkerStates {
     var periodicDownloadState : WorkInfo.State? = null
     var oneTimeSyncState : WorkInfo.State? = null
     var periodicSyncState : WorkInfo.State? = null
+    var setupState : WorkInfo.State? = null
+    var oneTimeOmegaState : WorkInfo.State? = null
+    var periodicOmegaState : WorkInfo.State? = null
+    var downloadPostState : WorkInfo.State? = null
+    var uploadPostState : WorkInfo.State? = null
 
 }

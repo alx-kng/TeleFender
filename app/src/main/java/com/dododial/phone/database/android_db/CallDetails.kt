@@ -29,7 +29,7 @@ object CallLogHelper{
         while (curs.moveToNext()) {
                 val number = curs.getString(0)
                 val type = curs.getInt(1).toString()
-                val date = curs.getString(2)
+                val date = curs.getString(2).toLong()
                 val duration = curs.getString(3)
                 val location = curs.getString(4)
             var dir: String? = null

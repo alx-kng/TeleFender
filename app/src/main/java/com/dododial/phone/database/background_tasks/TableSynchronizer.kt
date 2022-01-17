@@ -35,13 +35,14 @@ object TableSynchronizer {
             android.provider.CallLog.Calls.GEOCODED_LOCATION
             )
         val selection = "DATE > ?"
-        val curs : Cursor? = contentResolver.query(android.provider.CallLog.Calls.CONTENT_URI, projection, selection, arrayOf(mostRecentCallLogDate), null)
+        val curs : Cursor? = contentResolver.query(android.provider.CallLog.Calls.CONTENT_URI, projection, selection,
+            arrayOf(mostRecentCallLogDate.toString()), null)
 
         if (curs != null) {
             while (curs.moveToNext()) {
                 val number = cleanNumber(curs.getString(0))!!
                 val type = curs.getInt(1).toString()
-                val date = curs.getString(2)
+                val date = curs.getString(2).toLong()
                 val duration = curs.getString(3)
                 val location = curs.getString(4)
 
@@ -111,7 +112,7 @@ object TableSynchronizer {
                  */
                 if (matchCID.isEmpty()) {
                     val changeID = UUID.randomUUID().toString()
-                    val changeTime = Instant.now().toEpochMilli().toString()
+                    val changeTime = Instant.now().toEpochMilli()
 
                     database.changeAgentDao().changeFromClient(
                         changeID,
@@ -134,7 +135,7 @@ object TableSynchronizer {
                  */
                 if (matchPK == null) {
                     val changeID = UUID.randomUUID().toString()
-                    val changeTime = Instant.now().toEpochMilli().toString()
+                    val changeTime = Instant.now().toEpochMilli()
 
                     database.changeAgentDao().changeFromClient(
                         changeID,
@@ -191,7 +192,7 @@ object TableSynchronizer {
              */
             if (matchCID == null || matchCID.size == 0) {
                 val changeID = UUID.randomUUID().toString()
-                val changeTime = Instant.now().toEpochMilli().toString()
+                val changeTime = Instant.now().toEpochMilli()
 
                 database.changeAgentDao().changeFromClient(
                     changeID,
@@ -219,7 +220,7 @@ object TableSynchronizer {
                 // matchPK being null means that the corresponding contact number has been deleted
                 if (matchPK == null) {
                     val changeID = UUID.randomUUID().toString()
-                    val changeTime = Instant.now().toEpochMilli().toString()
+                    val changeTime = Instant.now().toEpochMilli()
 
                     database.changeAgentDao().changeFromClient(
                         changeID,
@@ -239,7 +240,7 @@ object TableSynchronizer {
                     //Different version numbers mean that we have to update our row with theirs
                     if (matchPK.versionNumber != contactNumbers.versionNumber) {
                         val cnChangeID = UUID.randomUUID().toString()
-                        val changeTime = Instant.now().toEpochMilli().toString()
+                        val changeTime = Instant.now().toEpochMilli()
 
                         database.changeAgentDao().changeFromClient(
                             cnChangeID,
@@ -261,7 +262,7 @@ object TableSynchronizer {
                          */
                         if (matchPK.name != contactNumbers.name) {
                             val cChangeID = UUID.randomUUID().toString()
-                            val changeTime = Instant.now().toEpochMilli().toString()
+                            val changeTime = Instant.now().toEpochMilli()
 
                             database.changeAgentDao().changeFromClient(
                                 cChangeID,

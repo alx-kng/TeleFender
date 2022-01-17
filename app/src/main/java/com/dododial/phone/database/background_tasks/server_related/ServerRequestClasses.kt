@@ -5,6 +5,7 @@ import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 
+// parse request - instanceNumber, key, changes: [{rowid, chgid, changeTime, type, cid, name, number}, ...]
 //The first request containing only instance field
 @JsonClass(generateAdapter = true)
 open class DefaultRequest(
@@ -43,12 +44,12 @@ open class KeyRequest(
 class UploadRequest(
     instanceNumber : String,
     key : String,
-    val changeLogs : List<ChangeLog>
+    val changes : List<ChangeLog>
 ) : KeyRequest(instanceNumber, key) {
 
     override fun toString() : String {
         var changeLogString = ""
-        for (changeLog in changeLogs) {
+        for (changeLog in changes) {
             changeLogString += changeLog.toString()
         }
         return super.toString() + " key: " + this.key + " changeLogs: " + changeLogString

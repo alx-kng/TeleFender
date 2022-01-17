@@ -1,13 +1,13 @@
 package com.dododial.phone.database
 object ClientDBConstants {
-    const val CHANGELOG_TYPE_CONTACT_INSERT = "cInsert"
-    const val CHANGELOG_TYPE_CONTACT_UPDATE = "cUpdate"
-    const val CHANGELOG_TYPE_CONTACT_DELETE = "cDelete"
-    const val CHANGELOG_TYPE_CONTACT_NUMBER_INSERT = "cnInsert"
-    const val CHANGELOG_TYPE_CONTACT_NUMBER_UPDATE = "cnUpdate"
-    const val CHANGELOG_TYPE_CONTACT_NUMBER_DELETE = "cnDelete"
-    const val CHANGELOG_TYPE_INSTANCE_INSERT = "insInsert"
-    const val CHANGELOG_TYPE_INSTANCE_DELETE = "insDelete"
+    const val CHANGELOG_TYPE_CONTACT_INSERT = "INSC"
+    const val CHANGELOG_TYPE_CONTACT_UPDATE = "UPDC"
+    const val CHANGELOG_TYPE_CONTACT_DELETE = "DELC"
+    const val CHANGELOG_TYPE_CONTACT_NUMBER_INSERT = "INSN"
+    const val CHANGELOG_TYPE_CONTACT_NUMBER_UPDATE = "UPDN"
+    const val CHANGELOG_TYPE_CONTACT_NUMBER_DELETE = "DELN"
+    const val CHANGELOG_TYPE_INSTANCE_INSERT = "INSI"
+    const val CHANGELOG_TYPE_INSTANCE_DELETE = "DELI"
 
     const val RESPONSE_OK = 0
     const val RESPONSE_ERROR = 1

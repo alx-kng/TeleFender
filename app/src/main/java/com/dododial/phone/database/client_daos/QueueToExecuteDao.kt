@@ -43,7 +43,7 @@ interface QueueToExecuteDao {
     suspend fun deleteQTE_ChangeID(changeID: String)
 
     @Query("DELETE FROM queue_to_execute WHERE createTime = :createTime")
-    suspend fun deleteQTE_Date(createTime: String)
+    suspend fun deleteQTE_Date(createTime: Long)
 
     @Query("DELETE FROM queue_to_execute")
     suspend fun deleteAllQTEs()

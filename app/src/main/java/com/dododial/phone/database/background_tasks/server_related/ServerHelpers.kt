@@ -3,20 +3,20 @@ package com.dododial.phone.database.background_tasks.server_related
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Context.TELEPHONY_SERVICE
-import android.os.Build
 import android.telephony.TelephonyManager
 import android.util.Log
-import androidx.annotation.RequiresApi
+import androidx.work.WorkInfo
 import com.android.volley.*
-import com.android.volley.toolbox.HttpHeaderParser
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.dododial.phone.database.ClientRepository
 import com.dododial.phone.database.MiscHelpers
+import com.dododial.phone.database.background_tasks.WorkerStates
 import com.dododial.phone.database.background_tasks.server_related.RequestHelpers.downloadRequestToJson
 import com.dododial.phone.database.background_tasks.server_related.RequestHelpers.uploadRequestToJson
 import com.dododial.phone.database.background_tasks.server_related.ResponseHelpers.jsonToChangeResponse
 import com.dododial.phone.database.background_tasks.server_related.ResponseHelpers.jsonToDefaultResponse
+import com.dododial.phone.database.background_tasks.server_related.ResponseHelpers.jsonToUploadResponse
 import com.dododial.phone.database.entities.ChangeLog
 import com.dododial.phone.database.entities.QueueToUpload
 import kotlinx.coroutines.CoroutineScope
@@ -30,12 +30,13 @@ object ServerHelpers {
     @SuppressLint("MissingPermission")
     fun downloadPostRequest(context : Context,  repository: ClientRepository, scope: CoroutineScope) {
         val tMgr = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
-        val instanceNumber = MiscHelpers.cleanNumber(tMgr.line1Number)!!
+        //val instanceNumber = MiscHelpers.cleanNumber(tMgr.line1Number)!!
+        val instanceNumber = "4436996212"
 
         var downloadRequestJson : String? = null
-        val url = " " // TODO finalize?
+        val url = "https://dev.scribblychat.com/callbook/downloadChanges"
 
-        // TODO does runblocking block the whole request thread
+        //      TODO does runblocking block the whole request thread
         /**
          * Used to create download request json body, as we need the instanceNumber, key, and last
          * server changeID to communicate with server correctly
@@ -44,12 +45,14 @@ object ServerHelpers {
             scope.launch {
                 val key = repository.getClientKey(instanceNumber)
                 val lastChangeID = repository.getLastChangeID()
-
-                val downloadRequest = DownloadRequest(instanceNumber, key, lastChangeID)
-                downloadRequestJson = downloadRequestToJson(downloadRequest)
+                if (key != null) {
+                    val downloadRequest = DownloadRequest(instanceNumber, key, lastChangeID)
+                    downloadRequestJson = downloadRequestToJson(downloadRequest)
+                } else {
+                    Log.i("DODODEBUG VOLLEY", "key was null")
+                }
             }
         }
-
         try {
             val stringRequest: StringRequest =
 
@@ -62,22 +65,32 @@ object ServerHelpers {
                      */
                     Response.Listener { response ->
                         Log.i("VOLLEY", response!!)
-                        val changeResponse : ChangeResponse? = jsonToChangeResponse(response)
 
                         /**
                          * Retrieves ChangeResponse object containing (status, error, List<ChangeLogs>)
                          * and inserts each change log into our database using changeFromServer()
                          * defined in ChangeAgentDao.
                          */
-                        runBlocking {
-                            scope.launch {
-                                /**
-                                 * Guarantees that response has the right status before trying to
-                                 * iterate through change logs stored in it.
-                                 */
-                                if (changeResponse != null && changeResponse.status == "OK") {
-                                    for (changeLog in changeResponse.changeLogs) {
+                        val changeResponse : DefaultResponse? =
+                            try {
+                                jsonToChangeResponse(response)
+                            } catch (e: Exception) {
+                                try {
+                                    jsonToDefaultResponse(response)
+                                } catch (e: Exception) {
+                                    null
+                                }
+                            }
 
+                        /**
+                         * Guarantees that response has the right status before trying to
+                         * iterate through change logs stored in it.
+                         */
+                        if (changeResponse != null && changeResponse.status == "ok" && changeResponse is ChangeResponse) {
+
+                            runBlocking {
+                                scope.launch {
+                                    for (changeLog in changeResponse.changeLogs) {
                                         /*
                                         Makes sure that serverChangeID is not null since it is needed
                                         future download requests
@@ -99,16 +112,34 @@ object ServerHelpers {
                                                 changeLog.counterValue,
                                                 changeLog.serverChangeID
                                             )
+
                                         } else {
                                             Log.i("DODODEBUG: VOLLEY: ", "ERROR WHEN DOWNLOAD: serverChangeID is null")
                                         }
                                     }
-                                } else {
-                                    Log.i("DODODEBUG: VOLLEY: ", "ERROR WHEN DOWNLOAD: " + changeResponse?.error)
                                 }
                             }
+
+                            if (changeResponse.changeLogs.isNotEmpty()) {
+                                downloadPostRequest(context, repository, scope)
+                                Log.i("DODODEBUG: VOLLEY: ", "MORE TO DOWNLOAD")
+                            } else {
+                                WorkerStates.downloadPostState = WorkInfo.State.SUCCEEDED
+                                Log.i("DODODEBUG: VOLLEY: ", "All DOWNLOADS COMPLETE")
+                            }
+                        } else {
+                            WorkerStates.downloadPostState = WorkInfo.State.FAILED
+
+                            if (changeResponse != null) {
+                                Log.i("DODODEBUG: VOLLEY: ", "ERROR WHEN DOWNLOAD: " + changeResponse.error)
+                            } else {
+                                Log.i("DODODEBUG: VOLLEY: ", "ERROR WHEN DOWNLOAD: CHANGE RESPONSE IS NULL")
+                            }
                         }
-                    }, Response.ErrorListener { error -> Log.e("VOLLEY", error.toString()) })
+                    }, Response.ErrorListener { error ->
+                        Log.e("VOLLEY", error.toString())
+                        WorkerStates.downloadPostState = WorkInfo.State.FAILED
+                    })
                 {
 
                     @SuppressLint("HardwareIds")
@@ -125,6 +156,10 @@ object ServerHelpers {
                             return null
                         }
                     }
+
+                    override fun getBodyContentType(): String {
+                        return "application/json; charset=utf-8"
+                    }
                 }
 
             /**
@@ -136,6 +171,7 @@ object ServerHelpers {
         }
 
     }
+
     /**
      * Sends post request containing the string requestString to the server at url.
      * Returns whether or not post was successful
@@ -143,30 +179,42 @@ object ServerHelpers {
     @SuppressLint("MissingPermission", "HardwareIds", "LogNotTimber")
     fun uploadPostRequest(context: Context, repository: ClientRepository, scope: CoroutineScope) {
         val tMgr : TelephonyManager = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
-        val instanceNumber = MiscHelpers.cleanNumber(tMgr.line1Number)!!
+        //val instanceNumber = MiscHelpers.cleanNumber(tMgr.line1Number)!!
+        val instanceNumber = "4436996212"
 
         var uploadLogs : List<QueueToUpload>? = null
         var uploadRequestJson : String? = null
-        val url = " " // TODO finalize
+        val url = "https://dev.scribblychat.com/callbook/uploadChanges"
 
         runBlocking {
             scope.launch {
                 val key = repository.getClientKey(instanceNumber)
+                if (key != null) {
+                    val temp = mutableListOf<ChangeLog>()
 
-                val temp = mutableListOf<ChangeLog>()
-                uploadLogs = repository.getAllQTU()
-                if (uploadLogs != null) {
-                    for (uploadLog in uploadLogs!!) {
-                        var changeLog = repository.getChangeLogRow(uploadLog.changeID)
-                        temp.add(changeLog)
+                    /**
+                     * Gets upload logs in order of rowID
+                     */
+                    uploadLogs = repository.getAllQTUByRowID()
+                    if (uploadLogs != null) {
+                        /**
+                         * Retrieves corresponding change logs for each upload log
+                         */
+                        for (uploadLog in uploadLogs!!) {
+                            var changeLog = repository.getChangeLogRow(uploadLog.changeID)
+                            temp.add(changeLog)
+                        }
+                        val changeLogs = temp.toList()
+
+                        val uploadRequest = UploadRequest(instanceNumber, key, changeLogs)
+                        uploadRequestJson = uploadRequestToJson(uploadRequest)
+                    } else {
+                        Log.i("DODODEBUG: VOLLEY: ", "RETRIEVED UPlOAD LOGS ARE NULL")
                     }
-                    val changeLogs = temp.toList()
-
-                    val uploadRequest = UploadRequest(instanceNumber, key, changeLogs)
-                    uploadRequestJson = uploadRequestToJson(uploadRequest)
                 } else {
-                    Log.i("DODODEBUG: VOLLEY: ", "RETRIEVED UPlOAD LOGS ARE NULL")
+                    Log.i("DODODEBUG: VOLLEY: ", "CLIENT KEY IS NULL")
                 }
+
             }
         }
 
@@ -176,7 +224,16 @@ object ServerHelpers {
                 Method.POST, url,
                 Response.Listener { response ->
                     Log.i("VOLLEY", response!!)
-                    val defaultResponse: DefaultResponse? = jsonToDefaultResponse(response)
+                    val uploadResponse: DefaultResponse? =
+                        try {
+                            jsonToUploadResponse(response)
+                        } catch (e: Exception) {
+                            try {
+                                jsonToDefaultResponse(response)
+                            } catch (e: Exception) {
+                                null
+                            }
+                        }
 
                     /**
                      * If all upload logs are uploaded to the server successfully, we will delete
@@ -188,20 +245,34 @@ object ServerHelpers {
                              * Guarantees that response has the right status before trying to
                              * iterate through upload logs. Also upload logs shouldn't be null.
                              */
-                            if (defaultResponse != null && defaultResponse.status == "OK" && uploadLogs != null) {
-                                for (uploadLog in uploadLogs!!) {
-                                    repository.deleteQTU(uploadLog.changeID)
+                            if (uploadResponse != null && uploadResponse is UploadResponse) {
+                                when(uploadResponse.status) {
+                                    "ok" -> {
+                                        repository.deleteUploadInclusive(uploadResponse.lastUploadRow)
+                                        WorkerStates.uploadPostState = WorkInfo.State.SUCCEEDED
+                                    }
+                                    else -> {
+                                        Log.i("DODODEBUG: VOLLEY: ", "PARTIALLY UPLOADED WITH ERROR: " + uploadResponse.error)
+                                        repository.deleteUploadExclusive(uploadResponse.lastUploadRow)
+                                        WorkerStates.uploadPostState = WorkInfo.State.SUCCEEDED
+                                    }
+
                                 }
                             } else {
-                                if (uploadLogs == null) {
-                                    Log.i("DODODEBUG: VOLLEY: ", "uploadLogs was null")
+                                WorkerStates.uploadPostState = WorkInfo.State.FAILED
+
+                                if (uploadResponse != null) {
+                                    Log.i("DODODEBUG: VOLLEY: ", "ERROR WHEN UPLOAD: " + uploadResponse.error)
                                 } else {
-                                    Log.i("DODODEBUG: VOLLEY: ", "ERROR WHEN UPLOAD: " + defaultResponse?.error)
+                                    Log.i("DODODEBUG: VOLLEY: ", "ERROR WHEN UPLOAD: UPLOAD RESPONSE IS NULL")
                                 }
                             }
                         }
                     }
-                }, Response.ErrorListener { error -> Log.e("VOLLEY", error.toString()) })
+                }, Response.ErrorListener {
+                        error -> Log.e("VOLLEY", error.toString())
+                        WorkerStates.uploadPostState = WorkInfo.State.FAILED
+                })
             {
                 @Throws(AuthFailureError::class)
                 override fun getBody(): ByteArray? {
@@ -215,6 +286,10 @@ object ServerHelpers {
                         )
                         return null
                     }
+                }
+
+                override fun getBodyContentType() : String {
+                    return "application/json; charset=utf-8"
                 }
             }
 

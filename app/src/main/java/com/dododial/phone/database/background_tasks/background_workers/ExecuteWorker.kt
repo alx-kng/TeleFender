@@ -26,6 +26,7 @@ object ExecuteScheduler {
     val execPeriodTag = "periodicExecuteWorker"
     
     fun initiateOneTimeExecuteWorker(context: Context) : UUID {
+        WorkerStates.oneTimeExecState = WorkInfo.State.RUNNING
         val executeRequest = OneTimeWorkRequestBuilder<CoroutineExecuteWorker>()
             .setInputData(workDataOf("variableName" to "oneTimeExecState", "notificationID" to "1111"))
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)

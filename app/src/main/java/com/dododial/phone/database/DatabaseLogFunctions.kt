@@ -2,7 +2,7 @@ package com.dododial.phone.database
 
 import android.annotation.SuppressLint
 import android.util.Log
-import com.dododial.phone.database.background_tasks.ServerHelpers
+import com.dododial.phone.database.background_tasks.server_related.ServerHelpers
 import com.dododial.phone.database.entities.CallLog
 import com.dododial.phone.database.entities.ContactNumbers
 import kotlinx.coroutines.launch
@@ -42,7 +42,7 @@ object DatabaseLogFunctions {
 
             for (changeLog in changeLogs) {
                 Log.i("DODODEBUG: ", changeLog.toString())
-                Log.i("DODODEBUG: CHANGE LOG JSON", ServerHelpers.changeLogToJson(changeLog))
+                //Log.i("DODODEBUG: CHANGE LOG JSON", ServerHelpers.changeLogToJson(changeLog))
             }
         }}
     }

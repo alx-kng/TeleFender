@@ -12,10 +12,13 @@ import androidx.annotation.RequiresApi
 import com.dododial.phone.database.entities.CallLog
 import com.dododial.phone.database.ClientDBConstants.CHANGELOG_TYPE_CONTACT_INSERT
 import com.dododial.phone.database.ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_INSERT
+import com.dododial.phone.database.ClientDBConstants.CHANGELOG_TYPE_INSTANCE_INSERT
 import com.dododial.phone.database.ClientDatabase
 import com.dododial.phone.database.MiscHelpers
 import com.dododial.phone.database.android_db.CallLogHelper
 import com.dododial.phone.database.android_db.ContactDetailsHelper
+import com.dododial.phone.database.entities.ChangeLog
+import com.dododial.phone.database.entities.QueueToExecute
 import java.time.Instant
 import java.util.*
 
@@ -61,10 +64,10 @@ object TableInitializers {
 
         val changeID = UUID.randomUUID().toString() // create a new changeLog
         val instanceNumber = MiscHelpers.cleanNumber(tMgr.line1Number) // get phone # of user
-        val changeTime = Instant.now().toEpochMilli().toString() // get epoch time
-        val type = "insInsert"
+        val changeTime = Instant.now().toEpochMilli() // get epoch time
+        val type = CHANGELOG_TYPE_INSTANCE_INSERT
 
-        database.changeAgentDao().changeFromClient(
+        val changeLog = ChangeLog(
             changeID,
             instanceNumber,
             changeTime,
@@ -77,6 +80,11 @@ object TableInitializers {
             null,
             null
         )
+
+        database.changeLogDao().insertChangeLog(changeLog)
+
+        val execLog = QueueToExecute(changeID, changeTime)
+        database.queueToExecuteDao().insertQTE(execLog)
     }
 
     /**
@@ -140,7 +148,7 @@ object TableInitializers {
 
 
         val cChangeID = UUID.randomUUID().toString()
-        val changeTime = Instant.now().toEpochMilli().toString()
+        val changeTime = Instant.now().toEpochMilli()
         val CID = UUID.nameUUIDFromBytes((cursor.getString(0) + parentNumber).toByteArray()).toString()
         val name = cursor.getString(1)
 
@@ -172,7 +180,7 @@ object TableInitializers {
         val parentNumber = MiscHelpers.cleanNumber(tMgr.line1Number)
 
         val cnChangeID = UUID.randomUUID().toString()
-        val changeTime = Instant.now().toEpochMilli().toString()
+        val changeTime = Instant.now().toEpochMilli()
         val CID = UUID.nameUUIDFromBytes((cursor.getString(0) + parentNumber).toByteArray()).toString()
         val number = cursor.getString(1)
         val name: String? = cursor.getString(2)

@@ -22,7 +22,7 @@ abstract class ChangeAgentDao: ChangeLogDao, QueueToExecuteDao, QueueToUploadDao
     open suspend fun changeFromServer(
         changeID : String,
         instanceNumber : String?,
-        changeTime: String,
+        changeTime: Long,
         type: String,
         CID: String?,
         name: String?,
@@ -70,7 +70,7 @@ abstract class ChangeAgentDao: ChangeLogDao, QueueToExecuteDao, QueueToUploadDao
     open suspend fun changeFromClient(
         changeID : String,
         instanceNumber : String?,
-        changeTime: String,
+        changeTime: Long,
         type: String,
         CID: String?,
         name: String?,
@@ -86,7 +86,7 @@ abstract class ChangeAgentDao: ChangeLogDao, QueueToExecuteDao, QueueToUploadDao
         val cleanNumber = MiscHelpers.cleanNumber(number)
         val cleanParentNumber = MiscHelpers.cleanNumber(parentNumber)
         
-        //Log.i("DODODEBUG ChangeAgentDAO", "recieved changeFromClient() call")
+        //Log.i("DODODEBUG ChangeAgentDAO", "received changeFromClient() call")
         val changeLog = ChangeLog(
             changeID,
             cleanInstanceNumber,
@@ -100,11 +100,12 @@ abstract class ChangeAgentDao: ChangeLogDao, QueueToExecuteDao, QueueToUploadDao
             trustability,
             counterValue)
 
+        insertChangeLog(changeLog)
+
         val execLog = QueueToExecute(changeID, changeTime)
 
-        val upLog = QueueToUpload(changeID, changeTime)
+        val upLog = QueueToUpload(changeID, changeTime, getRowID(changeID))
 
-        insertChangeLog(changeLog)
         insertQTE(execLog)
         insertQTU(upLog)
     }

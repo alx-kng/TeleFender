@@ -66,12 +66,10 @@ public abstract class ClientDatabase : RoomDatabase() {
             Log.i("DODODEBUG: ", "INSIDE DATABASE CALLBACK")
             INSTANCE?.let { database ->
                 scope.launch {
-                    Log.i("DODODEBUG: ", "initializaiiang tables")
                     while (context.getSystemService(TelecomManager::class.java).defaultDialerPackage != context.packageName
                         || !PermissionsRequester.hasPermissions(context, arrayOf(Manifest.permission.READ_CALL_LOG))) {
-                        Log.i("DODODEBUG: ", "INSIDE COROUTINE | HAS CALL LOG PERMISSION: "  + PermissionsRequester.hasPermissions(context, arrayOf(Manifest.permission.READ_CALL_LOG)))
                         delay(500)
-                        Log.i("dododeobug past ", "delay")
+                        Log.i("DODODEBUG: ", "INSIDE COROUTINE | HAS CALL LOG PERMISSION: "  + PermissionsRequester.hasPermissions(context, arrayOf(Manifest.permission.READ_CALL_LOG)))
                     }
                     // Goes through each call log and inserts to db
                     TableInitializers.initCallLog(context, database)
@@ -88,7 +86,21 @@ public abstract class ClientDatabase : RoomDatabase() {
                     // Initialize other tables
                     ExecuteScheduler.initiateOneTimeExecuteWorker(context)
 
-                    Log.i("DODODEBUG: ", "tales initialized and onetimeexecuteworker initiated")
+                    while(WorkerStates.oneTimeExecState != WorkInfo.State.SUCCEEDED) {
+                        delay(500)
+                        Log.i("DODODEBUG: ", "EXECUTE WORK STATE: " + WorkerStates.oneTimeExecState.toString())
+                    }
+                    WorkerStates.oneTimeExecState = null
+
+                    // UserSetup
+                    SetupScheduler.initiateSetupWorker(context)
+
+                    while(WorkerStates.setupState != WorkInfo.State.SUCCEEDED) {
+                        delay(500)
+                        Log.i("DODODEBUG: ", "SETUP WORK STATE: " + WorkerStates.setupState.toString())
+                    }
+                    WorkerStates.setupState = null
+
                 }
             }
         }
@@ -142,22 +154,19 @@ public abstract class ClientDatabase : RoomDatabase() {
                     }
 
                     Log.i("DODODEBUG: ", "BEFORE ONE TIMES")
-                    SyncScheduler.initiateOneTimeSyncWorker(context)
-                    // TODO put in Download worker
-                    ExecuteScheduler.initiateOneTimeExecuteWorker(context)
-                    // TODO put in Upload worker
+                    OmegaPeriodicScheduler.initiateOneTimeOmegaWorker(context)
 
-                    while(WorkerStates.oneTimeExecState != WorkInfo.State.SUCCEEDED) {
-                        if (WorkerStates.oneTimeExecState == WorkInfo.State.FAILED
-                            || WorkerStates.oneTimeExecState == WorkInfo.State.CANCELLED
-                            || WorkerStates.oneTimeExecState == WorkInfo.State.BLOCKED) {
+                    while(WorkerStates.oneTimeOmegaState != WorkInfo.State.SUCCEEDED) {
+                        if (WorkerStates.oneTimeOmegaState == WorkInfo.State.FAILED
+                            || WorkerStates.oneTimeOmegaState == WorkInfo.State.CANCELLED
+                            || WorkerStates.oneTimeOmegaState == WorkInfo.State.BLOCKED) {
                             Log.i("DODODEBUG: ", "WORKER STATE BAD")
                             break
                         }
                         delay(500)
-                        Log.i("DODODEBUG: ", "WORK STATE: " + WorkerStates.oneTimeExecState.toString())
+                        Log.i("DODODEBUG: ", "ONE TIME OMEGA WORK STATE: " + WorkerStates.oneTimeOmegaState.toString())
                     }
-                    WorkerStates.oneTimeExecState = null
+                    WorkerStates.oneTimeOmegaState = null
 
                     Log.i("DODODEBUG: ", "AFTER ONE TIMES")
 

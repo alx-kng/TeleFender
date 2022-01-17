@@ -31,7 +31,7 @@ interface ChangeLogDao {
     suspend fun deleteChangeLog_Date(changeTime: String)
 
     @Query("SELECT changeTime FROM change_log ORDER BY changeTime DESC LIMIT 1")
-    suspend fun getLatestChangeLogTime() : String?
+    suspend fun getLatestChangeLogTime() : Int
 
     @Query("SELECT * FROM change_log WHERE changeID = :changeID")
     suspend fun getChangeLogRow(changeID: String) : ChangeLog
@@ -56,4 +56,8 @@ interface ChangeLogDao {
 
     @Query("DELETE FROM change_log")
     suspend fun deleteAllChangeLogs()
+    
+    @Query("SELECT rowID FROM change_log WHERE changeID = :changeID")
+    suspend fun getRowID(changeID : String) : Int
+
 }

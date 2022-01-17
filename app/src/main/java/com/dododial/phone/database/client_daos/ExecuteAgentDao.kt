@@ -11,14 +11,44 @@ import com.dododial.phone.database.ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMB
 import com.dododial.phone.database.ClientDBConstants.CHANGELOG_TYPE_CONTACT_UPDATE
 import com.dododial.phone.database.ClientDBConstants.CHANGELOG_TYPE_INSTANCE_DELETE
 import com.dododial.phone.database.ClientDBConstants.CHANGELOG_TYPE_INSTANCE_INSERT
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 @Dao
 interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
     ChangeLogDao, QueueToExecuteDao, QueueToUploadDao, TrustedNumbersDao {
     
-    suspend fun executeAll() {
-        while (hasQTEs()) {
-            executeFirst()
+    suspend fun executeAll(
+        mutexExecute: Mutex,
+        mutexChange: Mutex,
+        mutexKey: Mutex,
+        mutexInstance : Mutex,
+        mutexContact : Mutex,
+        mutexContactNumbers : Mutex,
+        mutexTrustedNumbers : Mutex,
+        mutexOrganizations : Mutex,
+        mutexMiscellaneous : Mutex
+    ){
+
+        var hasQTEs = mutexExecute.withLock {
+            return@withLock hasQTEs()
+        }
+        while (hasQTEs) {
+            executeFirst(
+                mutexExecute,
+                mutexChange,
+                mutexKey,
+                mutexInstance,
+                mutexContact,
+                mutexContactNumbers,
+                mutexTrustedNumbers,
+                mutexOrganizations,
+                mutexMiscellaneous,
+            )
+
+            hasQTEs = mutexExecute.withLock {
+                return@withLock hasQTEs()
+            }
         }
     }
 
@@ -26,27 +56,48 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
      * Finds first task to execute and passes it's corresponding ChangeLog to
      * helper function executeFirstTransaction.
      */
-    suspend fun executeFirst() {
+    suspend fun executeFirst(
+        mutexExecute: Mutex,
+        mutexChange: Mutex,
+        mutexKey: Mutex,
+        mutexInstance : Mutex,
+        mutexContact : Mutex,
+        mutexContactNumbers : Mutex,
+        mutexTrustedNumbers : Mutex,
+        mutexOrganizations : Mutex,
+        mutexMiscellaneous : Mutex
+    ) {
 
-        val firstJob = getFirstQTE()
-        val firstID = firstJob.changeID
-        updateQTEErrorCounter_Delta(firstID, 1)
+        mutexExecute.withLock {
+            val firstJob = getFirstQTE()
+            val firstID = firstJob.changeID
+            updateQTEErrorCounter_Delta(firstID, 1)
 
-        val changeLog = getChangeLogRow(firstID)
+            val changeLog = getChangeLogRow(firstID)
 
-        executeFirstTransaction(
-            changeLog.changeID,
-            changeLog.instanceNumber,
-            changeLog.changeTime,
-            changeLog.type,
-            changeLog.CID,
-            changeLog.name,
-            changeLog.oldNumber,
-            changeLog.number,
-            changeLog.parentNumber,
-            changeLog.trustability,
-            changeLog.counterValue
-        )
+            executeFirstTransaction(
+                changeLog.changeID,
+                changeLog.instanceNumber,
+                changeLog.changeTime,
+                changeLog.type,
+                changeLog.CID,
+                changeLog.name,
+                changeLog.oldNumber,
+                changeLog.number,
+                changeLog.parentNumber,
+                changeLog.trustability,
+                changeLog.counterValue,
+                mutexExecute,
+                mutexChange,
+                mutexKey,
+                mutexInstance,
+                mutexContact,
+                mutexContactNumbers,
+                mutexTrustedNumbers,
+                mutexOrganizations,
+                mutexMiscellaneous,
+            )
+        }
     }
 
     /**
@@ -58,7 +109,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
     open suspend fun executeFirstTransaction(
         changeID: String,
         instanceNumber: String?,
-        changeTime: String,
+        changeTime: Long,
         type: String,
         CID : String?,
         name : String?,
@@ -66,21 +117,60 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
         number : String?,
         parentNumber : String?,
         trustability : Int?,
-        counterValue : Int?
+        counterValue : Int?,
+        mutexExecute: Mutex,
+        mutexChange: Mutex,
+        mutexKey: Mutex,
+        mutexInstance : Mutex,
+        mutexContact : Mutex,
+        mutexContactNumbers : Mutex,
+        mutexTrustedNumbers : Mutex,
+        mutexOrganizations : Mutex,
+        mutexMiscellaneous : Mutex
     ) {
 
         when (type) {
-            CHANGELOG_TYPE_CONTACT_INSERT -> cInsert(CID, parentNumber, name)
-            CHANGELOG_TYPE_CONTACT_UPDATE -> cUpdate(CID, name)
-            CHANGELOG_TYPE_CONTACT_DELETE -> cDelete(CID)
-            CHANGELOG_TYPE_CONTACT_NUMBER_INSERT -> cnInsert(CID, number, name, counterValue)
-            CHANGELOG_TYPE_CONTACT_NUMBER_UPDATE -> cnUpdate(CID, oldNumber, number, name, counterValue)
-            CHANGELOG_TYPE_CONTACT_NUMBER_DELETE -> cnDelete(CID, number)
-            CHANGELOG_TYPE_INSTANCE_INSERT -> insInsert(instanceNumber)
-            CHANGELOG_TYPE_INSTANCE_DELETE -> insDelete(number)
-            //"insUpdate" -> insUpdate(oldNumber, number)
+            CHANGELOG_TYPE_CONTACT_INSERT -> mutexContact.withLock {
+                cInsert(CID, parentNumber, name)
+            }
+            CHANGELOG_TYPE_CONTACT_UPDATE -> mutexContact.withLock {
+                cUpdate(CID, name)
+            }
+            CHANGELOG_TYPE_CONTACT_DELETE -> mutexContact.withLock {
+                mutexContactNumbers.withLock {
+                    mutexTrustedNumbers.withLock {
+                        cDelete(CID)
+                    }
+                }
+            }
+            CHANGELOG_TYPE_CONTACT_NUMBER_INSERT -> mutexContactNumbers.withLock {
+                mutexTrustedNumbers.withLock {
+                    cnInsert(CID, number, name, counterValue)
+                }
+            }
+            CHANGELOG_TYPE_CONTACT_NUMBER_UPDATE -> mutexContactNumbers.withLock {
+                mutexTrustedNumbers.withLock {
+                    cnUpdate(CID, oldNumber, number, name, counterValue)
+                }
+            }
+            CHANGELOG_TYPE_CONTACT_NUMBER_DELETE -> mutexContactNumbers.withLock {
+                mutexTrustedNumbers.withLock {
+                    cnDelete(CID, number)
+                }
+            }
+            CHANGELOG_TYPE_INSTANCE_INSERT -> mutexInstance.withLock {
+                mutexTrustedNumbers.withLock {
+                    insInsert(instanceNumber)
+                }
+            }
+            CHANGELOG_TYPE_INSTANCE_DELETE -> mutexInstance.withLock {
+                mutexContact.withLock {
+                    mutexContactNumbers.withLock {
+                        insDelete(number)
+                    }
+                }
+            }
         }
-
         deleteQTE_ChangeID(changeID)
     }
 
@@ -133,11 +223,9 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
                 them as well (this includes removing from the Trusted Numbers table
                 through cnDelete())
                  */
-                val contactNumberChildren = getContactNumbers_CID(CID)
-
-                val cnIterator = contactNumberChildren.iterator()
-                while (cnIterator.hasNext()) {
-                    cnDelete(CID, cnIterator.next().number)
+                val contactNumberChildren : List<ContactNumbers> = getContactNumbers_CID(CID)
+                for (contactNumber in contactNumberChildren) {
+                    cnDelete(CID, contactNumber.number)
                 }
 
                 deleteContact_CID(CID)
@@ -233,8 +321,16 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
             } else {
                 val instance = Instance(instanceNumber)
 
+                /*
+                Gets all contacts associated with instance number and calls cDelete() on each one,
+                which takes care of corresponding contact numbers and trusted numbers
+                 */
+                val contactChildren : List<Contact> = getContacts_ParentNumber(instanceNumber)
+                for (contact in contactChildren) {
+                    cDelete(contact.CID)
+                }
+
                 deleteInstanceNumbers(instance)
-                deleteTrustedNumbers(instanceNumber)
             }
         } catch (e: Exception) {
             e.printStackTrace()
