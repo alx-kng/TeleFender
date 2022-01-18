@@ -7,11 +7,11 @@ import android.telecom.InCallService
 import android.media.AudioManager
 import android.os.Build
 import android.os.Handler
-import android.util.Log
 import androidx.core.content.ContextCompat
 import com.dododial.phone.RuleChecker
 import com.dododial.phone.call_related.notifications.DummyForegroundActiveCallService
 import com.dododial.phone.call_related.notifications.DummyForegroundIncomingCallService
+import timber.log.Timber
 
 
 class CallService : InCallService() {
@@ -51,11 +51,11 @@ class CallService : InCallService() {
                     ContextCompat.startForegroundService(this, dummyIncomingServiceIntent)
                     val r = Runnable {
                         if (call.state == Call.STATE_CONNECTING || call.state == Call.STATE_ACTIVE) {
-                            Log.i("Silence Block Action: ", "No block action taken because call was answered by user.")
+                            Timber.i("Silence Block Action: No block action taken because call was answered by user.")
                         } else {
                             if (call.state != Call.STATE_DISCONNECTED && call.state != Call.STATE_DISCONNECTING) {
                                 OngoingCall.hangup()
-                                Log.i("Silence Block Action: ", "Block action was taken because call was not answered or disconnected by user.")
+                                Timber.i("Silence Block Action: Block action was taken because call was not answered or disconnected by user.")
                             }
                         }
 

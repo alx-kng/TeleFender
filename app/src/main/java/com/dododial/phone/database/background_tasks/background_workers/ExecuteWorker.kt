@@ -8,13 +8,13 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.work.*
 import com.dododial.phone.App
 import com.dododial.phone.DialerActivity
 import com.dododial.phone.database.ClientRepository
 import com.dododial.phone.database.background_tasks.WorkerStates
+import timber.log.Timber
 import java.lang.Exception
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -73,7 +73,6 @@ class CoroutineExecuteWorker(
     val CHANNEL_ID = "alxkng5737"
     var stateVarString: String? = null
 
-    @SuppressLint("LogNotTimber")
     override suspend fun doWork(): Result {
         stateVarString = inputData.getString("variableName")
         NOTIFICATION_ID = inputData.getString("notificationID")?.toInt()
@@ -82,14 +81,14 @@ class CoroutineExecuteWorker(
             try {
                 setForeground(getForegroundInfo())
             } catch(e: Exception) {
-                Log.i("DODODEBUG: ", e.message!!)
+                Timber.d("DODODEBUG: %s", e.message!!)
             }
         }
 
         val repository: ClientRepository? = (applicationContext as App).repository
         repository?.executeAll()
 
-        Log.i("DODODEBUG:", "EXECUTE STARTED")
+        Timber.d("DODODEBUG: EXECUTE STARTED")
         if (repository?.hasQTEs() != false) {
             return Result.retry()
         } else {
@@ -98,10 +97,10 @@ class CoroutineExecuteWorker(
                 "oneTimeExecState" -> WorkerStates.oneTimeExecState = WorkInfo.State.SUCCEEDED
                 "periodicExecState" -> WorkerStates.periodicExecState = WorkInfo.State.SUCCEEDED
                 else -> {
-                    Log.i("DODODEBUG: EXECUTE WORKER THREAD: ","Worker state variable name is wrong")
+                    Timber.d("DODODEBUG: EXECUTE WORKER THREAD: Worker state variable name is wrong")
                 }
             }
-            Log.i("DODODEBUG:", "EXECUTE ENDED")
+            Timber.d("DODODEBUG: EXECUTE ENDED")
             return Result.success()
         }
 

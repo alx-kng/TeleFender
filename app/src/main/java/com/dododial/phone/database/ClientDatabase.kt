@@ -6,7 +6,6 @@ import android.content.ContentResolver
 import android.content.Context
 import android.os.Build
 import android.telecom.TelecomManager
-import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.LiveData
 import androidx.room.Database
@@ -24,6 +23,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import com.dododial.phone.database.entities.*
+import timber.log.Timber
 import java.util.*
 
 @Database(entities = arrayOf(
@@ -59,17 +59,16 @@ public abstract class ClientDatabase : RoomDatabase() {
         val contentResolver: ContentResolver
     ) : RoomDatabase.Callback() {
 
-        @SuppressLint("LogNotTimber")
         @RequiresApi(Build.VERSION_CODES.O)
         override fun onCreate(db: SupportSQLiteDatabase) {
             super.onCreate(db)
-            Log.i("DODODEBUG: ", "INSIDE DATABASE CALLBACK")
+            Timber.i("DODODEBUG: INSIDE DATABASE CALLBACK")
             INSTANCE?.let { database ->
                 scope.launch {
                     while (context.getSystemService(TelecomManager::class.java).defaultDialerPackage != context.packageName
                         || !PermissionsRequester.hasPermissions(context, arrayOf(Manifest.permission.READ_CALL_LOG))) {
                         delay(500)
-                        Log.i("DODODEBUG: ", "INSIDE COROUTINE | HAS CALL LOG PERMISSION: "  + PermissionsRequester.hasPermissions(context, arrayOf(Manifest.permission.READ_CALL_LOG)))
+                        Timber.i("DODODEBUG: INSIDE COROUTINE | HAS CALL LOG PERMISSION: %s", PermissionsRequester.hasPermissions(context, arrayOf(Manifest.permission.READ_CALL_LOG)))
                     }
                     // Goes through each call log and inserts to db
                     TableInitializers.initCallLog(context, database)
@@ -88,7 +87,7 @@ public abstract class ClientDatabase : RoomDatabase() {
 
                     while(WorkerStates.oneTimeExecState != WorkInfo.State.SUCCEEDED) {
                         delay(500)
-                        Log.i("DODODEBUG: ", "EXECUTE WORK STATE: " + WorkerStates.oneTimeExecState.toString())
+                        Timber.i("DODODEBUG: EXECUTE WORK STATE: %s", WorkerStates.oneTimeExecState.toString())
                     }
                     WorkerStates.oneTimeExecState = null
 
@@ -97,7 +96,7 @@ public abstract class ClientDatabase : RoomDatabase() {
 
                     while(WorkerStates.setupState != WorkInfo.State.SUCCEEDED) {
                         delay(500)
-                        Log.i("DODODEBUG: ", "SETUP WORK STATE: " + WorkerStates.setupState.toString())
+                        Timber.i("DODODEBUG: SETUP WORK STATE: %s", WorkerStates.setupState.toString())
                     }
                     WorkerStates.setupState = null
 
@@ -136,7 +135,7 @@ public abstract class ClientDatabase : RoomDatabase() {
                 instance
             }
 
-            Log.i("DODODEBUG: ", "GET DATABASE CALLED!")
+            Timber.i("DODODEBUG: GET DATABASE CALLED!")
 
             runBlocking {
                 scope.launch {
@@ -147,28 +146,28 @@ public abstract class ClientDatabase : RoomDatabase() {
 
                     while (!isInitialized) {
                         delay(500)
-                        Log.i("DODODEBUG: ", "INSIDE GET DATABASE COROUTINE. DATABASE INITIALIZED = " + isInitialized)
+                        Timber.i("DODODEBUG: INSIDE GET DATABASE COROUTINE. DATABASE INITIALIZED = %s", isInitialized)
 
                         isInitialized = !instanceTemp.executeAgentDao().hasQTEs()
                             && instanceTemp.instanceDao().hasInstance()
                     }
 
-                    Log.i("DODODEBUG: ", "BEFORE ONE TIMES")
+                    Timber.i("DODODEBUG: BEFORE ONE TIMES")
                     OmegaPeriodicScheduler.initiateOneTimeOmegaWorker(context)
 
                     while(WorkerStates.oneTimeOmegaState != WorkInfo.State.SUCCEEDED) {
                         if (WorkerStates.oneTimeOmegaState == WorkInfo.State.FAILED
                             || WorkerStates.oneTimeOmegaState == WorkInfo.State.CANCELLED
                             || WorkerStates.oneTimeOmegaState == WorkInfo.State.BLOCKED) {
-                            Log.i("DODODEBUG: ", "WORKER STATE BAD")
+                            Timber.i("DODODEBUG: WORKER STATE BAD")
                             break
                         }
                         delay(500)
-                        Log.i("DODODEBUG: ", "ONE TIME OMEGA WORK STATE: " + WorkerStates.oneTimeOmegaState.toString())
+                        Timber.i("DODODEBUG: ONE TIME OMEGA WORK STATE: %s", WorkerStates.oneTimeOmegaState.toString())
                     }
                     WorkerStates.oneTimeOmegaState = null
 
-                    Log.i("DODODEBUG: ", "AFTER ONE TIMES")
+                    Timber.i("DODODEBUG: AFTER ONE TIMES")
 
                     DatabaseLogFunctions.logContacts(instanceTemp)
                     DatabaseLogFunctions.logContactNumbers(instanceTemp)

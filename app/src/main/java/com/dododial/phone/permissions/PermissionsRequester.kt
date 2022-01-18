@@ -6,10 +6,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.telecom.TelecomManager
-import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat.getSystemService
 import com.dododial.phone.DialerActivity
+import timber.log.Timber
 
 
 object PermissionsRequester {
@@ -17,7 +17,7 @@ object PermissionsRequester {
      * Starts dialer to request permissions in PERMISSIONS array, using hasPermissions as a helper.
      */
     fun multiplePermissions(context: Context?, activity: Activity) {
-        Log.i("DODODEBUG", "multiple permissions called")
+        Timber.i("DODODEBUG: multiple permissions called")
         // The request code is used in ActivityCompat.requestPermissions()
         // and returned in the Activity's onRequestPermissionsResult()
         val PERMISSION_ALL = 1

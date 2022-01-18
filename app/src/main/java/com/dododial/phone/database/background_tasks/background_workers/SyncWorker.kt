@@ -1,13 +1,12 @@
 package com.dododial.phone.database.background_tasks.background_workers
 
-import android.annotation.SuppressLint
+
 import android.app.Notification
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
-import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.work.*
@@ -18,6 +17,7 @@ import com.dododial.phone.database.ClientRepository
 import com.dododial.phone.database.background_tasks.TableSynchronizer
 import com.dododial.phone.database.background_tasks.WorkerStates
 import kotlinx.coroutines.delay
+import timber.log.Timber
 import java.lang.Exception
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -74,7 +74,6 @@ class CoroutineSyncWorker(
     var stateVarString: String? = null
     val context: Context? = context
 
-    @SuppressLint("LogNotTimber")
     @RequiresApi(Build.VERSION_CODES.O)
     override suspend fun doWork() : Result {
         stateVarString = inputData.getString("variableName")
@@ -84,27 +83,27 @@ class CoroutineSyncWorker(
             try {
                 setForeground(getForegroundInfo())
             } catch(e: Exception) {
-                Log.i("DODODEBUG: ", e.message!!)
+                Timber.i("DODODEBUG: %s", e.message!!)
             }
         }
 
         val repository: ClientRepository? = (applicationContext as App).repository
         val database : ClientDatabase? = (applicationContext as App).database
 
-        Log.i("DODODEBUG:", "SYNC STARTED")
+        Timber.i("DODODEBUG: SYNC STARTED")
         if (repository?.hasQTEs() != true && context != null && database != null) {
                 TableSynchronizer.syncContacts(context, database, context.contentResolver)
             TableSynchronizer.syncCallLogs(database, context.contentResolver)
         } else {
             return Result.retry()
         }
-        Log.i("DODODEBUG: ", "SYNC ENDED")
+        Timber.i("DODODEBUG: SYNC ENDED")
 
         when (stateVarString) {
             "oneTimeSyncState" ->  WorkerStates.oneTimeSyncState = WorkInfo.State.SUCCEEDED
             "periodicSyncState" -> WorkerStates.periodicSyncState = WorkInfo.State.SUCCEEDED
             else -> {
-                Log.i("DODODEBUG: SYNC WORKER THREAD: ","Worker state variable name is wrong")
+                Timber.i("DODODEBUG: SYNC WORKER THREAD: Worker state variable name is wrong")
             }
         }
 

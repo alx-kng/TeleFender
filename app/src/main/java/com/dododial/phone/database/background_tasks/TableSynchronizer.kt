@@ -6,7 +6,6 @@ import android.content.Context
 import android.database.Cursor
 import android.os.Build
 import android.telephony.TelephonyManager
-import android.util.Log
 import androidx.annotation.RequiresApi
 import com.dododial.phone.database.entities.CallLog
 import com.dododial.phone.database.ClientDBConstants
@@ -15,6 +14,7 @@ import com.dododial.phone.database.MiscHelpers
 import com.dododial.phone.database.MiscHelpers.cleanNumber
 import com.dododial.phone.database.entities.ContactNumbers
 import com.dododial.phone.database.android_db.ContactDetailsHelper
+import timber.log.Timber
 import java.time.Instant
 import java.util.*
 
@@ -47,7 +47,7 @@ object TableSynchronizer {
                 val location = curs.getString(4)
 
                 val callLog = CallLog(number, type, date, duration, location, null)
-                        Log.i("DODODEBUG callLogSync added: ", callLog.toString())
+                        Timber.i("DODODEBUG callLogSync added: %s", callLog.toString())
                 database.callLogDao().insertLog(callLog)
             }
             curs?.close()
@@ -73,7 +73,7 @@ object TableSynchronizer {
     * well as returning a HashMap of all ContactNumbers for use in checking for updates and deletes
     */
     @RequiresApi(Build.VERSION_CODES.O)
-    @SuppressLint("MissingPermission", "LogNotTimber")
+    @SuppressLint("MissingPermission")
     suspend fun checkForInserts(context: Context, database: ClientDatabase, contentResolver : ContentResolver) : HashMap<String, MutableList<ContactNumbers>> {
         val tMgr = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
         val parentNumber = MiscHelpers.cleanNumber(tMgr.line1Number)
@@ -87,7 +87,7 @@ object TableSynchronizer {
         var defaultContactHashMap = HashMap<String, MutableList<ContactNumbers>>()
 
         if (curs == null) {
-            Log.i("DODODEBUG: ", "Contact Number cursor is null; BAD")
+            Timber.i("DODODEBUG: Contact Number cursor is null; BAD")
         } else {
             while (!curs.isAfterLast) {
 
@@ -175,7 +175,6 @@ object TableSynchronizer {
         return defaultContactHashMap
     }
 
-    @SuppressLint("LogNotTimber")
     @RequiresApi(Build.VERSION_CODES.O)
     suspend fun checkForUpdatesAndDeletes(database: ClientDatabase, defaultContactHashMap: HashMap<String, MutableList<ContactNumbers>>)  {
         val dodoCN: List<ContactNumbers> = database.contactNumbersDao().getAllContactNumbers()

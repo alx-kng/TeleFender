@@ -15,11 +15,11 @@ import java.util.concurrent.TimeUnit
 import android.view.WindowManager
 import android.app.KeyguardManager
 import android.os.Build
-import android.util.Log
 import androidx.core.content.ContextCompat
 import com.dododial.phone.R
 import com.dododial.phone.asString
 import com.dododial.phone.call_related.notifications.DummyForegroundActiveCallService
+import timber.log.Timber
 
 
 class CallActivity : AppCompatActivity() {
@@ -40,7 +40,7 @@ class CallActivity : AppCompatActivity() {
         // but could be null in some cases (I think)
         incomingNumber = intent.data?.schemeSpecificPart ?: "No number"
 
-        Log.i("THIS NUMBER THING: ", incomingNumber)
+        Timber.i("THIS NUMBER THING: %s", incomingNumber)
 
         // TODO Fix CallActivity from showing over lockscreen when the call
         //  when the user presses powerbutton after already accepting call

@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.work.*
 import com.dododial.phone.App
@@ -14,6 +13,7 @@ import com.dododial.phone.DialerActivity
 import com.dododial.phone.database.ClientRepository
 import com.dododial.phone.database.background_tasks.WorkerStates
 import com.dododial.phone.database.background_tasks.server_related.ServerHelpers
+import timber.log.Timber
 import java.lang.Exception
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -78,7 +78,7 @@ class CoroutineDownloadWorker(
             try {
                 setForeground(getForegroundInfo())
             } catch(e: Exception) {
-                Log.i("DODODEBUG: ", e.message!!)
+                Timber.d("DODODEBUG: %s", e.message!!)
             }
         }
 
@@ -93,7 +93,7 @@ class CoroutineDownloadWorker(
             "oneTimeDownloadState" ->  WorkerStates.oneTimeDownloadState = WorkInfo.State.SUCCEEDED
             "periodicDownloadState" -> WorkerStates.periodicDownloadState = WorkInfo.State.SUCCEEDED
             else -> {
-                Log.i("DODODEBUG: DOWNLOAD WORKER THREAD: ","Worker state variable name is wrong")
+                Timber.d("DODODEBUG: DOWNLOAD WORKER THREAD: Worker state variable name is wrong")
             }
         }
 

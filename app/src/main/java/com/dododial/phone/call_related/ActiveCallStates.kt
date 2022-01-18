@@ -4,10 +4,10 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.media.AudioManager
 import android.os.Build
-import android.util.Log
 import android.telecom.CallAudioState
 import android.telecom.InCallService
 import androidx.lifecycle.MutableLiveData
+import timber.log.Timber
 
 
 @SuppressLint("StaticFieldLeak")
@@ -26,11 +26,11 @@ object ActiveCallStates {
     }
 
     fun adjustSpeakerAudio(context: Context?, setSpeaker: Boolean) { // AINT WORK NOW, BUT JUST IN CASE
-        Log.i("Receiver setSpeaker:", setSpeaker.toString())
+        Timber.i("Receiver setSpeaker: %s", setSpeaker.toString())
         val audioManager = context?.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         audioManager.mode = AudioManager.MODE_IN_CALL
         audioManager.isSpeakerphoneOn = setSpeaker
-        Log.i("TRUE SPEAKER STATUS: ", audioManager.isSpeakerphoneOn.toString())
+        Timber.i("TRUE SPEAKER STATUS: %s", audioManager.isSpeakerphoneOn.toString())
         audioManager.mode = AudioManager.MODE_NORMAL
     }
 
@@ -51,7 +51,7 @@ object ActiveCallStates {
         } else {
             audioManager.isSpeakerphoneOn = setSpeaker
         }
-        Log.i("TRUE SPEAKER STATUS: ", audioManager.isSpeakerphoneOn.toString())
+        Timber.i("TRUE SPEAKER STATUS: %s", audioManager.isSpeakerphoneOn.toString())
 
     }
 
