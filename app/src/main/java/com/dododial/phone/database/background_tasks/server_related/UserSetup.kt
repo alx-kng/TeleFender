@@ -68,10 +68,10 @@ object UserSetup {
                                     repository.insertKey(keyStorage)
 
                                     Log.i("DODODEBUG: ", repository.getSessionID(instanceNumber))
+                                    verifyPostRequest(context, repository, scope)
                                 }
                             }
 
-                            verifyPostRequest(context, repository, scope)
                         } else {
                             WorkerStates.setupState = WorkInfo.State.FAILED
 
@@ -125,94 +125,104 @@ object UserSetup {
         // TODO integrate OTP with notifications, for now, it's hardcoded
         val OTP = 111111
         val url = "https://dev.scribblychat.com/callbook/verifyInstallation"  // TODO finalize?
-        var verifyRequestJson : String? = null
-
+        Log.i("DODODEBUG:", "BEFORE RUN BLOCKING")
         runBlocking {
             scope.launch {
                 val sessionID = repository.getSessionID(instanceNumber)
                 Log.i("DODODEBGG", "session iD = " + sessionID)
+
                 val verifyRequest = VerifyRequest(instanceNumber, sessionID, OTP)
-                verifyRequestJson = RequestHelpers.verifyRequestToJson(verifyRequest)
+                var verifyRequestJson : String? = RequestHelpers.verifyRequestToJson(verifyRequest)
+                Log.i("DODODEBUG: AT TOP: verifyRequestJson = ", verifyRequestJson ?: "Null")
+
+
+                try {
+                    val stringRequest: StringRequest =
+
+                        @SuppressLint("LogNotTimber")
+                        object : StringRequest(
+                            Method.POST, url,
+
+                            Response.Listener { response ->
+
+
+                                Log.i("VOLLEY", response!!)
+                                val keyResponse: DefaultResponse? =
+                                    try {
+                                        jsonToKeyResponse(response)
+                                    } catch (e: Exception) {
+                                        try {
+                                            jsonToDefaultResponse(response)
+                                        } catch (e: Exception) {
+                                            null
+                                        }
+                                    }
+
+                                if (keyResponse != null && keyResponse.status == "ok" && keyResponse is KeyResponse) {
+                                    /**
+                                     * Update KeyStorage row with clientKey
+                                     */
+                                    runBlocking {
+                                        scope.launch {
+                                            repository.updateKey(instanceNumber, keyResponse.key)
+                                        }
+                                    }
+
+                                    WorkerStates.setupState = WorkInfo.State.SUCCEEDED
+
+                                } else {
+                                    WorkerStates.setupState = WorkInfo.State.FAILED
+
+                                    if (keyResponse != null) {
+                                        Log.i(
+                                            "DODODEBUG: VOLLEY: ",
+                                            "ERROR WHEN VERIFY INSTALLATION: " + keyResponse?.error
+                                        )
+                                    } else {
+                                        Log.i(
+                                            "DODODEBUG: VOLLEY: ",
+                                            "ERROR WHEN VERIFY INSTALLATION: SESSION RESPONSE IS NULL"
+                                        )
+                                    }
+                                }
+                            }, Response.ErrorListener { error ->
+                                Log.e("VOLLEY", error.toString())
+                                WorkerStates.setupState = WorkInfo.State.FAILED
+                            }) {
+
+                            @SuppressLint("HardwareIds")
+                            @Throws(AuthFailureError::class)
+                            override fun getBody(): ByteArray? {
+                                try {
+                                    Log.i(
+                                        "DODODEBUG: VerifyRequestJson = ",
+                                        verifyRequestJson ?: "NULL"
+                                    )
+                                    return verifyRequestJson?.toByteArray(charset("utf-8"))
+                                } catch (uee: UnsupportedEncodingException) {
+                                    VolleyLog.wtf(
+                                        "Unsupported Encoding while trying to get the bytes of %s using %s",
+                                        verifyRequestJson,
+                                        "utf-8"
+                                    )
+                                    return null
+                                }
+                            }
+
+                            override fun getBodyContentType(): String {
+                                return "application/json; charset=utf-8"
+                            }
+
+                        }
+
+                    /**
+                     * Adds entire string request to request queue
+                     */
+                    RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
+                } catch (e: JSONException) {
+                    e.printStackTrace()
+                }
             }
         }
-
-        try {
-            val stringRequest: StringRequest =
-
-                @SuppressLint("LogNotTimber")
-                object : StringRequest(
-                    Method.POST, url,
-
-                    Response.Listener { response ->
-
-
-                        Log.i("VOLLEY", response!!)
-                        val keyResponse : DefaultResponse? =
-                            try {
-                                jsonToKeyResponse(response)
-                            } catch (e: Exception) {
-                                try {
-                                    jsonToDefaultResponse(response)
-                                } catch (e: Exception) {
-                                    null
-                                }
-                            }
-
-                        if (keyResponse != null && keyResponse.status == "ok" && keyResponse is KeyResponse) {
-                            /**
-                             * Update KeyStorage row with clientKey
-                             */
-                            runBlocking {
-                                scope.launch {
-                                    repository.updateKey(instanceNumber, keyResponse.key)
-                                }
-                            }
-
-                            WorkerStates.setupState = WorkInfo.State.SUCCEEDED
-
-                        } else {
-                            WorkerStates.setupState = WorkInfo.State.FAILED
-
-                            if (keyResponse != null) {
-                                Log.i("DODODEBUG: VOLLEY: ", "ERROR WHEN VERIFY INSTALLATION: " + keyResponse?.error)
-                            } else {
-                                Log.i("DODODEBUG: VOLLEY: ", "ERROR WHEN VERIFY INSTALLATION: SESSION RESPONSE IS NULL")
-                            }
-                        }
-                    }, Response.ErrorListener { 
-                        error -> Log.e("VOLLEY", error.toString())
-                        WorkerStates.setupState = WorkInfo.State.FAILED
-                        })
-                {
-
-                    @SuppressLint("HardwareIds")
-                    @Throws(AuthFailureError::class)
-                    override fun getBody(): ByteArray? {
-                        try {
-                            return verifyRequestJson?.toByteArray(charset("utf-8"))
-                        } catch (uee: UnsupportedEncodingException) {
-                            VolleyLog.wtf(
-                                "Unsupported Encoding while trying to get the bytes of %s using %s",
-                                verifyRequestJson,
-                                "utf-8"
-                            )
-                            return null
-                        }
-                    }
-
-                    override fun getBodyContentType(): String {
-                        return "application/json; charset=utf-8"
-                    }
-
-                }
-
-            /**
-             * Adds entire string request to request queue
-             */
-            RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
-        } catch (e: JSONException) {
-            e.printStackTrace()
-        }
     }
-
 }

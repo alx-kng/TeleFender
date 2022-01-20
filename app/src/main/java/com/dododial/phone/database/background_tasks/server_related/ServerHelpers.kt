@@ -36,7 +36,6 @@ object ServerHelpers {
         var downloadRequestJson : String? = null
         val url = "https://dev.scribblychat.com/callbook/downloadChanges"
 
-        //      TODO does runblocking block the whole request thread
         /**
          * Used to create download request json body, as we need the instanceNumber, key, and last
          * server changeID to communicate with server correctly

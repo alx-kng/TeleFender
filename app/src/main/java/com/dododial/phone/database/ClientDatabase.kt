@@ -145,12 +145,19 @@ public abstract class ClientDatabase : RoomDatabase() {
                     var isInitialized = !instanceTemp.executeAgentDao().hasQTEs()
                         && instanceTemp.instanceDao().hasInstance()
 
-                    while (!isInitialized) {
+                    // TODO update the is setup to automatically use user's number instead of
+                    //  hardcoded value
+                    var isSetup = instanceTemp.keyStorageDao().hasCredKey("4436996212")
+
+                    while (!isInitialized || !isSetup) {
                         delay(500)
                         Log.i("DODODEBUG: ", "INSIDE GET DATABASE COROUTINE. DATABASE INITIALIZED = " + isInitialized)
+                        Log.i("DODODEBUG: ", "INSIDE GET DATABASE COROUTINE. USER SETUP = " + isSetup)
 
                         isInitialized = !instanceTemp.executeAgentDao().hasQTEs()
                             && instanceTemp.instanceDao().hasInstance()
+
+                        isSetup = instanceTemp.keyStorageDao().hasCredKey("4436996212")
                     }
 
                     Log.i("DODODEBUG: ", "BEFORE ONE TIMES")
