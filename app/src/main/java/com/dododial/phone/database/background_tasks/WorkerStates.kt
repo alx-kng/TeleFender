@@ -18,4 +18,7 @@ internal object WorkerStates {
     var downloadPostState : WorkInfo.State? = null
     var uploadPostState : WorkInfo.State? = null
 
+    var oneTimeTokenState : WorkInfo.State? = null
+    var periodicTokenState : WorkInfo.State? = null
+    var uploadTokenState : WorkInfo.State? = null
 }

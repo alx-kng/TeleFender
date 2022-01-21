@@ -21,15 +21,23 @@ import timber.log.Timber
 class DodoFirebaseService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
-        // Not getting messages here? See why this may be: https://goo.gl/39bRNJ
-        Timber.d("From: ${remoteMessage.from}")
+        Timber.d("Firebase message recieved")
+        Timber.d(remoteMessage.data.toString())
 
-        // TODO: Step 3.5 check messages for data
-        // Check if the message contains a data payload.
-        remoteMessage.data.let {
-            Timber.d("Message data payload: %s", remoteMessage.data)
+        val data : Map<String, String> = remoteMessage.data
+
+        when {
+            data.containsKey("number") -> {
+                // TODO unblock number
+                val number = data["number"]
+            }
+            data.containsKey("tokenRefresh") -> {
+                //TODO send current token
+            }
+            else -> {
+                Timber.d("message %s has bad data", remoteMessage.messageId)
+            }
         }
-
     }
 
     /**
@@ -63,6 +71,8 @@ class DodoFirebaseService : FirebaseMessagingService() {
 
                 val repository : ClientRepository? = (application as App).repository
                 repository?.updateKey(instanceNumber, null, token)
+
+                //TODO CALL onetime TOKENWORKER HERE
             }
         }
         // If you want to send messages to this application instance or

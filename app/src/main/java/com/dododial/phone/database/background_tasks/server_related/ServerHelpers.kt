@@ -18,6 +18,7 @@ import com.dododial.phone.database.background_tasks.server_related.ResponseHelpe
 import com.dododial.phone.database.background_tasks.server_related.ResponseHelpers.jsonToDefaultResponse
 import com.dododial.phone.database.background_tasks.server_related.ResponseHelpers.jsonToUploadResponse
 import com.dododial.phone.database.entities.ChangeLog
+import com.dododial.phone.database.entities.KeyStorage
 import com.dododial.phone.database.entities.QueueToUpload
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -28,12 +29,13 @@ import java.io.UnsupportedEncodingException
 
 object ServerHelpers {
 
+
     @SuppressLint("MissingPermission")
-    fun downloadPostRequest(context : Context,  repository: ClientRepository, scope: CoroutineScope) {
+    fun downloadPostRequest(context: Context, repository: ClientRepository, scope: CoroutineScope) {
         val tMgr = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
         val instanceNumber = MiscHelpers.cleanNumber(tMgr.line1Number)!!
 
-        var downloadRequestJson : String? = null
+        var downloadRequestJson: String? = null
         val url = "https://dev.scribblychat.com/callbook/downloadChanges"
 
         /**
@@ -131,7 +133,10 @@ object ServerHelpers {
                                     WorkerStates.downloadPostState = WorkInfo.State.FAILED
 
                                     if (changeResponse != null) {
-                                        Timber.i("DODODEBUG: VOLLEY: ERROR WHEN DOWNLOAD: %s", changeResponse.error)
+                                        Timber.i(
+                                            "DODODEBUG: VOLLEY: ERROR WHEN DOWNLOAD: %s",
+                                            changeResponse.error
+                                        )
                                     } else {
                                         Timber.i("DODODEBUG: VOLLEY: ERROR WHEN DOWNLOAD: CHANGE RESPONSE IS NULL")
                                     }
@@ -141,8 +146,7 @@ object ServerHelpers {
                                     Timber.e("VOLLEY %s", error.toString())
                                     WorkerStates.downloadPostState = WorkInfo.State.FAILED
                                 }
-                            })
-                        {
+                            }) {
 
                             @SuppressLint("HardwareIds")
                             @Throws(AuthFailureError::class)
@@ -308,6 +312,91 @@ object ServerHelpers {
                     }
 
                     RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
+                } catch (e: JSONException) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
+    /**
+     * Could be used with the suggested token checkup every month, or used whenever token updates in general as it is incredibly important
+     * server has access to reliable tokens for every device
+     */
+    @SuppressLint("MissingPermission", "HardwareIds")
+    fun tokenPostRequest(
+        context: Context,
+        repository: ClientRepository,
+        scope: CoroutineScope,
+        token: String
+    ) {
+        val tMgr = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
+        val instanceNumber: String = MiscHelpers.cleanNumber(tMgr.line1Number)!!
+
+
+        val url = "" // TODO unknown
+
+        runBlocking {
+            scope.launch {
+                val key = repository.getClientKey(instanceNumber)
+
+                val tokenRequest = TokenRequest(instanceNumber, key!!, token) // TODO make sure we are always set up by this point
+                var tokenRequestJson: String = RequestHelpers.tokenRequestToJson(tokenRequest)
+
+                try {
+                    val stringRequest: StringRequest =
+                        object : StringRequest(
+                            Method.POST, url,
+                            Response.Listener { response ->
+                                Timber.i("TOKEN RESPONSE: %s", response!!)
+                                val defaultResponse: DefaultResponse? = jsonToDefaultResponse(response)
+
+                                if (defaultResponse != null && defaultResponse.status == "ok") {
+                                    WorkerStates.uploadTokenState = WorkInfo.State.SUCCEEDED
+
+                                } else {
+                                    WorkerStates.uploadTokenState = WorkInfo.State.FAILED
+
+                                    if (defaultResponse != null) {
+                                        Timber.i(
+                                            "DODODEBUG: VOLLEY: ERROR WHEN TOKEN UPLOAD: %s",
+                                            defaultResponse.error
+                                        )
+                                    } else {
+                                        Timber.i("DODODEBUG: VOLLEY: ERROR WHEN TOKEN UPLOAD: SESSION RESPONSE IS NULL")
+                                    }
+                                }
+                            }, Response.ErrorListener { error ->
+                                if (error.toString() != "null") {
+                                    Timber.e("VOLLEY %s", error.toString())
+                                    WorkerStates.uploadTokenState = WorkInfo.State.FAILED
+                                }
+                            }) {
+                            @SuppressLint("HardwareIds")
+                            @Throws(AuthFailureError::class)
+                            override fun getBody(): ByteArray? {
+                                try {
+                                    return tokenRequestJson.toByteArray(charset("utf-8"))
+                                } catch (uee: UnsupportedEncodingException) {
+                                    VolleyLog.wtf(
+                                        "Unsupported Encoding while trying to get the bytes of %s using %s",
+                                        tokenRequestJson,
+                                        "utf-8"
+                                    )
+                                    return null
+                                }
+                            }
+
+                            override fun getBodyContentType(): String {
+                                return "application/json; charset=utf-8"
+                            }
+                        }
+
+                    /**
+                     * Adds entire string request to request queue
+                     */
+                    RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
+
                 } catch (e: JSONException) {
                     e.printStackTrace()
                 }

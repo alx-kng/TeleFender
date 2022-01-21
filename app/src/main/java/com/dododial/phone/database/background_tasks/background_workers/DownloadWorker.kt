@@ -78,7 +78,7 @@ class CoroutineDownloadWorker(
             try {
                 setForeground(getForegroundInfo())
             } catch(e: Exception) {
-                Timber.d("DODODEBUG: %s", e.message!!)
+                Timber.i("DODODEBUG: %s", e.message!!)
             }
         }
 
@@ -93,7 +93,7 @@ class CoroutineDownloadWorker(
             "oneTimeDownloadState" ->  WorkerStates.oneTimeDownloadState = WorkInfo.State.SUCCEEDED
             "periodicDownloadState" -> WorkerStates.periodicDownloadState = WorkInfo.State.SUCCEEDED
             else -> {
-                Timber.d("DODODEBUG: DOWNLOAD WORKER THREAD: Worker state variable name is wrong")
+                Timber.i("DODODEBUG: DOWNLOAD WORKER THREAD: Worker state variable name is wrong")
             }
         }
 

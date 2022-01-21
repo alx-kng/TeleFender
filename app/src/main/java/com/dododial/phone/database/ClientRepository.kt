@@ -84,6 +84,15 @@ class ClientRepository(
         }
         return result
     }
+
+    @WorkerThread
+    suspend fun getFireBaseToken(number : String) : String? {
+        val result : String?
+        mutexKey.withLock {
+            result = keyStorageDao.getFireBaseToken(number)
+        }
+        return result
+    }
     
     @WorkerThread
     suspend fun getLastChangeID() : Int? {

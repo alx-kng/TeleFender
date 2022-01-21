@@ -65,7 +65,19 @@ class DownloadRequest(
 ) : KeyRequest(instanceNumber, key) {
 
     override fun toString() : String {
-        return super.toString() + " key: " + this.key + " lastChangeID: " + lastChangeID.toString()
+        return super.toString() + " key: " + this.key + " lastChangeID: " + this.lastChangeID.toString()
+    }
+}
+
+@JsonClass(generateAdapter = true)
+class TokenRequest(
+    instanceNumber : String,
+    key : String,
+    val token : String
+) : KeyRequest(instanceNumber, key) {
+
+    override fun toString() : String {
+        return super.toString() + " key: " + this.key + " token: " + this.token
     }
 }
 
@@ -104,5 +116,12 @@ object RequestHelpers {
         val adapter : JsonAdapter<DownloadRequest> = moshi.adapter(DownloadRequest::class.java)
 
         return adapter.serializeNulls().toJson(downloadRequest)
+    }
+
+    fun tokenRequestToJson(tokenRequest : TokenRequest) : String {
+        val moshi : Moshi = Moshi.Builder().build()
+        val adapter : JsonAdapter<TokenRequest> = moshi.adapter(TokenRequest::class.java)
+
+        return adapter.serializeNulls().toJson(tokenRequest)
     }
 }

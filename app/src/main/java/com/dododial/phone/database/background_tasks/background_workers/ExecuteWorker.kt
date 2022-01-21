@@ -81,14 +81,14 @@ class CoroutineExecuteWorker(
             try {
                 setForeground(getForegroundInfo())
             } catch(e: Exception) {
-                Timber.d("DODODEBUG: %s", e.message!!)
+                Timber.i("DODODEBUG: %s", e.message!!)
             }
         }
 
         val repository: ClientRepository? = (applicationContext as App).repository
         repository?.executeAll()
 
-        Timber.d("DODODEBUG: EXECUTE STARTED")
+        Timber.i("DODODEBUG: EXECUTE STARTED")
         if (repository?.hasQTEs() != false) {
             return Result.retry()
         } else {
@@ -97,10 +97,10 @@ class CoroutineExecuteWorker(
                 "oneTimeExecState" -> WorkerStates.oneTimeExecState = WorkInfo.State.SUCCEEDED
                 "periodicExecState" -> WorkerStates.periodicExecState = WorkInfo.State.SUCCEEDED
                 else -> {
-                    Timber.d("DODODEBUG: EXECUTE WORKER THREAD: Worker state variable name is wrong")
+                    Timber.i("DODODEBUG: EXECUTE WORKER THREAD: Worker state variable name is wrong")
                 }
             }
-            Timber.d("DODODEBUG: EXECUTE ENDED")
+            Timber.i("DODODEBUG: EXECUTE ENDED")
             return Result.success()
         }
 

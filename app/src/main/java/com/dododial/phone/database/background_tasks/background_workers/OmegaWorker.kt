@@ -89,7 +89,7 @@ class CoroutineOmegaWorker(
         try {
             setForeground(getForegroundInfo())
         } catch(e: Exception) {
-            Timber.d("DODODEBUG: %s", e.message!!)
+            Timber.i("DODODEBUG: %s", e.message!!)
         }
 
         when (stateVarString) {
