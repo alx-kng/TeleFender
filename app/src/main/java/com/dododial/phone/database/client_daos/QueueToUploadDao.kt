@@ -27,6 +27,9 @@ interface QueueToUploadDao {
     @Query("SELECT * FROM queue_to_upload")
     suspend fun getAllQTU() : List<QueueToUpload>
 
+    @Query("SELECT * FROM queue_to_upload ORDER BY rowID ASC LIMIT 200")
+    suspend fun getChunkQTU_rowID() : List<QueueToUpload>
+
     @Query("SELECT * FROM queue_to_upload ORDER BY rowID ASC")
     suspend fun getAllQTU_rowID() : List<QueueToUpload>
 

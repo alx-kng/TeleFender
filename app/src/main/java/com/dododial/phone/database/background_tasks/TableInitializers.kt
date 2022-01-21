@@ -7,7 +7,6 @@ import android.content.Context.TELEPHONY_SERVICE
 import android.database.Cursor
 import android.os.Build
 import android.telephony.TelephonyManager
-import android.util.Log
 import androidx.annotation.RequiresApi
 import com.dododial.phone.database.entities.CallLog
 import com.dododial.phone.database.ClientDBConstants.CHANGELOG_TYPE_CONTACT_INSERT
@@ -19,6 +18,7 @@ import com.dododial.phone.database.android_db.CallLogHelper
 import com.dododial.phone.database.android_db.ContactDetailsHelper
 import com.dododial.phone.database.entities.ChangeLog
 import com.dododial.phone.database.entities.QueueToExecute
+import timber.log.Timber
 import java.time.Instant
 import java.util.*
 
@@ -95,13 +95,12 @@ object TableInitializers {
      * changeFromClient()
      */
     @RequiresApi(Build.VERSION_CODES.O)
-    @SuppressLint("LogNotTimber")
     suspend fun initContact(context: Context, database: ClientDatabase, contentResolver: ContentResolver) {
 
         val curs: Cursor? = ContactDetailsHelper.getContactCursor(contentResolver)
 
         if (curs == null) {
-            Log.i("DODODEBUG: ", "Contact cursor is null; BAD")
+            Timber.e("DODODEBUG: Contact cursor is null; BAD")
         } else {
             while (!curs.isAfterLast) {
                 cursContactInsert(curs, context, database)
@@ -120,12 +119,11 @@ object TableInitializers {
      * and ChangeLog using changeFromClient()
      */
     @RequiresApi(Build.VERSION_CODES.O)
-    @SuppressLint("LogNotTimber")
     suspend fun initContactNumber(context: Context, database: ClientDatabase, contentResolver: ContentResolver) {
 
         val curs: Cursor? = ContactDetailsHelper.getContactNumberCursor(contentResolver)
         if (curs == null) {
-            Log.i("DODODEBUG: ", "Contact Number cursor is null; BAD")
+            Timber.e("DODODEBUG: Contact Number cursor is null; BAD")
         } else {
             while (!curs.isAfterLast) {
                 cursContactNumberInsert(curs, context, database)

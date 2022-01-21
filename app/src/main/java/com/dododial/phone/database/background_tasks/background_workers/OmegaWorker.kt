@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
-import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.work.*
@@ -19,6 +18,7 @@ import com.dododial.phone.database.background_tasks.TableSynchronizer
 import com.dododial.phone.database.background_tasks.WorkerStates
 import com.dododial.phone.database.background_tasks.server_related.ServerHelpers
 import kotlinx.coroutines.delay
+import timber.log.Timber
 import java.lang.Exception
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -80,7 +80,6 @@ class CoroutineOmegaWorker(
     val context: Context? = context
     var stateVarString: String? = null
 
-    @SuppressLint("LogNotTimber")
     @RequiresApi(Build.VERSION_CODES.O)
     override suspend fun doWork() : Result {
 
@@ -90,13 +89,24 @@ class CoroutineOmegaWorker(
         try {
             setForeground(getForegroundInfo())
         } catch(e: Exception) {
-            Log.i("DODODEBUG: ", e.message!!)
+            Timber.d("DODODEBUG: %s", e.message!!)
+        }
+
+        when (stateVarString) {
+            "oneTimeOmegaState" -> {
+                Timber.i("DODODEBUG: OMEGA ONE TIME STARTED")
+            }
+            "periodicOmegaState" -> {
+                Timber.i("DODODEBUG: OMEGA PERIODIC STARTED")
+            }
+            else -> {
+                Timber.i("DODODEBUG: OMEGA WORKER THREAD: Worker state variable name is wrong")
+            }
         }
 
         val repository: ClientRepository? = (applicationContext as App).repository
         val database: ClientDatabase? = (applicationContext as App).database
 
-        Log.i("DODODEBUG:", "OMEGA PERIODIC STARTED")
         if (context != null && database != null && repository != null) {
 
             /**
@@ -124,7 +134,7 @@ class CoroutineOmegaWorker(
              */
             while (WorkerStates.downloadPostState == WorkInfo.State.RUNNING) {
                 delay(1000)
-                Log.i("DODODEBUG: ", "DOWNLOAD STILL RUNNING")
+                Timber.i("DODODEBUG: DOWNLOAD STILL RUNNING")
             }
             WorkerStates.downloadPostState = null
 
@@ -141,19 +151,24 @@ class CoroutineOmegaWorker(
              * If a big error occurs, like a 404, the upload should not continue
              */
             WorkerStates.uploadPostState = WorkInfo.State.RUNNING
-            ServerHelpers.uploadPostRequest(context, repository, (applicationContext as App).applicationScope)
+            if (repository.hasQTUs()) {
+                ServerHelpers.uploadPostRequest(context, repository, (applicationContext as App).applicationScope)
+            } else {
+                WorkerStates.uploadPostState = WorkInfo.State.SUCCEEDED
+            }
 
             /**
              * Used to observe the upload state. Makes sure that upload doesn't have a big error before
              * retrying
              */
             while (WorkerStates.uploadPostState == WorkInfo.State.RUNNING) {
-                if (WorkerStates.uploadPostState == WorkInfo.State.FAILED) {
-                    Log.i("DODODEBUG:", "OMEGA PERIODIC ENDED EARLY. PROBLEM WITH UPLOAD.")
-                    return Result.failure()
-                }
                 delay(1000)
-                Log.i("DODODEBUG: ", "UPLOAD STILL RUNNING")
+                Timber.i("DODODEBUG: UPLOAD STILL RUNNING")
+            }
+            
+            if (WorkerStates.uploadPostState == WorkInfo.State.FAILED) {
+                Timber.e("DODODEBUG: OMEGA PERIODIC ENDED EARLY. PROBLEM WITH UPLOAD.")
+                return Result.failure()
             }
             WorkerStates.uploadPostState = null
 
@@ -161,17 +176,22 @@ class CoroutineOmegaWorker(
                 return Result.retry()
             }
 
-            Log.i("DODODEBUG:", "OMEGA PERIODIC ENDED")
 
             when (stateVarString) {
-                "oneTimeOmegaState" -> WorkerStates.oneTimeOmegaState = WorkInfo.State.SUCCEEDED
-                "periodicOmegaState" -> WorkerStates.periodicOmegaState = WorkInfo.State.SUCCEEDED
+                "oneTimeOmegaState" -> {
+                    WorkerStates.oneTimeOmegaState = WorkInfo.State.SUCCEEDED
+                    Timber.i("DODODEBUG: OMEGA ONE TIME ENDED")
+                }
+                "periodicOmegaState" -> {
+                    WorkerStates.periodicOmegaState = WorkInfo.State.SUCCEEDED
+                    Timber.i("DODODEBUG: OMEGA PERIODIC ENDED")
+                }
                 else -> {
-                    Log.i("DODODEBUG: OMEGA WORKER THREAD: ","Worker state variable name is wrong")
+                    Timber.i("DODODEBUG: OMEGA WORKER THREAD: Worker state variable name is wrong")
                 }
             }
-            return Result.success()
 
+            return Result.success()
         } else {
             return Result.retry()
         }
@@ -186,7 +206,7 @@ class CoroutineOmegaWorker(
         val notification : Notification = NotificationCompat.Builder(applicationContext)
             .setSmallIcon(android.R.mipmap.sym_def_app_icon)
             .setContentTitle("DodoDial")
-            .setContentText("DodoDial downloading from server: Omega Periodic...")
+            .setContentText("DodoDial updating...")
             .setContentIntent(pendingIntent)
             .setChannelId(CHANNEL_ID)
             .build()

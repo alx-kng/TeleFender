@@ -1,7 +1,6 @@
 package com.dododial.phone.database.client_daos
 
 import android.os.Build
-import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.room.Dao
 import androidx.room.Transaction
@@ -45,7 +44,7 @@ abstract class ChangeAgentDao: ChangeLogDao, QueueToExecuteDao, QueueToUploadDao
             changeTime,
             type,
             CID,
-            name,
+            null,
             cleanOldNumber,
             cleanNumber,
             cleanParentNumber,
@@ -80,7 +79,6 @@ abstract class ChangeAgentDao: ChangeLogDao, QueueToExecuteDao, QueueToUploadDao
         trustability: Int?,
         counterValue: Int?,
     ) {
-
         val cleanInstanceNumber = MiscHelpers.cleanNumber(instanceNumber)
         val cleanOldNumber = MiscHelpers.cleanNumber(oldNumber)
         val cleanNumber = MiscHelpers.cleanNumber(number)
@@ -93,7 +91,7 @@ abstract class ChangeAgentDao: ChangeLogDao, QueueToExecuteDao, QueueToUploadDao
             changeTime,
             type,
             CID,
-            name,
+            null,
             cleanOldNumber,
             cleanNumber,
             cleanParentNumber,

@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Context.TELEPHONY_SERVICE
 import android.telephony.TelephonyManager
-import android.util.Log
 import androidx.work.WorkInfo
 import com.android.volley.AuthFailureError
 import com.android.volley.Response
@@ -22,6 +21,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.json.JSONException
+import timber.log.Timber
 import java.io.UnsupportedEncodingException
 
 object UserSetup {
@@ -30,8 +30,7 @@ object UserSetup {
     @SuppressLint("MissingPermission", "HardwareIds")
     fun initialPostRequest(context : Context, repository: ClientRepository, scope: CoroutineScope) {
         val tMgr = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
-        //val instanceNumber : String = MiscHelpers.cleanNumber(tMgr.line1Number)!!
-        val instanceNumber = "4436996212"
+        val instanceNumber : String = MiscHelpers.cleanNumber(tMgr.line1Number)!!
 
         val installationRequest = DefaultRequest(instanceNumber)
         var installationRequestJson : String = defaultRequestToJson(installationRequest)
@@ -41,13 +40,12 @@ object UserSetup {
         try {
             val stringRequest: StringRequest =
 
-                @SuppressLint("LogNotTimber")
                 object : StringRequest(
                     Method.POST, url,
 
                     Response.Listener { response ->
-                        Log.i("VOLLEY: FIRST RESPONSE", response!!)
-                          val sessionResponse : DefaultResponse? =
+                        Timber.i("VOLLEY: FIRST RESPONSE %s", response!!)
+                        val sessionResponse : DefaultResponse? =
                             try {
                                 jsonToSessionResponse(response)
                             } catch (e: Exception) {
@@ -64,10 +62,9 @@ object UserSetup {
                              */
                             runBlocking {
                                 scope.launch {
-                                    val keyStorage = KeyStorage(instanceNumber, sessionResponse.sessionID!!, null)
+                                    val keyStorage = KeyStorage(instanceNumber, sessionResponse.sessionID!!, null, null)
                                     repository.insertKey(keyStorage)
 
-                                    Log.i("DODODEBUG: ", repository.getSessionID(instanceNumber))
                                     verifyPostRequest(context, repository, scope)
                                 }
                             }
@@ -76,17 +73,18 @@ object UserSetup {
                             WorkerStates.setupState = WorkInfo.State.FAILED
 
                             if (sessionResponse != null) {
-                                Log.i("DODODEBUG: VOLLEY: ", "ERROR WHEN REQUEST INSTALLATION: " + sessionResponse.error)
+                                Timber.i("DODODEBUG: VOLLEY: ERROR WHEN REQUEST INSTALLATION: %s", sessionResponse.error)
                             } else {
-                                Log.i("DODODEBUG: VOLLEY: ", "ERROR WHEN REQUEST INSTALLATION: SESSION RESPONSE IS NULL")
+                                Timber.i("DODODEBUG: VOLLEY: ERROR WHEN REQUEST INSTALLATION: SESSION RESPONSE IS NULL")
                             }
                         }
                     }, Response.ErrorListener { error ->
-                        Log.e("VOLLEY", error.toString())
-                        WorkerStates.setupState = WorkInfo.State.FAILED
+                        if (error.toString() != "null") {
+                            Timber.e("VOLLEY %s", error.toString())
+                            WorkerStates.setupState = WorkInfo.State.FAILED
+                        }
                         })
                 {
-
                     @SuppressLint("HardwareIds")
                     @Throws(AuthFailureError::class)
                     override fun getBody(): ByteArray? {
@@ -119,34 +117,28 @@ object UserSetup {
     @SuppressLint("MissingPermission", "HardwareIds")
     fun verifyPostRequest(context : Context, repository: ClientRepository, scope: CoroutineScope) {
         val tMgr = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
-        // val instanceNumber = MiscHelpers.cleanNumber(tMgr.line1Number)!!
-        val instanceNumber = "4436996212"
+        val instanceNumber = MiscHelpers.cleanNumber(tMgr.line1Number)!!
 
         // TODO integrate OTP with notifications, for now, it's hardcoded
         val OTP = 111111
         val url = "https://dev.scribblychat.com/callbook/verifyInstallation"  // TODO finalize?
-        Log.i("DODODEBUG:", "BEFORE RUN BLOCKING")
         runBlocking {
             scope.launch {
                 val sessionID = repository.getSessionID(instanceNumber)
-                Log.i("DODODEBGG", "session iD = " + sessionID)
 
                 val verifyRequest = VerifyRequest(instanceNumber, sessionID, OTP)
                 var verifyRequestJson : String? = RequestHelpers.verifyRequestToJson(verifyRequest)
-                Log.i("DODODEBUG: AT TOP: verifyRequestJson = ", verifyRequestJson ?: "Null")
-
 
                 try {
                     val stringRequest: StringRequest =
 
-                        @SuppressLint("LogNotTimber")
                         object : StringRequest(
                             Method.POST, url,
 
                             Response.Listener { response ->
 
 
-                                Log.i("VOLLEY", response!!)
+                                Timber.i("VOLLEY %s", response!!)
                                 val keyResponse: DefaultResponse? =
                                     try {
                                         jsonToKeyResponse(response)
@@ -164,7 +156,7 @@ object UserSetup {
                                      */
                                     runBlocking {
                                         scope.launch {
-                                            repository.updateKey(instanceNumber, keyResponse.key)
+                                            repository.updateKey(instanceNumber, keyResponse.key, null)
                                         }
                                     }
 
@@ -174,28 +166,24 @@ object UserSetup {
                                     WorkerStates.setupState = WorkInfo.State.FAILED
 
                                     if (keyResponse != null) {
-                                        Log.i(
-                                            "DODODEBUG: VOLLEY: ",
-                                            "ERROR WHEN VERIFY INSTALLATION: " + keyResponse?.error
-                                        )
+                                        Timber.i("DODODEBUG: VOLLEY: ERROR WHEN VERIFY INSTALLATION: %s", keyResponse?.error)
                                     } else {
-                                        Log.i(
-                                            "DODODEBUG: VOLLEY: ",
-                                            "ERROR WHEN VERIFY INSTALLATION: SESSION RESPONSE IS NULL"
-                                        )
+                                        Timber.i("DODODEBUG: VOLLEY: ERROR WHEN VERIFY INSTALLATION: SESSION RESPONSE IS NULL")
                                     }
                                 }
                             }, Response.ErrorListener { error ->
-                                Log.e("VOLLEY", error.toString())
-                                WorkerStates.setupState = WorkInfo.State.FAILED
-                            }) {
-
+                                if (error.toString() != "null") {
+                                    Timber.e("VOLLEY %s", error.toString())
+                                    WorkerStates.setupState = WorkInfo.State.FAILED
+                                }
+                            }) 
+                        {
                             @SuppressLint("HardwareIds")
                             @Throws(AuthFailureError::class)
                             override fun getBody(): ByteArray? {
                                 try {
-                                    Log.i(
-                                        "DODODEBUG: VerifyRequestJson = ",
+                                    Timber.i(
+                                        "DODODEBUG: VerifyRequestJson = %s",
                                         verifyRequestJson ?: "NULL"
                                     )
                                     return verifyRequestJson?.toByteArray(charset("utf-8"))

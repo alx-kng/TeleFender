@@ -15,14 +15,23 @@ interface KeyStorageDao {
     @Query("SELECT sessionID FROM key_storage WHERE number = :number")
     suspend fun getSessionID(number: String): String
 
+    @Query("SELECT fireBaseToken FROM key_storage WHERE number = :number")
+    suspend fun getFireBaseToken(number : String) : String?
+
     @Query("""UPDATE key_storage SET clientKey =
         CASE
             WHEN :clientKey IS NOT NULL
                 THEN :clientKey
             ELSE clientKey
-        END
+        END,
+        fireBaseToken =
+            CASE
+                WHEN :fireBaseToken IS NOT NULL
+                    THEN :fireBaseToken
+                ELSE fireBaseToken
+            END
         WHERE number = :number""")
-    suspend fun updateKey(number: String, clientKey: String?)
+    suspend fun updateKey(number: String, clientKey: String?, fireBaseToken : String?)
 
     @Delete
     suspend fun deleteKey(vararg keyStorage: KeyStorage)

@@ -4,8 +4,8 @@ import android.content.Context
 import android.database.Cursor
 import android.os.Build
 import android.provider.CallLog
-import android.util.Log
 import androidx.annotation.RequiresApi
+import timber.log.Timber
 
 object CallLogHelper{
 
@@ -53,7 +53,7 @@ object CallLogHelper{
     fun callsLogCat(context: Context) {
         var calls = getCallDetails(context)
         for (call in calls) {
-            Log.i("CALL LOG: ", call.toString())
+            Timber.i("CALL LOG: %s", call.toString())
         }
     }
 }

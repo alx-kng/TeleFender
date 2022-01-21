@@ -4,8 +4,9 @@ plugins {
     id 'kotlin-kapt'
     // TODO possibly migrate over from 'kotlin-android-extensions' (which is deprecated)
     id 'kotlin-android-extensions'
-}
+    id 'com.google.gms.google-services'
 
+}
 android {
     compileSdkVersion 31
     defaultConfig {
@@ -39,6 +40,7 @@ dependencies {
 
     // Moshi components
     implementation("com.squareup.moshi:moshi:$rootProject.moshiVersion")
+    implementation 'com.google.firebase:firebase-messaging-ktx:23.0.0'
     kapt("com.squareup.moshi:moshi-kotlin-codegen:$rootProject.moshiVersion")
     
     // Volley components
@@ -99,6 +101,13 @@ dependencies {
     implementation "io.reactivex.rxjava2:rxjava:2.2.3"
     implementation 'io.reactivex.rxjava2:rxkotlin:2.3.0'
     implementation 'com.jakewharton.timber:timber:4.7.0'
+
+    // Firebase
+    implementation platform("com.google.firebase:firebase-bom:$rootProject.firebaseVersion")
+    implementation 'com.google.firebase:firebase-analytics-ktx'
+    implementation 'com.google.firebase:firebase-messaging:23.0.0'
+
+
 
 
 }

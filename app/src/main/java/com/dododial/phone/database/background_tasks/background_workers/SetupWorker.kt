@@ -65,14 +65,17 @@ class CoroutineSetupWorker(
         UserSetup.initialPostRequest(context, repository, scope)
 
         while (WorkerStates.setupState == WorkInfo.State.RUNNING) {
-            if (WorkerStates.setupState == WorkInfo.State.FAILED) {
-                Log.i("DODODEBUG: ", "SETUP WORKER RETRYING...")
-                return Result.retry()
-            }
             delay(1000)
             Log.i("DODODEBUG: ", "SETUP WORKER STILL RUNNING")
         }
-        
+
+        if (WorkerStates.setupState == WorkInfo.State.FAILED) {
+            Log.i("DODODEBUG: ", "SETUP WORKER RETRYING...")
+            return Result.retry()
+        }
+
+        Log.i("DODODEBUG: ", "SETUP WORKER DONE")
+
         return Result.success()
     }
 

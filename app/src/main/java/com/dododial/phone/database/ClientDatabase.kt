@@ -6,7 +6,7 @@ import android.content.ContentResolver
 import android.content.Context
 import android.os.Build
 import android.telecom.TelecomManager
-import android.util.Log
+import android.telephony.TelephonyManager
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.LiveData
 import androidx.room.Database
@@ -17,6 +17,7 @@ import androidx.work.WorkInfo
 import com.dododial.phone.database.background_tasks.TableInitializers
 import com.dododial.phone.database.background_tasks.WorkerStates
 import com.dododial.phone.database.background_tasks.background_workers.*
+import com.dododial.phone.database.background_tasks.firebase.DodoFirebaseService
 import com.dododial.phone.database.client_daos.*
 import com.example.actualfinaldatabase.permissions.PermissionsRequester
 import kotlinx.coroutines.CoroutineScope
@@ -24,6 +25,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import com.dododial.phone.database.entities.*
+import com.google.android.gms.tasks.OnCompleteListener
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.messaging.ktx.messaging
+import timber.log.Timber
 import java.util.*
 
 @Database(entities = arrayOf(
@@ -59,17 +64,16 @@ public abstract class ClientDatabase : RoomDatabase() {
         val contentResolver: ContentResolver
     ) : RoomDatabase.Callback() {
 
-        @SuppressLint("LogNotTimber")
         @RequiresApi(Build.VERSION_CODES.O)
         override fun onCreate(db: SupportSQLiteDatabase) {
             super.onCreate(db)
-            Log.i("DODODEBUG: ", "INSIDE DATABASE CALLBACK")
+            Timber.i("DODODEBUG: INSIDE DATABASE CALLBACK")
             INSTANCE?.let { database ->
                 scope.launch {
                     while (context.getSystemService(TelecomManager::class.java).defaultDialerPackage != context.packageName
                         || !PermissionsRequester.hasPermissions(context, arrayOf(Manifest.permission.READ_CALL_LOG))) {
                         delay(500)
-                        Log.i("DODODEBUG: ", "INSIDE COROUTINE | HAS CALL LOG PERMISSION: "  + PermissionsRequester.hasPermissions(context, arrayOf(Manifest.permission.READ_CALL_LOG)))
+                        Timber.i("DODODEBUG: INSIDE COROUTINE | HAS CALL LOG PERMISSION: %s", PermissionsRequester.hasPermissions(context, arrayOf(Manifest.permission.READ_CALL_LOG)))
                     }
                     // Goes through each call log and inserts to db
                     TableInitializers.initCallLog(context, database)
@@ -88,7 +92,7 @@ public abstract class ClientDatabase : RoomDatabase() {
 
                     while(WorkerStates.oneTimeExecState != WorkInfo.State.SUCCEEDED) {
                         delay(500)
-                        Log.i("DODODEBUG: ", "EXECUTE WORK STATE: " + WorkerStates.oneTimeExecState.toString())
+                        Timber.i("DODODEBUG: EXECUTE WORK STATE: %s", WorkerStates.oneTimeExecState.toString())
                     }
                     WorkerStates.oneTimeExecState = null
 
@@ -97,9 +101,21 @@ public abstract class ClientDatabase : RoomDatabase() {
 
                     while(WorkerStates.setupState != WorkInfo.State.SUCCEEDED) {
                         delay(500)
-                        Log.i("DODODEBUG: ", "SETUP WORK STATE: " + WorkerStates.setupState.toString())
+                        Timber.i("DODODEBUG: SETUP WORK STATE: %s", WorkerStates.setupState.toString())
                     }
                     WorkerStates.setupState = null
+
+                    // Gets firebase token
+                    Firebase.messaging.token.addOnCompleteListener(OnCompleteListener { task ->
+                        if (!task.isSuccessful) {
+                            Timber.e("DODODEBUG: Fetching FCM registration token failed %s", task.exception)
+                            return@OnCompleteListener
+                        }
+
+                        // Get new FCM registration token
+                        val token = task.result
+                        Timber.i("DODODEBUG: %s", token ?: "TOKEN WAS NULL")
+                    })
 
                 }
             }
@@ -116,6 +132,7 @@ public abstract class ClientDatabase : RoomDatabase() {
          * Either creates new database instance if there is no initialized one available or returns
          * the initialized instance that already exists.
          */
+        @SuppressLint("MissingPermission")
         @RequiresApi(Build.VERSION_CODES.O)
         fun getDatabase(
             context: Context,
@@ -136,7 +153,7 @@ public abstract class ClientDatabase : RoomDatabase() {
                 instance
             }
 
-            Log.i("DODODEBUG: ", "GET DATABASE CALLED!")
+            Timber.i("DODODEBUG: GET DATABASE CALLED!")
 
             runBlocking {
                 scope.launch {
@@ -145,43 +162,48 @@ public abstract class ClientDatabase : RoomDatabase() {
                     var isInitialized = !instanceTemp.executeAgentDao().hasQTEs()
                         && instanceTemp.instanceDao().hasInstance()
 
-                    // TODO update the is setup to automatically use user's number instead of
-                    //  hardcoded value
-                    var isSetup = instanceTemp.keyStorageDao().hasCredKey("4436996212")
-
-                    while (!isInitialized || !isSetup) {
+                    while (!isInitialized) {
                         delay(500)
-                        Log.i("DODODEBUG: ", "INSIDE GET DATABASE COROUTINE. DATABASE INITIALIZED = " + isInitialized)
-                        Log.i("DODODEBUG: ", "INSIDE GET DATABASE COROUTINE. USER SETUP = " + isSetup)
+                        Timber.i("DODODEBUG: INSIDE GET DATABASE COROUTINE. DATABASE INITIALIZED = %s", isInitialized)
 
                         isInitialized = !instanceTemp.executeAgentDao().hasQTEs()
                             && instanceTemp.instanceDao().hasInstance()
-
-                        isSetup = instanceTemp.keyStorageDao().hasCredKey("4436996212")
                     }
 
-                    Log.i("DODODEBUG: ", "BEFORE ONE TIMES")
+                    val tMgr = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+                    val instanceNumber = MiscHelpers.cleanNumber(tMgr.line1Number) // get phone # of user
+
+                    var isSetup = instanceTemp.keyStorageDao().hasCredKey(instanceNumber!!)
+                    
+                    while (!isInitialized || !isSetup) {
+                        delay(500)
+                        Timber.i("DODODEBUG: INSIDE GET DATABASE COROUTINE. USER SETUP = %s", isSetup)
+                        
+                        isSetup = instanceTemp.keyStorageDao().hasCredKey(instanceNumber!!)
+                    }
+
+                    Timber.i("DODODEBUG: BEFORE ONE TIMES")
                     OmegaPeriodicScheduler.initiateOneTimeOmegaWorker(context)
 
                     while(WorkerStates.oneTimeOmegaState != WorkInfo.State.SUCCEEDED) {
                         if (WorkerStates.oneTimeOmegaState == WorkInfo.State.FAILED
                             || WorkerStates.oneTimeOmegaState == WorkInfo.State.CANCELLED
                             || WorkerStates.oneTimeOmegaState == WorkInfo.State.BLOCKED) {
-                            Log.i("DODODEBUG: ", "WORKER STATE BAD")
+                            Timber.i("DODODEBUG: WORKER STATE BAD")
                             break
                         }
                         delay(500)
-                        Log.i("DODODEBUG: ", "ONE TIME OMEGA WORK STATE: " + WorkerStates.oneTimeOmegaState.toString())
+                        Timber.i("DODODEBUG: ONE TIME OMEGA WORK STATE: %s", WorkerStates.oneTimeOmegaState.toString())
                     }
                     WorkerStates.oneTimeOmegaState = null
 
-                    Log.i("DODODEBUG: ", "AFTER ONE TIMES")
+                    Timber.i("DODODEBUG: AFTER ONE TIMES")
 
-                    DatabaseLogFunctions.logContacts(instanceTemp)
-                    DatabaseLogFunctions.logContactNumbers(instanceTemp)
-                    DatabaseLogFunctions.logChangeLogs(instanceTemp)
-                    DatabaseLogFunctions.logExecuteLogs(instanceTemp)
-                    DatabaseLogFunctions.logUploadLogs(instanceTemp)
+                    DatabaseLogFunctions.logContacts(instanceTemp, null)
+                    DatabaseLogFunctions.logContactNumbers(instanceTemp, null)
+                    DatabaseLogFunctions.logChangeLogs(instanceTemp, null)
+                    DatabaseLogFunctions.logExecuteLogs(instanceTemp, null)
+                    DatabaseLogFunctions.logUploadLogs(instanceTemp, null)
 
                     // Initialize Omega Periodic Worker (sync, download, execute, upload)
                     OmegaPeriodicScheduler.initiatePeriodicOmegaWorker(context)

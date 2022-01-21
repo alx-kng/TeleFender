@@ -10,10 +10,11 @@ data class KeyStorage(
     @PrimaryKey val number: String,
     val sessionID: String,
     val clientKey: String?,
+    val fireBaseToken: String?
 ) {
 
     override fun toString() : String {
-        return "KEYSTORAGE - number" + this.number + " sessionID: " + this.sessionID + " clientKey: " + this.clientKey
+        return "KEYSTORAGE - number" + this.number + " sessionID: " + this.sessionID + " clientKey: " + this.clientKey + " fireBaseToken: " + this.fireBaseToken
     }
 }
 

@@ -17,6 +17,8 @@ import timber.log.Timber
 @RequiresApi(Build.VERSION_CODES.O)
 class App : Application() {
 
+
+
     val applicationScope = CoroutineScope(SupervisorJob())
 
     val database by lazy { ClientDatabase.getDatabase(this, applicationScope, contentResolver) }
@@ -32,13 +34,20 @@ class App : Application() {
             database.keyStorageDao(),
             database.queueToExecuteDao(),
             database.queueToUploadDao(),
-            database.instanceDao()
+            database.instanceDao(),
+            database.contactDao(),
+            database.contactNumbersDao()
         )
     }
 
     override fun onCreate() {
         super.onCreate()
-        Timber.plant(Timber.DebugTree())
+
+        if (BuildConfig.DEBUG) {
+            Timber.plant(Timber.DebugTree())
+        }
     }
+
+    //if we want, we could add custom crashreportingtree for release that would send error messages back to server
 }
  

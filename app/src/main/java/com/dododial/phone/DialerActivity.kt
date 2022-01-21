@@ -14,7 +14,6 @@ import android.telecom.Call
 import android.telecom.TelecomManager
 import android.telecom.TelecomManager.ACTION_CHANGE_DEFAULT_DIALER
 import android.telecom.TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME
-import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat.requestPermissions
 import androidx.core.content.PermissionChecker.PERMISSION_GRANTED
@@ -55,7 +54,6 @@ class DialerActivity : AppCompatActivity() {
     var fromDialer = false
     private val CHANNEL_ID = "alxkng5737"
 
-    @SuppressLint("LogNotTimber")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_dialer)
@@ -79,7 +77,6 @@ class DialerActivity : AppCompatActivity() {
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
-    @SuppressLint("LogNotTimber")
     override fun onStart() {
         super.onStart()
 
@@ -125,7 +122,6 @@ class DialerActivity : AppCompatActivity() {
         }
     }
 
-    @SuppressLint("LogNotTimber")
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -155,8 +151,6 @@ class DialerActivity : AppCompatActivity() {
 
     @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("MissingPermission")
-
-
     companion object {
         const val REQUEST_PERMISSION = 0
     }

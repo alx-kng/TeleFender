@@ -7,10 +7,7 @@ import androidx.annotation.WorkerThread
 import androidx.work.WorkInfo
 import com.dododial.phone.database.client_daos.ChangeAgentDao
 import com.dododial.phone.database.client_daos.*
-import com.dododial.phone.database.entities.ChangeLog
-import com.dododial.phone.database.entities.CallLog
-import com.dododial.phone.database.entities.KeyStorage
-import com.dododial.phone.database.entities.QueueToUpload
+import com.dododial.phone.database.entities.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -24,7 +21,9 @@ class ClientRepository(
     private val keyStorageDao : KeyStorageDao,
     private val queueToExecuteDao : QueueToExecuteDao,
     private val queueToUploadDao : QueueToUploadDao,
-    private val instanceDao : InstanceDao
+    private val instanceDao : InstanceDao,
+    private val contactDao : ContactDao,
+    private val contactNumbersDao : ContactNumbersDao
     ) {
 
     /**
@@ -124,6 +123,15 @@ class ClientRepository(
         return result
     }
 
+    @WorkerThread
+    suspend fun getAllQTE() : List<QueueToExecute> {
+        val result : List<QueueToExecute>
+        mutexExecute.withLock {
+            result = queueToExecuteDao.getAllQTEs()
+        }
+        return result
+    }
+
     /**
      * executeAll() is called to execute the logs within QueueToExecute
      * Should be scheduled async and done when possible / there are logs left
@@ -194,9 +202,9 @@ class ClientRepository(
     }
 
     @WorkerThread
-    suspend fun updateKey(number : String, clientKey : String?) {
+    suspend fun updateKey(number : String, clientKey : String?, token : String?) {
         mutexKey.withLock {
-            keyStorageDao.updateKey(number, clientKey)
+            keyStorageDao.updateKey(number, clientKey, token)
         }
     }
 
@@ -269,7 +277,7 @@ class ClientRepository(
             changeTime,
             type,
             CID,
-            name,
+            null,
             oldNumber,
             number,
             parentNumber,
@@ -323,4 +331,32 @@ class ClientRepository(
         }
         return result
     }
+
+    @WorkerThread
+    suspend fun getChunkQTUByRowID() : List<QueueToUpload> {
+        val result : List<QueueToUpload>
+        mutexUpload.withLock {
+            result = queueToUploadDao.getChunkQTU_rowID()
+        }
+        return result
+    }
+
+    @WorkerThread
+    suspend fun getAllContacts() : List<Contact> {
+        val result : List<Contact>
+        mutexContact.withLock {
+            result = contactDao.getAllContacts()
+        }
+        return result
+    }
+
+    @WorkerThread
+    suspend fun getAllContactNumbers() : List<ContactNumbers> {
+        val result : List<ContactNumbers>
+        mutexContactNumbers.withLock {
+            result = contactNumbersDao.getAllContactNumbers()
+        }
+        return result
+    }
+
 }

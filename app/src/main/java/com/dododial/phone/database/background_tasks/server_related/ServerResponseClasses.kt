@@ -1,11 +1,13 @@
     package com.dododial.phone.database.background_tasks.server_related
 
 import com.dododial.phone.database.entities.ChangeLog
+import com.squareup.moshi.Json
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
+import timber.log.Timber
 
-@JsonClass(generateAdapter = true)
+    @JsonClass(generateAdapter = true)
 open class DefaultResponse (
     val status : String,
     val error : String?
@@ -25,11 +27,6 @@ class SessionResponse(
         return super.toString() + " sessionID: " + this.sessionID
     }
 }
-
-//class SessionJsonAdapter {
-//    @FromJson
-//    fun sessionFromJson(sessionJson)
-//}
 
 @JsonClass(generateAdapter = true)
 class KeyResponse(
@@ -63,6 +60,7 @@ class ChangeResponse(
 class UploadResponse(
     status : String,
     error : String?,
+    @Json(name = "rowID")
     val lastUploadRow : Int
 ) : DefaultResponse(status, error) {
 

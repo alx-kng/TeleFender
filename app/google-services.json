@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "577016276571",
+    "project_id": "dododial",
+    "storage_bucket": "dododial.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:577016276571:android:054c2bfe9da74a5e51417e",
+        "android_client_info": {
+          "package_name": "com.dododial.phone"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "577016276571-7rsoq0bo4jvartcfgeosqcqoh6mr8ivu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCpiom01xOwyzmhVqOurbxz9CyH8FmRMz8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "577016276571-7rsoq0bo4jvartcfgeosqcqoh6mr8ivu.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
