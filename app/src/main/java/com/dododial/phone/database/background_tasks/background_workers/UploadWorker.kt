@@ -21,7 +21,6 @@ import java.util.concurrent.TimeUnit
 object UploadScheduler {
     val uploadOneTag = "oneTimeUploadWorker"
     val uploadPeriodTag = "periodicUploadWorker"
-
     
     fun initiateOneTimeUploadWorker(context : Context) : UUID {
         val uploadRequest = OneTimeWorkRequestBuilder<CoroutineUploadWorker>()
@@ -85,14 +84,12 @@ class CoroutineUploadWorker(
         if (repository != null && repository.hasQTUs()) {
             ServerHelpers.uploadPostRequest(context, repository, (applicationContext as App).applicationScope)
         } else {
-            
             if (repository?.hasQTUs() == false) {
                 return Result.success()
             } else {
                 return Result.retry()
             }
         }
-
         when (stateVarString) {
             "oneTimeUploadState" ->  WorkerStates.oneTimeUploadState = WorkInfo.State.SUCCEEDED
             "periodicUploadState" -> WorkerStates.periodicUploadState = WorkInfo.State.SUCCEEDED
@@ -100,7 +97,6 @@ class CoroutineUploadWorker(
                 Timber.i("DODODEBUG: UPLOAD WORKER THREAD: Worker state variable name is wrong")
             }
         }
-
         return Result.success()
     }
 

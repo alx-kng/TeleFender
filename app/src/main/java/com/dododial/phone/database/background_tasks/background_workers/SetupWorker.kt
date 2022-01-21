@@ -18,6 +18,7 @@ import android.content.pm.ServiceInfo
 import android.app.Notification
 import com.dododial.phone.database.background_tasks.server_related.UserSetup
 import kotlinx.coroutines.delay
+import timber.log.Timber
 
 object SetupScheduler {
     val setupTag = "setupWorker"
@@ -51,11 +52,10 @@ class CoroutineSetupWorker(
     val context = context
 
     override suspend fun doWork() : Result {
-
         try {
             setForeground(getForegroundInfo())
         } catch(e: Exception) {
-            Log.i("DODODEBUG: ", e.message!!)
+            Timber.i("DODODEBUG: %s", e.message!!)
         }
 
         val repository : ClientRepository = (applicationContext as App).repository
@@ -66,16 +66,15 @@ class CoroutineSetupWorker(
 
         while (WorkerStates.setupState == WorkInfo.State.RUNNING) {
             delay(1000)
-            Log.i("DODODEBUG: ", "SETUP WORKER STILL RUNNING")
+            Timber.i("DODODEBUG: SETUP WORKER STILL RUNNING")
         }
 
         if (WorkerStates.setupState == WorkInfo.State.FAILED) {
-            Log.i("DODODEBUG: ", "SETUP WORKER RETRYING...")
+            Timber.i("DODODEBUG: SETUP WORKER RETRYING...")
             return Result.retry()
         }
 
-        Log.i("DODODEBUG: ", "SETUP WORKER DONE")
-
+        Timber.i("DODODEBUG: SETUP WORKER DONE")
         return Result.success()
     }
 
@@ -95,13 +94,13 @@ class CoroutineSetupWorker(
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             ForegroundInfo(
-                NOTIFICATION_ID!!,
+                NOTIFICATION_ID,
                 notification,
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
             )
         } else {
             ForegroundInfo(
-                NOTIFICATION_ID!!,
+                NOTIFICATION_ID,
                 notification
             )
         }

@@ -85,7 +85,6 @@ class CoroutineTokenWorker(
                 Timber.i("DODODEBUG: TOKEN WORKER THREAD: Worker state variable name is wrong")
             }
         }
-
         return Result.success()
     }
 }

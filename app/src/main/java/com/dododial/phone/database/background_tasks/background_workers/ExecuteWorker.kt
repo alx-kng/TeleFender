@@ -19,7 +19,6 @@ import java.lang.Exception
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-
 object ExecuteScheduler {
 
     val execOneTag = "oneTimeExecuteWorker"
@@ -62,12 +61,10 @@ object ExecuteScheduler {
     }
 }
 
-
 class CoroutineExecuteWorker(
     context: Context,
     params: WorkerParameters
 ) : CoroutineWorker(context, params) {
-
 
     var NOTIFICATION_ID : Int? = -1
     val CHANNEL_ID = "alxkng5737"
@@ -92,7 +89,6 @@ class CoroutineExecuteWorker(
         if (repository?.hasQTEs() != false) {
             return Result.retry()
         } else {
-
             when (stateVarString) {
                 "oneTimeExecState" -> WorkerStates.oneTimeExecState = WorkInfo.State.SUCCEEDED
                 "periodicExecState" -> WorkerStates.periodicExecState = WorkInfo.State.SUCCEEDED
@@ -103,7 +99,6 @@ class CoroutineExecuteWorker(
             Timber.i("DODODEBUG: EXECUTE ENDED")
             return Result.success()
         }
-
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {

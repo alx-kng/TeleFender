@@ -14,12 +14,7 @@ interface ContactNumbersDao {
     suspend fun insertContactNumbers(vararg contactNumbers: ContactNumbers)
 
     @Query("""
-        UPDATE contact_numbers SET number = :number, name =
-            CASE
-                WHEN :name IS NOT NULL
-                    THEN :name
-                ELSE name
-            END,
+        UPDATE contact_numbers SET number = :number,
             versionNumber =
                 CASE
                     WHEN :versionNumber IS NOT NULL
@@ -28,7 +23,7 @@ interface ContactNumbersDao {
                 END
             WHERE CID = :CID AND number = :oldNumber
         """)
-    suspend fun updateContactNumbers(CID: String, oldNumber: String, number: String, name: String?, versionNumber: Int?)
+    suspend fun updateContactNumbers(CID: String, oldNumber: String, number: String, versionNumber: Int?)
 
     @Query("SELECT * FROM contact_numbers WHERE CID = :CID AND number = :number")
     suspend fun getContactNumbersRow(CID: String, number: String): ContactNumbers?

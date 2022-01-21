@@ -36,11 +36,10 @@ data class Instance(
     )])
 data class Contact(
     @PrimaryKey val CID: String,
-    val parentNumber : String,
-    val name : String?) {
+    val parentNumber : String) {
 
     override fun toString() : String {
-        return "CONTACT -  CID: " + this.CID  +  " parentNumber: " + this.parentNumber + " name: " + this.name
+        return "CONTACT -  CID: " + this.CID  +  " parentNumber: " + this.parentNumber
     }
 }
 
@@ -56,7 +55,6 @@ data class Contact(
 data class ContactNumbers(
     val CID: String,
     val number : String,
-    val name : String?, // Repeated from Contact table for ease of sync
     val versionNumber: Int = 0
 ) {
     override fun equals(other: Any?): Boolean {
@@ -68,7 +66,7 @@ data class ContactNumbers(
     }
     override fun toString() : String {
         return "CONTACTNUMBER -  CID: " + this.CID  +  " number: " + this.number +
-            " name: " + this.name + " versionNumber: " + this.versionNumber
+            " versionNumber: " + this.versionNumber
     }
 }
 

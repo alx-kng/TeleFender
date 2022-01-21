@@ -121,7 +121,6 @@ class CoroutineOmegaWorker(
                 return Result.retry()
             }
 
-
             /**
              * Downloads changes from server
              */
@@ -176,7 +175,6 @@ class CoroutineOmegaWorker(
                 return Result.retry()
             }
 
-
             when (stateVarString) {
                 "oneTimeOmegaState" -> {
                     WorkerStates.oneTimeOmegaState = WorkInfo.State.SUCCEEDED
@@ -190,7 +188,6 @@ class CoroutineOmegaWorker(
                     Timber.i("DODODEBUG: OMEGA WORKER THREAD: Worker state variable name is wrong")
                 }
             }
-
             return Result.success()
         } else {
             return Result.retry()

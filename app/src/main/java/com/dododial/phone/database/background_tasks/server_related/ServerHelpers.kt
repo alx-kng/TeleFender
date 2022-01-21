@@ -104,7 +104,6 @@ object ServerHelpers {
                                                         changeLog.changeTime,
                                                         changeLog.type,
                                                         changeLog.CID,
-                                                        changeLog.name,
                                                         changeLog.oldNumber,
                                                         changeLog.number,
                                                         changeLog.parentNumber,
@@ -131,7 +130,6 @@ object ServerHelpers {
                                     }
                                 } else {
                                     WorkerStates.downloadPostState = WorkInfo.State.FAILED
-
                                     if (changeResponse != null) {
                                         Timber.i(
                                             "DODODEBUG: VOLLEY: ERROR WHEN DOWNLOAD: %s",
@@ -162,7 +160,6 @@ object ServerHelpers {
                                     return null
                                 }
                             }
-
                             override fun getBodyContentType(): String {
                                 return "application/json; charset=utf-8"
                             }
@@ -386,7 +383,6 @@ object ServerHelpers {
                                     return null
                                 }
                             }
-
                             override fun getBodyContentType(): String {
                                 return "application/json; charset=utf-8"
                             }

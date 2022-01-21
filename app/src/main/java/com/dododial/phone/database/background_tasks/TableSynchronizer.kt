@@ -97,8 +97,7 @@ object TableSynchronizer {
                  */
                 val defCID = UUID.nameUUIDFromBytes((curs.getString(0) + parentNumber).toByteArray()).toString()
                 val defNumber = cleanNumber(curs.getString(1))!!
-                val defName = curs.getString(2)
-                val defVersionNumber = curs.getString(3).toInt()
+                val defVersionNumber = curs.getString(2).toInt()
 
                 // Corresponding contact numbers (by CID) in our database
                 val matchCID: List<ContactNumbers> = database.contactNumbersDao().getContactNumbers_CID(defCID)
@@ -120,7 +119,6 @@ object TableSynchronizer {
                         changeTime,
                         ClientDBConstants.CHANGELOG_TYPE_CONTACT_INSERT,
                         defCID,
-                        defName,
                         null,
                         null,
                         parentNumber,
@@ -143,7 +141,6 @@ object TableSynchronizer {
                         changeTime,
                         ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_INSERT,
                         defCID,
-                        defName,
                         null,
                         defNumber,
                         null,
@@ -155,7 +152,6 @@ object TableSynchronizer {
                 val contactNumber = ContactNumbers(
                     defCID,
                     defNumber,
-                    defName,
                     defVersionNumber
                 )
 
@@ -203,7 +199,6 @@ object TableSynchronizer {
                     null,
                     null,
                     null,
-                    null,
                     null
                 )
             } else {
@@ -228,7 +223,6 @@ object TableSynchronizer {
                         ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_DELETE,
                         dodoCID,
                         null,
-                        null,
                         contactNumbers.number,
                         null,
                         null,
@@ -247,40 +241,12 @@ object TableSynchronizer {
                             changeTime,
                             ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_UPDATE,
                             dodoCID,
-                            matchPK.name,
                             contactNumbers.number, // oldNumber
                             matchPK.number, // new number
                             null,
                             null,
                             matchPK.versionNumber
                         )
-
-                        // TODO Clean up name field
-                        /**
-                         * Think it might be not needed since name will always be null in our database
-                         */
-//                        /*
-//                        Different names means that the Contact table also needs to be updated,
-//                        since Contacts also stores names
-//                         */
-//                        if (matchPK.name != contactNumbers.name) {
-//                            val cChangeID = UUID.randomUUID().toString()
-//                            val changeTime = Instant.now().toEpochMilli()
-//
-//                            database.changeAgentDao().changeFromClient(
-//                                cChangeID,
-//                                null,
-//                                changeTime,
-//                                ClientDBConstants.CHANGELOG_TYPE_CONTACT_UPDATE,
-//                                dodoCID,
-//                                matchPK.name,
-//                                null,
-//                                null,
-//                                null,
-//                                null,
-//                                null
-//                            )
-//                        }
                     }
                 }
             }

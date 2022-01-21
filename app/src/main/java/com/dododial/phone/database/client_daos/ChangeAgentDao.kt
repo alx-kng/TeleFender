@@ -24,7 +24,6 @@ abstract class ChangeAgentDao: ChangeLogDao, QueueToExecuteDao, QueueToUploadDao
         changeTime: Long,
         type: String,
         CID: String?,
-        name: String?,
         oldNumber: String?,
         number: String?,
         parentNumber: String?,
@@ -44,7 +43,6 @@ abstract class ChangeAgentDao: ChangeLogDao, QueueToExecuteDao, QueueToUploadDao
             changeTime,
             type,
             CID,
-            null,
             cleanOldNumber,
             cleanNumber,
             cleanParentNumber,
@@ -72,7 +70,6 @@ abstract class ChangeAgentDao: ChangeLogDao, QueueToExecuteDao, QueueToUploadDao
         changeTime: Long,
         type: String,
         CID: String?,
-        name: String?,
         oldNumber : String?,
         number: String?,
         parentNumber: String?,
@@ -84,14 +81,12 @@ abstract class ChangeAgentDao: ChangeLogDao, QueueToExecuteDao, QueueToUploadDao
         val cleanNumber = MiscHelpers.cleanNumber(number)
         val cleanParentNumber = MiscHelpers.cleanNumber(parentNumber)
         
-        //Log.i("DODODEBUG ChangeAgentDAO", "received changeFromClient() call")
         val changeLog = ChangeLog(
             changeID,
             cleanInstanceNumber,
             changeTime,
             type,
             CID,
-            null,
             cleanOldNumber,
             cleanNumber,
             cleanParentNumber,

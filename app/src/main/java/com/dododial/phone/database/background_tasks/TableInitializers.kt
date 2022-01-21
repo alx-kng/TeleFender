@@ -78,7 +78,6 @@ object TableInitializers {
             null,
             null,
             null,
-            null
         )
 
         database.changeLogDao().insertChangeLog(changeLog)
@@ -96,7 +95,6 @@ object TableInitializers {
      */
     @RequiresApi(Build.VERSION_CODES.O)
     suspend fun initContact(context: Context, database: ClientDatabase, contentResolver: ContentResolver) {
-
         val curs: Cursor? = ContactDetailsHelper.getContactCursor(contentResolver)
 
         if (curs == null) {
@@ -104,7 +102,6 @@ object TableInitializers {
         } else {
             while (!curs.isAfterLast) {
                 cursContactInsert(curs, context, database)
-
                 curs.moveToNext()
             }
         }
@@ -148,7 +145,6 @@ object TableInitializers {
         val cChangeID = UUID.randomUUID().toString()
         val changeTime = Instant.now().toEpochMilli()
         val CID = UUID.nameUUIDFromBytes((cursor.getString(0) + parentNumber).toByteArray()).toString()
-        val name = cursor.getString(1)
 
         // To insert into Contacts table
         database.changeAgentDao().changeFromClient(
@@ -157,10 +153,9 @@ object TableInitializers {
             changeTime,
             CHANGELOG_TYPE_CONTACT_INSERT,
             CID,
-            name,
-            null,
             null,
             parentNumber,
+            null,
             null,
             null
         )
@@ -181,7 +176,6 @@ object TableInitializers {
         val changeTime = Instant.now().toEpochMilli()
         val CID = UUID.nameUUIDFromBytes((cursor.getString(0) + parentNumber).toByteArray()).toString()
         val number = cursor.getString(1)
-        val name: String? = cursor.getString(2)
         val versionNumber = cursor.getString(3).toInt()
 
         // To insert into ContactNumbers table
@@ -191,7 +185,6 @@ object TableInitializers {
             changeTime,
             CHANGELOG_TYPE_CONTACT_NUMBER_INSERT,
             CID,
-            name,
             null,
             number,
             null,

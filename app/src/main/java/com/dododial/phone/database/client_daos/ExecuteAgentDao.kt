@@ -81,7 +81,6 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
                 changeLog.changeTime,
                 changeLog.type,
                 changeLog.CID,
-                changeLog.name,
                 changeLog.oldNumber,
                 changeLog.number,
                 changeLog.parentNumber,
@@ -112,7 +111,6 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
         changeTime: Long,
         type: String,
         CID : String?,
-        name : String?,
         oldNumber : String?,
         number : String?,
         parentNumber : String?,
@@ -131,10 +129,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
 
         when (type) {
             CHANGELOG_TYPE_CONTACT_INSERT -> mutexContact.withLock {
-                cInsert(CID, parentNumber, name)
-            }
-            CHANGELOG_TYPE_CONTACT_UPDATE -> mutexContact.withLock {
-                cUpdate(CID, name)
+                cInsert(CID, parentNumber)
             }
             CHANGELOG_TYPE_CONTACT_DELETE -> mutexContact.withLock {
                 mutexContactNumbers.withLock {
@@ -145,12 +140,12 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
             }
             CHANGELOG_TYPE_CONTACT_NUMBER_INSERT -> mutexContactNumbers.withLock {
                 mutexTrustedNumbers.withLock {
-                    cnInsert(CID, number, name, counterValue)
+                    cnInsert(CID, number, counterValue)
                 }
             }
             CHANGELOG_TYPE_CONTACT_NUMBER_UPDATE -> mutexContactNumbers.withLock {
                 mutexTrustedNumbers.withLock {
-                    cnUpdate(CID, oldNumber, number, name, counterValue)
+                    cnUpdate(CID, oldNumber, number, counterValue)
                 }
             }
             CHANGELOG_TYPE_CONTACT_NUMBER_DELETE -> mutexContactNumbers.withLock {
@@ -179,29 +174,13 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
      * Inserts contact given CID, parentNumber, and Name. Higher level function than the corresponding
      * DAO function as it also verifies arguments are not Null and catches exceptions.
      */
-    suspend fun cInsert(CID: String?, parentNumber: String?, name: String?) {
+    suspend fun cInsert(CID: String?, parentNumber: String?) {
         try {
             if (CID == null || parentNumber == null) {
                 throw NullPointerException("CID or parentNumber was null for cInsert")
             } else {
-                val contact = Contact(CID, parentNumber, name)
+                val contact = Contact(CID, parentNumber)
                 insertContact(contact)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
-    /**
-     * Updates contact given CID and new name. Higher level function than the corresponding
-     * DAO function as it also verifies arguments are not Null and catches exceptions.
-     */
-    suspend fun cUpdate(CID: String?, name: String?) {
-        try {
-            if (CID == null || name == null) {
-                throw NullPointerException("CID or name was Null for cUpdate ")
-            } else {
-                updateContactName(CID, name)
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -240,12 +219,12 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
      * DAO function as it also inserts number into TrustedNumbers, verifies arguments are not Null,
      * and catches exceptions.
      */
-    suspend fun cnInsert(CID: String?, number: String?, name: String?, versionNumber: Int?){
+    suspend fun cnInsert(CID: String?, number: String?, versionNumber: Int?){
         try {
             if (CID == null || number == null || versionNumber == null) {
                 throw NullPointerException("CID, number, or versionNumber was null for cnInsert")
             } else {
-                val contactNumber = ContactNumbers(CID, number, name, versionNumber)
+                val contactNumber = ContactNumbers(CID, number, versionNumber)
 
                 insertContactNumbers(contactNumber)
                 insertTrustedNumbers(number)
@@ -259,12 +238,12 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
      * Updates ContactNumber given CID, oldNumber, and new number. Higher level function than the corresponding
      * DAO function as it also updates TrustedNumbers, verifies arguments are not Null, and catches exceptions.
      */
-    suspend fun cnUpdate(CID: String?, oldNumber: String?, number: String?, name: String?, versionNumber: Int?) {
+    suspend fun cnUpdate(CID: String?, oldNumber: String?, number: String?, versionNumber: Int?) {
         try {
             if (CID == null || oldNumber == null || number == null) {
                 throw NullPointerException("oldNumber or number was null for cnUpdate")
             } else {
-                updateContactNumbers(CID, oldNumber, number, name, versionNumber)
+                updateContactNumbers(CID, oldNumber, number, versionNumber)
                 updateTrustedNumbers(oldNumber, number)
             }
         } catch (e: Exception) {

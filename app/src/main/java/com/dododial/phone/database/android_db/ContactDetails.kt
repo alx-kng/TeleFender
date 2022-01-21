@@ -36,7 +36,6 @@ object ContactDetailsHelper {
         val projection = arrayOf(
             Phone.CONTACT_ID,
             Phone.NUMBER,
-            Phone.DISPLAY_NAME_PRIMARY,
             Phone.DATA_VERSION
         )
         var cur: Cursor? = null
@@ -47,7 +46,6 @@ object ContactDetailsHelper {
                     Phone.CONTACT_ID
                         + " ASC")
             )
-
             cur!!.moveToFirst()
         } catch (e: Exception) {
             e.printStackTrace()
@@ -63,7 +61,6 @@ object ContactDetailsHelper {
     ): Cursor? {
         val projection = arrayOf(
             ContactsContract.Contacts._ID,
-            ContactsContract.Contacts.DISPLAY_NAME_PRIMARY,
         )
         var cur: Cursor? = null
         try {
