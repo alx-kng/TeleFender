@@ -58,20 +58,19 @@ class DodoFirebaseService : FirebaseMessagingService() {
                         Manifest.permission.READ_CALL_LOG)))
                 }
 
-                WorkerStates.setupState = WorkInfo.State.RUNNING
-                while(WorkerStates.setupState != WorkInfo.State.SUCCEEDED) {
-                    delay(500)
-                    Timber.i("DODODEBUG: SETUP WORK STATE: %s", WorkerStates.setupState.toString())
-                }
-                WorkerStates.setupState = null
-
-
                 val tMgr = applicationContext.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
                 val instanceNumber : String = MiscHelpers.cleanNumber(tMgr.line1Number)!!
-
                 val repository : ClientRepository? = (application as App).repository
-                repository?.updateKey(instanceNumber, null, token)
 
+                var isSetup = repository?.hasCredKey(instanceNumber!!) ?: false
+                while (!isSetup) {
+                    delay(500)
+                    Timber.i("DODODEBUG: INSIDE GET DATABASE COROUTINE. USER SETUP = %s", isSetup)
+
+                    isSetup = repository?.hasCredKey(instanceNumber!!) ?: false
+                }
+
+                repository?.updateKey(instanceNumber, null, token)
                 //TODO CALL onetime TOKENWORKER HERE
             }
         }

@@ -216,6 +216,11 @@ class ClientRepository(
             keyStorageDao.updateKey(number, clientKey, token)
         }
     }
+    
+    @WorkerThread
+    suspend fun hasCredKey(instanceNumber : String) : Boolean {
+        return keyStorageDao.hasCredKey(instanceNumber)
+    }
 
     @WorkerThread
     suspend fun getSessionID(number: String) : String {

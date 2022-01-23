@@ -114,7 +114,7 @@ public abstract class ClientDatabase : RoomDatabase() {
 
                         // Get new FCM registration token
                         val token = task.result
-                        Timber.i("DODODEBUG: %s", token ?: "TOKEN WAS NULL")
+                        Timber.i("DODODEBUG: TOKEN: %s", token ?: "TOKEN WAS NULL")
                     })
 
                 }
@@ -175,7 +175,7 @@ public abstract class ClientDatabase : RoomDatabase() {
 
                     var isSetup = instanceTemp.keyStorageDao().hasCredKey(instanceNumber!!)
                     
-                    while (!isInitialized || !isSetup) {
+                    while (!isSetup) {
                         delay(500)
                         Timber.i("DODODEBUG: INSIDE GET DATABASE COROUTINE. USER SETUP = %s", isSetup)
                         

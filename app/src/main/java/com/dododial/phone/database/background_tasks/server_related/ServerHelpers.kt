@@ -86,7 +86,7 @@ object ServerHelpers {
                                  * Guarantees that response has the right status before trying to
                                  * iterate through change logs stored in it.
                                  */
-                                if (changeResponse != null && changeResponse.status == "ok" && changeResponse is ChangeResponse) {
+                                if (changeResponse != null && changeResponse.status == "ok" && (changeResponse is ChangeResponse)) {
 
                                     runBlocking {
                                         scope.launch {

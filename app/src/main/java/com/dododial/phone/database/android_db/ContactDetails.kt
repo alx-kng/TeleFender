@@ -42,9 +42,7 @@ object ContactDetailsHelper {
         try {
             cur = contactHelper.query(
                 Phone.CONTENT_URI,
-                projection, null, null, (
-                    Phone.CONTACT_ID
-                        + " ASC")
+                projection, null, null, null
             )
             cur!!.moveToFirst()
         } catch (e: Exception) {
@@ -66,9 +64,7 @@ object ContactDetailsHelper {
         try {
             cur = contactHelper.query(
                 ContactsContract.Contacts.CONTENT_URI,
-                projection, null, null, (
-                    ContactsContract.Contacts.DISPLAY_NAME_PRIMARY
-                        + " ASC")
+                projection, null, null, null
             )
 
             cur!!.moveToFirst()

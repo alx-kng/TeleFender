@@ -43,6 +43,7 @@ class KeyResponse(
 class ChangeResponse(
     status : String,
     error : String?,
+    @Json(name= "changes")
     val changeLogs : List<ChangeLog>
 ) : DefaultResponse(status, error) {
 
@@ -75,6 +76,7 @@ object ResponseHelpers {
     fun jsonToDefaultResponse(jsonIn : String) : DefaultResponse? {
         val moshi : Moshi = Moshi.Builder().build()
         val adapter : JsonAdapter<DefaultResponse> = moshi.adapter(DefaultResponse::class.java)
+        Timber.i("default erposne clled")
 
        return adapter.serializeNulls().fromJson(jsonIn)
     }
@@ -87,9 +89,10 @@ object ResponseHelpers {
     }
 
     fun jsonToChangeResponse(jsonIn : String) : ChangeResponse? {
+
         val moshi : Moshi = Moshi.Builder().build()
         val adapter : JsonAdapter<ChangeResponse> = moshi.adapter(ChangeResponse::class.java)
-
+        Timber.i("cahnge response called")
         return adapter.serializeNulls().fromJson(jsonIn)
     }
 

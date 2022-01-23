@@ -154,8 +154,8 @@ object TableInitializers {
             CHANGELOG_TYPE_CONTACT_INSERT,
             CID,
             null,
-            parentNumber,
             null,
+            parentNumber,
             null,
             null
         )
@@ -176,7 +176,7 @@ object TableInitializers {
         val changeTime = Instant.now().toEpochMilli()
         val CID = UUID.nameUUIDFromBytes((cursor.getString(0) + parentNumber).toByteArray()).toString()
         val number = cursor.getString(1)
-        val versionNumber = cursor.getString(3).toInt()
+        val versionNumber = cursor.getString(2).toInt()
 
         // To insert into ContactNumbers table
         database.changeAgentDao().changeFromClient(

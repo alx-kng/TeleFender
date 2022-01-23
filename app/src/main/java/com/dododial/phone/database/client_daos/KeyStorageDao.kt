@@ -39,7 +39,7 @@ interface KeyStorageDao {
     @Query("DELETE FROM key_storage")
     suspend fun deleteAllKeys()
 
-    suspend fun hasCredKey(instanceNumber: String) : Boolean{
+    suspend fun hasCredKey(instanceNumber: String) : Boolean {
         return getCredKey(instanceNumber) != null
     }
 }

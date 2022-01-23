@@ -11,6 +11,7 @@ import com.dododial.phone.database.ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMB
 import com.dododial.phone.database.ClientDBConstants.CHANGELOG_TYPE_CONTACT_UPDATE
 import com.dododial.phone.database.ClientDBConstants.CHANGELOG_TYPE_INSTANCE_DELETE
 import com.dododial.phone.database.ClientDBConstants.CHANGELOG_TYPE_INSTANCE_INSERT
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
