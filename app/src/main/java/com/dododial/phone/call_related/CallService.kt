@@ -18,15 +18,11 @@ class CallService : InCallService() {
 
     var ruleCheck = RuleChecker()
     var placeholderMode = 1
-    var silencedHangUpDelay: Long = 3000L
+    var silencedHangUpDelay: Long = 10000L
     private val CHANNEL_ID = "alxkng5737"
     private val NOTIFICATION_ID = 12345678
 
     override fun onCallAdded(call: Call) {
-
-        if (placeholderMode == 0 || placeholderMode == 1) {
-            adjustAudio(true)
-        }
 
         OngoingCall.call = call
         val number = call.details.handle.toString()
@@ -39,6 +35,10 @@ class CallService : InCallService() {
             CallActivity.start(this, call)
             ContextCompat.startForegroundService(this, dummyIncomingServiceIntent)
         } else {
+
+            if (placeholderMode == 0 || placeholderMode == 1) {
+                adjustAudio(true)
+            }
             when (placeholderMode) {
                 // Full block identified spam
                 0 -> {
@@ -94,24 +94,17 @@ class CallService : InCallService() {
 
     fun adjustAudio(setMute: Boolean) {
         val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val adJustMute: Int = if (setMute) {
-                AudioManager.ADJUST_MUTE
-            } else {
-                AudioManager.ADJUST_UNMUTE
-            }
-            //audioManager.adjustStreamVolume(AudioManager.STREAM_NOTIFICATION, adJustMute, 0)
-            //audioManager.adjustStreamVolume(AudioManager.STREAM_ALARM, adJustMute, 0)
-            //audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, adJustMute, 0)
-            audioManager.adjustStreamVolume(AudioManager.STREAM_RING, adJustMute, 0)
-            //audioManager.adjustStreamVolume(AudioManager.STREAM_SYSTEM, adJustMute, 0)
+        val adJustMute: Int = if (setMute) {
+            AudioManager.RINGER_MODE_SILENT
         } else {
-            //audioManager.setStreamMute(AudioManager.STREAM_NOTIFICATION, setMute)
-            //audioManager.setStreamMute(AudioManager.STREAM_ALARM, setMute)
-            //audioManager.setStreamMute(AudioManager.STREAM_MUSIC, setMute)
-            audioManager.setStreamMute(AudioManager.STREAM_RING, setMute)
-            //audioManager.setStreamMute(AudioManager.STREAM_SYSTEM, setMute)
+            AudioManager.RINGER_MODE_NORMAL
         }
+        //audioManager.adjustStreamVolume(AudioManager.STREAM_NOTIFICATION, adJustMute, 0)
+        //audioManager.adjustStreamVolume(AudioManager.STREAM_ALARM, adJustMute, 0)
+        //audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, adJustMute, 0)
+        audioManager.ringerMode = adJustMute
+//            audioManager.setStreamVolume(AudioManager.STREAM_RING, 0, 0)
+        //audioManager.adjustStreamVolume(AudioManager.STREAM_SYSTEM, adJustMute, 0)
 
     }
 

@@ -42,6 +42,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import androidx.core.app.ActivityCompat.startActivityForResult
+
+import android.media.AudioManager
+import android.provider.Settings
+
 
 // TODO we need to make a custom notification for initiating a call
 
@@ -72,6 +77,15 @@ class DialerActivity : AppCompatActivity() {
         } else {
             offerReplacingDefaultDialer()
         }
+
+
+        //TODO Make dialog to explain reason for Do not disturb access.
+        val notificationManager = applicationContext.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        if (!notificationManager.isNotificationPolicyAccessGranted) {
+            val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+            startActivityForResult(intent, 120)
+        }
+
 
         //PermissionsRequester.multiplePermissions(this, this)
     }
