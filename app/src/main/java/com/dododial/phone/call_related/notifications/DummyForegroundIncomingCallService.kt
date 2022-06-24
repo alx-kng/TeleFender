@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
+import android.system.Os.stat
 import android.telecom.Call
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
@@ -41,20 +42,20 @@ class DummyForegroundIncomingCallService : Service() {
         }
 
         val fullScreenPendingIntent = PendingIntent.getActivity(this, 0,
-            fullScreenIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+            fullScreenIntent, PendingIntent.FLAG_IMMUTABLE)
 
         val answerButton = Intent(this, IncomingNotificationActionReceiver::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             putExtra("answer_value", "answer")
         }
-        val pendingAnswerIntent = PendingIntent.getBroadcast(this, 1, answerButton, 0)
+        val pendingAnswerIntent = PendingIntent.getBroadcast(this, 1, answerButton, PendingIntent.FLAG_IMMUTABLE)
 
 
         val declineButton = Intent(this, IncomingNotificationActionReceiver::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             putExtra("answer_value", "decline")
         }
-        val pendingDeclineIntent = PendingIntent.getBroadcast(this, 2, declineButton, 0)
+        val pendingDeclineIntent = PendingIntent.getBroadcast(this, 2, declineButton, PendingIntent.FLAG_IMMUTABLE)
 
 
         val contentView = RemoteViews(packageName, R.layout.incoming_call_notification)
@@ -64,10 +65,10 @@ class DummyForegroundIncomingCallService : Service() {
         contentView.setOnClickPendingIntent(R.id.decline_button, pendingDeclineIntent)
 
         when {
-            OngoingCall.call?.state ?: Call.STATE_DISCONNECTING == Call.STATE_RINGING -> {
+            (OngoingCall.call?.state ?: Call.STATE_DISCONNECTING) == Call.STATE_RINGING -> {
                 contentView.setTextViewText(R.id.incoming_notification_title, "Incoming Call")
             }
-            OngoingCall.call?.state ?: Call.STATE_DISCONNECTED == Call.STATE_ACTIVE -> {
+            (OngoingCall.call?.state ?: Call.STATE_DISCONNECTED) == Call.STATE_ACTIVE -> {
                 contentView.setTextViewText(R.id.incoming_notification_title, "Active Call")
             }
             else -> contentView.setTextViewText(R.id.incoming_notification_title, "Something went wrong!")

@@ -26,6 +26,7 @@ object OngoingCall {
         }
 
     fun answer() {
+        Timber.d("ONGOING CALL: Call is %s", call)
         call!!.answer(VideoProfile.STATE_AUDIO_ONLY)
     }
 

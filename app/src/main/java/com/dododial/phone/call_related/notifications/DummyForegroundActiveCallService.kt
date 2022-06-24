@@ -64,26 +64,26 @@ class DummyForegroundActiveCallService: Service() {
         }
 
         val fullScreenPendingIntent = PendingIntent.getActivity(this, 0,
-            fullScreenIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+            fullScreenIntent, PendingIntent.FLAG_IMMUTABLE)
 
         val speakerButton = Intent(this, ActiveNotificationActionReceiver::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             putExtra("button_value", "speaker")
         }
-        val pendingSpeakerIntent = PendingIntent.getBroadcast(this, 3, speakerButton, 0)
+        val pendingSpeakerIntent = PendingIntent.getBroadcast(this, 3, speakerButton, PendingIntent.FLAG_IMMUTABLE)
 
         val muteButton = Intent(this, ActiveNotificationActionReceiver::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             putExtra("button_value", "mute")
         }
-        val pendingMuteIntent = PendingIntent.getBroadcast(this, 4, muteButton, 0)
+        val pendingMuteIntent = PendingIntent.getBroadcast(this, 4, muteButton, PendingIntent.FLAG_IMMUTABLE)
 
 
         val hangupButton = Intent(this, ActiveNotificationActionReceiver::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             putExtra("button_value", "hangup")
         }
-        val pendingHangupIntent = PendingIntent.getBroadcast(this, 5, hangupButton, 0)
+        val pendingHangupIntent = PendingIntent.getBroadcast(this, 5, hangupButton, PendingIntent.FLAG_IMMUTABLE)
 
 
         var contentView = RemoteViews(packageName, R.layout.active_call_notification)
