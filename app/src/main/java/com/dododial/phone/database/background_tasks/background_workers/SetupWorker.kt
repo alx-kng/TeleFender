@@ -16,7 +16,9 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import android.content.pm.ServiceInfo
 import android.app.Notification
+import androidx.annotation.RequiresApi
 import com.dododial.phone.database.background_tasks.server_related.UserSetup
+import com.google.android.datatransport.runtime.scheduling.jobscheduling.SchedulerConfig
 import kotlinx.coroutines.delay
 import timber.log.Timber
 
@@ -43,14 +45,14 @@ object SetupScheduler {
 }
 
 class CoroutineSetupWorker(
-    context: Context,
+    val context: Context,
     params: WorkerParameters
 ) : CoroutineWorker(context, params) {
 
     var NOTIFICATION_ID = 4324
     val CHANNEL_ID = "alxkng5737"
-    val context = context
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override suspend fun doWork() : Result {
         try {
             setForeground(getForegroundInfo())
@@ -81,7 +83,7 @@ class CoroutineSetupWorker(
     override suspend fun getForegroundInfo() : ForegroundInfo {
         val pendingIntent: PendingIntent = Intent(applicationContext, DialerActivity::class.java).let {
                 notificationIntent: Intent ->
-                    PendingIntent.getActivity(applicationContext, 0, notificationIntent, 0)
+                    PendingIntent.getActivity(applicationContext, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
                 }
 
         val notification : Notification = NotificationCompat.Builder(applicationContext)

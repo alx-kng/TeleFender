@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.work.*
 import com.dododial.phone.App
@@ -61,15 +62,15 @@ object DownloadScheduler {
 
 
 class CoroutineDownloadWorker(
-    context: Context,
+    var context: Context,
     params: WorkerParameters
 ) : CoroutineWorker(context, params) {
 
     var NOTIFICATION_ID : Int? = -1
     val CHANNEL_ID = "alxkng5737"
     var stateVarString: String? = null
-    var context = context
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override suspend fun doWork() : Result {
         stateVarString = inputData.getString("variableName")
         NOTIFICATION_ID = inputData.getString("notificationID")?.toInt()
@@ -103,7 +104,7 @@ class CoroutineDownloadWorker(
     override suspend fun getForegroundInfo() : ForegroundInfo {
         val pendingIntent: PendingIntent = Intent(applicationContext, DialerActivity::class.java).let {
                 notificationIntent: Intent ->
-                    PendingIntent.getActivity(applicationContext, 0, notificationIntent, 0)
+                    PendingIntent.getActivity(applicationContext, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
                 }
 
         val notification : Notification = NotificationCompat.Builder(applicationContext)

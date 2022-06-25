@@ -113,7 +113,7 @@ class CoroutineSyncWorker(
     override suspend fun getForegroundInfo() : ForegroundInfo {
         val pendingIntent: PendingIntent = Intent(applicationContext, DialerActivity::class.java).let {
                 notificationIntent: Intent ->
-                    PendingIntent.getActivity(applicationContext, 0, notificationIntent, 0)
+                    PendingIntent.getActivity(applicationContext, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
                 }
 
         val notification : Notification = NotificationCompat.Builder(applicationContext)

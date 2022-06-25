@@ -56,12 +56,11 @@ object TokenScheduler{
 }
 
 class CoroutineTokenWorker(
-    context: Context,
+    val context: Context,
     params: WorkerParameters
 ) : CoroutineWorker(context, params) {
 
     var stateVarString: String? = null
-    val context: Context = context
 
     @SuppressLint("MissingPermission", "HardwareIds")
     @RequiresApi(Build.VERSION_CODES.O)
