@@ -84,9 +84,9 @@ dependencies {
     // UI
     implementation "androidx.constraintlayout:constraintlayout:$rootProject.constraintLayoutVersion"
     implementation "com.google.android.material:material:$rootProject.materialVersion"
-    implementation 'androidx.navigation:navigation-fragment-ktx:2.3.5'
-    implementation 'androidx.navigation:navigation-ui-ktx:2.3.5'
-    implementation 'androidx.navigation:navigation-runtime-ktx:2.3.5'
+    implementation "androidx.navigation:navigation-fragment-ktx:$nav_version"
+    implementation "androidx.navigation:navigation-ui-ktx:$nav_version"
+    implementation "androidx.navigation:navigation-runtime-ktx:$nav_version"
 
     // Testing
     testImplementation "junit:junit:$rootProject.junitVersion"

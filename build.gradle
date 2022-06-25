@@ -42,7 +42,7 @@ ext {
     constraintLayoutVersion = '2.1.2'
     lifecycleVersion = '2.4.1'
     materialVersion = "1.6.1"
-    nav_version = "2.3.1"
+    nav_version = "2.4.2"
 
 
     // Work
