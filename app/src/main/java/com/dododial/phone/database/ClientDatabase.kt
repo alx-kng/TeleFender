@@ -4,17 +4,20 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ContentResolver
 import android.content.Context
+import android.content.Context.TELEPHONY_SERVICE
 import android.os.Build
 import android.telecom.TelecomManager
 import android.telephony.TelephonyManager
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.LiveData
 import androidx.room.Database
+import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.work.WorkInfo
 import com.dododial.phone.database.background_tasks.TableInitializers
+import com.dododial.phone.database.background_tasks.TableSynchronizer
 import com.dododial.phone.database.background_tasks.WorkerStates
 import com.dododial.phone.database.background_tasks.background_workers.*
 import com.dododial.phone.database.background_tasks.firebase.DodoFirebaseService
@@ -64,6 +67,10 @@ public abstract class ClientDatabase : RoomDatabase() {
         val contentResolver: ContentResolver
     ) : RoomDatabase.Callback() {
 
+
+        //TODO Note that sync is not always called, as onCreate is only called on entering the app,
+        // so changes mid app lifecycle to contacts will not be caught.
+
         @RequiresApi(Build.VERSION_CODES.O)
         override fun onCreate(db: SupportSQLiteDatabase) {
             super.onCreate(db)
@@ -75,6 +82,9 @@ public abstract class ClientDatabase : RoomDatabase() {
                         delay(500)
                         Timber.i("DODODEBUG: INSIDE COROUTINE | HAS CALL LOG PERMISSION: %s", PermissionsRequester.hasPermissions(context, arrayOf(Manifest.permission.READ_CALL_LOG)))
                     }
+
+                    Timber.e("DODODEBUG:", "CAME INTO ClientDatabaseCallback onCreate()")
+
                     // Goes through each call log and inserts to db
                     TableInitializers.initCallLog(context, database)
 
@@ -95,6 +105,12 @@ public abstract class ClientDatabase : RoomDatabase() {
                         Timber.i("DODODEBUG: EXECUTE WORK STATE: %s", WorkerStates.oneTimeExecState.toString())
                     }
                     WorkerStates.oneTimeExecState = null
+
+                    // Set databaseInitialized status in Instance table
+                    val tMgr = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+                    val instanceNumber = MiscHelpers.cleanNumber(tMgr.line1Number)
+
+                    database.instanceDao().updateInstanceInitialized(instanceNumber!!, true)
 
                     // UserSetup
                     SetupScheduler.initiateSetupWorker(context)
@@ -158,29 +174,39 @@ public abstract class ClientDatabase : RoomDatabase() {
             runBlocking {
                 scope.launch {
 
+                    while (context.getSystemService(TelecomManager::class.java).defaultDialerPackage != context.packageName
+                        || !PermissionsRequester.hasPermissions(context, arrayOf(Manifest.permission.READ_CALL_LOG))) {
+                        delay(1000)
+                        Timber.i("DODODEBUG: INSIDE getDatabase() | Waiting for permissions")
+                    }
+
+//                    OmegaPeriodicScheduler.cancelOneTimeOmegaWorker(context)
+//                    OmegaPeriodicScheduler.cancelPeriodicOmegaWorker(context)
+
+                    val tMgr = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
+                    val instanceNumber = MiscHelpers.cleanNumber(tMgr.line1Number) // get phone # of user
+
                     // Checks if database is fully initialized
-                    var isInitialized = !instanceTemp.executeAgentDao().hasQTEs()
-                        && instanceTemp.instanceDao().hasInstance()
+                    var isInitialized = instanceTemp.instanceDao().hasInstance()
+                        && instanceTemp.instanceDao().isInitialized(instanceNumber!!)
 
                     while (!isInitialized) {
                         delay(500)
                         Timber.i("DODODEBUG: INSIDE GET DATABASE COROUTINE. DATABASE INITIALIZED = %s", isInitialized)
 
-                        isInitialized = !instanceTemp.executeAgentDao().hasQTEs()
-                            && instanceTemp.instanceDao().hasInstance()
+                        isInitialized = instanceTemp.instanceDao().hasInstance()
+                            && instanceTemp.instanceDao().isInitialized(instanceNumber!!)
                     }
 
-                    val tMgr = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-                    val instanceNumber = MiscHelpers.cleanNumber(tMgr.line1Number) // get phone # of user
-
                     var isSetup = instanceTemp.keyStorageDao().hasCredKey(instanceNumber!!)
-                    
+
                     while (!isSetup) {
                         delay(500)
                         Timber.i("DODODEBUG: INSIDE GET DATABASE COROUTINE. USER SETUP = %s", isSetup)
-                        
+
                         isSetup = instanceTemp.keyStorageDao().hasCredKey(instanceNumber!!)
                     }
+
 
                     Timber.i("DODODEBUG: BEFORE ONE TIMES")
                     OmegaPeriodicScheduler.initiateOneTimeOmegaWorker(context)

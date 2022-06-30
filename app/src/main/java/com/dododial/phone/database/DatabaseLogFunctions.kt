@@ -1,6 +1,7 @@
 package com.dododial.phone.database
 
 import android.annotation.SuppressLint
+import android.util.Log
 import com.dododial.phone.database.background_tasks.server_related.ServerHelpers
 import com.dododial.phone.database.entities.CallLog
 import com.dododial.phone.database.entities.ContactNumbers
@@ -13,10 +14,10 @@ object DatabaseLogFunctions {
     fun logContacts(database : ClientDatabase?, repository : ClientRepository?) {
         runBlocking { launch {
             val contacts = (database?.contactDao()?.getAllContacts() ?: repository?.getAllContacts()) ?: listOf()
-            Timber.i("DODODEBUG: CONTACT SIZE ARRAY.SIZE: %s", contacts.size.toString())
+            Timber.e("DODODEBUG: CONTACT SIZE ARRAY.SIZE: %s", contacts.size.toString())
             
             for (contact in contacts) {
-                Timber.i("DODODEBUG: %s", contact.toString())
+                Timber.e("DODODEBUG: %s", contact.toString())
             }
         }}
     }
@@ -24,9 +25,9 @@ object DatabaseLogFunctions {
     fun logContactNumbers(database: ClientDatabase?, repository : ClientRepository?) {
         runBlocking { launch {
             val contactNumbers = (database?.contactNumbersDao()?.getAllContactNumbers() ?: repository?.getAllContactNumbers()) ?: listOf()
-            Timber.i("DODODEBUG: CONTACT NUMBERS SIZE: %s", contactNumbers.size.toString())
+            Timber.e("DODODEBUG: CONTACT NUMBERS SIZE: %s", contactNumbers.size.toString())
             for (contactNumber in contactNumbers) {
-                Timber.i("DODODEBUG: %s", contactNumber.toString())
+                Timber.e("DODODEBUG: %s", contactNumber.toString())
             }
         }}
     }
@@ -34,10 +35,10 @@ object DatabaseLogFunctions {
     fun logChangeLogs(database : ClientDatabase?, repository: ClientRepository?) {
         runBlocking { launch {
             val changeLogs = (database?.changeLogDao()?.getAllChangeLogs() ?: repository?.getAllChangeLogs()) ?: listOf()
-            Timber.i("DODODEBUG: CHANGE LOG SIZE: %s", changeLogs.size.toString())
+            Timber.e("DODODEBUG: CHANGE LOG SIZE: %s", changeLogs.size.toString())
 
             for (changeLog in changeLogs) {
-                Timber.i("DODODEBUG: %s", changeLog.toString())
+                Timber.e("DODODEBUG: %s", changeLog.toString())
                 //Log.i("DODODEBUG: CHANGE LOG JSON", ServerHelpers.changeLogToJson(changeLog))
             }
         }}
@@ -46,10 +47,21 @@ object DatabaseLogFunctions {
     fun logExecuteLogs(database : ClientDatabase?, repository: ClientRepository?) {
         runBlocking { launch {
             val executeLogs = (database?.queueToExecuteDao()?.getAllQTEs() ?:repository?.getAllQTE()) ?: listOf()
-            Timber.i("DODODEBUG: EXECUTE LOG SIZE: %s", executeLogs.size.toString())
+            Timber.e("DODODEBUG: EXECUTE LOG SIZE: %s", executeLogs.size.toString())
 
             for (executeLog in executeLogs) {
-                Timber.i("DODODEBUG: %s", executeLog.toString())
+                Timber.e("DODODEBUG: %s", executeLog.toString())
+            }
+        }}
+    }
+
+    fun logInstanceLogs(database : ClientDatabase?, repository: ClientRepository?) {
+        runBlocking { launch {
+            val instanceLogs = (database?.instanceDao()?.getAllInstance()) ?: listOf()
+            Timber.e("DODODEBUG: INSTANCE LOG SIZE: %s", instanceLogs.size.toString())
+
+            for (instanceLog in instanceLogs) {
+                Timber.e("DODODEBUG: %s", instanceLog.toString())
             }
         }}
     }
@@ -57,10 +69,10 @@ object DatabaseLogFunctions {
     fun logUploadLogs(database : ClientDatabase?, repository: ClientRepository?) {
         runBlocking { launch {
             val uploadLogs = (database?.queueToUploadDao()?.getAllQTU() ?: repository?.getAllQTU()) ?: listOf()
-            Timber.i("DODODEBUG: UPLOAD LOG SIZE: %s", uploadLogs.size.toString())
+            Timber.e("DODODEBUG: UPLOAD LOG SIZE: %s", uploadLogs.size.toString())
 
             for (uploadLog in uploadLogs) {
-                Timber.i("DODODEBUG: %s", uploadLog.toString())
+                Timber.e("DODODEBUG: %s", uploadLog.toString())
             }
         }}
     }
@@ -68,10 +80,10 @@ object DatabaseLogFunctions {
     fun logCallLogs(database : ClientDatabase?, repository: ClientRepository?) {
         runBlocking { launch {
             val callLogs = (database?.callLogDao()?.getCallLogs() ?: repository?.getCallLogs()) ?: listOf()
-            Timber.i("DODODEBUG: CALL LOG SIZE: %s", callLogs.size.toString())
+            Timber.e("DODODEBUG: CALL LOG SIZE: %s", callLogs.size.toString())
 
             for (callLog: CallLog in callLogs) {
-                Timber.i("DODODEBUG: CALL LOG: %s", callLog.toString())
+                Timber.e("DODODEBUG: CALL LOG: %s", callLog.toString())
             }
         }}
     }

@@ -46,6 +46,12 @@ import androidx.core.app.ActivityCompat.startActivityForResult
 
 import android.media.AudioManager
 import android.provider.Settings
+import android.util.Log
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.dododial.phone.database.DatabaseLogFunctions
+import com.dododial.phone.database.MiscHelpers
+import timber.log.Timber
 
 
 // TODO we need to make a custom notification for initiating a call
@@ -59,6 +65,16 @@ class DialerActivity : AppCompatActivity() {
     var fromDialer = false
     private val CHANNEL_ID = "alxkng5737"
 
+    private val startForResult = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val notificationManager = applicationContext.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            if (!notificationManager.isNotificationPolicyAccessGranted) {
+                val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+                startActivityForResult(intent, 120)
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_dialer)
@@ -71,21 +87,15 @@ class DialerActivity : AppCompatActivity() {
          * separately unnecessary
          */
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val rm = getSystemService(Context.ROLE_SERVICE) as RoleManager
-            startActivityForResult(rm.createRequestRoleIntent(RoleManager.ROLE_DIALER), 120)
-        } else {
-            offerReplacingDefaultDialer()
-        }
+        offerReplacingDefaultDialer()
 
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+//            val rm = getSystemService(Context.ROLE_SERVICE) as RoleManager
+//            startForResult.launch(rm.createRequestRoleIntent(RoleManager.ROLE_DIALER))
+//        } else {
+//        }
 
         //TODO Make dialog to explain reason for Do not disturb access.
-        val notificationManager = applicationContext.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        if (!notificationManager.isNotificationPolicyAccessGranted) {
-            val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
-            startActivityForResult(intent, 120)
-        }
-
 
         //PermissionsRequester.multiplePermissions(this, this)
     }
@@ -109,8 +119,9 @@ class DialerActivity : AppCompatActivity() {
             true
         }
 
-        if (OngoingCall.call?.state ?: Call.STATE_DISCONNECTED == Call.STATE_ACTIVE ||
-            OngoingCall.call?.state ?: Call.STATE_DISCONNECTING == Call.STATE_RINGING) {
+        if ((OngoingCall.call?.state ?: Call.STATE_DISCONNECTED) == Call.STATE_ACTIVE ||
+            (OngoingCall.call?.state ?: Call.STATE_DISCONNECTING) == Call.STATE_RINGING
+        ) {
                 fromDialer = true
                 go_back_to_call.isVisible = true
                 go_back_to_call.setOnClickListener {
@@ -153,12 +164,12 @@ class DialerActivity : AppCompatActivity() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val roleManager : RoleManager = getSystemService(Context.ROLE_SERVICE) as RoleManager
                 val intent : Intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_DIALER)
-                    intent.putExtra(EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, packageName)
-                    .let(::startActivity)
-            } else {
-                Intent(ACTION_CHANGE_DEFAULT_DIALER)
                     .putExtra(EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, packageName)
-                    .let(::startActivity)
+                startForResult.launch(intent)
+            } else {
+                val intent = Intent(ACTION_CHANGE_DEFAULT_DIALER)
+                    .putExtra(EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, packageName)
+                startForResult.launch(intent)
             }
         }
     }
@@ -169,7 +180,7 @@ class DialerActivity : AppCompatActivity() {
         const val REQUEST_PERMISSION = 0
     }
 
-    fun notificationChannelCreator() {
+    private fun notificationChannelCreator() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             // Create the NotificationChannel
             val name = getString(R.string.channel_name)

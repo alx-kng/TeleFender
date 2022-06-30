@@ -6,10 +6,13 @@ import android.content.Context
 import android.database.Cursor
 import android.os.Build
 import android.telephony.TelephonyManager
+import android.util.Log
 import androidx.annotation.RequiresApi
+import com.dododial.phone.App
 import com.dododial.phone.database.entities.CallLog
 import com.dododial.phone.database.ClientDBConstants
 import com.dododial.phone.database.ClientDatabase
+import com.dododial.phone.database.DatabaseLogFunctions
 import com.dododial.phone.database.MiscHelpers
 import com.dododial.phone.database.MiscHelpers.cleanNumber
 import com.dododial.phone.database.entities.ContactNumbers
@@ -89,6 +92,7 @@ object TableSynchronizer {
         if (curs == null) {
             Timber.i("DODODEBUG: Contact Number cursor is null; BAD")
         } else {
+            Timber.e("DODODEBUG: Inside table synchronizer")
             while (!curs.isAfterLast) {
 
                 /**
@@ -166,7 +170,7 @@ object TableSynchronizer {
             }
             curs.close()
         }
-
+        Timber.e("DODODEBUG: AFTER SYNC INSERTS")
         // Now all CIDs and there lists of contact numbers from their database (in our format)
         return defaultContactHashMap
     }

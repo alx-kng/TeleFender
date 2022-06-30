@@ -65,6 +65,18 @@ object OmegaPeriodicScheduler {
 
         return uploadRequest.id
     }
+
+    fun cancelOneTimeOmegaWorker(context: Context) {
+        WorkManager
+            .getInstance(context)
+            .cancelAllWorkByTag(oneTimeOmegaWorkerTag)
+    }
+
+    fun cancelPeriodicOmegaWorker(context: Context) {
+        WorkManager
+            .getInstance(context)
+            .cancelAllWorkByTag(periodicOmegaWorkerTag)
+    }
 }
 
 // TODO may need to make into long running worker

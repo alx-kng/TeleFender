@@ -20,10 +20,11 @@ data class KeyStorage(
 
 @Entity(tableName = "instance")
 data class Instance(
-    @PrimaryKey val number: String) {
+    @PrimaryKey val number: String,
+    val databaseInitialized: Boolean = false) {
 
     override fun toString() : String {
-        return "INSTANCE - number: " + this.number
+        return "INSTANCE - number: " + this.number + " databaseInitialized: " + this.databaseInitialized
     }
 }
 

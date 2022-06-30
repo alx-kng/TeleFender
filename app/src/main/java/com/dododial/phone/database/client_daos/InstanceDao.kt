@@ -11,6 +11,9 @@ interface InstanceDao {
 
     @Query("UPDATE instance SET number = :newNumber WHERE number = :oldNumber")
     suspend fun updateInstanceNumbers(oldNumber: String, newNumber: String)
+
+    @Query("UPDATE instance SET databaseInitialized = :initialized WHERE number = :number")
+    suspend fun updateInstanceInitialized(number: String, initialized: Boolean)
     
     @Query("SELECT * FROM instance")
     suspend fun getAllInstance() : List<Instance>
@@ -20,6 +23,9 @@ interface InstanceDao {
     
     @Query("SELECT EXISTS (SELECT number FROM instance LIMIT 1)")
     suspend fun hasInstance() : Boolean
+
+    @Query("SELECT databaseInitialized FROM instance WHERE number = :number")
+    suspend fun isInitialized(number: String) : Boolean
     
     @Delete
     suspend fun deleteInstanceNumbers(vararg instances: Instance)

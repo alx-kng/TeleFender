@@ -145,6 +145,7 @@ object TableInitializers {
         val cChangeID = UUID.randomUUID().toString()
         val changeTime = Instant.now().toEpochMilli()
         val CID = UUID.nameUUIDFromBytes((cursor.getString(0) + parentNumber).toByteArray()).toString()
+        Timber.e("DODODEBUG:", "cursor.getString(0) returns")
 
         // To insert into Contacts table
         database.changeAgentDao().changeFromClient(
