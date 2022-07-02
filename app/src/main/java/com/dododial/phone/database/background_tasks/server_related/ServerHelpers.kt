@@ -20,17 +20,14 @@ import com.dododial.phone.database.background_tasks.server_related.ResponseHelpe
 import com.dododial.phone.database.entities.ChangeLog
 import com.dododial.phone.database.entities.KeyStorage
 import com.dododial.phone.database.entities.QueueToUpload
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
 import org.json.JSONException
 import timber.log.Timber
 import java.io.UnsupportedEncodingException
 
 object ServerHelpers {
 
-
+    
     @SuppressLint("MissingPermission")
     suspend fun downloadPostRequest(context: Context, repository: ClientRepository, scope: CoroutineScope) {
         val tMgr = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
@@ -43,7 +40,7 @@ object ServerHelpers {
          * Used to create download request json body, as we need the instanceNumber, key, and last
          * server changeID to communicate with server correctly
          */
-        scope.launch {
+        withContext(Dispatchers.IO) {
             val key = repository.getClientKey(instanceNumber)
             val lastChangeID = repository.getLastChangeID()
 
@@ -63,9 +60,37 @@ object ServerHelpers {
                          * A lambda that is called when the response is received from the server after
                          * we send the POST request
                          */
+                        /**
+                         * A lambda that is called when the response is received from the server after
+                         * we send the POST request
+                         */
+                        /**
+                         * A lambda that is called when the response is received from the server after
+                         * we send the POST request
+                         */
+                        /**
+                         * A lambda that is called when the response is received from the server after
+                         * we send the POST request
+                         */
                         Response.Listener { response ->
                             Timber.i("VOLLEY %s", response!!)
 
+                            /**
+                             * Retrieves ChangeResponse object containing (status, error, List<ChangeLogs>)
+                             * and inserts each change log into our database using changeFromServer()
+                             * defined in ChangeAgentDao.
+                             */
+
+                            /**
+                             * Retrieves ChangeResponse object containing (status, error, List<ChangeLogs>)
+                             * and inserts each change log into our database using changeFromServer()
+                             * defined in ChangeAgentDao.
+                             */
+                            /**
+                             * Retrieves ChangeResponse object containing (status, error, List<ChangeLogs>)
+                             * and inserts each change log into our database using changeFromServer()
+                             * defined in ChangeAgentDao.
+                             */
                             /**
                              * Retrieves ChangeResponse object containing (status, error, List<ChangeLogs>)
                              * and inserts each change log into our database using changeFromServer()
@@ -86,36 +111,53 @@ object ServerHelpers {
                              * Guarantees that response has the right status before trying to
                              * iterate through change logs stored in it.
                              */
+
+                            /**
+                             * Guarantees that response has the right status before trying to
+                             * iterate through change logs stored in it.
+                             */
+
+                            /**
+                             * Guarantees that response has the right status before trying to
+                             * iterate through change logs stored in it.
+                             */
+
+                            /**
+                             * Guarantees that response has the right status before trying to
+                             * iterate through change logs stored in it.
+                             */
                             if (changeResponse != null && changeResponse.status == "ok" && (changeResponse is ChangeResponse)) {
 
                                 runBlocking {
                                     scope.launch {
-                                        for (changeLog in changeResponse.changeLogs) {
-                                            /*
-                                            Makes sure that serverChangeID is not null since it is needed
-                                            future download requests
-                                             */
-                                            if (changeLog.serverChangeID != null) {
+                                        withContext(Dispatchers.IO) {
+                                            for (changeLog in changeResponse.changeLogs) {
+                                                /*
+                                                Makes sure that serverChangeID is not null since it is needed
+                                                future download requests
+                                                 */
+                                                if (changeLog.serverChangeID != null) {
 
-                                                // Inserts each change log into right tables
-                                                repository.changeFromServer(
-                                                    changeLog.changeID,
-                                                    changeLog.instanceNumber,
-                                                    changeLog.changeTime,
-                                                    changeLog.type,
-                                                    changeLog.CID,
-                                                    changeLog.oldNumber,
-                                                    changeLog.number,
-                                                    changeLog.parentNumber,
-                                                    changeLog.trustability,
-                                                    changeLog.counterValue,
-                                                    changeLog.serverChangeID
-                                                )
+                                                    // Inserts each change log into right tables
+                                                    repository.changeFromServer(
+                                                        changeLog.changeID,
+                                                        changeLog.instanceNumber,
+                                                        changeLog.changeTime,
+                                                        changeLog.type,
+                                                        changeLog.CID,
+                                                        changeLog.oldNumber,
+                                                        changeLog.number,
+                                                        changeLog.parentNumber,
+                                                        changeLog.trustability,
+                                                        changeLog.counterValue,
+                                                        changeLog.serverChangeID
+                                                    )
 
-                                            } else {
-                                                Timber.i(
-                                                    "DODODEBUG: VOLLEY: ERROR WHEN DOWNLOAD: serverChangeID is null"
-                                                )
+                                                } else {
+                                                    Timber.i(
+                                                        "DODODEBUG: VOLLEY: ERROR WHEN DOWNLOAD: serverChangeID is null"
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -170,6 +212,18 @@ object ServerHelpers {
                 /**
                  * Adds entire string request to request queue
                  */
+
+                /**
+                 * Adds entire string request to request queue
+                 */
+
+                /**
+                 * Adds entire string request to request queue
+                 */
+
+                /**
+                 * Adds entire string request to request queue
+                 */
                 RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
             } catch (e: JSONException) {
                 e.printStackTrace()
@@ -190,7 +244,7 @@ object ServerHelpers {
         var uploadRequestJson: String? = null
         val url = "https://dev.scribblychat.com/callbook/uploadChanges"
 
-        scope.launch {
+        withContext(Dispatchers.IO) {
             val key = repository.getClientKey(instanceNumber)
             if (key != null) {
                 val temp = mutableListOf<ChangeLog>()
@@ -239,53 +293,54 @@ object ServerHelpers {
                          * the corresponding upload logs from the QueueToUpload table
                          */
                         scope.launch {
-                            /**
-                             * Guarantees that response has the right status before trying to
-                             * iterate through upload logs. Also upload logs shouldn't be null.
-                             */
-                            if (uploadResponse != null && uploadResponse is UploadResponse) {
+                            withContext(Dispatchers.IO) {
                                 /**
-                                 * coroutineScope{} ensures that delete finishes before checking
-                                 * if there are more Upload logs.
+                                 * Guarantees that response has the right status before trying to
+                                 * iterate through upload logs. Also upload logs shouldn't be null.
                                  */
-                                coroutineScope {
-                                    when (uploadResponse.status) {
-                                        "ok" -> {
-                                            repository.deleteUploadInclusive(uploadResponse.lastUploadRow)
-                                        }
-                                        else -> {
-                                            Timber.i(
-                                                "DODODEBUG: VOLLEY: PARTIALLY UPLOADED WITH ERROR: %s",
-                                                uploadResponse.error
-                                            )
-                                            repository.deleteUploadExclusive(uploadResponse.lastUploadRow)
-                                        }
+                                if (uploadResponse != null && uploadResponse is UploadResponse) {
+                                    /**
+                                     * coroutineScope{} ensures that delete finishes before checking
+                                     * if there are more Upload logs.
+                                     */
+                                    coroutineScope {
+                                        when (uploadResponse.status) {
+                                            "ok" -> {
+                                                repository.deleteUploadInclusive(uploadResponse.lastUploadRow)
+                                            }
+                                            else -> {
+                                                Timber.i(
+                                                    "DODODEBUG: VOLLEY: PARTIALLY UPLOADED WITH ERROR: %s",
+                                                    uploadResponse.error
+                                                )
+                                                repository.deleteUploadExclusive(uploadResponse.lastUploadRow)
+                                            }
 
+                                        }
+                                    }
+
+                                    if (repository.hasQTUs()) {
+                                        Timber.i("DODODEBUG: VOLLEY: MORE TO UPLOAD")
+                                        uploadPostRequest(context, repository, scope)
+                                    } else {
+                                        Timber.i("DODODEBUG: VOLLEY: All UPLOAD COMPLETE")
+                                        WorkerStates.uploadPostState = WorkInfo.State.SUCCEEDED
+                                    }
+                                } else {
+                                    WorkerStates.uploadPostState = WorkInfo.State.FAILED
+
+                                    if (uploadResponse != null) {
+                                        Timber.i(
+                                            "DODODEBUG: VOLLEY: ERROR WHEN UPLOAD: %s",
+                                            uploadResponse.error
+                                        )
+                                    } else {
+                                        Timber.i(
+                                            "DODODEBUG: VOLLEY: ERROR WHEN UPLOAD: UPLOAD RESPONSE IS NULL"
+                                        )
                                     }
                                 }
-
-                                if (repository.hasQTUs()) {
-                                    Timber.i("DODODEBUG: VOLLEY: MORE TO UPLOAD")
-                                    uploadPostRequest(context, repository, scope)
-                                } else {
-                                    Timber.i("DODODEBUG: VOLLEY: All UPLOAD COMPLETE")
-                                    WorkerStates.uploadPostState = WorkInfo.State.SUCCEEDED
-                                }
-                            } else {
-                                WorkerStates.uploadPostState = WorkInfo.State.FAILED
-
-                                if (uploadResponse != null) {
-                                    Timber.i(
-                                        "DODODEBUG: VOLLEY: ERROR WHEN UPLOAD: %s",
-                                        uploadResponse.error
-                                    )
-                                } else {
-                                    Timber.i(
-                                        "DODODEBUG: VOLLEY: ERROR WHEN UPLOAD: UPLOAD RESPONSE IS NULL"
-                                    )
-                                }
                             }
-
                         }
                     }, Response.ErrorListener { error ->
                         if (error.toString() != "null") {
@@ -336,7 +391,7 @@ object ServerHelpers {
 
         val url = "" // TODO unknown
 
-        scope.launch {
+        withContext(Dispatchers.IO) {
             val key : String?
             coroutineScope {
                key = repository.getClientKey(instanceNumber)

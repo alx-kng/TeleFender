@@ -17,7 +17,7 @@ import timber.log.Timber
 class CallService : InCallService() {
 
     var ruleCheck = RuleChecker()
-    var placeholderMode = 1
+    var placeholderMode = 2
     var silencedHangUpDelay: Long = 10000L
     private val CHANNEL_ID = "alxkng5737"
     private val NOTIFICATION_ID = 12345678
