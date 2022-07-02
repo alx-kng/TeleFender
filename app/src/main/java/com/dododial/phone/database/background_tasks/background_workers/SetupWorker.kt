@@ -19,6 +19,8 @@ import android.app.Notification
 import androidx.annotation.RequiresApi
 import com.dododial.phone.database.background_tasks.server_related.UserSetup
 import com.google.android.datatransport.runtime.scheduling.jobscheduling.SchedulerConfig
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import timber.log.Timber
 
@@ -61,7 +63,8 @@ class CoroutineSetupWorker(
         }
 
         val repository : ClientRepository = (applicationContext as App).repository
-        val scope = (applicationContext as App).applicationScope
+//        val scope = (applicationContext as App).applicationScope
+        val scope = CoroutineScope(Dispatchers.IO)
 
         WorkerStates.setupState = WorkInfo.State.RUNNING
         UserSetup.initialPostRequest(context, repository, scope)

@@ -14,9 +14,12 @@ import com.dododial.phone.App
 import com.dododial.phone.DialerActivity
 import com.dododial.phone.database.ClientDatabase
 import com.dododial.phone.database.ClientRepository
+import com.dododial.phone.database.DatabaseLogFunctions
 import com.dododial.phone.database.background_tasks.TableSynchronizer
 import com.dododial.phone.database.background_tasks.WorkerStates
 import com.dododial.phone.database.background_tasks.server_related.ServerHelpers
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import timber.log.Timber
 import java.lang.Exception
@@ -91,6 +94,7 @@ class CoroutineOmegaWorker(
     val CHANNEL_ID = "alxkng5737"
     val context: Context? = context
     var stateVarString: String? = null
+    val scope = CoroutineScope(Dispatchers.IO)
 
     @RequiresApi(Build.VERSION_CODES.O)
     override suspend fun doWork() : Result {
@@ -137,7 +141,7 @@ class CoroutineOmegaWorker(
              * Downloads changes from server
              */
             WorkerStates.downloadPostState = WorkInfo.State.RUNNING
-            ServerHelpers.downloadPostRequest(context, repository, (applicationContext as App).applicationScope)
+            ServerHelpers.downloadPostRequest(context, repository, scope)
 
             /**
              * Used to observe the download state. Makes sure that download is finished before
@@ -163,7 +167,7 @@ class CoroutineOmegaWorker(
              */
             WorkerStates.uploadPostState = WorkInfo.State.RUNNING
             if (repository.hasQTUs()) {
-                ServerHelpers.uploadPostRequest(context, repository, (applicationContext as App).applicationScope)
+                ServerHelpers.uploadPostRequest(context, repository, scope)
             } else {
                 WorkerStates.uploadPostState = WorkInfo.State.SUCCEEDED
             }
@@ -200,6 +204,13 @@ class CoroutineOmegaWorker(
                     Timber.i("DODODEBUG: OMEGA WORKER THREAD: Worker state variable name is wrong")
                 }
             }
+
+            DatabaseLogFunctions.logContacts(database, null)
+            DatabaseLogFunctions.logContactNumbers(database, null)
+            DatabaseLogFunctions.logChangeLogs(database, null)
+            DatabaseLogFunctions.logExecuteLogs(database, null)
+            DatabaseLogFunctions.logUploadLogs(database, null)
+
             return Result.success()
         } else {
             return Result.retry()

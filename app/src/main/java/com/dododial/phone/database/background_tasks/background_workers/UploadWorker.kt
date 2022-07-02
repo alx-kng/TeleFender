@@ -14,6 +14,8 @@ import com.dododial.phone.DialerActivity
 import com.dododial.phone.database.ClientRepository
 import com.dododial.phone.database.background_tasks.WorkerStates
 import com.dododial.phone.database.background_tasks.server_related.ServerHelpers
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import timber.log.Timber
 import java.lang.Exception
 import java.util.*
@@ -83,8 +85,10 @@ class CoroutineUploadWorker(
         }
 
         val repository: ClientRepository? = (applicationContext as App).repository
+        val scope = CoroutineScope(Dispatchers.IO)
+
         if (repository != null && repository.hasQTUs()) {
-            ServerHelpers.uploadPostRequest(context, repository, (applicationContext as App).applicationScope)
+            ServerHelpers.uploadPostRequest(context, repository, scope)
         } else {
             if (repository?.hasQTUs() == false) {
                 return Result.success()

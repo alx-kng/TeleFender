@@ -21,6 +21,7 @@ import com.dododial.phone.database.entities.ChangeLog
 import com.dododial.phone.database.entities.KeyStorage
 import com.dododial.phone.database.entities.QueueToUpload
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.json.JSONException
@@ -31,7 +32,7 @@ object ServerHelpers {
 
 
     @SuppressLint("MissingPermission")
-    fun downloadPostRequest(context: Context, repository: ClientRepository, scope: CoroutineScope) {
+    suspend fun downloadPostRequest(context: Context, repository: ClientRepository, scope: CoroutineScope) {
         val tMgr = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
         val instanceNumber = MiscHelpers.cleanNumber(tMgr.line1Number)!!
 
@@ -42,136 +43,136 @@ object ServerHelpers {
          * Used to create download request json body, as we need the instanceNumber, key, and last
          * server changeID to communicate with server correctly
          */
-        runBlocking {
-            scope.launch {
-                val key = repository.getClientKey(instanceNumber)
-                val lastChangeID = repository.getLastChangeID()
+        scope.launch {
+            val key = repository.getClientKey(instanceNumber)
+            val lastChangeID = repository.getLastChangeID()
 
-                if (key != null) {
-                    val downloadRequest = DownloadRequest(instanceNumber, key, lastChangeID)
-                    downloadRequestJson = downloadRequestToJson(downloadRequest)
-                } else {
-                    Timber.i("DODODEBUG VOLLEY key was null")
-                }
+            if (key != null) {
+                val downloadRequest = DownloadRequest(instanceNumber, key, lastChangeID)
+                downloadRequestJson = downloadRequestToJson(downloadRequest)
+            } else {
+                Timber.i("DODODEBUG VOLLEY key was null")
+            }
 
-                try {
-                    val stringRequest: StringRequest =
+            try {
+                val stringRequest: StringRequest =
 
-                        object : StringRequest(
-                            Method.POST, url,
+                    object : StringRequest(
+                        Method.POST, url,
+                        /**
+                         * A lambda that is called when the response is received from the server after
+                         * we send the POST request
+                         */
+                        Response.Listener { response ->
+                            Timber.i("VOLLEY %s", response!!)
+
                             /**
-                             * A lambda that is called when the response is received from the server after
-                             * we send the POST request
+                             * Retrieves ChangeResponse object containing (status, error, List<ChangeLogs>)
+                             * and inserts each change log into our database using changeFromServer()
+                             * defined in ChangeAgentDao.
                              */
-                            Response.Listener { response ->
-                                Timber.i("VOLLEY %s", response!!)
-
-                                /**
-                                 * Retrieves ChangeResponse object containing (status, error, List<ChangeLogs>)
-                                 * and inserts each change log into our database using changeFromServer()
-                                 * defined in ChangeAgentDao.
-                                 */
-                                val changeResponse: DefaultResponse? =
+                            val changeResponse: DefaultResponse? =
+                                try {
+                                    jsonToChangeResponse(response)
+                                } catch (e: Exception) {
                                     try {
-                                        jsonToChangeResponse(response)
+                                        jsonToDefaultResponse(response)
                                     } catch (e: Exception) {
-                                        try {
-                                            jsonToDefaultResponse(response)
-                                        } catch (e: Exception) {
-                                            null
-                                        }
+                                        null
                                     }
+                                }
 
-                                /**
-                                 * Guarantees that response has the right status before trying to
-                                 * iterate through change logs stored in it.
-                                 */
-                                if (changeResponse != null && changeResponse.status == "ok" && (changeResponse is ChangeResponse)) {
+                            /**
+                             * Guarantees that response has the right status before trying to
+                             * iterate through change logs stored in it.
+                             */
+                            if (changeResponse != null && changeResponse.status == "ok" && (changeResponse is ChangeResponse)) {
 
-                                    runBlocking {
-                                        scope.launch {
-                                            for (changeLog in changeResponse.changeLogs) {
-                                                /*
-                                        Makes sure that serverChangeID is not null since it is needed
-                                        future download requests
-                                         */
-                                                if (changeLog.serverChangeID != null) {
+                                runBlocking {
+                                    scope.launch {
+                                        for (changeLog in changeResponse.changeLogs) {
+                                            /*
+                                            Makes sure that serverChangeID is not null since it is needed
+                                            future download requests
+                                             */
+                                            if (changeLog.serverChangeID != null) {
 
-                                                    // Inserts each change log into right tables
-                                                    repository.changeFromServer(
-                                                        changeLog.changeID,
-                                                        changeLog.instanceNumber,
-                                                        changeLog.changeTime,
-                                                        changeLog.type,
-                                                        changeLog.CID,
-                                                        changeLog.oldNumber,
-                                                        changeLog.number,
-                                                        changeLog.parentNumber,
-                                                        changeLog.trustability,
-                                                        changeLog.counterValue,
-                                                        changeLog.serverChangeID
-                                                    )
+                                                // Inserts each change log into right tables
+                                                repository.changeFromServer(
+                                                    changeLog.changeID,
+                                                    changeLog.instanceNumber,
+                                                    changeLog.changeTime,
+                                                    changeLog.type,
+                                                    changeLog.CID,
+                                                    changeLog.oldNumber,
+                                                    changeLog.number,
+                                                    changeLog.parentNumber,
+                                                    changeLog.trustability,
+                                                    changeLog.counterValue,
+                                                    changeLog.serverChangeID
+                                                )
 
-                                                } else {
-                                                    Timber.i(
-                                                        "DODODEBUG: VOLLEY: ERROR WHEN DOWNLOAD: serverChangeID is null"
-                                                    )
-                                                }
+                                            } else {
+                                                Timber.i(
+                                                    "DODODEBUG: VOLLEY: ERROR WHEN DOWNLOAD: serverChangeID is null"
+                                                )
                                             }
                                         }
                                     }
+                                }
 
-                                    if (changeResponse.changeLogs.isNotEmpty()) {
+                                if (changeResponse.changeLogs.isNotEmpty()) {
+                                    scope.launch {
                                         downloadPostRequest(context, repository, scope)
-                                        Timber.i("DODODEBUG: VOLLEY: MORE TO DOWNLOAD")
-                                    } else {
-                                        WorkerStates.downloadPostState = WorkInfo.State.SUCCEEDED
-                                        Timber.i("DODODEBUG: VOLLEY: All DOWNLOADS COMPLETE")
                                     }
+                                    Timber.i("DODODEBUG: VOLLEY: MORE TO DOWNLOAD")
                                 } else {
-                                    WorkerStates.downloadPostState = WorkInfo.State.FAILED
-                                    if (changeResponse != null) {
-                                        Timber.i(
-                                            "DODODEBUG: VOLLEY: ERROR WHEN DOWNLOAD: %s",
-                                            changeResponse.error
-                                        )
-                                    } else {
-                                        Timber.i("DODODEBUG: VOLLEY: ERROR WHEN DOWNLOAD: CHANGE RESPONSE IS NULL")
-                                    }
+                                    WorkerStates.downloadPostState = WorkInfo.State.SUCCEEDED
+                                    Timber.i("DODODEBUG: VOLLEY: All DOWNLOADS COMPLETE")
                                 }
-                            }, Response.ErrorListener { error ->
-                                if (error.toString() != "null") {
-                                    Timber.e("VOLLEY %s", error.toString())
-                                    WorkerStates.downloadPostState = WorkInfo.State.FAILED
-                                }
-                            }) {
-
-                            @SuppressLint("HardwareIds")
-                            @Throws(AuthFailureError::class)
-                            override fun getBody(): ByteArray? {
-                                try {
-                                    return downloadRequestJson?.toByteArray(charset("utf-8"))
-                                } catch (uee: UnsupportedEncodingException) {
-                                    VolleyLog.wtf(
-                                        "Unsupported Encoding while trying to get the bytes of %s using %s",
-                                        downloadRequestJson,
-                                        "utf-8"
+                            } else {
+                                WorkerStates.downloadPostState = WorkInfo.State.FAILED
+                                if (changeResponse != null) {
+                                    Timber.i(
+                                        "DODODEBUG: VOLLEY: ERROR WHEN DOWNLOAD: %s",
+                                        changeResponse.error
                                     )
-                                    return null
+                                } else {
+                                    Timber.i("DODODEBUG: VOLLEY: ERROR WHEN DOWNLOAD: CHANGE RESPONSE IS NULL")
                                 }
                             }
-                            override fun getBodyContentType(): String {
-                                return "application/json; charset=utf-8"
+                        }, Response.ErrorListener { error ->
+                            if (error.toString() != "null") {
+                                Timber.e("VOLLEY %s", error.toString())
+                                WorkerStates.downloadPostState = WorkInfo.State.FAILED
+                            }
+                        }) {
+
+                        @SuppressLint("HardwareIds")
+                        @Throws(AuthFailureError::class)
+                        override fun getBody(): ByteArray? {
+                            try {
+                                return downloadRequestJson?.toByteArray(charset("utf-8"))
+                            } catch (uee: UnsupportedEncodingException) {
+                                VolleyLog.wtf(
+                                    "Unsupported Encoding while trying to get the bytes of %s using %s",
+                                    downloadRequestJson,
+                                    "utf-8"
+                                )
+                                return null
                             }
                         }
+                        override fun getBodyContentType(): String {
+                            return "application/json; charset=utf-8"
+                        }
+                    }
 
-                    /**
-                     * Adds entire string request to request queue
-                     */
-                    RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
-                } catch (e: JSONException) {
-                    e.printStackTrace()
-                }
+                /**
+                 * Adds entire string request to request queue
+                 */
+                RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
+            } catch (e: JSONException) {
+                e.printStackTrace()
             }
         }
     }
@@ -181,7 +182,7 @@ object ServerHelpers {
      * Returns whether or not post was successful
      */
     @SuppressLint("MissingPermission", "HardwareIds")
-    fun uploadPostRequest(context: Context, repository: ClientRepository, scope: CoroutineScope) {
+    suspend fun uploadPostRequest(context: Context, repository: ClientRepository, scope: CoroutineScope) {
         val tMgr: TelephonyManager = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
         val instanceNumber = MiscHelpers.cleanNumber(tMgr.line1Number)!!
 
@@ -189,129 +190,131 @@ object ServerHelpers {
         var uploadRequestJson: String? = null
         val url = "https://dev.scribblychat.com/callbook/uploadChanges"
 
-        runBlocking {
-            scope.launch {
-                val key = repository.getClientKey(instanceNumber)
-                if (key != null) {
-                    val temp = mutableListOf<ChangeLog>()
+        scope.launch {
+            val key = repository.getClientKey(instanceNumber)
+            if (key != null) {
+                val temp = mutableListOf<ChangeLog>()
 
+                /**
+                 * Gets first 200 upload logs in order of rowID
+                 */
+                uploadLogs = repository.getChunkQTUByRowID()
+                if (uploadLogs != null) {
                     /**
-                     * Gets first 200 upload logs in order of rowID
+                     * Retrieves corresponding change logs for each upload log
                      */
-                    uploadLogs = repository.getChunkQTUByRowID()
-                    if (uploadLogs != null) {
-                        /**
-                         * Retrieves corresponding change logs for each upload log
-                         */
-                        for (uploadLog in uploadLogs!!) {
-                            var changeLog = repository.getChangeLogRow(uploadLog.changeID)
-                            temp.add(changeLog)
-                        }
-                        val changeLogs = temp.toList()
-
-                        val uploadRequest = UploadRequest(instanceNumber, key, changeLogs)
-                        uploadRequestJson = uploadRequestToJson(uploadRequest)
-                        Timber.i("DODODEBUG UPLOAD REQUEST JSON %s ", uploadRequestJson)
-                    } else {
-                        Timber.i("DODODEBUG: VOLLEY: RETRIEVED UPlOAD LOGS ARE NULL")
+                    for (uploadLog in uploadLogs!!) {
+                        var changeLog = repository.getChangeLogRow(uploadLog.changeID)
+                        temp.add(changeLog)
                     }
+                    val changeLogs = temp.toList()
+
+                    val uploadRequest = UploadRequest(instanceNumber, key, changeLogs)
+                    uploadRequestJson = uploadRequestToJson(uploadRequest)
+                    Timber.i("DODODEBUG UPLOAD REQUEST JSON %s ", uploadRequestJson)
                 } else {
-                    Timber.i("DODODEBUG: VOLLEY: CLIENT KEY IS NULL")
+                    Timber.i("DODODEBUG: VOLLEY: RETRIEVED UPlOAD LOGS ARE NULL")
                 }
+            } else {
+                Timber.i("DODODEBUG: VOLLEY: CLIENT KEY IS NULL")
+            }
 
-                try {
-                    val stringRequest: StringRequest = object : StringRequest(
-                        Method.POST, url,
-                        Response.Listener { response ->
-                            Timber.i("VOLLEY %s", response!!)
-                            val uploadResponse: DefaultResponse? =
+            try {
+                val stringRequest: StringRequest = object : StringRequest(
+                    Method.POST, url,
+                    Response.Listener { response ->
+                        Timber.i("VOLLEY %s", response!!)
+                        val uploadResponse: DefaultResponse? =
+                            try {
+                                jsonToUploadResponse(response)
+                            } catch (e: Exception) {
                                 try {
-                                    jsonToUploadResponse(response)
+                                    jsonToDefaultResponse(response)
                                 } catch (e: Exception) {
-                                    try {
-                                        jsonToDefaultResponse(response)
-                                    } catch (e: Exception) {
-                                        null
-                                    }
+                                    null
                                 }
+                            }
+                        /**
+                         * If all upload logs are uploaded to the server successfully, we will delete
+                         * the corresponding upload logs from the QueueToUpload table
+                         */
+                        scope.launch {
                             /**
-                             * If all upload logs are uploaded to the server successfully, we will delete
-                             * the corresponding upload logs from the QueueToUpload table
+                             * Guarantees that response has the right status before trying to
+                             * iterate through upload logs. Also upload logs shouldn't be null.
                              */
-                            runBlocking {
-                                scope.launch {
-                                    /**
-                                     * Guarantees that response has the right status before trying to
-                                     * iterate through upload logs. Also upload logs shouldn't be null.
-                                     */
-                                    if (uploadResponse != null && uploadResponse is UploadResponse) {
-                                        when (uploadResponse.status) {
-                                            "ok" -> {
-                                                repository.deleteUploadInclusive(uploadResponse.lastUploadRow)
-                                            }
-                                            else -> {
-                                                Timber.i(
-                                                    "DODODEBUG: VOLLEY: PARTIALLY UPLOADED WITH ERROR: %s",
-                                                    uploadResponse.error
-                                                )
-                                                repository.deleteUploadExclusive(uploadResponse.lastUploadRow)
-                                            }
-
+                            if (uploadResponse != null && uploadResponse is UploadResponse) {
+                                /**
+                                 * coroutineScope{} ensures that delete finishes before checking
+                                 * if there are more Upload logs.
+                                 */
+                                coroutineScope {
+                                    when (uploadResponse.status) {
+                                        "ok" -> {
+                                            repository.deleteUploadInclusive(uploadResponse.lastUploadRow)
                                         }
-
-                                        if (repository.hasQTUs()) {
-                                            Timber.i("DODODEBUG: VOLLEY: MORE TO UPLOAD")
-                                            uploadPostRequest(context, repository, scope)
-                                        } else {
-                                            Timber.i("DODODEBUG: VOLLEY: All UPLOAD COMPLETE")
-                                            WorkerStates.uploadPostState = WorkInfo.State.SUCCEEDED
-                                        }
-                                    } else {
-                                        WorkerStates.uploadPostState = WorkInfo.State.FAILED
-
-                                        if (uploadResponse != null) {
+                                        else -> {
                                             Timber.i(
-                                                "DODODEBUG: VOLLEY: ERROR WHEN UPLOAD: %s",
+                                                "DODODEBUG: VOLLEY: PARTIALLY UPLOADED WITH ERROR: %s",
                                                 uploadResponse.error
                                             )
-                                        } else {
-                                            Timber.i(
-                                                "DODODEBUG: VOLLEY: ERROR WHEN UPLOAD: UPLOAD RESPONSE IS NULL"
-                                            )
+                                            repository.deleteUploadExclusive(uploadResponse.lastUploadRow)
                                         }
-                                    }
 
+                                    }
+                                }
+
+                                if (repository.hasQTUs()) {
+                                    Timber.i("DODODEBUG: VOLLEY: MORE TO UPLOAD")
+                                    uploadPostRequest(context, repository, scope)
+                                } else {
+                                    Timber.i("DODODEBUG: VOLLEY: All UPLOAD COMPLETE")
+                                    WorkerStates.uploadPostState = WorkInfo.State.SUCCEEDED
+                                }
+                            } else {
+                                WorkerStates.uploadPostState = WorkInfo.State.FAILED
+
+                                if (uploadResponse != null) {
+                                    Timber.i(
+                                        "DODODEBUG: VOLLEY: ERROR WHEN UPLOAD: %s",
+                                        uploadResponse.error
+                                    )
+                                } else {
+                                    Timber.i(
+                                        "DODODEBUG: VOLLEY: ERROR WHEN UPLOAD: UPLOAD RESPONSE IS NULL"
+                                    )
                                 }
                             }
-                        }, Response.ErrorListener { error ->
-                            if (error.toString() != "null") {
-                                Timber.e("VOLLEY %s", error.toString())
-                                WorkerStates.uploadPostState = WorkInfo.State.FAILED
-                            }
-                        }) {
-                        @Throws(AuthFailureError::class)
-                        override fun getBody(): ByteArray? {
-                            try {
-                                return uploadRequestJson?.toByteArray(charset("utf-8"))
-                            } catch (uee: UnsupportedEncodingException) {
-                                VolleyLog.wtf(
-                                    "Unsupported Encoding while trying to get the bytes of %s using %s",
-                                    uploadRequestJson,
-                                    "utf-8"
-                                )
-                                return null
-                            }
-                        }
 
-                        override fun getBodyContentType(): String {
-                            return "application/json; charset=utf-8"
+                        }
+                    }, Response.ErrorListener { error ->
+                        if (error.toString() != "null") {
+                            Timber.e("VOLLEY %s", error.toString())
+                            WorkerStates.uploadPostState = WorkInfo.State.FAILED
+                        }
+                    }) {
+                    @Throws(AuthFailureError::class)
+                    override fun getBody(): ByteArray? {
+                        try {
+                            return uploadRequestJson?.toByteArray(charset("utf-8"))
+                        } catch (uee: UnsupportedEncodingException) {
+                            VolleyLog.wtf(
+                                "Unsupported Encoding while trying to get the bytes of %s using %s",
+                                uploadRequestJson,
+                                "utf-8"
+                            )
+                            return null
                         }
                     }
 
-                    RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
-                } catch (e: JSONException) {
-                    e.printStackTrace()
+                    override fun getBodyContentType(): String {
+                        return "application/json; charset=utf-8"
+                    }
                 }
+
+                RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
+            } catch (e: JSONException) {
+                e.printStackTrace()
             }
         }
     }
@@ -321,7 +324,7 @@ object ServerHelpers {
      * server has access to reliable tokens for every device
      */
     @SuppressLint("MissingPermission", "HardwareIds")
-    fun tokenPostRequest(
+    suspend fun tokenPostRequest(
         context: Context,
         repository: ClientRepository,
         scope: CoroutineScope,
@@ -333,69 +336,70 @@ object ServerHelpers {
 
         val url = "" // TODO unknown
 
-        runBlocking {
-            scope.launch {
-                val key = repository.getClientKey(instanceNumber)
+        scope.launch {
+            val key : String?
+            coroutineScope {
+               key = repository.getClientKey(instanceNumber)
+            }
 
-                val tokenRequest = TokenRequest(instanceNumber, key!!, token) // TODO make sure we are always set up by this point
-                var tokenRequestJson: String = RequestHelpers.tokenRequestToJson(tokenRequest)
+            val tokenRequest = TokenRequest(instanceNumber, key!!, token) // TODO make sure we are always set up by this point
+            var tokenRequestJson: String = RequestHelpers.tokenRequestToJson(tokenRequest)
 
-                try {
-                    val stringRequest: StringRequest =
-                        object : StringRequest(
-                            Method.POST, url,
-                            Response.Listener { response ->
-                                Timber.i("TOKEN RESPONSE: %s", response!!)
-                                val defaultResponse: DefaultResponse? = jsonToDefaultResponse(response)
+            try {
+                val stringRequest: StringRequest =
+                    object : StringRequest(
+                        Method.POST, url,
+                        Response.Listener { response ->
+                            Timber.i("TOKEN RESPONSE: %s", response!!)
+                            val defaultResponse: DefaultResponse? = jsonToDefaultResponse(response)
 
-                                if (defaultResponse != null && defaultResponse.status == "ok") {
-                                    WorkerStates.uploadTokenState = WorkInfo.State.SUCCEEDED
+                            if (defaultResponse != null && defaultResponse.status == "ok") {
+                                WorkerStates.uploadTokenState = WorkInfo.State.SUCCEEDED
 
-                                } else {
-                                    WorkerStates.uploadTokenState = WorkInfo.State.FAILED
+                            } else {
+                                WorkerStates.uploadTokenState = WorkInfo.State.FAILED
 
-                                    if (defaultResponse != null) {
-                                        Timber.i(
-                                            "DODODEBUG: VOLLEY: ERROR WHEN TOKEN UPLOAD: %s",
-                                            defaultResponse.error
-                                        )
-                                    } else {
-                                        Timber.i("DODODEBUG: VOLLEY: ERROR WHEN TOKEN UPLOAD: SESSION RESPONSE IS NULL")
-                                    }
-                                }
-                            }, Response.ErrorListener { error ->
-                                if (error.toString() != "null") {
-                                    Timber.e("VOLLEY %s", error.toString())
-                                    WorkerStates.uploadTokenState = WorkInfo.State.FAILED
-                                }
-                            }) {
-                            @SuppressLint("HardwareIds")
-                            @Throws(AuthFailureError::class)
-                            override fun getBody(): ByteArray? {
-                                try {
-                                    return tokenRequestJson.toByteArray(charset("utf-8"))
-                                } catch (uee: UnsupportedEncodingException) {
-                                    VolleyLog.wtf(
-                                        "Unsupported Encoding while trying to get the bytes of %s using %s",
-                                        tokenRequestJson,
-                                        "utf-8"
+                                if (defaultResponse != null) {
+                                    Timber.i(
+                                        "DODODEBUG: VOLLEY: ERROR WHEN TOKEN UPLOAD: %s",
+                                        defaultResponse.error
                                     )
-                                    return null
+                                } else {
+                                    Timber.i("DODODEBUG: VOLLEY: ERROR WHEN TOKEN UPLOAD: SESSION RESPONSE IS NULL")
                                 }
                             }
-                            override fun getBodyContentType(): String {
-                                return "application/json; charset=utf-8"
+                        }, Response.ErrorListener { error ->
+                            if (error.toString() != "null") {
+                                Timber.e("VOLLEY %s", error.toString())
+                                WorkerStates.uploadTokenState = WorkInfo.State.FAILED
+                            }
+                        }) {
+                        @SuppressLint("HardwareIds")
+                        @Throws(AuthFailureError::class)
+                        override fun getBody(): ByteArray? {
+                            try {
+                                return tokenRequestJson.toByteArray(charset("utf-8"))
+                            } catch (uee: UnsupportedEncodingException) {
+                                VolleyLog.wtf(
+                                    "Unsupported Encoding while trying to get the bytes of %s using %s",
+                                    tokenRequestJson,
+                                    "utf-8"
+                                )
+                                return null
                             }
                         }
+                        override fun getBodyContentType(): String {
+                            return "application/json; charset=utf-8"
+                        }
+                    }
 
-                    /**
-                     * Adds entire string request to request queue
-                     */
-                    RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
+                /**
+                 * Adds entire string request to request queue
+                 */
+                RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
 
-                } catch (e: JSONException) {
-                    e.printStackTrace()
-                }
+            } catch (e: JSONException) {
+                e.printStackTrace()
             }
         }
     }

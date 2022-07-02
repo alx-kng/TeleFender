@@ -225,12 +225,6 @@ public abstract class ClientDatabase : RoomDatabase() {
 
                     Timber.i("DODODEBUG: AFTER ONE TIMES")
 
-                    DatabaseLogFunctions.logContacts(instanceTemp, null)
-                    DatabaseLogFunctions.logContactNumbers(instanceTemp, null)
-                    DatabaseLogFunctions.logChangeLogs(instanceTemp, null)
-                    DatabaseLogFunctions.logExecuteLogs(instanceTemp, null)
-                    DatabaseLogFunctions.logUploadLogs(instanceTemp, null)
-
                     // Initialize Omega Periodic Worker (sync, download, execute, upload)
                     OmegaPeriodicScheduler.initiatePeriodicOmegaWorker(context)
                 }
