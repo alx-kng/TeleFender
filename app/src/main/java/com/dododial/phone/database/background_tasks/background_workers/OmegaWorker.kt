@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.database.Cursor
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
@@ -15,6 +16,8 @@ import com.dododial.phone.DialerActivity
 import com.dododial.phone.database.ClientDatabase
 import com.dododial.phone.database.ClientRepository
 import com.dododial.phone.database.DatabaseLogFunctions
+import com.dododial.phone.database.android_db.ContactDetailsHelper
+import com.dododial.phone.database.background_tasks.TableInitializers.cursContactInsert
 import com.dododial.phone.database.background_tasks.TableSynchronizer
 import com.dododial.phone.database.background_tasks.WorkerStates
 import com.dododial.phone.database.background_tasks.server_related.ServerHelpers

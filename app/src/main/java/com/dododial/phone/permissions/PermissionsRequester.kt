@@ -22,8 +22,8 @@ object PermissionsRequester {
         // and returned in the Activity's onRequestPermissionsResult()
         val PERMISSION_ALL = 1
         val PERMISSIONS = arrayOf(
-            Manifest.permission.READ_CONTACTS,
-            Manifest.permission.READ_CALL_LOG,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.ADD_VOICEMAIL
         )
 
         if (!hasPermissions(context, PERMISSIONS)) {

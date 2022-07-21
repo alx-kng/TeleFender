@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.content.ContentResolver
 import android.content.Context
 import android.content.Context.TELEPHONY_SERVICE
+import android.database.Cursor
 import android.os.Build
 import android.telecom.TelecomManager
 import android.telephony.TelephonyManager
@@ -16,6 +17,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.work.WorkInfo
+import com.dododial.phone.database.android_db.ContactDetailsHelper
 import com.dododial.phone.database.background_tasks.TableInitializers
 import com.dododial.phone.database.background_tasks.TableSynchronizer
 import com.dododial.phone.database.background_tasks.WorkerStates

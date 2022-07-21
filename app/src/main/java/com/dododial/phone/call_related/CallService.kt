@@ -8,7 +8,9 @@ import android.media.AudioManager
 import android.os.Build
 import android.os.Handler
 import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat.getSystemService
 import com.dododial.phone.RuleChecker
+import com.dododial.phone.call_related.OngoingCall.call
 import com.dododial.phone.call_related.notifications.DummyForegroundActiveCallService
 import com.dododial.phone.call_related.notifications.DummyForegroundIncomingCallService
 import timber.log.Timber
@@ -24,16 +26,18 @@ class CallService : InCallService() {
 
     override fun onCallAdded(call: Call) {
 
-        OngoingCall.call = call
-        val number = call.details.handle.toString()
+        CallManager.addCall(call)
+        val number = call?.details?.handle?.toString() ?: "Conference"
 
         var dummyIncomingServiceIntent = Intent(this, DummyForegroundIncomingCallService::class.java)
         ActiveCallStates.callServiceContext = this
 
-        if (ruleCheck.allowChecker(number)) {
+//        if (ruleCheck.allowChecker(number)) {
+        if (true) {
+
             adjustAudio(false)
             CallActivity.start(this, call)
-            ContextCompat.startForegroundService(this, dummyIncomingServiceIntent)
+//            ContextCompat.startForegroundService(this, dummyIncomingServiceIntent)
         } else {
 
             if (placeholderMode == 0 || placeholderMode == 1) {
@@ -42,7 +46,7 @@ class CallService : InCallService() {
             when (placeholderMode) {
                 // Full block identified spam
                 0 -> {
-                    OngoingCall.hangup()
+                    CallManager.hangup()
                     adjustAudio(false)
                 }
                 // Silence identified spam (may be with vibrate if user has the "Vibrate while Ringing" option selected in settings
@@ -81,15 +85,15 @@ class CallService : InCallService() {
 
 
     override fun onCallRemoved(call: Call) {
-        var dummyIncomingServiceIntent = Intent(this, DummyForegroundIncomingCallService::class.java)
-        var dummyActiveServiceIntent = Intent(this, DummyForegroundActiveCallService::class.java)
-
-        stopService(dummyIncomingServiceIntent)
-        stopService(dummyActiveServiceIntent)
+//        var dummyIncomingServiceIntent = Intent(this, DummyForegroundIncomingCallService::class.java)
+//        var dummyActiveServiceIntent = Intent(this, DummyForegroundActiveCallService::class.java)
+//
+//        stopService(dummyIncomingServiceIntent)
+//        stopService(dummyActiveServiceIntent)
         ActiveCallStates.callServiceContext = null
 
         //notificationCanceler()
-        OngoingCall.call = null
+        CallManager.removeCall(call)
     }
 
     fun adjustAudio(setMute: Boolean) {

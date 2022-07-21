@@ -11,6 +11,7 @@ import android.provider.ContactsContract
 import android.provider.ContactsContract.CommonDataKinds.Phone
 import android.provider.ContactsContract.PhoneLookup
 import android.provider.ContactsContract.RawContacts
+import android.provider.VoicemailContract
 import java.lang.Exception
 import java.util.ArrayList
 
@@ -51,6 +52,29 @@ object ContactDetailsHelper {
         return cur
     }
 
+    fun getVoicemailCursor(
+        voicemailHelper: ContentResolver
+    ): Cursor? {
+        val projection = arrayOf(
+            VoicemailContract.Voicemails.NUMBER,
+            VoicemailContract.Voicemails.DURATION,
+            VoicemailContract.Voicemails.DATE,
+            VoicemailContract.Voicemails._ID
+        )
+        var cur: Cursor? = null
+        try {
+            cur = voicemailHelper.query(
+                VoicemailContract.Voicemails.CONTENT_URI,
+                projection, null, null, null
+            )
+
+            cur!!.moveToFirst()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return cur
+    }
+
     /**
      * Returns a cursor containing all aggregate column rows in Android's Contact table
      */
@@ -73,12 +97,6 @@ object ContactDetailsHelper {
         }
         return cur
     }
-
-
-
-
-
-
 
     private fun getContactID(
         contactHelper: ContentResolver,

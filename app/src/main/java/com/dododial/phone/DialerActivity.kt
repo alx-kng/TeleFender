@@ -45,10 +45,17 @@ import kotlinx.coroutines.runBlocking
 import androidx.core.app.ActivityCompat.startActivityForResult
 
 import android.media.AudioManager
+import android.net.Uri
 import android.provider.Settings
+import android.provider.VoicemailContract
+import android.telecom.PhoneAccount
+import android.telecom.PhoneAccountHandle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import com.dododial.phone.call_related.CallManager
+import com.dododial.phone.call_related.OngoingCall.state
 import com.dododial.phone.database.DatabaseLogFunctions
 import com.dododial.phone.database.MiscHelpers
 import timber.log.Timber
@@ -86,7 +93,6 @@ class DialerActivity : AppCompatActivity() {
          * Offers to replace default dialer, automatically makes requesting permissions
          * separately unnecessary
          */
-
         offerReplacingDefaultDialer()
 
 //        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -108,28 +114,30 @@ class DialerActivity : AppCompatActivity() {
          * Repository / database needs to call a query first in order to initialize database,
          * in which the ClientDatabase getDatabase is called
          */
-        val repository: ClientRepository? = (application as App).repository
-
-        val job = (application as App).applicationScope.launch {
-            repository?.dummyQuery()
-        }
+//        val repository: ClientRepository? = (application as App).repository
+//
+//        val job = (application as App).applicationScope.launch {
+//            repository?.dummyQuery()
+//        }
 
         phoneNumberInput.setOnEditorActionListener { _, _, _ ->
-            makeCall()
+            initOutgoingCall()
             true
         }
 
-        if ((OngoingCall.call?.state ?: Call.STATE_DISCONNECTED) == Call.STATE_ACTIVE ||
-            (OngoingCall.call?.state ?: Call.STATE_DISCONNECTING) == Call.STATE_RINGING
+        if ((CallManager.getPrimaryCall()?.state ?: Call.STATE_DISCONNECTED) == Call.STATE_ACTIVE ||
+            (CallManager.getPrimaryCall()?.state ?: Call.STATE_DISCONNECTING) == Call.STATE_RINGING
         ) {
                 fromDialer = true
                 go_back_to_call.isVisible = true
                 go_back_to_call.setOnClickListener {
-                    OngoingCall.call?.let { CallActivity.start(this, it) }
+                    CallManager.getPrimaryCall()?.let { CallActivity.start(this, it) }
                 }
         } else {
             go_back_to_call.isVisible = false
         }
+
+        val intent = Intent()
 
     }
 
@@ -146,6 +154,18 @@ class DialerActivity : AppCompatActivity() {
             requestPermissions(this, arrayOf(CALL_PHONE), REQUEST_PERMISSION)
         }
     }
+
+    @SuppressLint("MissingPermission")
+    private fun initOutgoingCall() {
+        try {
+            val telecomManager = getSystemService(Context.TELECOM_SERVICE) as TelecomManager
+            val uri = "tel:${phoneNumberInput.text}".toUri()
+            telecomManager.placeCall(uri, null)
+        } catch (e: Exception) {
+            finish()
+        }
+    }
+
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onRequestPermissionsResult(

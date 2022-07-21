@@ -15,9 +15,11 @@ import java.util.concurrent.TimeUnit
 import android.view.WindowManager
 import android.app.KeyguardManager
 import android.os.Build
+import android.util.Log
 import androidx.core.content.ContextCompat
 import com.dododial.phone.R
 import com.dododial.phone.asString
+import com.dododial.phone.call_related.OngoingCall.state
 import com.dododial.phone.call_related.notifications.DummyForegroundActiveCallService
 import timber.log.Timber
 
@@ -38,7 +40,7 @@ class CallActivity : AppCompatActivity() {
 
         // Gets the incoming number string from the intent data,
         // but could be null in some cases (I think)
-        incomingNumber = intent.data?.schemeSpecificPart ?: "No number"
+        incomingNumber = intent.data?.schemeSpecificPart ?: "Conference"
 
         Timber.i("THIS NUMBER THING: %s", incomingNumber)
 
@@ -56,40 +58,64 @@ class CallActivity : AppCompatActivity() {
                     WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
             )
         }
+
+        var dummyActiveServiceIntent = Intent(this, DummyForegroundActiveCallService::class.java)
+
+        CallManager.phoneState.observe(this) { state ->
+            Log.i("DODOEBUG", "INSIDE OBSERVER")
+            when (state) {
+                is NoCall -> {
+                    Log.i("DODODEBUG", "FINISH IS BEING CALLED!")
+                    finish()
+                }
+                is OneCall -> {
+                    updateUi(state.call.getStateCompat())
+                }
+                is TwoCallsIncoming -> updateUi(state.incoming.getStateCompat())
+                is TwoCallsHold -> {
+                    updateUi(state.active.getStateCompat())
+//                    ContextCompat.startForegroundService(this, dummyActiveServiceIntent)
+                }
+            }
+        }
     }
 
     override fun onStart() {
         super.onStart()
 
-        var dummyActiveServiceIntent = Intent(this, DummyForegroundActiveCallService::class.java)
 
         answer.setOnClickListener {
-            OngoingCall.answer()
+            CallManager.answer()
         }
 
         hangup.setOnClickListener {
-            OngoingCall.hangup()
+            CallManager.hangup()
+            finish()
         }
 
-        OngoingCall.state
-            .subscribe(::updateUi)
-            .addTo(disposables)
+        merge.setOnClickListener {
+            CallManager.merge()
+        }
 
-        OngoingCall.state
-            .filter { it == Call.STATE_ACTIVE}
-            .firstElement()
-            .subscribe {
-                ContextCompat.startForegroundService(this, dummyActiveServiceIntent)
-            }
-            .addTo(disposables)
-
-        OngoingCall.state
-            .filter { it == Call.STATE_DISCONNECTED }
-            .delay(1, TimeUnit.SECONDS)
-            .firstElement()
-            .subscribe {
-                finish() }
-            .addTo(disposables)
+//        OngoingCall.state
+//            .subscribe(::updateUi)
+//            .addTo(disposables)
+//
+//        OngoingCall.state
+//            .filter { it == Call.STATE_ACTIVE}
+//            .firstElement()
+//            .subscribe {
+//                ContextCompat.startForegroundService(this, dummyActiveServiceIntent)
+//            }
+//            .addTo(disposables)
+//
+//        OngoingCall.state
+//            .filter { it == Call.STATE_DISCONNECTED }
+//            .delay(1, TimeUnit.SECONDS)
+//            .firstElement()
+//            .subscribe {
+//                finish() }
+//            .addTo(disposables)
     }
 
 
@@ -107,7 +133,7 @@ class CallActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        disposables.clear()
+//        disposables.clear()
 
         /*val intent = Intent(this, TestActivity::class.java)
         startActivity(intent)*/
