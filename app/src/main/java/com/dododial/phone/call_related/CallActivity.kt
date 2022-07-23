@@ -61,21 +61,14 @@ class CallActivity : AppCompatActivity() {
 
         var dummyActiveServiceIntent = Intent(this, DummyForegroundActiveCallService::class.java)
 
-        CallManager.phoneState.observe(this) { state ->
+        CallManager.focusedConnection.observe(this) { connection ->
             Log.i("DODOEBUG", "INSIDE OBSERVER")
-            when (state) {
-                is NoCall -> {
-                    Log.i("DODODEBUG", "FINISH IS BEING CALLED!")
-                    finish()
-                }
-                is OneCall -> {
-                    updateUi(state.call.getStateCompat())
-                }
-                is TwoCallsIncoming -> updateUi(state.incoming.getStateCompat())
-                is TwoCallsHold -> {
-                    updateUi(state.active.getStateCompat())
-//                    ContextCompat.startForegroundService(this, dummyActiveServiceIntent)
-                }
+
+            if (connection == null) {
+                Log.i("DODODEBUG", "FINISH IS BEING CALLED!")
+                finish()
+            } else {
+                updateUi(connection.state, connection.call.number())
             }
         }
     }
@@ -95,6 +88,10 @@ class CallActivity : AppCompatActivity() {
 
         merge.setOnClickListener {
             CallManager.merge()
+        }
+
+        swap.setOnClickListener {
+            CallManager.swap()
         }
 
 //        OngoingCall.state
@@ -120,8 +117,8 @@ class CallActivity : AppCompatActivity() {
 
 
     @SuppressLint("SetTextI18n")
-    private fun updateUi(state: Int) {
-        callInfo.text = "${state.asString().lowercase().capitalize()}\n$incomingNumber"
+    private fun updateUi(state: Int, number: String?) {
+        callInfo.text = "${state.asString().lowercase().capitalize()}\n${number ?: "Conference"}"
 
         answer.isVisible = state == Call.STATE_RINGING
         hangup.isVisible = state in listOf(

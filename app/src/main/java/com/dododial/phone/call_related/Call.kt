@@ -2,6 +2,7 @@ package com.dododial.phone.call_related
 
 import android.os.Build
 import android.telecom.Call
+import com.dododial.phone.call_related.OngoingCall.call
 
 
 private val OUTGOING_CALL_STATES = arrayOf(
@@ -28,6 +29,10 @@ fun Call?.getCallDuration(): Int {
     } else {
         0
     }
+}
+
+fun Call?.number(): String? {
+    return this?.details?.handle?.schemeSpecificPart
 }
 
 fun Call.isOutgoing(): Boolean {

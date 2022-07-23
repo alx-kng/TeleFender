@@ -125,13 +125,13 @@ class DialerActivity : AppCompatActivity() {
             true
         }
 
-        if ((CallManager.getPrimaryCall()?.state ?: Call.STATE_DISCONNECTED) == Call.STATE_ACTIVE ||
-            (CallManager.getPrimaryCall()?.state ?: Call.STATE_DISCONNECTING) == Call.STATE_RINGING
+        if ((CallManager.focusedConnection.value?.state ?: Call.STATE_DISCONNECTED) == Call.STATE_ACTIVE ||
+            (CallManager.focusedConnection.value?.state ?: Call.STATE_DISCONNECTING) == Call.STATE_RINGING
         ) {
                 fromDialer = true
                 go_back_to_call.isVisible = true
                 go_back_to_call.setOnClickListener {
-                    CallManager.getPrimaryCall()?.let { CallActivity.start(this, it) }
+                    CallManager.focusedConnection.value?.call?.let { CallActivity.start(this, it) }
                 }
         } else {
             go_back_to_call.isVisible = false

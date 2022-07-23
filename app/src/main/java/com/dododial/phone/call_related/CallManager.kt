@@ -2,306 +2,317 @@ package com.dododial.phone.call_related
 
 import android.telecom.Call
 import android.telecom.VideoProfile
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.dododial.phone.call_related.CallManager.getPhoneState
-import com.dododial.phone.call_related.OngoingCall.call
+import com.dododial.phone.call_related.CallManager.connections
+import com.dododial.phone.call_related.CallManager2.callStateString
+import com.dododial.phone.call_related.CallManager2.logCalls
 import timber.log.Timber
-import java.util.concurrent.CopyOnWriteArraySet
 
-
-interface CallListener {
-    val tag: String
-    fun onStateChanged()
-    fun onPrimaryCallChanged(call: Call)
-}
 
 /**
- * The sealed modifier just means that the only possible subclasses of PhoneState are the ones
- * listed below. This is useful in when expressions, where full coverage can be confirmed.
+ * Let's first understand a conference call before we go further. Essentially, when you merge
+ * two calls into a conference call, the service provider is notified and separate connections
+ * are created for the conference call. By separate, we mean that the existing call connections
+ * (objects) are no longer used and two new call connections (same numbers) fit for a
+ * conference call are created and added as new calls through onCallAdded() of the CallService.
+ * Moreover, the service provider / Android system provides a third host connection (also as a
+ * call object) with a null number that manages the child conference calls. Note, the host
+ * is the only call that is actually marked as a conference call. When more calls are added to
+ * the conference call, the same null host call is used and another replacement call is added
+ * for the newly merged number.
  */
-sealed class PhoneState
-object NoCall : PhoneState()
-class OneCall(val call: Call) : PhoneState()
-class TwoCallsIncoming(val active: Call, val incoming: Call) : PhoneState()
-class TwoCallsHold(val active: Call, val onHold: Call) : PhoneState()
+
+/**
+ * TODO: Singular conference call UI
+ *
+ * As mentioned above, a conference call is a different type of
+ * connection with the service provider (remember how a null host call and replacement
+ * calls are added). Due to this difference, any calls within a conference call permanently
+ * stay within the conference call (each call will always be a child of the null host call).
+ * The slight problem that arises is that a conference call can technically have just one
+ * child call, which may not seem ideal since it doesn't make much sense to have a conference
+ * call with a single call.
+ *
+ * Although it's impossible to decouple a child call from its null host call, we can
+ * simply treat a singular conference call as a single call UI wise (e.g., not showing the
+ * conference call UI for singular conference calls). This way, the singular conference
+ * call acts like a single call (so the user isn't confused), with the normal merging
+ * functionality working as expected.
+ */
+
+/**
+ * A call is not conferenceable only
+ * when it's already in a conference call through another phone (e.g., the user calls
+ * another phone that puts the user in a conference call with someone else). This allows us
+ * to disable the merge button and inform the user when the call is already in another
+ * conference (by checking if a call is conferencable or not).
+ * Unfortunately, once the user has been in someone else's conference call, the user can no
+ * longer create conference call with that person. For example, if the user joins Alex's
+ * conference call with 2 people, and Alex removes the other caller from the conference call,
+ * Alex's call inherently stays as a conference call (due to being a different type of
+ * connection). As a result, the user cannot create a conference call with Alex (through the
+ * user's phone) since Alex's call object is not conferenceable.
+*/
+
+/**
+ * Abstraction of a group of calls. Represents either a single call or a conference call.
+ */
+class Connection(val call: Call?) {
+    val isConference: Boolean = call.isConference()
+
+    val state: Int
+        get() = call.getStateCompat()
+
+    fun hold() {
+        if (isConference) {
+            call?.hold()
+            call?.children?.forEach { it?.hold() }
+        } else {
+            call?.hold()
+        }
+    }
+
+    fun unhold() {
+        if (isConference) {
+            call?.unhold()
+            call?.children?.forEach { it?.unhold() }
+        } else {
+            call?.unhold()
+        }
+    }
+}
 
 object CallManager {
 
     /**
-     * Stores the current active call.
+     * List of calls for managing and logging calls (emphasis on latter). The same calls are
+     * stored in [connections] and are more often managed in that form.
      */
-    private var primaryCall: Call? = null
+    val calls = mutableListOf<Call>()
 
     /**
-     * Stores all calls.
+     * List of Connections used to manage the calls.
      */
-    private val calls = mutableListOf<Call>()
+    val connections = mutableListOf<Connection>()
 
     /**
-     * Stores current phone state (useful for UI).
+     * Current top level connection. That is, the connection that should have the user's attention.
+     * Usually will be the current active call, incoming call, or dialing call.
      */
-    private val _phoneState = MutableLiveData<PhoneState>(NoCall)
-    val phoneState : LiveData<PhoneState> = _phoneState
+    private val _focusedConnection = MutableLiveData<Connection?>()
+    val focusedConnection : LiveData<Connection?> = _focusedConnection
 
     /**
-     * Stores listeners / callbacks for when the active call changes to a different call object
-     * or the state of the active call changes. CopyOnWriteArraySet just provides a thread-safe
-     * way of adding and accessing the listeners.
+     * Updates the current focused connection. Ringing, Connecting, and Dialing connections take
+     * precedence over Active connections (since they should be addressed immediately). During
+     * state transitions, there might not be any connections that are in the aforementioned states
+     * (Ringing, Connection, Dialing, Active). However, a focusedConnection is still necessary
+     * (if there are still connections) to update the UI. As a result, we keep the current
+     * focusedConnection if it is not disconnected. If it is disconnected, we search for any
+     * connection that is not disconnected (if nothing is found, that means there
+     * are no live calls).
      */
-    private val listeners = CopyOnWriteArraySet<CallListener>()
-
-    fun addListener(listener: CallListener) {
-        listeners.add(listener)
-    }
-
-    fun removeListener(tag: String) {
-        listeners.removeIf { listener -> listener.tag == tag }
-    }
-
-    fun addCall(call: Call) {
-        primaryCall = call
-        calls.add(call)
-        updatePhoneState()
-
-        for (listener in listeners) {
-            listener.onPrimaryCallChanged(call)
+    fun updateFocusedConnection() {
+        for (connection in connections) {
+            if (connection.state == Call.STATE_RINGING
+                || connection.state == Call.STATE_CONNECTING
+                || connection.state == Call.STATE_DIALING
+            ) {
+                _focusedConnection.value = connection
+                return
+            }
         }
+
+        for (connection in connections) {
+            if (connection.state == Call.STATE_ACTIVE) {
+                _focusedConnection.value = connection
+                return
+            }
+        }
+
+        if (focusedConnection.value?.state != Call.STATE_DISCONNECTED) {
+            return
+        }
+
+        _focusedConnection.value = connections.find { it.state != Call.STATE_DISCONNECTED }
+
+        Timber.i("DODDEBUG: UPDATE FOCUS")
+    }
+
+    /**
+     * Finds the connection that is a conference (if there is one).
+     */
+    fun conferenceConnection(): Connection? {
+        return connections.find { it.isConference }
+    }
+
+    /**
+     * Checks if there is an existing connection with the same number as the passed in Call object.
+     * Remember, Connection stores a call object, but there can be different call objects with the
+     * same number (e.g., during transition to merge)
+     */
+    fun existingConnection(call: Call): Boolean {
+        return connections.find { it.call.number() == call.number() } != null
+    }
+
+    /**
+     * Checks if there are any connections with the same state.
+     */
+    private fun sameStateConnections(): Boolean {
+        val uniqueStateConnections = mutableListOf<Connection>()
+        for (connection in connections) {
+            if (uniqueStateConnections.find { it.state == connection.state } == null) {
+                uniqueStateConnections.add(connection)
+            } else {
+                return true
+            }
+        }
+        return false
+    }
+
+    /**
+     * Checks if there are any Call objects with the same number.
+     */
+    private fun repeatCalls(): Boolean {
+        val uniqueCalls = mutableListOf<Call>()
+        for (call in calls) {
+            if (uniqueCalls.find { it.number() == call.number() } == null) {
+                uniqueCalls.add(call)
+            } else {
+                return true
+            }
+        }
+        return false
+    }
+
+    /**
+     * Checks if the connections are in a stable state (refer to Android - Telecom Diagram).
+     * Connections are stable if
+     *
+     *      1. No connections have the same state
+     *      2. No calls have the same number
+     *      3. There are no disconnected calls
+     */
+    fun isStableState(): Boolean {
+        val hasDisconnected = calls.find { it.getStateCompat() == Call.STATE_DISCONNECTED } != null
+        return !(sameStateConnections() || repeatCalls() || hasDisconnected)
+    }
+
+    /**********************************************************************************************
+     * The following wrapped functions require a stable state.
+     *********************************************************************************************/
+
+    fun holdingConnection(): Connection? {
+        return connections.find { it.state == Call.STATE_HOLDING }
+    }
+
+    fun nonHoldingConnection(): Connection? {
+        return connections.find { it.state != Call.STATE_HOLDING }
+    }
+
+    /*********************************************************************************************/
+
+    /**
+     * Only adds a new connection for the call if there isn't an existing connection with the same
+     * number and the call is not a child of a conference connection.
+     */
+    fun addCall(call: Call) {
+        val conference = conferenceConnection()
+        if (conference == null || call !in (conference.call?.children ?: emptyList())) {
+            if (!existingConnection(call)) {
+                val newConnection = Connection(call)
+                connections.add(newConnection)
+
+                Timber.i("DODODEBUG: CONNETION ADDED")
+            }
+        }
+        updateFocusedConnection()
+
+        calls.add(call)
 
         call.registerCallback(object : Call.Callback() {
             override fun onStateChanged(call: Call?, state: Int) {
-                updateState()
+                updateFocusedConnection()
+                logConnections()
                 logCalls()
-            }
-
-            override fun onDetailsChanged(call: Call?, details: Call.Details?) {
-//                updateState()
-                logCalls()
-            }
-            override fun onConferenceableCallsChanged(call: Call, conferenceableCalls: MutableList<Call>) {
-                updateState()
             }
         })
 
+        logCalls()
         Timber.i("DODODEBUG: CALL ADDED")
     }
 
     /**
-     * TODO: Singular conference call UI
-     *
-     * As mentioned further down in the code, a conference call is a different type of
-     * connection with the service provider (remember how a null host call and replacement
-     * calls are added). Due to this difference, any calls within a conference call permanently
-     * stay within the conference call (each call will always be a child of the null host call).
-     * The slight problem that arises is that a conference call can technically have just one
-     * child call, which may not seem ideal since it doesn't make much sense to have a conference
-     * call with a single call.
-     *
-     * Although it's impossible to decouple a child call from its null host call, we can
-     * simply treat a singular conference call as a single call UI wise (e.g., not showing the
-     * conference call UI for singular conference calls). This way, the singular conference
-     * call acts like a single call (so the user isn't confused), with the normal merging
-     * functionality working as expected.
+     * Removes a Connection from [connections] only if the Connection wraps the [call].
      */
     fun removeCall(call: Call) {
+        if (existingConnection(call)) {
+            connections.removeIf {it.call == call}
+        }
+        updateFocusedConnection()
+
         calls.remove(call)
-        updateState()
+
         Timber.i("DODODEBUG: CALL REMOVED")
     }
 
-    /**
-     * Returns a PhoneState that is primarily used to find the current active call.
-     *
-     * For the call.size == 2 case, the calls are "grouped" by active, newCall, onHold, and incoming.
-     * The reason why .find() is used, which only returns the first matching element, is because
-     * there should be only be at most one of each type of call, and there should be at most two
-     * types of calls. For example, you can have one active and one incoming call, but you can't
-     * have an active, on hold, and incoming call.
-     *
-     * The slight catch is for conference calls, where there are technicallya multiple active calls.
-     * Let's first understand a conference call before we go further. Essentially, when you merge
-     * two calls into a conference call, the service provider is notified and separate connections
-     * are created for the conference call. By separate, we mean that the existing call connections
-     * (objects) are no longer used and two new call connections (same numbers) fit for a
-     * conference call are created and added as new calls through onCallAdded() of the CallService.
-     * Moreover, the service provider / Android system provides a third host connection (also as a
-     * call object) with a null number that manages the child conference calls. Note, the host
-     * is the only call that is actually marked as a conference call. When more calls are added to
-     * the conference call, the same null host call is used and another replacement call is added
-     * for the newly merged number.
-     *
-     * As mentioned above, a conference call will always have at least 3 calls, so the
-     * call.size == 2 case is not applicable for conference calls.
-     */
-    fun getPhoneState(): PhoneState {
-        return when (calls.size) {
-            0 -> NoCall
-            1 -> OneCall(calls.first())
-            2 -> {
-                val active = calls.find { it.getStateCompat() == Call.STATE_ACTIVE }
-                val newCall = calls.find { it.getStateCompat() == Call.STATE_CONNECTING || it.getStateCompat() == Call.STATE_DIALING }
-                val onHold = calls.find { it.getStateCompat() == Call.STATE_HOLDING }
-                val incoming = calls.find { it.getStateCompat() == Call.STATE_RINGING }
-
-                if (active != null && newCall != null) {
-                    TwoCallsHold(newCall, active)
-                } else if (newCall != null && onHold != null) {
-                    TwoCallsHold(newCall, onHold)
-                } else if (active != null && onHold != null) {
-                    TwoCallsHold(active, onHold)
-                } else if (active != null && incoming != null) {
-                    TwoCallsIncoming(active, incoming)
-                } else if (incoming != null && onHold != null) {
-                    TwoCallsIncoming(incoming, onHold)
-                } else {
-                    Log.i("DODODEBUG", "nulls: active - ${active == null} | newCall - ${newCall == null} | onHold - ${onHold == null} | incoming - ${incoming == null}")
-                    throw Exception("No matching PhoneState!")
-                }
-            } else -> {
-                /**
-                 * As mentioned in the earlier comment, there is a conference host that is the
-                 * only call marked as a conference call, and it has a null number.
-                 * conferenceHost.children contains the list of calls within the same conference
-                 * call (excluding the conference host call). As a result,
-                 * conferenceHost.children.size + 1 gives the number of calls in the conference.
-                 * If the number of calls in the conference isn't the total number of calls,
-                 * then there must be a separate call
-                 */
-                val conferenceHost = calls.find { it.isConference() } ?: return NoCall
-                val separateCall = if (conferenceHost.children.size + 1 != calls.size) {
-                    calls.filter { !it.isConference() }
-                        .subtract(conferenceHost.children.toSet())
-                        .firstOrNull()
-                } else {
-                    null
-                }
-
-                /**
-                 * It takes a little time for the original copies of the conference call children
-                 * to be removed.
-                 */
-                if (separateCall == null
-                    || separateCall?.details?.state == Call.STATE_DISCONNECTING
-                    || separateCall?.details?.state == Call.STATE_DISCONNECTED
-                ) {
-                    OneCall(conferenceHost)
-                } else {
-                    when (separateCall.getStateCompat()) {
-                        Call.STATE_ACTIVE, Call.STATE_CONNECTING, Call.STATE_DIALING -> {
-                            TwoCallsHold(separateCall, conferenceHost)
-                        }
-                        Call.STATE_RINGING -> {
-                            TwoCallsIncoming(conferenceHost, separateCall)
-                        }
-                        else -> {
-                            TwoCallsHold(conferenceHost, separateCall)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    fun updatePhoneState() {
-        val currentPhoneState = getPhoneState()
-        if (currentPhoneState != _phoneState.value) {
-            _phoneState.value = currentPhoneState
-        }
-    }
-
-    private fun updateState() {
-        val currentPhoneState = getPhoneState()
-        val activeCall = when (currentPhoneState) {
-            is NoCall -> null
-            is OneCall -> currentPhoneState.call
-            is TwoCallsHold -> currentPhoneState.active
-            is TwoCallsIncoming -> currentPhoneState.incoming
-        }
-
-        if (currentPhoneState != _phoneState.value) {
-            _phoneState.value = currentPhoneState
-        }
-
-        var notify = true
-        if (activeCall == null) {
-            primaryCall = null
-        } else if (activeCall != primaryCall) {
-            primaryCall = activeCall
-
-            for (listener in listeners) {
-                listener.onPrimaryCallChanged(activeCall)
-            }
-
-            notify = false
-        }
-
-        if (notify) {
-            for (listener in listeners) {
-                listener.onStateChanged()
-            }
-        }
-    }
-
     fun answer() {
-        primaryCall?.answer(VideoProfile.STATE_AUDIO_ONLY)
+        focusedConnection.value?.call?.answer(VideoProfile.STATE_AUDIO_ONLY)
     }
 
     /**
      * When hangup() is called, onCallRemoved() of CallService is automatically invoked.
      */
     fun hangup() {
-        if (primaryCall != null) {
-            if (getState() == Call.STATE_RINGING) {
-                primaryCall!!.reject(false, null)
-            } else {
-                primaryCall!!.disconnect()
-            }
-        }
-    }
-
-    /**
-     * Not sure why the primary call state (through getState()) would ever be holding, as the
-     * state is updated every time a call state changes (through the callbacks in the beginning
-     * of the file). The weird thing is when the code holds / unholds the primary call, the
-     * other call doesn't seem to be toggled here. I guess the default hold() and unhold()
-     * methods automatically make the other call hold or unhold based off what we do to the
-     * primary call (as you can't have two holding calls or two active calls).
-     */
-    fun toggleHold(): Boolean {
-        val isOnHold = getState() == Call.STATE_HOLDING
-        if (isOnHold) {
-            primaryCall?.unhold()
+        if (focusedConnection.value?.state == Call.STATE_RINGING) {
+            focusedConnection.value?.call?.reject(false, null)
         } else {
-            primaryCall?.hold()
+            focusedConnection.value?.call?.disconnect()
         }
-        return !isOnHold
     }
 
     fun swap() {
-        if (calls.size > 1) {
-            calls.find { it.getStateCompat() == Call.STATE_HOLDING }?.unhold()
+        logConnections()
+        if (isStableState() && connections.size == 2) {
+            holdingConnection()?.unhold()
+            nonHoldingConnection()?.hold()
         }
     }
 
+
     /**
-     * A call is conferenceable when it's not already in another conference call (there may
-     * be additional cases). [conferenceableCalls] gives the possible calls a the primary call
-     * [call] can conference with. The conference() method then puts the primary call in a
+     * TODO: Think about making actions that require a stable state asynchronous. That way, the
+     *  action still gets done.
+     *
+     * We can get the possible calls that the focused call can conference with by using
+     * conferenceableCalls. The conference() method then puts the  focused call in a
      * conference with the other conferenceable call. The reason why .first() is used is
      * because there can only be one call outside of the conference (remember, only one active
-     * and one on hold call is allowed). The difference between conference() and mergeConference()
-     * is that they are probably used for different carriers (GSM and CDMA), although this is
-     * not confirmed.
+     * and one on hold connection is allowed). The difference between conference() and
+     * mergeConference() is that they are probably used for different carriers (GSM and CDMA),
+     * although this is not confirmed.
      */
     fun merge() {
-        val conferenceableCalls = primaryCall!!.conferenceableCalls
+        if (!isStableState()) {
+            Timber.i("DODODEBUG: NOT STABLE STATE")
+            logConnections()
+            logCalls()
+            return
+        }
+
+        val focusedCall = focusedConnection.value?.call
+
+        val conferenceableCalls = focusedCall?.conferenceableCalls ?: emptyList()
         if (conferenceableCalls.isNotEmpty()) {
-            primaryCall!!.conference(conferenceableCalls.first())
+            focusedCall?.conference(conferenceableCalls.first())
+
             Timber.i("DODODEBUG: CONFERENCEABLE ==========================================")
         } else {
-            if (primaryCall!!.hasCapability(Call.Details.CAPABILITY_MERGE_CONFERENCE)) {
-                primaryCall!!.mergeConference()
+            val conferenceCapability = focusedCall?.hasCapability(Call.Details.CAPABILITY_MERGE_CONFERENCE) ?: false
+            if (conferenceCapability) {
+                focusedCall?.mergeConference()
+
                 Timber.i("DODODEBUG: MERGED WORKED =======================================")
             } else {
                 Timber.i("DODODEBUG: MERGED NOT WORKED ===================================")
@@ -310,51 +321,31 @@ object CallManager {
     }
 
     fun keypad(c: Char) {
-        primaryCall?.playDtmfTone(c)
-        primaryCall?.stopDtmfTone()
+        focusedConnection.value?.call?.playDtmfTone(c)
+        focusedConnection.value?.call?.stopDtmfTone()
     }
 
-    /**
-     * Used for null safe access of call state (primaryCall can be null).
-     */
-    fun getState() = primaryCall?.getStateCompat()
-
-    fun getPrimaryCall(): Call? {
-        return primaryCall
-    }
-
-    fun getConferenceHost(): Call? {
-        return calls.find { it.isConference() }
-    }
-
-    fun getConferenceCalls(): List<Call> {
-        return getConferenceHost()?.children ?: emptyList()
+    fun logConnections() {
+        for (connection in connections) {
+            Timber.i("DODODEBUG: CONNECTIONS =======" +
+                "connection state: ${callStateString(connection.state)}"
+            )
+        }
     }
 
     fun logCalls() {
-        for (call in calls ) {
+        for (call in calls) {
             Timber.i("DODODEBUG: CALLS =============" +
-                "${call?.details?.handle?.schemeSpecificPart}" +
-                    " | in conference: ${call.isConference()}" +
-                    " | call state: ${callStateString(call.getStateCompat())}" +
-                    " | conferenceable: ${conferenceableState(call)}"
+                "${call.details?.handle?.schemeSpecificPart}" +
+                " | in conference: ${call.isConference()}" +
+                " | call state: ${callStateString(call.getStateCompat())}" +
+                " | conferenceable: ${conferenceableState(call)}"
             )
         }
     }
 
     /**
-     * Used to check if a call is conferenceable or not. A call is not conferenceable only
-     * when it's already in a conference call through another phone (e.g., the user calls
-     * another phone that puts the user in a conference call with someone else). This allows us
-     * to disable the merge button and inform the user when the call is already in another
-     * conference (by checking if a call is conferencable or not).
-     *
-     * Unfortunately, once the user has been in someone else's conference call, the user can no
-     * longer create conference call with that person. For example, if the user joins Alex's
-     * conference call with 2 people, and Alex removes the other caller from the conference call,
-     * Alex's call inherently stays as a conference call (due to being a different type of
-     * connection). As a result, the user cannot create a conference call with Alex (through the
-     * user's phone) since Alex's call object is not conferenceable.
+     * Returns a String for whether a call is conferenceable or not.
      */
     fun conferenceableState(call: Call): String {
         if (calls.size == 1) {
@@ -387,5 +378,4 @@ object CallManager {
             else -> "Some other state"
         }
     }
-
 }
