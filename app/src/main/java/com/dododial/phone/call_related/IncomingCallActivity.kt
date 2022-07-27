@@ -18,7 +18,7 @@ class IncomingCallActivity : AppCompatActivity() {
 
     private val silenceDelay: Long = 10000L
     private lateinit var binding: ActivityIncomingCallBinding
-    private val scope = CoroutineScope(Dispatchers.Main)
+    private val scope = CoroutineScope(Dispatchers.Default)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,6 +67,15 @@ class IncomingCallActivity : AppCompatActivity() {
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+
+        /**
+         * Sets the ringer mode back to normal. Using a runnable doesn't seem necessary.
+         */
+        AudioHelpers.ringerSilent(this, false)
+    }
+
     suspend fun silenceHangup() {
         delay(silenceDelay)
 
@@ -80,9 +89,6 @@ class IncomingCallActivity : AppCompatActivity() {
             CallManager.hangup()
             Timber.i("Silence Block Action: Block action was taken because call was not answered or disconnected by user.")
         }
-
-        // Sets the ringer mode back to normal. Using a runnable doesn't seem necessary.
-        AudioHelpers.ringerSilent(this, false)
     }
 
     /**

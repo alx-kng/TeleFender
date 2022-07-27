@@ -7,25 +7,36 @@ import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.view.WindowManager
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.dododial.phone.DialerActivity
 import com.dododial.phone.R
 import com.dododial.phone.databinding.ActivityInCallBinding
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import timber.log.Timber
 
 class InCallActivity : AppCompatActivity() {
 
     private val CHANNEL_ID = "alxkng5737"
     private val NOTIFICATION_ID = 12345678
-    private lateinit var binding: ActivityInCallBinding
 
+    private lateinit var binding: ActivityInCallBinding
+    private val inCallViewModel: InCallViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         binding = ActivityInCallBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        /**
+         * Updates call duration for display.
+         */
+        binding.lifecycleOwner = this
+        binding.viewModel = inCallViewModel
 
         // Lets IncomingCallActivity know that InCallActivity is already running.
         running = true

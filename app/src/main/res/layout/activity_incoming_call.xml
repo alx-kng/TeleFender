@@ -72,7 +72,6 @@
                 app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Dodo.Button.Circle"
                 />
 
-
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/answer_incoming"
                 style="?attr/materialButtonOutlinedStyle"

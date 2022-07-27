@@ -6,6 +6,9 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import com.dododial.phone.call_related.CallManager.connections
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import timber.log.Timber
 
 
@@ -23,7 +26,7 @@ import timber.log.Timber
  */
 
 /**
- * TODO: Singular conference call UI
+ * TODO: Maybe singular conference call UI?
  *
  * As mentioned above, a conference call is a different type of
  * connection with the telecom carrier (remember how a null host call and replacement
@@ -315,9 +318,6 @@ object CallManager {
 
 
     /**
-     * TODO: Think about making actions that require a stable state asynchronous. That way, the
-     *  action still gets done.
-     *
      * TODO: Second branch might not be CDMA vs GSM (check).
      *
      * We can get the possible calls that the focused call can conference with by using
