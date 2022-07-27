@@ -1,64 +1,33 @@
 package com.dododial.phone
 
-import android.Manifest
 import android.Manifest.permission.CALL_PHONE
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.role.RoleManager
+import android.content.Context
 import android.content.Intent
-import android.database.Cursor
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.telecom.Call
 import android.telecom.TelecomManager
 import android.telecom.TelecomManager.ACTION_CHANGE_DEFAULT_DIALER
 import android.telecom.TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat.requestPermissions
 import androidx.core.content.PermissionChecker.PERMISSION_GRANTED
 import androidx.core.content.PermissionChecker.checkSelfPermission
 import androidx.core.net.toUri
 import androidx.core.view.isVisible
-import com.dododial.phone.call_related.CallActivity
-import com.dododial.phone.call_related.OngoingCall
-import kotlinx.android.synthetic.main.activity_dialer.*
-import android.app.role.RoleManager
-import android.content.Context
-import android.content.pm.PackageManager
-import androidx.annotation.RequiresApi
-import com.dododial.phone.database.entities.ChangeLog
-import com.dododial.phone.database.ClientDBConstants.CHANGELOG_TYPE_CONTACT_INSERT
-import com.dododial.phone.database.android_db.ContactDetailsHelper
-import java.time.Instant
-import java.util.UUID
-import android.telephony.TelephonyManager
-import androidx.core.app.ActivityCompat
-import com.dododial.phone.database.ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_INSERT
-import com.dododial.phone.database.ClientDatabase
-import com.dododial.phone.database.ClientRepository
-import com.example.actualfinaldatabase.permissions.PermissionsRequester
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import androidx.core.app.ActivityCompat.startActivityForResult
-
-import android.media.AudioManager
-import android.net.Uri
-import android.provider.Settings
-import android.provider.VoicemailContract
-import android.telecom.PhoneAccount
-import android.telecom.PhoneAccountHandle
-import android.util.Log
-import android.widget.Toast
-import androidx.activity.result.ActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import com.dododial.phone.call_related.CallManager
-import com.dododial.phone.call_related.OngoingCall.state
-import com.dododial.phone.database.DatabaseLogFunctions
-import com.dododial.phone.database.MiscHelpers
-import timber.log.Timber
+import com.dododial.phone.call_related.InCallActivity
+import com.dododial.phone.call_related.IncomingCallActivity
+import kotlinx.android.synthetic.main.activity_dialer.*
 
 
 // TODO we need to make a custom notification for initiating a call
@@ -122,6 +91,7 @@ class DialerActivity : AppCompatActivity() {
 
         phoneNumberInput.setOnEditorActionListener { _, _, _ ->
             initOutgoingCall()
+            InCallActivity.start(this)
             true
         }
 
@@ -131,7 +101,7 @@ class DialerActivity : AppCompatActivity() {
                 fromDialer = true
                 go_back_to_call.isVisible = true
                 go_back_to_call.setOnClickListener {
-                    CallManager.focusedConnection.value?.call?.let { CallActivity.start(this, it) }
+                    InCallActivity.start(this)
                 }
         } else {
             go_back_to_call.isVisible = false
@@ -194,12 +164,6 @@ class DialerActivity : AppCompatActivity() {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    @SuppressLint("MissingPermission")
-    companion object {
-        const val REQUEST_PERMISSION = 0
-    }
-
     private fun notificationChannelCreator() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             // Create the NotificationChannel
@@ -213,6 +177,17 @@ class DialerActivity : AppCompatActivity() {
             // or other notification behaviors after this
             val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(mChannel)
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    companion object {
+        const val REQUEST_PERMISSION = 0
+
+        fun start(context: Context) {
+            Intent(context, DialerActivity::class.java)
+                .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                .let(context::startActivity)
         }
     }
 

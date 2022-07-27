@@ -17,8 +17,6 @@ import timber.log.Timber
 @RequiresApi(Build.VERSION_CODES.O)
 class App : Application() {
 
-
-
     val applicationScope = CoroutineScope(SupervisorJob())
 
     val database by lazy { ClientDatabase.getDatabase(this, applicationScope, contentResolver) }

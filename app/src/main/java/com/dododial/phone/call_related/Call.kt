@@ -2,7 +2,6 @@ package com.dododial.phone.call_related
 
 import android.os.Build
 import android.telecom.Call
-import com.dododial.phone.call_related.OngoingCall.call
 
 
 private val OUTGOING_CALL_STATES = arrayOf(

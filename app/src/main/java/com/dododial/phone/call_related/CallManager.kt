@@ -4,19 +4,18 @@ import android.telecom.Call
 import android.telecom.VideoProfile
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.Transformations
 import com.dododial.phone.call_related.CallManager.connections
-import com.dododial.phone.call_related.CallManager2.callStateString
-import com.dododial.phone.call_related.CallManager2.logCalls
 import timber.log.Timber
 
 
 /**
  * Let's first understand a conference call before we go further. Essentially, when you merge
- * two calls into a conference call, the service provider is notified and separate connections
+ * two calls into a conference call, the telecom carrier is notified and separate connections
  * are created for the conference call. By separate, we mean that the existing call connections
  * (objects) are no longer used and two new call connections (same numbers) fit for a
  * conference call are created and added as new calls through onCallAdded() of the CallService.
- * Moreover, the service provider / Android system provides a third host connection (also as a
+ * Moreover, the telecom carrier / Android system provides a third host connection (also as a
  * call object) with a null number that manages the child conference calls. Note, the host
  * is the only call that is actually marked as a conference call. When more calls are added to
  * the conference call, the same null host call is used and another replacement call is added
@@ -27,7 +26,7 @@ import timber.log.Timber
  * TODO: Singular conference call UI
  *
  * As mentioned above, a conference call is a different type of
- * connection with the service provider (remember how a null host call and replacement
+ * connection with the telecom carrier (remember how a null host call and replacement
  * calls are added). Due to this difference, any calls within a conference call permanently
  * stay within the conference call (each call will always be a child of the null host call).
  * The slight problem that arises is that a conference call can technically have just one
@@ -85,6 +84,15 @@ class Connection(val call: Call?) {
 
 object CallManager {
 
+    val BLOCK_MODE = 0
+    val SILENCE_MODE = 1
+    val ALLOW_MODE = 2
+
+    // TODO: Store current block mode in database.
+    private var _currentMode = SILENCE_MODE
+    val currentMode : Int
+        get() = _currentMode
+
     /**
      * List of calls for managing and logging calls (emphasis on latter). The same calls are
      * stored in [connections] and are more often managed in that form.
@@ -102,6 +110,15 @@ object CallManager {
      */
     private val _focusedConnection = MutableLiveData<Connection?>()
     val focusedConnection : LiveData<Connection?> = _focusedConnection
+    val focusedCall : Call?
+        get() = _focusedConnection.value?.call
+
+    /**
+     * Used to decide whether the incoming call screen should still show.
+     */
+    val incomingCall : LiveData<Boolean> = Transformations.map(_focusedConnection) {
+        it?.state == Call.STATE_RINGING || it?.state == Call.STATE_NEW
+    }
 
     /**
      * Updates the current focused connection. Ringing, Connecting, and Dialing connections take
@@ -118,6 +135,7 @@ object CallManager {
             if (connection.state == Call.STATE_RINGING
                 || connection.state == Call.STATE_CONNECTING
                 || connection.state == Call.STATE_DIALING
+                || connection.state == Call.STATE_NEW
             ) {
                 _focusedConnection.value = connection
                 return
@@ -199,6 +217,13 @@ object CallManager {
         return !(sameStateConnections() || repeatCalls() || hasDisconnected)
     }
 
+    fun isActiveStableState(): Boolean {
+        val hasIncoming = connections.find { it.state == Call.STATE_RINGING } != null
+        val hasOutgoing = connections.find { it.state == Call.STATE_CONNECTING || it.state == Call.STATE_DIALING} != null
+
+        return isStableState() && !hasIncoming && !hasOutgoing
+    }
+
     /**********************************************************************************************
      * The following wrapped functions require a stable state.
      *********************************************************************************************/
@@ -224,7 +249,7 @@ object CallManager {
                 val newConnection = Connection(call)
                 connections.add(newConnection)
 
-                Timber.i("DODODEBUG: CONNETION ADDED")
+                Timber.i("DODODEBUG: CONNECTION ADDED")
             }
         }
         updateFocusedConnection()
@@ -285,6 +310,8 @@ object CallManager {
      * TODO: Think about making actions that require a stable state asynchronous. That way, the
      *  action still gets done.
      *
+     * TODO: Second branch might not be CDMA vs GSM (check).
+     *
      * We can get the possible calls that the focused call can conference with by using
      * conferenceableCalls. The conference() method then puts the  focused call in a
      * conference with the other conferenceable call. The reason why .first() is used is
@@ -318,6 +345,19 @@ object CallManager {
                 Timber.i("DODODEBUG: MERGED NOT WORKED ===================================")
             }
         }
+    }
+
+    fun canMerge() : Boolean{
+        var hasConferenceable = false
+        for (call in calls) {
+            if (!call.conferenceableCalls.isNullOrEmpty()) {
+                hasConferenceable = true
+            }
+        }
+        val conferenceCapability = CallManager.focusedCall?.hasCapability(Call.Details.CAPABILITY_MERGE_CONFERENCE) ?: false
+
+        Timber.i("DODODEBUG: canMerge = ${hasConferenceable || conferenceCapability}")
+        return hasConferenceable || conferenceCapability
     }
 
     fun keypad(c: Char) {

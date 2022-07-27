@@ -4,4 +4,25 @@
     <color name="colorPrimaryDark">#303F9F</color>
     <color name="colorAccent">#FF4081</color>
     <color name="notificationGreen">#11F451</color>
+    <color name="hangup_red">#FF0000</color>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="call_green">#52EC50</color>
+    <!--    <color name="icon_white">#DFDADA</color>-->
+    <color name="icon_white">#FFFFFF</color>
+    <color name="message_blue">#03A9F4</color>
+    <color name="border_color">#637D8A</color>
+    <color name="grey">#222222</color>
+    <color name="disabled_grey">#4A4A4A</color>
+    <color name="clicked_blue">#37D6A4</color>
+    <color name="block_red">#F44336</color>
+    <color name="business_blue">#399EF0</color>
+    <color name="business_green">#A3E359</color>
+    <color name="missed_red">#FF4E43</color>
+    <color name="active_call_button">#000D4A</color>
 </resources>

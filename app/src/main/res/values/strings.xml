@@ -16,4 +16,10 @@
     <string name="channel_name">Incoming and active phone notification channel</string>
     <string name="channel_description">High-priority notification to show incoming and active calls</string>
     <string name="default_notification_channel_id">firebase channel</string>
+    <string name="add_active">Add</string>
+    <string name="swap_active">Swap</string>
+    <string name="merge_active">Merge</string>
+    <string name="speaker_active">Speaker</string>
+    <string name="mute_active">Mute</string>
+    <string name="keypad_active">Keypad</string>
 </resources>
