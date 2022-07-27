@@ -1,12 +1,10 @@
 package com.dododial.phone.call_related
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.os.Build
 import android.os.Bundle
-import android.telecom.Call
 import android.view.View
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
@@ -15,7 +13,6 @@ import com.dododial.phone.DialerActivity
 import com.dododial.phone.R
 import com.dododial.phone.databinding.ActivityInCallBinding
 import timber.log.Timber
-
 
 class InCallActivity : AppCompatActivity() {
 
@@ -30,8 +27,8 @@ class InCallActivity : AppCompatActivity() {
         binding = ActivityInCallBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Lets CallService know that CallActivity is already active.
-        RunningStates.callActivityRunning = true
+        // Lets IncomingCallActivity know that InCallActivity is already running.
+        running = true
 
         inCallOverLockScreen()
 
@@ -81,8 +78,8 @@ class InCallActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
 
-        // Lets CallService know that CallActivity is no longer active.
-        RunningStates.callActivityRunning = false
+        // Lets IncomingCallActivity know that InCallActivity is already running.
+        running = false
     }
 
     fun inCallOverLockScreen() {
@@ -129,8 +126,6 @@ class InCallActivity : AppCompatActivity() {
         }
     }
 
-    // TODO: FIX canMerge(). canMerge() doesn't work on first time second call is added.
-    @SuppressLint("SetTextI18n")
     private fun updateScreen() {
 
         /**
@@ -148,7 +143,7 @@ class InCallActivity : AppCompatActivity() {
         }
 
         /**
-         * Can only swap calls if there are exactly two connections.
+         * Can only swap calls if there are exactly two connections (holding, active).
          */
         val swapClickable = CallManager.isActiveStableState() && CallManager.connections.size == 2
         binding.swapActive.isClickable = swapClickable
@@ -162,9 +157,10 @@ class InCallActivity : AppCompatActivity() {
         }
 
         /**
-         * Can only swap calls if there are exactly two connections.
+         * Can only merge calls if there are exactly two connections (holding, active) and the
+         * call is conferenceable.
          */
-        val mergeClickable = CallManager.isActiveStableState() && CallManager.connections.size == 2 && CallManager.canMerge()
+        val mergeClickable = CallManager.isActiveStableState() && CallManager.canMerge()
         binding.mergeActive.isClickable = mergeClickable
 
         if (mergeClickable) {
@@ -196,6 +192,8 @@ class InCallActivity : AppCompatActivity() {
     }
 
     companion object {
+        var running = false
+
         fun start(context: Context) {
             Intent(context, InCallActivity::class.java)
                 .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

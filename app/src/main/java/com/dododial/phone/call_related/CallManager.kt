@@ -252,12 +252,19 @@ object CallManager {
                 Timber.i("DODODEBUG: CONNECTION ADDED")
             }
         }
-        updateFocusedConnection()
 
         calls.add(call)
 
+        updateFocusedConnection()
+
         call.registerCallback(object : Call.Callback() {
             override fun onStateChanged(call: Call?, state: Int) {
+                updateFocusedConnection()
+                logConnections()
+                logCalls()
+            }
+
+            override fun onConferenceableCallsChanged(call: Call?, conferenceableCalls: MutableList<Call>?) {
                 updateFocusedConnection()
                 logConnections()
                 logCalls()
@@ -275,9 +282,10 @@ object CallManager {
         if (existingConnection(call)) {
             connections.removeIf {it.call == call}
         }
-        updateFocusedConnection()
 
         calls.remove(call)
+
+        updateFocusedConnection()
 
         Timber.i("DODODEBUG: CALL REMOVED")
     }
@@ -321,7 +329,7 @@ object CallManager {
      * although this is not confirmed.
      */
     fun merge() {
-        if (!isStableState()) {
+        if (!isStableState() && connections.size == 2) {
             Timber.i("DODODEBUG: NOT STABLE STATE")
             logConnections()
             logCalls()
@@ -348,16 +356,12 @@ object CallManager {
     }
 
     fun canMerge() : Boolean{
-        var hasConferenceable = false
-        for (call in calls) {
-            if (!call.conferenceableCalls.isNullOrEmpty()) {
-                hasConferenceable = true
-            }
-        }
-        val conferenceCapability = CallManager.focusedCall?.hasCapability(Call.Details.CAPABILITY_MERGE_CONFERENCE) ?: false
+
+        val hasConferenceable = !focusedCall?.conferenceableCalls.isNullOrEmpty()
+        val conferenceCapability = focusedCall?.hasCapability(Call.Details.CAPABILITY_MERGE_CONFERENCE) ?: false
 
         Timber.i("DODODEBUG: canMerge = ${hasConferenceable || conferenceCapability}")
-        return hasConferenceable || conferenceCapability
+        return (hasConferenceable || conferenceCapability)
     }
 
     fun keypad(c: Char) {

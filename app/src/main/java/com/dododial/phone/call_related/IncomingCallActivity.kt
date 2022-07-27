@@ -5,12 +5,14 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.telecom.Call
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 import com.dododial.phone.databinding.ActivityIncomingCallBinding
 import kotlinx.coroutines.*
 import timber.log.Timber
+
 
 class IncomingCallActivity : AppCompatActivity() {
 
@@ -84,23 +86,48 @@ class IncomingCallActivity : AppCompatActivity() {
     }
 
     /**
-     * TODO: Fix possible side cases.
+     * TODO: Double check side cases.
      *
      * Shows activity over lock screen.
      */
     fun showOverLockScreen() {
+
+        /**
+         * Only wake screen if screen isn't on. Otherwise, just set to show over lock screen.
+         */
+        val powerManager = getSystemService(POWER_SERVICE) as PowerManager
+        val screenOn = powerManager.isInteractive
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
-            setTurnScreenOn(true)
 
-            val keyguardManager = getSystemService(AppCompatActivity.KEYGUARD_SERVICE) as KeyguardManager
-            keyguardManager.requestDismissKeyguard(this, null)
+            if (!screenOn) {
+                setTurnScreenOn(true)
+
+                /**
+                 * Makes sure to not dismiss keyguard if already dismissed. Otherwise, the keyguard
+                 * pops up again.
+                 */
+                if (!InCallActivity.running) {
+                    val keyguardManager = getSystemService(KEYGUARD_SERVICE) as KeyguardManager
+                    keyguardManager.requestDismissKeyguard(this, null)
+                }
+            }
         } else {
-            window.addFlags(
-                WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
-                    WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
-            )
+            if (!screenOn) {
+                window.addFlags(
+                        WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
+                            or WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+                )
+
+                if (!InCallActivity.running) {
+                    window.addFlags(WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD)
+                }
+            } else {
+                window.addFlags(
+                    WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
+                )
+            }
         }
     }
 
