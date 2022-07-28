@@ -1,9 +1,12 @@
 package com.dododial.phone.call_related
 
-import android.os.Build.VERSION_CODES.S
 import android.telecom.Call
 import androidx.lifecycle.*
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import timber.log.Timber
 
 class InCallViewModel : ViewModel() {
 
@@ -26,6 +29,7 @@ class InCallViewModel : ViewModel() {
                     delay(500)
                     _duration.postValue(CallManager.focusedCall.getCallDuration())
                 }
+                Timber.i("DODODEBUG: OUT OF CALL DURATION!")
             }
         }
     }

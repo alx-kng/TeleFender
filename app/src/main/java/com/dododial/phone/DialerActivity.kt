@@ -15,6 +15,7 @@ import android.telecom.Call
 import android.telecom.TelecomManager
 import android.telecom.TelecomManager.ACTION_CHANGE_DEFAULT_DIALER
 import android.telecom.TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME
+import android.util.Log
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
@@ -28,6 +29,8 @@ import com.dododial.phone.call_related.CallManager
 import com.dododial.phone.call_related.InCallActivity
 import com.dododial.phone.call_related.IncomingCallActivity
 import kotlinx.android.synthetic.main.activity_dialer.*
+import kotlinx.coroutines.*
+import timber.log.Timber
 
 
 // TODO we need to make a custom notification for initiating a call
@@ -59,20 +62,12 @@ class DialerActivity : AppCompatActivity() {
         notificationChannelCreator()
 
         /**
+         * TODO Make dialog to explain reason for Do not disturb access.
+         *
          * Offers to replace default dialer, automatically makes requesting permissions
          * separately unnecessary
          */
         offerReplacingDefaultDialer()
-
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-//            val rm = getSystemService(Context.ROLE_SERVICE) as RoleManager
-//            startForResult.launch(rm.createRequestRoleIntent(RoleManager.ROLE_DIALER))
-//        } else {
-//        }
-
-        //TODO Make dialog to explain reason for Do not disturb access.
-
-        //PermissionsRequester.multiplePermissions(this, this)
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -91,24 +86,25 @@ class DialerActivity : AppCompatActivity() {
 
         phoneNumberInput.setOnEditorActionListener { _, _, _ ->
             initOutgoingCall()
-            InCallActivity.start(this)
+            Timber.i("DODODEBUG: DIALED")
             true
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
 
         if ((CallManager.focusedConnection.value?.state ?: Call.STATE_DISCONNECTED) == Call.STATE_ACTIVE ||
             (CallManager.focusedConnection.value?.state ?: Call.STATE_DISCONNECTING) == Call.STATE_RINGING
         ) {
-                fromDialer = true
-                go_back_to_call.isVisible = true
-                go_back_to_call.setOnClickListener {
-                    InCallActivity.start(this)
-                }
+            fromDialer = true
+            go_back_to_call.isVisible = true
+            go_back_to_call.setOnClickListener {
+                InCallActivity.start(this)
+            }
         } else {
             go_back_to_call.isVisible = false
         }
-
-        val intent = Intent()
-
     }
 
     // TODO : Warning

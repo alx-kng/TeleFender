@@ -31,6 +31,7 @@
         <activity
             android:name="com.dododial.phone.DialerActivity"
             android:windowSoftInputMode="stateAlwaysVisible|adjustResize"
+            android:launchMode="singleInstance"
             android:exported="true"
             >
             <intent-filter>
@@ -55,7 +56,11 @@
             </intent-filter>
         </activity>
 
-        <activity android:name="com.dododial.phone.call_related.InCallActivity"/>
+        <activity
+            android:name="com.dododial.phone.call_related.InCallActivity"
+            android:launchMode="singleTask"
+            android:documentLaunchMode="always"
+            />
 
         <activity android:name="com.dododial.phone.call_related.IncomingCallActivity"/>
 
@@ -65,34 +70,11 @@
             android:label="@string/title_activity_test"
             android:theme="@style/AppTheme.NoActionBar"
             />
-        <receiver
-            android:name="com.dododial.phone.call_related.notifications.IncomingNotificationActionReceiver"
-            android:enabled="true"
-            android:exported="true"
-            />
-
-        <receiver
-            android:name="com.dododial.phone.call_related.notifications.ActiveNotificationActionReceiver"
-            android:enabled="true"
-            android:exported="true"
-            />
-
-        <service
-            android:name="com.dododial.phone.call_related.notifications.DummyForegroundIncomingCallService"
-            android:enabled="true"
-            android:exported="true"
-            />
             
         <service
            android:name="androidx.work.impl.foreground.SystemForegroundService"
            android:foregroundServiceType="dataSync"
            />
-
-        <service
-            android:name="com.dododial.phone.call_related.notifications.DummyForegroundActiveCallService"
-            android:enabled="true"
-            android:exported="true"
-            />
 
         <service
             android:name="com.dododial.phone.database.background_tasks.firebase.DodoFirebaseService"

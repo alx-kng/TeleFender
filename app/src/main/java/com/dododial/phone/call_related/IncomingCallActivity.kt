@@ -112,7 +112,7 @@ class IncomingCallActivity : AppCompatActivity() {
 
                 /**
                  * Makes sure to not dismiss keyguard if already dismissed. Otherwise, the keyguard
-                 * pops up again.
+                 * pops up again. Keyguard is already dismissed if InCallActivity is running.
                  */
                 if (!InCallActivity.running) {
                     val keyguardManager = getSystemService(KEYGUARD_SERVICE) as KeyguardManager

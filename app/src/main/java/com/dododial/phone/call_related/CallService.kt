@@ -1,13 +1,9 @@
 package com.dododial.phone.call_related
 
-import android.os.Handler
-import android.os.Looper
+
 import android.telecom.Call
 import android.telecom.InCallService
 import com.dododial.phone.RuleChecker
-
-
-import timber.log.Timber
 
 class CallService : InCallService() {
 
@@ -35,10 +31,18 @@ class CallService : InCallService() {
 
         CallManager.addCall(call)
 
-        if (RuleChecker.isSafe(call.number()) || CallManager.currentMode == CallManager.ALLOW_MODE) {
-            safeCall()
+        /**
+         * Only launches IncomingActivity if it is an incoming call. Otherwise, InCallActivity is
+         * directly started.
+         */
+        if (call.getStateCompat() == Call.STATE_RINGING) {
+            if (RuleChecker.isSafe(call.number()) || CallManager.currentMode == CallManager.ALLOW_MODE) {
+                safeCall()
+            } else {
+                unsafeCall()
+            }
         } else {
-            unsafeCall()
+            InCallActivity.start(this)
         }
     }
 
