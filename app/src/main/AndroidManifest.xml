@@ -62,7 +62,9 @@
             android:documentLaunchMode="always"
             />
 
-        <activity android:name="com.dododial.phone.call_related.IncomingCallActivity"/>
+        <activity
+            android:name="com.dododial.phone.call_related.IncomingCallActivity"
+            />
 
         <activity
             android:name="com.dododial.phone.TestActivity"

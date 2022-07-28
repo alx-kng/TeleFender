@@ -371,7 +371,7 @@ object CallManager {
 
     fun logConnections() {
         for (connection in connections) {
-            Timber.i("DODODEBUG: CONNECTIONS =======" +
+            Timber.i("DODODEBUG: CONNECTIONS ======= " +
                 "connection state: ${callStateString(connection.state)}"
             )
         }
@@ -379,7 +379,7 @@ object CallManager {
 
     fun logCalls() {
         for (call in calls) {
-            Timber.i("DODODEBUG: CALLS =============" +
+            Timber.i("DODODEBUG: CALLS ============= " +
                 "${call.details?.handle?.schemeSpecificPart}" +
                 " | in conference: ${call.isConference()}" +
                 " | call state: ${callStateString(call.getStateCompat())}" +

@@ -7,11 +7,13 @@ import android.os.Bundle
 import android.view.View
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat.startActivity
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import com.dododial.phone.R
 import com.dododial.phone.databinding.ActivityInCallBinding
+import timber.log.Timber
 
 class InCallActivity : AppCompatActivity() {
 
@@ -33,7 +35,8 @@ class InCallActivity : AppCompatActivity() {
         navController = navHostFragment.navController
 
         // Lets IncomingCallActivity know that InCallActivity is already running.
-        running = true
+        _running = true
+        _context = this
 
         inCallOverLockScreen()
     }
@@ -42,7 +45,8 @@ class InCallActivity : AppCompatActivity() {
         super.onDestroy()
 
         // Lets IncomingCallActivity know that InCallActivity is already running.
-        running = false
+        _running = false
+        _context = null
     }
 
     /**
@@ -67,12 +71,30 @@ class InCallActivity : AppCompatActivity() {
     }
 
     companion object {
-        var running = false
+
+        private var _running = false
+        val running : Boolean
+            get() = _running
+
+        private var _context: Context? = null
+        val context : Context?
+            get() = _context
 
         fun start(context: Context) {
             Intent(context, InCallActivity::class.java)
                 .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 .let(context::startActivity)
+        }
+
+        /**
+         * Launches IncomingActivity into same task as InCallActivity if InCallActivity is running.
+         */
+        fun startIncoming(safe: Boolean) {
+            if (context != null) {
+                Intent(context, IncomingCallActivity::class.java)
+                    .putExtra("Safe", safe)
+                    .let((context as InCallActivity)::startActivity)
+            }
         }
     }
 }

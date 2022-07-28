@@ -2,6 +2,7 @@ package com.dododial.phone.call_related
 
 import android.content.res.ColorStateList
 import android.os.Bundle
+import android.telecom.Call
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -41,7 +42,10 @@ class InCallFragment : Fragment() {
          * Observes and updates UI based off current focusedConnection
          */
         CallManager.focusedConnection.observe(viewLifecycleOwner) { connection ->
-            if (connection == null) {
+            val edgeState = (CallManager.connections.firstOrNull()?.state ?: Call.STATE_DISCONNECTED)
+            if (connection == null
+                || (CallManager.connections.size == 1 && edgeState == Call.STATE_DISCONNECTED)
+            ) {
                 requireActivity().finishAndRemoveTask()
                 Timber.i("DODODEBUG: IN CALL FINISHED!")
             } else {
@@ -81,6 +85,8 @@ class InCallFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+
+        Timber.i("DODODEBUG: InCallFragment Destroyed!")
     }
 
     private fun prepareAudio() {

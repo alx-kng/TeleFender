@@ -138,11 +138,20 @@ class IncomingCallActivity : AppCompatActivity() {
     }
 
     companion object {
+
+        /**
+         * Launches into the same task as InCallActivity if InCallActivity is running.
+         */
         fun start(context: Context, safe: Boolean) {
-            Intent(context, IncomingCallActivity::class.java)
+            if (InCallActivity.running){
+                InCallActivity.startIncoming(safe)
+            } else {
+                Intent(context, IncomingCallActivity::class.java)
                     .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
                     .putExtra("Safe", safe)
                     .let(context::startActivity)
+            }
         }
     }
 }
