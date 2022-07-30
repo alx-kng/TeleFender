@@ -61,7 +61,8 @@ import timber.log.Timber
  * Abstraction of a group of calls. Represents either a single call or a conference call.
  */
 class Connection(val call: Call?) {
-    val isConference: Boolean = call.isConference()
+    val isConference: Boolean
+        get() = call.isConference()
 
     val state: Int
         get() = call.getStateCompat()
@@ -168,6 +169,21 @@ object CallManager {
         return connections.find { it.isConference }
     }
 
+    fun orderedConnections(): List<Connection?> {
+        return connections.filter { it.state != Call.STATE_DISCONNECTED }
+    }
+
+    /**
+     * Connection that currently doesn't have focus.
+     */
+    fun nonFocusConnection(): Connection? {
+        return connections.find { it != focusedConnection.value && it.state != Call.STATE_DISCONNECTED}
+    }
+
+    fun holdingConnections(): List<Connection?> {
+        return connections.filter { it.state == Call.STATE_HOLDING}
+    }
+
     /**
      * Checks if there is an existing connection with the same number as the passed in Call object.
      * Remember, Connection stores a call object, but there can be different call objects with the
@@ -228,7 +244,7 @@ object CallManager {
     }
 
     /**********************************************************************************************
-     * The following wrapped functions require a stable state.
+     * The following wrapped functions require an active stable state.
      *********************************************************************************************/
 
     fun holdingConnection(): Connection? {
@@ -310,7 +326,7 @@ object CallManager {
 
     fun swap() {
         logConnections()
-        if (isStableState() && connections.size == 2) {
+        if (isActiveStableState() && connections.size == 2) {
             holdingConnection()?.unhold()
             nonHoldingConnection()?.hold()
         }

@@ -9,6 +9,7 @@ import android.os.PowerManager
 import android.telecom.Call
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
+import com.dododial.phone.R
 import com.dododial.phone.databinding.ActivityIncomingCallBinding
 import kotlinx.coroutines.*
 import timber.log.Timber
@@ -74,6 +75,13 @@ class IncomingCallActivity : AppCompatActivity() {
          * Sets the ringer mode back to normal. Using a runnable doesn't seem necessary.
          */
         AudioHelpers.ringerSilent(this, false)
+    }
+
+    /**
+     * Don't allow back press when in IncomingActivity.
+     */
+    override fun onBackPressed() {
+        return
     }
 
     suspend fun silenceHangup() {

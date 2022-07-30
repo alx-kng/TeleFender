@@ -25,4 +25,5 @@
     <color name="business_green">#A3E359</color>
     <color name="missed_red">#FF4E43</color>
     <color name="active_call_button">#000000</color>
+    <color name="holding_grey">#A5A5A5</color>
 </resources>

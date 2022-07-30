@@ -3,6 +3,7 @@ package com.dododial.phone.call_related
 import android.content.res.ColorStateList
 import android.os.Bundle
 import android.telecom.Call
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -11,7 +12,9 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.dododial.phone.DialerActivity
 import com.dododial.phone.R
+import com.dododial.phone.call_related.InCallActivity.Companion.context
 import com.dododial.phone.databinding.FragmentInCallBinding
+import kotlinx.coroutines.NonCancellable.children
 import timber.log.Timber
 
 class InCallFragment : Fragment() {
@@ -45,11 +48,13 @@ class InCallFragment : Fragment() {
             val edgeState = (CallManager.connections.firstOrNull()?.state ?: Call.STATE_DISCONNECTED)
             if (connection == null
                 || (CallManager.connections.size == 1 && edgeState == Call.STATE_DISCONNECTED)
+                || conferenceShouldDisconnect()
             ) {
                 requireActivity().finishAndRemoveTask()
                 Timber.i("DODODEBUG: IN CALL FINISHED!")
             } else {
-                updateScreen()
+                updateCallerDisplay()
+                updateButtons()
             }
         }
 
@@ -123,7 +128,196 @@ class InCallFragment : Fragment() {
         }
     }
 
-    private fun updateScreen() {
+    private fun conferenceShouldDisconnect(): Boolean {
+        val oneConnection = CallManager.connections.size == 1
+
+        val children = CallManager.conferenceConnection()?.call?.children
+        val noChildren = children?.size == 0
+
+        return oneConnection && noChildren
+    }
+
+    private fun singleDisplay(): Boolean {
+        val singleNonConference = (
+            CallManager.isStableState()
+                && CallManager.connections.size == 1
+                && !(CallManager.focusedConnection.value?.isConference ?: false)
+            )
+
+        val outgoing = (
+            CallManager.focusedCall.getStateCompat() == Call.STATE_CONNECTING
+                || CallManager.focusedCall.getStateCompat() == Call.STATE_DIALING
+            )
+
+        val twoNotActiveStable = !CallManager.isActiveStableState() && CallManager.connections.size == 2
+        val twoNotHolding = CallManager.holdingConnections().size != 2
+        val noConference = CallManager.conferenceConnection() == null
+        val unstableConference = CallManager.calls.size != CallManager.connections.size
+
+        return singleNonConference
+            || (twoNotActiveStable && twoNotHolding && noConference && !unstableConference)
+            || outgoing
+    }
+
+    private fun singleConference(): Boolean {
+        val hasConference = CallManager.conferenceConnection() != null
+        val oneConnection = CallManager.connections.filter { it.state != Call.STATE_DISCONNECTED }.size == 1
+        val threeConnections = CallManager.connections.size == 3
+
+        return hasConference && (oneConnection || threeConnections)
+    }
+
+    private fun getNumber(call: Call?): String {
+        val temp: String? = call.number()
+        val number = if (!temp.isNullOrEmpty()) {
+            temp
+        } else {
+            if (temp == null) {
+                throw Exception("Shouldn't have null number in single display.")
+            } else {
+                "Unknown"
+            }
+        }
+
+        return number
+    }
+
+    private fun getNumberDisplay(connection: Connection): String {
+        return if (connection.isConference) {
+            val conferenceSize = connection.call?.children?.size ?: 0
+            "Conference (${conferenceSize} others)"
+        } else {
+            getNumber(connection.call)
+        }
+    }
+
+    private fun displayColor(firstActive: Boolean) {
+        if (firstActive) {
+            binding.firstNumber.setTextColor(ContextCompat.getColor(requireActivity(), R.color.icon_white))
+            binding.firstText.setTextColor(ContextCompat.getColor(requireActivity(), R.color.icon_white))
+            binding.firstDuration.setTextColor(ContextCompat.getColor(requireActivity(), R.color.icon_white))
+
+            binding.secondNumber.setTextColor(ContextCompat.getColor(requireActivity(), R.color.holding_grey))
+            binding.secondText.setTextColor(ContextCompat.getColor(requireActivity(), R.color.holding_grey))
+            binding.secondDuration.setTextColor(ContextCompat.getColor(requireActivity(), R.color.holding_grey))
+        } else {
+            binding.firstNumber.setTextColor(ContextCompat.getColor(requireActivity(), R.color.holding_grey))
+            binding.firstText.setTextColor(ContextCompat.getColor(requireActivity(), R.color.holding_grey))
+            binding.firstDuration.setTextColor(ContextCompat.getColor(requireActivity(), R.color.holding_grey))
+
+            binding.secondNumber.setTextColor(ContextCompat.getColor(requireActivity(), R.color.icon_white))
+            binding.secondText.setTextColor(ContextCompat.getColor(requireActivity(), R.color.icon_white))
+            binding.secondDuration.setTextColor(ContextCompat.getColor(requireActivity(), R.color.icon_white))
+        }
+    }
+
+    private fun showInfoButton(button: Int, show: Boolean) {
+        val infoButton = if (button == 1) binding.firstInfo else binding.secondInfo
+
+        if (show) {
+            infoButton.visibility = View.VISIBLE
+            infoButton.isClickable = true
+            infoButton.isFocusable = true
+        } else {
+            infoButton.visibility = View.INVISIBLE
+            infoButton.isClickable = false
+            infoButton.isFocusable = false
+        }
+    }
+
+    /**
+     * TODO: Double check this logic to make sure all cases are handled correctly.
+     *  Also, there seems to be a problem where the audio isn't connected sometimes (when there
+     *  are two calls), particularly when swapping calls (may or may not be fixed).
+     *  Need to catch in-between states to ensure smoother UI transition.
+     */
+    private fun updateCallerDisplay() {
+
+        if (singleDisplay()) {
+            binding.multiCallerDisplay.visibility = View.GONE
+            binding.singleCallerDisplay.visibility = View.VISIBLE
+
+            Timber.i("DODODEBUG: SINGLE DISPLAY")
+            inCallViewModel.singleMode = true
+
+            /**
+             * Only display number if contact doesn't exist. Otherwise display both number and contact.
+             */
+            val contactExists = false
+            if (contactExists) {
+
+            } else {
+                binding.smallNumber.visibility = View.GONE
+                binding.numberOrContact.text = getNumber(CallManager.focusedCall)
+            }
+        } else {
+            binding.multiCallerDisplay.visibility = View.VISIBLE
+            binding.singleCallerDisplay.visibility = View.GONE
+
+            // Single conference call.
+            if (singleConference()) {
+                binding.secondDisplay.visibility = View.INVISIBLE
+
+                inCallViewModel.singleMode = true
+
+                showInfoButton(1, true)
+                showInfoButton(2, false)
+                displayColor(true)
+
+                Timber.i("DODODEBUG: SINGLE CONFERENCE")
+
+                val conferenceSize = CallManager.focusedCall?.children?.size ?: 0
+                binding.firstNumber.text = "Conference (${conferenceSize} others)"
+                binding.firstText.text = "Active"
+            } else {
+                // Two connections.
+
+                binding.secondDisplay.visibility = View.VISIBLE
+                inCallViewModel.singleMode = false
+
+                val orderedConnections = CallManager.orderedConnections()
+
+                val firstConnection = orderedConnections.first()
+                val secondConnection = if (orderedConnections.size == 1) {
+                    throw Exception("Second connection was null!")
+                } else {
+                    orderedConnections[1]
+                }
+
+                binding.firstNumber.text = getNumberDisplay(firstConnection!!)
+                binding.secondNumber.text = getNumberDisplay(secondConnection!!)
+
+                val firstActive = firstConnection == CallManager.focusedConnection.value
+                if (firstActive) {
+                    binding.firstText.text = "Active"
+                    binding.secondText.text = "Holding"
+                    displayColor(true)
+                } else {
+                    binding.firstText.text = "Holding"
+                    binding.secondText.text = "Active"
+                    displayColor(false)
+                }
+
+                if (firstConnection.isConference && firstActive) {
+                    showInfoButton(1, true)
+                } else {
+                    showInfoButton(1, false)
+                }
+
+                if (secondConnection.isConference && !firstActive) {
+                    showInfoButton(2, true)
+                } else {
+                    showInfoButton(2, false)
+                }
+            }
+        }
+    }
+
+    /**
+     * TODO: When pressing add button, DialerActivity doesn't show on screen because we didn't call
+     *  the show over lock screen function in it.
+     */
+    private fun updateButtons() {
 
         /**
          * Can only add calls if there is exactly one connection.
@@ -170,24 +364,5 @@ class InCallFragment : Fragment() {
             binding.mergeActive.iconTint = ColorStateList.valueOf(ContextCompat.getColor(context!!, R.color.disabled_grey))
             binding.mergeText.setTextColor(ContextCompat.getColor(context!!, R.color.disabled_grey))
         }
-
-        /**
-         * Display only number if contact doesn't exist. Otherwise display both number and contact.
-         */
-        val temp: String? = CallManager.focusedCall.number()
-        val number = if (!temp.isNullOrEmpty()) {
-            temp
-        } else {
-            if (temp == null) "Conference" else "Unknown"
-        }
-
-        val contactExists = false
-        if (contactExists) {
-
-        } else {
-            binding.smallNumber.visibility = View.GONE
-            binding.numberOrContact.text = number
-        }
-
     }
 }

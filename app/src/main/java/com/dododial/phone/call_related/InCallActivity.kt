@@ -60,6 +60,10 @@ class InCallActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * TODO: When the InCallActivity has already started, and the user closes the phone. The
+     *  InCallActivity should not show over again.
+     */
     fun inCallOverLockScreen() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)

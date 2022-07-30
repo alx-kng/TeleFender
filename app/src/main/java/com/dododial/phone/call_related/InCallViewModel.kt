@@ -10,8 +10,20 @@ import timber.log.Timber
 
 class InCallViewModel : ViewModel() {
 
-    private val _duration = MutableLiveData(0)
-    val duration : LiveData<String> = Transformations.map(_duration) { seconds ->
+    var singleMode = true
+
+    private val _singleDuration = MutableLiveData(0)
+    val singleDuration : LiveData<String> = Transformations.map(_singleDuration) { seconds ->
+        secondsToTime(seconds)
+    }
+
+    private val _firstDuration = MutableLiveData(0)
+    val firstDuration : LiveData<String> = Transformations.map(_firstDuration) { seconds ->
+        secondsToTime(seconds)
+    }
+
+    private val _secondDuration = MutableLiveData(0)
+    val secondDuration : LiveData<String> = Transformations.map(_secondDuration) { seconds ->
         secondsToTime(seconds)
     }
 
@@ -27,7 +39,20 @@ class InCallViewModel : ViewModel() {
             withContext(Dispatchers.Default) {
                 while (CallManager.focusedCall != null) {
                     delay(500)
-                    _duration.postValue(CallManager.focusedCall.getCallDuration())
+                    if (singleMode) {
+                        _singleDuration.postValue(CallManager.focusedCall.getCallDuration())
+                        _firstDuration.postValue(CallManager.focusedCall.getCallDuration())
+                    } else {
+                        val orderedConnections = CallManager.orderedConnections()
+
+                        if (orderedConnections.isNotEmpty()) {
+                            _firstDuration.postValue(orderedConnections[0]?.call.getCallDuration())
+                        }
+
+                        if (orderedConnections.size == 2) {
+                            _secondDuration.postValue(orderedConnections[1]?.call.getCallDuration())
+                        }
+                    }
                 }
                 Timber.i("DODODEBUG: OUT OF CALL DURATION!")
             }
