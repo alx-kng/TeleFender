@@ -9,7 +9,6 @@ import android.os.PowerManager
 import android.telecom.Call
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
-import com.dododial.phone.R
 import com.dododial.phone.databinding.ActivityIncomingCallBinding
 import kotlinx.coroutines.*
 import timber.log.Timber
@@ -44,7 +43,7 @@ class IncomingCallActivity : AppCompatActivity() {
         /**
          * Finishes activity if there is no incoming call. Used for case where other user hangs up.
          */
-        CallManager.incomingCall.observe(this) { isIncoming ->
+        CallManager.incomingCallLiveData.observe(this) { isIncoming ->
             if (!isIncoming) {
                 Timber.i("DODODEBUG: INCOMING FINISHED: focusedCall state: ${CallManager.callStateString(CallManager.focusedCall.getStateCompat())}")
                 scope.cancel()
@@ -55,6 +54,9 @@ class IncomingCallActivity : AppCompatActivity() {
         binding.displayNumber.text = CallManager.focusedCall.number() ?: "Unknown number"
 
         binding.answerIncoming.setOnClickListener {
+            Timber.i("DODODEBUG: ANSWER PRESSED")
+
+            CallManager.lastAnsweredCall = CallManager.focusedCall
             CallManager.answer()
             InCallActivity.start(this)
             scope.cancel()
@@ -68,9 +70,15 @@ class IncomingCallActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        _running = true
+    }
+
     override fun onDestroy() {
         super.onDestroy()
 
+        _running = false
         /**
          * Sets the ringer mode back to normal. Using a runnable doesn't seem necessary.
          */
@@ -146,6 +154,14 @@ class IncomingCallActivity : AppCompatActivity() {
     }
 
     companion object {
+
+        /**
+         * Indicates whether IncomingCallActivity is currently shown. Used to smoothly update
+         * UI in InCallFragment's updateCallerDisplay().
+         */
+        private var _running = false
+        val running : Boolean
+            get() = _running
 
         /**
          * Launches into the same task as InCallActivity if InCallActivity is running.

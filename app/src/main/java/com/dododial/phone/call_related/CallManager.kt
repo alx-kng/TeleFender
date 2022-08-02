@@ -98,6 +98,12 @@ object CallManager {
         get() = _currentMode
 
     /**
+     * Contains the last answered Call object. Used to smoothly update UI in InCallFragment's
+     * updateCallerDisplay().
+     */
+    var lastAnsweredCall: Call? = null
+
+    /**
      * List of calls for managing and logging calls (emphasis on latter). The same calls are
      * stored in [connections] and are more often managed in that form.
      */
@@ -120,9 +126,17 @@ object CallManager {
     /**
      * Used to decide whether the incoming call screen should still show.
      */
-    val incomingCall : LiveData<Boolean> = Transformations.map(_focusedConnection) {
+    val incomingCallLiveData : LiveData<Boolean> = Transformations.map(_focusedConnection) {
         it?.state == Call.STATE_RINGING || it?.state == Call.STATE_NEW
     }
+
+    /**
+     * Indicates whether there is currently an incoming call. Used to correctly update the
+     * InCallFragment UI in updateCallerDisplay(). [incomingCallLiveData] is not used because
+     * LiveData only updates its value when it's being observed.
+     */
+    val incomingCall : Boolean
+        get() = _focusedConnection.value?.state.let { it == Call.STATE_RINGING || it == Call.STATE_DIALING }
 
     /**
      * Updates the current focused connection. Ringing, Connecting, and Dialing connections take
@@ -169,19 +183,20 @@ object CallManager {
         return connections.find { it.isConference }
     }
 
+    /**
+     * Returns non-disconnected connections. Function is called orderedConnections() because the
+     * returned connections are naturally ordered from oldest to newest added.
+     */
     fun orderedConnections(): List<Connection?> {
         return connections.filter { it.state != Call.STATE_DISCONNECTED }
     }
 
     /**
-     * Connection that currently doesn't have focus.
+     * Returns non-disconnected calls. Remember that calls and connections are different, so this
+     * function is slightly different from orderedConnections().
      */
-    fun nonFocusConnection(): Connection? {
-        return connections.find { it != focusedConnection.value && it.state != Call.STATE_DISCONNECTED}
-    }
-
-    fun holdingConnections(): List<Connection?> {
-        return connections.filter { it.state == Call.STATE_HOLDING}
+    fun nonDisconnectedCalls(): List<Call?> {
+        return calls.filter { it.getStateCompat() != Call.STATE_DISCONNECTED }
     }
 
     /**
@@ -211,7 +226,7 @@ object CallManager {
     /**
      * Checks if there are any Call objects with the same number.
      */
-    private fun repeatCalls(): Boolean {
+    fun repeatCalls(): Boolean {
         val uniqueCalls = mutableListOf<Call>()
         for (call in calls) {
             if (uniqueCalls.find { it.number() == call.number() } == null) {
@@ -317,6 +332,7 @@ object CallManager {
      * When hangup() is called, onCallRemoved() of CallService is automatically invoked.
      */
     fun hangup() {
+        Timber.i("DODODEBUG: HANGUP PRESSED ==============================================")
         if (focusedConnection.value?.state == Call.STATE_RINGING) {
             focusedConnection.value?.call?.reject(false, null)
         } else {

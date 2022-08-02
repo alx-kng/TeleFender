@@ -3,7 +3,6 @@ package com.dododial.phone.call_related
 import android.content.res.ColorStateList
 import android.os.Bundle
 import android.telecom.Call
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -12,9 +11,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.dododial.phone.DialerActivity
 import com.dododial.phone.R
-import com.dododial.phone.call_related.InCallActivity.Companion.context
 import com.dododial.phone.databinding.FragmentInCallBinding
-import kotlinx.coroutines.NonCancellable.children
 import timber.log.Timber
 
 class InCallFragment : Fragment() {
@@ -34,6 +31,9 @@ class InCallFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        /**
+         * InCallViewModel is used with DataBinding to live update the call duration UI.
+         */
         binding.apply {
             viewModel = inCallViewModel
             lifecycleOwner = viewLifecycleOwner
@@ -42,9 +42,15 @@ class InCallFragment : Fragment() {
         prepareAudio()
 
         /**
+         * TODO: Conference count doesn't update correctly (not sure if fixed).
+         *
          * Observes and updates UI based off current focusedConnection
          */
         CallManager.focusedConnection.observe(viewLifecycleOwner) { connection ->
+            /**
+             * End InCallActivity if there are no connections, only disconnected connections, or a
+             * single conference connection that is about to end.
+             */
             val edgeState = (CallManager.connections.firstOrNull()?.state ?: Call.STATE_DISCONNECTED)
             if (connection == null
                 || (CallManager.connections.size == 1 && edgeState == Call.STATE_DISCONNECTED)
@@ -58,6 +64,34 @@ class InCallFragment : Fragment() {
             }
         }
 
+        /*******************************************************************************************
+         * On click listeners for multi-display. Should swap calls if the holding call is pressed.
+         * Only safe to use when updateCallerDisplay() enables these buttons. Also shows loading
+         * circle.
+         ******************************************************************************************/
+
+        binding.firstDisplay.setOnClickListener {
+            if (CallManager.isActiveStableState() && CallManager.connections.size == 2) {
+                val orderedConnections = CallManager.orderedConnections()
+                if (orderedConnections[1] == CallManager.focusedConnection.value) {
+                    binding.firstProgressBar.visibility = View.VISIBLE
+                    CallManager.swap()
+                }
+            }
+        }
+
+        binding.secondDisplay.setOnClickListener {
+            if (CallManager.isActiveStableState() && CallManager.connections.size == 2) {
+                val orderedConnections = CallManager.orderedConnections()
+                if (orderedConnections[0] == CallManager.focusedConnection.value) {
+                    binding.secondProgressBar.visibility = View.VISIBLE
+                    CallManager.swap()
+                }
+            }
+        }
+
+        /******************************************************************************************/
+
         binding.hangupActive.setOnClickListener {
             CallManager.hangup()
         }
@@ -67,10 +101,26 @@ class InCallFragment : Fragment() {
         }
 
         binding.swapActive.setOnClickListener {
+            /**
+             * Shows loading circle on holding connection during swaps.
+             */
+            val orderedConnections = CallManager.orderedConnections()
+            if (orderedConnections.size == 2) {
+                if (binding.firstText.text == "Active") {
+                    binding.secondProgressBar.visibility = View.VISIBLE
+                } else {
+                    binding.firstProgressBar.visibility = View.VISIBLE
+                }
+            }
             CallManager.swap()
         }
 
         binding.mergeActive.setOnClickListener {
+            /**
+             * Shows loading circle on firstDisplay when merging.
+             */
+            binding.firstProgressBar.visibility = View.VISIBLE
+            showInfoButton(1, false)
             CallManager.merge()
         }
 
@@ -87,6 +137,11 @@ class InCallFragment : Fragment() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        updateCallerDisplay()
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
@@ -94,6 +149,9 @@ class InCallFragment : Fragment() {
         Timber.i("DODODEBUG: InCallFragment Destroyed!")
     }
 
+    /**
+     * Prepares audio states and UI.
+     */
     private fun prepareAudio() {
         /**
          * Reset speaker and mute states.
@@ -128,45 +186,61 @@ class InCallFragment : Fragment() {
         }
     }
 
+    /**
+     * Conference should disconnect when it is the only connection left and has 0 child calls.
+     */
     private fun conferenceShouldDisconnect(): Boolean {
         val oneConnection = CallManager.connections.size == 1
-
         val children = CallManager.conferenceConnection()?.call?.children
         val noChildren = children?.size == 0
 
         return oneConnection && noChildren
     }
 
+    /**
+     * Checks if the single display UI should show. Single display should show when there is either
+     * one non-disconnected call that is also not a conference or an outgoing call.
+     */
     private fun singleDisplay(): Boolean {
-        val singleNonConference = (
-            CallManager.isStableState()
-                && CallManager.connections.size == 1
-                && !(CallManager.focusedConnection.value?.isConference ?: false)
+        val nonDisconnectedCalls = CallManager.nonDisconnectedCalls()
+        val singleCallNoConference = (
+            nonDisconnectedCalls.size == 1
+                && !nonDisconnectedCalls.firstOrNull().isConference()
             )
 
-        val outgoing = (
-            CallManager.focusedCall.getStateCompat() == Call.STATE_CONNECTING
-                || CallManager.focusedCall.getStateCompat() == Call.STATE_DIALING
-            )
+        val outgoing = CallManager.focusedCall.getStateCompat().let {
+            it == Call.STATE_CONNECTING || it == Call.STATE_DIALING
+        }
 
-        val twoNotActiveStable = !CallManager.isActiveStableState() && CallManager.connections.size == 2
-        val twoNotHolding = CallManager.holdingConnections().size != 2
-        val noConference = CallManager.conferenceConnection() == null
-        val unstableConference = CallManager.calls.size != CallManager.connections.size
-
-        return singleNonConference
-            || (twoNotActiveStable && twoNotHolding && noConference && !unstableConference)
-            || outgoing
+        return singleCallNoConference || outgoing
     }
 
+    /**
+     * Checks if the single conference UI should show. Single conference is when there is only
+     * one live connection that is also a conference. Multi-caller display is used, but the
+     * second display is hidden. A single conference occurs when there is a conference call and
+     * either only one connection or repeat calls (refer to the UI Annotated Telecom State Diagram).
+     */
     private fun singleConference(): Boolean {
         val hasConference = CallManager.conferenceConnection() != null
         val oneConnection = CallManager.connections.filter { it.state != Call.STATE_DISCONNECTED }.size == 1
-        val threeConnections = CallManager.connections.size == 3
+        val hasRepeatCalls = CallManager.repeatCalls()
 
-        return hasConference && (oneConnection || threeConnections)
+        return hasConference && (oneConnection || hasRepeatCalls)
     }
 
+    /**
+     * Small check to ensure that there are two live (non-disconnected) connections.
+     */
+    private fun twoConnections(): Boolean {
+        return CallManager.orderedConnections().size == 2
+    }
+
+    /**
+     * TODO: Possibly replace Exception for safer code.
+     *
+     * Returns the number of a Call object. Acts as helper to getNumberDisplay().
+     */
     private fun getNumber(call: Call?): String {
         val temp: String? = call.number()
         val number = if (!temp.isNullOrEmpty()) {
@@ -182,6 +256,10 @@ class InCallFragment : Fragment() {
         return number
     }
 
+    /**
+     * Returns the number display string for a Connection. If the connection is a conference, 0then
+     * a different display string is used.
+     */
     private fun getNumberDisplay(connection: Connection): String {
         return if (connection.isConference) {
             val conferenceSize = connection.call?.children?.size ?: 0
@@ -191,6 +269,18 @@ class InCallFragment : Fragment() {
         }
     }
 
+    /**
+     * Hides the loading circles within the multi-caller display.
+     */
+    private fun hideProgressBars() {
+        binding.firstProgressBar.visibility = View.GONE
+        binding.secondProgressBar.visibility = View.GONE
+    }
+
+    /**
+     * If the first display contains the active connection, then the first display will be shown
+     * in white and the second display will be shown in grey, and vise-versa.
+     */
     private fun displayColor(firstActive: Boolean) {
         if (firstActive) {
             binding.firstNumber.setTextColor(ContextCompat.getColor(requireActivity(), R.color.icon_white))
@@ -211,6 +301,9 @@ class InCallFragment : Fragment() {
         }
     }
 
+    /**
+     * Shows or hides the conference info buttons.
+     */
     private fun showInfoButton(button: Int, show: Boolean) {
         val infoButton = if (button == 1) binding.firstInfo else binding.secondInfo
 
@@ -226,18 +319,59 @@ class InCallFragment : Fragment() {
     }
 
     /**
+     * Makes the first and second display clickable or non-clickable. This is used to make the
+     * displays clickable when swapping is allowed (so that the user can click a connection to
+     * swap instead of having to press the swap button).
+     */
+    private fun displayClickable(clickable: Boolean) {
+        binding.firstDisplay.isClickable = clickable
+        binding.firstDisplay.isFocusable = clickable
+        binding.secondDisplay.isClickable = clickable
+        binding.secondDisplay.isFocusable = clickable
+    }
+
+    /**
      * TODO: Double check this logic to make sure all cases are handled correctly.
-     *  Also, there seems to be a problem where the audio isn't connected sometimes (when there
-     *  are two calls), particularly when swapping calls (may or may not be fixed).
-     *  Need to catch in-between states to ensure smoother UI transition.
+     *
+     * Updates the caller display based on the current call / connection states. There are two
+     * main layouts in the caller display: the single display and the multi-caller display. The
+     * single display is used for when there is either only one live connection or there is
+     * an outgoing call. The multi-caller display layout has a first and second display,
+     * which are ordered vertically. When there is a single conference call, only the first
+     * display of the multi-caller display is shown. When there are multiple connections, both the
+     * first and second display are shown (they contain the active and holding connections).
      */
     private fun updateCallerDisplay() {
 
+        Timber.i("DODODEBUG: incomingCall: ${CallManager.incomingCall}")
+        Timber.i("DODODEBUG: incomingActivity running: ${IncomingCallActivity.running}")
+        Timber.i("DODODEBUG: incomingActivity last answered: ${CallManager.lastAnsweredCall.number()}")
+        Timber.i("DODODEBUG: connections size: ${CallManager.connections.size}")
+        Timber.i("DODODEBUG: focusedCall: number = ${CallManager.focusedCall.number()}, " +
+            "state = ${CallManager.callStateString(CallManager.focusedCall.getStateCompat())}")
+
+        /**
+         * Used to decide whether or not the UI should update when an incoming call is detected
+         * and the IncomingActivity is not currently showing (refer to the UI Annotated Telecom
+         * State Diagram). Leads to smoother UI transitions.
+         */
+        if (CallManager.incomingCall && !IncomingCallActivity.running
+            && CallManager.lastAnsweredCall != CallManager.focusedCall) {
+            Timber.i("DODODEBUG: INSIDE INCOMING RETURN")
+            return
+        }
+
         if (singleDisplay()) {
+            // Single caller / outgoing call.
+            Timber.i("DODODEBUG: SINGLE DISPLAY")
+
+            // Switches out display views. Single caller display is used.
             binding.multiCallerDisplay.visibility = View.GONE
             binding.singleCallerDisplay.visibility = View.VISIBLE
+            hideProgressBars()
+            displayClickable(false)
 
-            Timber.i("DODODEBUG: SINGLE DISPLAY")
+            // Changes the call duration variables that InCallViewModel updates.
             inCallViewModel.singleMode = true
 
             /**
@@ -250,65 +384,74 @@ class InCallFragment : Fragment() {
                 binding.smallNumber.visibility = View.GONE
                 binding.numberOrContact.text = getNumber(CallManager.focusedCall)
             }
-        } else {
+        } else if (singleConference()) {
+            // Single conference call.
+            Timber.i("DODODEBUG: SINGLE CONFERENCE")
+
+            // Switches out display views. Second display is hidden.
             binding.multiCallerDisplay.visibility = View.VISIBLE
             binding.singleCallerDisplay.visibility = View.GONE
+            binding.secondDisplay.visibility = View.INVISIBLE
+            hideProgressBars()
+            displayClickable(false)
 
-            // Single conference call.
-            if (singleConference()) {
-                binding.secondDisplay.visibility = View.INVISIBLE
+            inCallViewModel.singleMode = true
 
-                inCallViewModel.singleMode = true
+            // Shows conference info button and sets the color to white.
+            showInfoButton(1, true)
+            showInfoButton(2, false)
+            displayColor(true)
 
-                showInfoButton(1, true)
-                showInfoButton(2, false)
-                displayColor(true)
+            binding.firstNumber.text = getNumberDisplay(CallManager.focusedConnection.value!!)
+            binding.firstText.text = "Active"
 
-                Timber.i("DODODEBUG: SINGLE CONFERENCE")
+        } else if (twoConnections()) {
+            // Two connections.
+            Timber.i("DODODEBUG: TWO CONNECTIONS")
 
-                val conferenceSize = CallManager.focusedCall?.children?.size ?: 0
-                binding.firstNumber.text = "Conference (${conferenceSize} others)"
+            // Switches out display views. Both first and second display are shown.
+            binding.multiCallerDisplay.visibility = View.VISIBLE
+            binding.singleCallerDisplay.visibility = View.GONE
+            binding.secondDisplay.visibility = View.VISIBLE
+            hideProgressBars()
+            displayClickable(true)
+
+            inCallViewModel.singleMode = false
+
+            // Gets the connections in the order they were initially added.
+            val orderedConnections = CallManager.orderedConnections()
+            val firstConnection = orderedConnections[0]
+            val secondConnection = orderedConnections[1]
+
+            binding.firstNumber.text = getNumberDisplay(firstConnection!!)
+            binding.secondNumber.text = getNumberDisplay(secondConnection!!)
+
+            /*
+            Sets the text of the displays. A display is set to white if it contains the active
+            connection and is set to grey if it contains the holding connection.
+             */
+            val firstActive = firstConnection == CallManager.focusedConnection.value
+            if (firstActive) {
                 binding.firstText.text = "Active"
+                binding.secondText.text = "Holding"
+                displayColor(true)
             } else {
-                // Two connections.
+                binding.firstText.text = "Holding"
+                binding.secondText.text = "Active"
+                displayColor(false)
+            }
 
-                binding.secondDisplay.visibility = View.VISIBLE
-                inCallViewModel.singleMode = false
+            // Only shows the conference info button if the conference connection is active.
+            if (firstConnection.isConference && firstActive) {
+                showInfoButton(1, true)
+            } else {
+                showInfoButton(1, false)
+            }
 
-                val orderedConnections = CallManager.orderedConnections()
-
-                val firstConnection = orderedConnections.first()
-                val secondConnection = if (orderedConnections.size == 1) {
-                    throw Exception("Second connection was null!")
-                } else {
-                    orderedConnections[1]
-                }
-
-                binding.firstNumber.text = getNumberDisplay(firstConnection!!)
-                binding.secondNumber.text = getNumberDisplay(secondConnection!!)
-
-                val firstActive = firstConnection == CallManager.focusedConnection.value
-                if (firstActive) {
-                    binding.firstText.text = "Active"
-                    binding.secondText.text = "Holding"
-                    displayColor(true)
-                } else {
-                    binding.firstText.text = "Holding"
-                    binding.secondText.text = "Active"
-                    displayColor(false)
-                }
-
-                if (firstConnection.isConference && firstActive) {
-                    showInfoButton(1, true)
-                } else {
-                    showInfoButton(1, false)
-                }
-
-                if (secondConnection.isConference && !firstActive) {
-                    showInfoButton(2, true)
-                } else {
-                    showInfoButton(2, false)
-                }
+            if (secondConnection.isConference && !firstActive) {
+                showInfoButton(2, true)
+            } else {
+                showInfoButton(2, false)
             }
         }
     }
@@ -316,6 +459,8 @@ class InCallFragment : Fragment() {
     /**
      * TODO: When pressing add button, DialerActivity doesn't show on screen because we didn't call
      *  the show over lock screen function in it.
+     *
+     *  Updates the add, swap, and merge buttons based off which actions are possible.
      */
     private fun updateButtons() {
 
