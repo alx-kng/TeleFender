@@ -30,6 +30,14 @@ fun Call?.getCallDuration(): Int {
     }
 }
 
+fun Call?.connectTime(): Long {
+    return if (this != null) {
+        details.connectTimeMillis
+    } else {
+        -1
+    }
+}
+
 fun Call?.number(): String? {
     return this?.details?.handle?.schemeSpecificPart
 }

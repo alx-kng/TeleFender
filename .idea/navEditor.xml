@@ -60,13 +60,25 @@
             <LayoutPositions>
               <option name="myPositions">
                 <map>
+                  <entry key="conferenceFragment">
+                    <value>
+                      <LayoutPositions>
+                        <option name="myPosition">
+                          <Point>
+                            <option name="x" value="29" />
+                            <option name="y" value="3" />
+                          </Point>
+                        </option>
+                      </LayoutPositions>
+                    </value>
+                  </entry>
                   <entry key="inCallFragment">
                     <value>
                       <LayoutPositions>
                         <option name="myPosition">
                           <Point>
-                            <option name="x" value="-141" />
-                            <option name="y" value="14" />
+                            <option name="x" value="-269" />
+                            <option name="y" value="-10" />
                           </Point>
                         </option>
                       </LayoutPositions>

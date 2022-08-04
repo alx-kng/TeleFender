@@ -9,9 +9,11 @@ import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
 import com.dododial.phone.DialerActivity
 import com.dododial.phone.R
 import com.dododial.phone.databinding.FragmentInCallBinding
+import kotlinx.android.synthetic.main.fragment_in_call.view.*
 import timber.log.Timber
 
 class InCallFragment : Fragment() {
@@ -74,6 +76,7 @@ class InCallFragment : Fragment() {
             if (CallManager.isActiveStableState() && CallManager.connections.size == 2) {
                 val orderedConnections = CallManager.orderedConnections()
                 if (orderedConnections[1] == CallManager.focusedConnection.value) {
+                    showInfoButton(1, false)
                     binding.firstProgressBar.visibility = View.VISIBLE
                     CallManager.swap()
                 }
@@ -84,10 +87,26 @@ class InCallFragment : Fragment() {
             if (CallManager.isActiveStableState() && CallManager.connections.size == 2) {
                 val orderedConnections = CallManager.orderedConnections()
                 if (orderedConnections[0] == CallManager.focusedConnection.value) {
+                    showInfoButton(2, false)
                     binding.secondProgressBar.visibility = View.VISIBLE
                     CallManager.swap()
                 }
             }
+        }
+
+        /*******************************************************************************************
+         * On click listeners for info buttons. Shows conference calls within a conference
+         * connection. Should only be used when updateCallerDisplay() enables these buttons.
+         ******************************************************************************************/
+
+        binding.firstInfo.setOnClickListener {
+            val action = InCallFragmentDirections.actionInCallFragmentToConferenceFragment()
+            findNavController().navigate(action)
+        }
+
+        binding.secondInfo.setOnClickListener {
+            val action = InCallFragmentDirections.actionInCallFragmentToConferenceFragment()
+            findNavController().navigate(action)
         }
 
         /******************************************************************************************/
@@ -107,8 +126,10 @@ class InCallFragment : Fragment() {
             val orderedConnections = CallManager.orderedConnections()
             if (orderedConnections.size == 2) {
                 if (binding.firstText.text == "Active") {
+                    showInfoButton(2, false)
                     binding.secondProgressBar.visibility = View.VISIBLE
                 } else {
+                    showInfoButton(1, false)
                     binding.firstProgressBar.visibility = View.VISIBLE
                 }
             }
@@ -286,18 +307,22 @@ class InCallFragment : Fragment() {
             binding.firstNumber.setTextColor(ContextCompat.getColor(requireActivity(), R.color.icon_white))
             binding.firstText.setTextColor(ContextCompat.getColor(requireActivity(), R.color.icon_white))
             binding.firstDuration.setTextColor(ContextCompat.getColor(requireActivity(), R.color.icon_white))
+            binding.firstInfo.iconTint = ColorStateList.valueOf(ContextCompat.getColor(context!!, R.color.icon_white))
 
             binding.secondNumber.setTextColor(ContextCompat.getColor(requireActivity(), R.color.holding_grey))
             binding.secondText.setTextColor(ContextCompat.getColor(requireActivity(), R.color.holding_grey))
             binding.secondDuration.setTextColor(ContextCompat.getColor(requireActivity(), R.color.holding_grey))
+            binding.secondInfo.iconTint = ColorStateList.valueOf(ContextCompat.getColor(context!!, R.color.holding_grey))
         } else {
             binding.firstNumber.setTextColor(ContextCompat.getColor(requireActivity(), R.color.holding_grey))
             binding.firstText.setTextColor(ContextCompat.getColor(requireActivity(), R.color.holding_grey))
             binding.firstDuration.setTextColor(ContextCompat.getColor(requireActivity(), R.color.holding_grey))
+            binding.firstInfo.iconTint = ColorStateList.valueOf(ContextCompat.getColor(context!!, R.color.holding_grey))
 
             binding.secondNumber.setTextColor(ContextCompat.getColor(requireActivity(), R.color.icon_white))
             binding.secondText.setTextColor(ContextCompat.getColor(requireActivity(), R.color.icon_white))
             binding.secondDuration.setTextColor(ContextCompat.getColor(requireActivity(), R.color.icon_white))
+            binding.secondInfo.iconTint = ColorStateList.valueOf(ContextCompat.getColor(context!!, R.color.icon_white))
         }
     }
 
@@ -352,8 +377,8 @@ class InCallFragment : Fragment() {
 
         /**
          * Used to decide whether or not the UI should update when an incoming call is detected
-         * and the IncomingActivity is not currently showing (refer to the UI Annotated Telecom
-         * State Diagram). Leads to smoother UI transitions.
+         * and the IncomingActivity is not currently showing (refer to Call UI Flow). Leads
+         * to smoother UI transitions.
          */
         if (CallManager.incomingCall && !IncomingCallActivity.running
             && CallManager.lastAnsweredCall != CallManager.focusedCall) {
@@ -441,14 +466,14 @@ class InCallFragment : Fragment() {
                 displayColor(false)
             }
 
-            // Only shows the conference info button if the conference connection is active.
-            if (firstConnection.isConference && firstActive) {
+            // Only shows info button for conference connections.
+            if (firstConnection.isConference) {
                 showInfoButton(1, true)
             } else {
                 showInfoButton(1, false)
             }
 
-            if (secondConnection.isConference && !firstActive) {
+            if (secondConnection.isConference) {
                 showInfoButton(2, true)
             } else {
                 showInfoButton(2, false)

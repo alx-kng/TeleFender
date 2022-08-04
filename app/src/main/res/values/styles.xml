@@ -18,4 +18,34 @@
         <item name="cornerSize">15sp</item>
     </style>
 
+    <style name="ShapeAppearanceOverlay.Dodo.Button.LessRounded" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">10sp</item>
+    </style>
+
+    <style name="ShapeAppearanceOverlay.Dodo.CardView.Square" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">0dp</item>
+    </style>
+
+    <style name="ShapeAppearanceOverlay.Dodo.Button.LeftRounded" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeTopLeft">10dp</item>
+        <item name="cornerSizeBottomLeft">10sp</item>
+    </style>
+
+    <style name="ShapeAppearanceOverlay.Dodo.Button.RightRounded" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeBottomRight">10sp</item>
+        <item name="cornerSizeTopRight">10sp</item>
+    </style>
+
+    <style name="Widget.Dodo.Toolbar.Primary" parent="@style/Widget.MaterialComponents.Toolbar.Primary">
+        <item name="colorControlNormal">@color/icon_white</item>
+    </style>
+
+    <style name="ThemeOverlay.Dodo.ActionBar" parent="@style/ThemeOverlay.AppCompat.ActionBar">
+        <item name="colorControlNormal">@color/icon_white</item>
+    </style>
+
 </resources>

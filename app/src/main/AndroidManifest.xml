@@ -33,6 +33,7 @@
             android:windowSoftInputMode="stateAlwaysVisible|adjustResize"
             android:launchMode="singleInstance"
             android:exported="true"
+            android:screenOrientation="portrait"
             >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -60,10 +61,12 @@
             android:name="com.dododial.phone.call_related.InCallActivity"
             android:launchMode="singleTask"
             android:documentLaunchMode="always"
+            android:screenOrientation="portrait"
             />
 
         <activity
             android:name="com.dododial.phone.call_related.IncomingCallActivity"
+            android:screenOrientation="portrait"
             />
 
         <activity

@@ -180,7 +180,7 @@ object CallManager {
      * Finds the connection that is a conference (if there is one).
      */
     fun conferenceConnection(): Connection? {
-        return connections.find { it.isConference }
+        return connections.find { it.isConference  && it.state != Call.STATE_DISCONNECTED}
     }
 
     /**
@@ -337,6 +337,14 @@ object CallManager {
             focusedConnection.value?.call?.reject(false, null)
         } else {
             focusedConnection.value?.call?.disconnect()
+        }
+    }
+
+    fun hangupArg(call: Call?) {
+        if (call.getStateCompat() == Call.STATE_RINGING) {
+            call?.reject(false, null)
+        } else {
+            call?.disconnect()
         }
     }
 

@@ -4,6 +4,7 @@ plugins {
     id 'kotlin-kapt'
     // TODO possibly migrate over from 'kotlin-android-extensions' (which is deprecated)
     id 'kotlin-android-extensions'
+    id 'androidx.navigation.safeargs'
     id 'com.google.gms.google-services'
 
 }

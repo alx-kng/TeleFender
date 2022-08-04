@@ -12,5 +12,19 @@
         android:name="com.dododial.phone.call_related.InCallFragment"
         android:label="InCallFragment"
         tools:layout="@layout/fragment_in_call"
-        />
+        >
+        <action
+            android:id="@+id/action_inCallFragment_to_conferenceFragment"
+            app:destination="@id/conferenceFragment"
+            />
+    </fragment>
+
+    <fragment
+        android:id="@+id/conferenceFragment"
+        android:name="com.dododial.phone.call_related.ConferenceFragment"
+        android:label="ConferenceFragment"
+        tools:layout="@layout/fragment_conference"
+        >
+    </fragment>
+
 </navigation>

@@ -9,6 +9,8 @@ import android.os.PowerManager
 import android.telecom.Call
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import com.dododial.phone.databinding.ActivityIncomingCallBinding
 import kotlinx.coroutines.*
 import timber.log.Timber
@@ -79,6 +81,7 @@ class IncomingCallActivity : AppCompatActivity() {
         super.onDestroy()
 
         _running = false
+
         /**
          * Sets the ringer mode back to normal. Using a runnable doesn't seem necessary.
          */
