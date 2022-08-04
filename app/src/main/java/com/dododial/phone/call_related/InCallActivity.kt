@@ -4,16 +4,13 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.view.View
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat.startActivity
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import com.dododial.phone.R
 import com.dododial.phone.databinding.ActivityInCallBinding
-import timber.log.Timber
 
 class InCallActivity : AppCompatActivity() {
 
@@ -60,10 +57,6 @@ class InCallActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * TODO: When the InCallActivity has already started, and the user closes the phone. The
-     *  InCallActivity should not show over again.
-     */
     fun inCallOverLockScreen() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)

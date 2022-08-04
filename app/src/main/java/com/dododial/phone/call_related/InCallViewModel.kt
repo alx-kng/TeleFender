@@ -12,11 +12,6 @@ class InCallViewModel : ViewModel() {
 
     var singleMode = true
 
-    private val _singleDuration = MutableLiveData(0)
-    val singleDuration : LiveData<String> = Transformations.map(_singleDuration) { seconds ->
-        secondsToTime(seconds)
-    }
-
     private val _firstDuration = MutableLiveData(0)
     val firstDuration : LiveData<String> = Transformations.map(_firstDuration) { seconds ->
         secondsToTime(seconds)
@@ -38,9 +33,9 @@ class InCallViewModel : ViewModel() {
         viewModelScope.launch {
             withContext(Dispatchers.Default) {
                 while (CallManager.focusedCall != null) {
-                    delay(500)
+                    delay(250)
+
                     if (singleMode) {
-                        _singleDuration.postValue(CallManager.focusedCall.getCallDuration())
                         _firstDuration.postValue(CallManager.focusedCall.getCallDuration())
                     } else {
                         val orderedConnections = CallManager.orderedConnections()

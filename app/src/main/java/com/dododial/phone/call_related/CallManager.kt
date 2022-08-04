@@ -26,8 +26,6 @@ import timber.log.Timber
  */
 
 /**
- * TODO: Maybe singular conference call UI?
- *
  * As mentioned above, a conference call is a different type of
  * connection with the telecom carrier (remember how a null host call and replacement
  * calls are added). Due to this difference, any calls within a conference call permanently

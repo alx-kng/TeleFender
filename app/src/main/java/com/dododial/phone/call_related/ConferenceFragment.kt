@@ -25,7 +25,7 @@ class ConferenceFragment : Fragment() {
 
     /**
      * TODO: Problem with call automatically hanging up in conference connection (with only one
-     *  call) and inside this fragment.
+     *  call) and inside this fragment. (May not be a big problem)
      */
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
