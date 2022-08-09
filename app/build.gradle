@@ -4,7 +4,7 @@ plugins {
     id 'kotlin-kapt'
     // TODO possibly migrate over from 'kotlin-android-extensions' (which is deprecated)
     id 'kotlin-android-extensions'
-    id 'androidx.navigation.safeargs'
+    id 'androidx.navigation.safeargs.kotlin'
     id 'com.google.gms.google-services'
 
 }
@@ -25,8 +25,8 @@ android {
         }
     }
     buildFeatures {
-        viewBinding true
         dataBinding true
+        viewBinding true
     }
 }
 

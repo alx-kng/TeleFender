@@ -1,14 +1,10 @@
-package com.example.actualfinaldatabase.permissions
+package com.dododial.phone.permissions
 
 import android.Manifest
 import android.app.Activity
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
-import android.telecom.TelecomManager
 import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat.getSystemService
-import com.dododial.phone.DialerActivity
 import timber.log.Timber
 
 

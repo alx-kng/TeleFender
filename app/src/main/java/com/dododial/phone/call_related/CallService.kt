@@ -3,7 +3,8 @@ package com.dododial.phone.call_related
 
 import android.telecom.Call
 import android.telecom.InCallService
-import com.dododial.phone.RuleChecker
+import com.dododial.phone.gui.InCallActivity
+import com.dododial.phone.gui.IncomingCallActivity
 
 class CallService : InCallService() {
 

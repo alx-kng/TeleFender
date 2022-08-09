@@ -9,7 +9,7 @@
 
     <fragment
         android:id="@+id/inCallFragment"
-        android:name="com.dododial.phone.call_related.InCallFragment"
+        android:name="com.dododial.phone.gui.fragments.InCallFragment"
         android:label="InCallFragment"
         tools:layout="@layout/fragment_in_call"
         >
@@ -21,7 +21,7 @@
 
     <fragment
         android:id="@+id/conferenceFragment"
-        android:name="com.dododial.phone.call_related.ConferenceFragment"
+        android:name="com.dododial.phone.gui.fragments.ConferenceFragment"
         android:label="ConferenceFragment"
         tools:layout="@layout/fragment_conference"
         >

@@ -1,34 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
-<navigation
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/FirstFragment"
-    >
+    app:startDestination="@id/dialerFragment">
+
+    <action android:id="@+id/action_global_contactsFragment"
+        app:destination="@id/contactsFragment"
+        app:popUpTo="@id/contactsFragment"
+        app:popUpToInclusive="true"/>
+
+    <action android:id="@+id/action_global_dialerFragment"
+        app:destination="@id/dialerFragment"
+        app:popUpTo="@id/dialerFragment"
+        app:popUpToInclusive="true"/>
+
+    <action android:id="@+id/action_global_recentsFragment"
+        app:destination="@id/recentsFragment"
+        app:popUpTo="@id/recentsFragment"
+        app:popUpToInclusive="true"/>
 
     <fragment
-        android:id="@+id/FirstFragment"
-        android:name="com.dododial.phone.FirstFragment"
-        android:label="@string/first_fragment_label"
-        tools:layout="@layout/fragment_first"
-        >
+        android:id="@+id/contactsFragment"
+        android:name="com.dododial.phone.gui.fragments.ContactsFragment"
+        android:label="ContactsFragment"
+        tools:layout="@layout/fragment_contacts"/>
 
-        <action
-            android:id="@+id/action_FirstFragment_to_SecondFragment"
-            app:destination="@id/SecondFragment"
-            />
-    </fragment>
     <fragment
-        android:id="@+id/SecondFragment"
-        android:name="com.dododial.phone.SecondFragment"
-        android:label="@string/second_fragment_label"
-        tools:layout="@layout/fragment_second"
-        >
+        android:id="@+id/dialerFragment"
+        android:name="com.dododial.phone.gui.fragments.DialerFragment"
+        android:label="DialerFragment"
+        tools:layout="@layout/fragment_dialer"/>
 
+    <fragment
+        android:id="@+id/recentsFragment"
+        android:name="com.dododial.phone.gui.fragments.RecentsFragment"
+        android:label="RecentsFragment"
+        tools:layout="@layout/fragment_recents">
         <action
-            android:id="@+id/action_SecondFragment_to_FirstFragment"
-            app:destination="@id/FirstFragment"
-            />
+            android:id="@+id/action_recentsFragment_to_callHistoryFragment"
+            app:destination="@id/callHistoryFragment" />
     </fragment>
+
+    <fragment
+        android:id="@+id/callHistoryFragment"
+        android:name="com.dododial.phone.gui.fragments.CallHistoryFragment"
+        android:label="CallHistoryFragment"
+        tools:layout="@layout/fragment_call_history"/>
 </navigation>

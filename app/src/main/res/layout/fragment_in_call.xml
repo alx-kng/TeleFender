@@ -8,7 +8,7 @@
     <data>
         <variable
             name="viewModel"
-            type="com.dododial.phone.call_related.InCallViewModel"
+            type="com.dododial.phone.gui.model.InCallViewModel"
             />
     </data>
 

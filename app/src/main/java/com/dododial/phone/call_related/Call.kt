@@ -2,6 +2,7 @@ package com.dododial.phone.call_related
 
 import android.os.Build
 import android.telecom.Call
+import timber.log.Timber
 
 
 private val OUTGOING_CALL_STATES = arrayOf(
@@ -16,6 +17,26 @@ fun Call?.getStateCompat(): Int {
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> details.state
         else -> state
     }
+}
+
+fun Int.toStateString(): String = when (this) {
+    Call.STATE_NEW -> "NEW"
+    Call.STATE_RINGING -> "RINGING"
+    Call.STATE_DIALING -> "DIALING"
+    Call.STATE_ACTIVE -> "ACTIVE"
+    Call.STATE_HOLDING -> "HOLDING"
+    Call.STATE_DISCONNECTED -> "DISCONNECTED"
+    Call.STATE_CONNECTING -> "CONNECTING"
+    Call.STATE_DISCONNECTING -> "DISCONNECTING"
+    Call.STATE_SELECT_PHONE_ACCOUNT -> "SELECT_PHONE_ACCOUNT"
+    else -> {
+        Timber.w("Unknown state ${this}")
+        "UNKNOWN"
+    }
+}
+
+fun Call?.stateString(): String {
+    return this.getStateCompat().toStateString()
 }
 
 fun Call?.getCallDuration(): Int {

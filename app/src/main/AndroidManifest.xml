@@ -28,19 +28,20 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar"
         >
+
         <activity
-            android:name="com.dododial.phone.DialerActivity"
+            android:name="com.dododial.phone.gui.DialerActivity"
             android:windowSoftInputMode="stateAlwaysVisible|adjustResize"
             android:launchMode="singleInstance"
             android:exported="true"
             android:screenOrientation="portrait"
             >
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-            <intent-filter>
+<!--            <intent-filter>-->
+<!--                <action android:name="android.intent.action.MAIN" />-->
+<!--                <category android:name="android.intent.category.LAUNCHER" />-->
+<!--            </intent-filter>-->
 
+            <intent-filter>
                 <!-- Handle links from other applications -->
                 <action android:name="android.intent.action.VIEW" />
                 <action android:name="android.intent.action.DIAL" />
@@ -48,9 +49,9 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <!-- Handle links in browsers -->
                 <category android:name="android.intent.category.BROWSABLE" />
-
                 <data android:scheme="tel" />
             </intent-filter>
+
             <intent-filter>
                 <action android:name="android.intent.action.DIAL" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -58,22 +59,44 @@
         </activity>
 
         <activity
-            android:name="com.dododial.phone.call_related.InCallActivity"
+            android:name=".gui.MainActivity"
+            android:exported="true"
+            android:launchMode="standard"
+            android:screenOrientation="portrait"
+            android:parentActivityName="com.dododial.phone.gui.MainActivity">
+
+            <intent-filter>
+                <!-- Handle links from other applications -->
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.intent.action.DIAL" />
+                <!-- Populate the system chooser -->
+                <category android:name="android.intent.category.DEFAULT" />
+                <!-- Handle links in browsers -->
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="tel" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.DIAL" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name="com.dododial.phone.gui.InCallActivity"
             android:launchMode="singleTask"
             android:documentLaunchMode="always"
             android:screenOrientation="portrait"
             />
 
         <activity
-            android:name="com.dododial.phone.call_related.IncomingCallActivity"
+            android:name="com.dododial.phone.gui.IncomingCallActivity"
             android:screenOrientation="portrait"
-            />
-
-        <activity
-            android:name="com.dododial.phone.TestActivity"
-            android:exported="true"
-            android:label="@string/title_activity_test"
-            android:theme="@style/AppTheme.NoActionBar"
             />
             
         <service
@@ -82,7 +105,7 @@
            />
 
         <service
-            android:name="com.dododial.phone.database.background_tasks.firebase.DodoFirebaseService"
+            android:name="com.dododial.phone.data.server_related.firebase.DodoFirebaseService"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
@@ -107,5 +130,6 @@
                 android:value="true"
                 />
         </service>
+
     </application>
 </manifest>

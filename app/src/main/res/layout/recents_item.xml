@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <data>
+
+    </data>
+
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="10sp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="10sp"
+            android:background="@drawable/top_bottom_border"
+            tools:background="@color/white">
+
+            <ImageView
+                android:id="@+id/item_direction"
+                android:layout_width="20sp"
+                android:layout_height="20sp"
+                android:layout_marginStart="15sp"
+                android:importantForAccessibility="no"
+                tools:srcCompat="@drawable/ic_baseline_call_made_24"
+                app:layout_constraintBottom_toBottomOf="@id/item_number"
+                app:layout_constraintTop_toTopOf="@id/item_number"
+                app:layout_constraintStart_toStartOf="parent" />
+
+            <TextView
+                android:id="@+id/item_number"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="15sp"
+                android:textSize="20sp"
+                android:textColor="@color/icon_white"
+                tools:textColor="@color/black"
+                tools:text="7167102601"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toEndOf="@id/item_direction" />
+
+            <TextView
+                android:id="@+id/item_location"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="15sp"
+                android:textSize="15sp"
+                tools:text="Tonawanda, NY"
+                app:layout_constraintTop_toBottomOf="@id/item_number"
+                app:layout_constraintStart_toEndOf="@id/item_direction" />
+
+            <TextView
+                android:id="@+id/item_call_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="15sp"
+                android:textSize="15sp"
+                tools:text="5:00 PM"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/item_call_info" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/item_call_info"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="35sp"
+                android:layout_height="35sp"
+                app:icon="@drawable/ic_baseline_info_24"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="@dimen/log_info_button"
+                android:padding="0dp"
+                android:insetLeft="0dp"
+                android:insetTop="0dp"
+                android:insetRight="0dp"
+                android:insetBottom="0dp"
+                app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Dodo.Button.Circle"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+</layout>
