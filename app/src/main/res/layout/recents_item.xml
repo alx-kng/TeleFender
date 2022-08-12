@@ -40,7 +40,7 @@
                 android:textSize="20sp"
                 android:textColor="@color/icon_white"
                 tools:textColor="@color/black"
-                tools:text="7167102601"
+                tools:text="Sijun Kang (3)"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintStart_toEndOf="@id/item_direction" />
 

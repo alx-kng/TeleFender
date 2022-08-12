@@ -490,7 +490,7 @@ class InCallFragment : Fragment() {
 
     /**
      * TODO: When pressing add button, DialerActivity doesn't show on screen because we didn't call
-     *  the show over lock screen function in it.
+     *  the show over lock screen function in it. Make sure to require password to add calls.
      *
      *  Updates the add, swap, and merge buttons based off which actions are possible.
      */

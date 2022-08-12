@@ -24,9 +24,12 @@ import androidx.core.content.PermissionChecker.PERMISSION_GRANTED
 import androidx.core.content.PermissionChecker.checkSelfPermission
 import androidx.core.net.toUri
 import androidx.core.view.isVisible
+import com.dododial.phone.App
 import com.dododial.phone.R
 import com.dododial.phone.call_related.CallManager
+import com.dododial.phone.data.dodo_database.ClientRepository
 import kotlinx.android.synthetic.main.activity_dialer.*
+import kotlinx.coroutines.launch
 import timber.log.Timber
 
 
@@ -104,11 +107,12 @@ class DialerActivity : AppCompatActivity() {
         }
     }
 
-    // TODO : Warning
-    //  In the odd case that making a call through the dialer requires that you choose
-    //  a different app to "complete an action" either notify users choose the default
-    //  phone app as always or see if we can bypass that in the first place
-
+    /**
+    * TODO : Warning
+    *  In the odd case that making a call through the dialer requires that you choose
+    *  a different app to "complete an action" either notify users choose the default
+    *  phone app as always or see if we can bypass that in the first place
+    */
     private fun makeCall() {
         if (checkSelfPermission(this, CALL_PHONE) == PERMISSION_GRANTED) {
             val uri = "tel:${phoneNumberInput.text}".toUri()

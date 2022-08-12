@@ -23,11 +23,14 @@ import androidx.core.net.toUri
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
+import com.dododial.phone.App
 import com.dododial.phone.R
+import com.dododial.phone.data.dodo_database.ClientRepository
 import com.dododial.phone.databinding.ActivityMainBinding
 import com.dododial.phone.gui.model.*
 import com.dododial.phone.permissions.PermissionsRequester
 import kotlinx.android.synthetic.main.activity_dialer.*
+import kotlinx.coroutines.launch
 import timber.log.Timber
 
 // TODO make sure the app opens up to last used fragment.
@@ -135,6 +138,16 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         updateBottomHighlight()
+
+        /**
+         * Repository / database needs to call a query first in order to initialize database,
+         * in which the ClientDatabase getDatabase is called
+         */
+//        val repository: ClientRepository? = (application as App).repository
+//
+//        val job = (application as App).applicationScope.launch {
+//            repository?.dummyQuery()
+//        }
     }
 
     /**

@@ -19,7 +19,7 @@ import com.dododial.phone.gui.adapters.ContactsAdapter
 import com.dododial.phone.gui.model.ContactsViewModel
 import com.dododial.phone.gui.model.ContactsViewModelFactory
 
-
+// TODO: Consider not showing contacts that don't have a number associated with them.
 class ContactsFragment : Fragment() {
 
     private var _binding: FragmentContactsBinding? = null
@@ -62,6 +62,7 @@ class ContactsFragment : Fragment() {
             adapter.submitList(contactsViewModel.dividedContacts)
         }
 
+        // TODO: Handle case where permissions aren't given (or default dialer isn't granted).
         requireActivity().applicationContext.contentResolver.registerContentObserver(
             ContactsContract.Contacts.CONTENT_URI,
             true,

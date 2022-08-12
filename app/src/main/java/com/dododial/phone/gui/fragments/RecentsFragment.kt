@@ -44,8 +44,6 @@ class RecentsFragment : Fragment() {
         val context = context!!
         val recyclerView = binding.recentsRecyclerView
 
-        //TODO Make sure back button is overridden so that it doesn't close CallActivity
-        // In fact, back button shouldn't do anything when in CallActivity.
         /**
          * First lambda passed to initiate CallActivity when Recycler View item is clicked.
          * Second lambda passed to initiate CallHistory Frgament when info button is clicked
@@ -69,6 +67,7 @@ class RecentsFragment : Fragment() {
             adapter.submitList(recentsViewModel.groupedCallLogs)
         }
 
+        // TODO: Handle case where permissions aren't given (or default dialer isn't granted).
         requireActivity().applicationContext.contentResolver.registerContentObserver(
             android.provider.CallLog.Calls.CONTENT_URI,
             true,
