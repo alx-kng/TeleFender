@@ -9,7 +9,7 @@
 
     <fragment
         android:id="@+id/inCallFragment"
-        android:name="com.dododial.phone.gui.fragments.InCallFragment"
+        android:name="com.telefender.phone.gui.fragments.InCallFragment"
         android:label="InCallFragment"
         tools:layout="@layout/fragment_in_call"
         >
@@ -21,7 +21,7 @@
 
     <fragment
         android:id="@+id/conferenceFragment"
-        android:name="com.dododial.phone.gui.fragments.ConferenceFragment"
+        android:name="com.telefender.phone.gui.fragments.ConferenceFragment"
         android:label="ConferenceFragment"
         tools:layout="@layout/fragment_conference"
         >

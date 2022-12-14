@@ -5,13 +5,13 @@ plugins {
     // TODO possibly migrate over from 'kotlin-android-extensions' (which is deprecated)
     id 'kotlin-android-extensions'
     id 'androidx.navigation.safeargs.kotlin'
-    id 'com.google.gms.google-services'
+//    id 'com.google.gms.google-services'
 
 }
 android {
     compileSdkVersion 31
     defaultConfig {
-        applicationId "com.dododial.phone"
+        applicationId "com.telefender.phone"
         minSdkVersion 23
         targetSdkVersion 31
         versionCode 1
@@ -52,6 +52,9 @@ dependencies {
     implementation "androidx.room:room-ktx:$rootProject.roomVersion"
     kapt "androidx.room:room-compiler:$rootProject.roomVersion"
     androidTestImplementation "androidx.room:room-testing:$rootProject.roomVersion"
+
+    // DataStore components
+    implementation "androidx.datastore:datastore-preferences:$rootProject.dataStoreVersion"
 
     // Lifecycle components
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$rootProject.lifecycleVersion"

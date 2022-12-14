@@ -22,19 +22,19 @@
 
     <fragment
         android:id="@+id/contactsFragment"
-        android:name="com.dododial.phone.gui.fragments.ContactsFragment"
+        android:name="com.telefender.phone.gui.fragments.ContactsFragment"
         android:label="ContactsFragment"
         tools:layout="@layout/fragment_contacts"/>
 
     <fragment
         android:id="@+id/dialerFragment"
-        android:name="com.dododial.phone.gui.fragments.DialerFragment"
+        android:name="com.telefender.phone.gui.fragments.DialerFragment"
         android:label="DialerFragment"
         tools:layout="@layout/fragment_dialer"/>
 
     <fragment
         android:id="@+id/recentsFragment"
-        android:name="com.dododial.phone.gui.fragments.RecentsFragment"
+        android:name="com.telefender.phone.gui.fragments.RecentsFragment"
         android:label="RecentsFragment"
         tools:layout="@layout/fragment_recents">
         <action
@@ -44,7 +44,7 @@
 
     <fragment
         android:id="@+id/callHistoryFragment"
-        android:name="com.dododial.phone.gui.fragments.CallHistoryFragment"
+        android:name="com.telefender.phone.gui.fragments.CallHistoryFragment"
         android:label="CallHistoryFragment"
         tools:layout="@layout/fragment_call_history"/>
 </navigation>

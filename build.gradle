@@ -55,6 +55,9 @@ ext {
     // Room
     roomVersion = '2.4.2'
 
+    // DataStore
+    dataStoreVersion = '1.0.0'
+
     // Moshi
     moshiVersion = '1.13.0'
 

@@ -1,33 +1,33 @@
 {
   "project_info": {
-    "project_number": "577016276571",
-    "project_id": "dododial",
-    "storage_bucket": "dododial.appspot.com"
+    "project_number": "539462199382",
+    "project_id": "telefender-3183a",
+    "storage_bucket": "telefender-3183a.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:577016276571:android:054c2bfe9da74a5e51417e",
+        "mobilesdk_app_id": "1:539462199382:android:dbd033693288820354f3f7",
         "android_client_info": {
-          "package_name": "com.dododial.phone"
+          "package_name": "com.telefender.phone"
         }
       },
       "oauth_client": [
         {
-          "client_id": "577016276571-7rsoq0bo4jvartcfgeosqcqoh6mr8ivu.apps.googleusercontent.com",
+          "client_id": "539462199382-vllu23a5st3f7m2o02v1ho63n55tihnb.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyCpiom01xOwyzmhVqOurbxz9CyH8FmRMz8"
+          "current_key": "AIzaSyAHjuMAZEfBP5Z8eRSc-ReHMCaXylatUX4"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "577016276571-7rsoq0bo4jvartcfgeosqcqoh6mr8ivu.apps.googleusercontent.com",
+              "client_id": "539462199382-vllu23a5st3f7m2o02v1ho63n55tihnb.apps.googleusercontent.com",
               "client_type": 3
             }
           ]

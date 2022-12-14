@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">DodoDial</string>
+    <string name="app_name">TeleFender</string>
     <string name="call_input_hint">Call…</string>
     <string name="dialog_fire_missiles">Fire Dialog</string>
     <string name="fire">FIRE</string>

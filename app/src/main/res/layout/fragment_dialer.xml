@@ -7,7 +7,7 @@
 
         <variable
             name="viewModel"
-            type="com.dododial.phone.gui.model.DialerViewModel" />
+            type="com.telefender.phone.gui.model.DialerViewModel" />
     </data>
 
     <androidx.constraintlayout.widget.ConstraintLayout
