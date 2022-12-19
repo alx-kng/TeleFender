@@ -3,7 +3,7 @@ package com.telefender.phone.gui.model
 import android.telecom.Call
 import androidx.lifecycle.*
 import com.telefender.phone.call_related.CallManager
-import com.telefender.phone.call_related.getCallDuration
+import com.telefender.phone.call_related.callDurationSEC
 import com.telefender.phone.call_related.getStateCompat
 import com.telefender.phone.helpers.MiscHelpers
 import kotlinx.coroutines.Dispatchers
@@ -42,16 +42,16 @@ class InCallViewModel : ViewModel() {
                     delay(250)
 
                     if (singleMode) {
-                        _firstDuration.postValue(CallManager.focusedCall.getCallDuration())
+                        _firstDuration.postValue(CallManager.focusedCall.callDurationSEC())
                     } else {
                         val orderedConnections = CallManager.orderedConnections()
 
                         if (orderedConnections.isNotEmpty()) {
-                            _firstDuration.postValue(orderedConnections[0]?.call.getCallDuration())
+                            _firstDuration.postValue(orderedConnections[0]?.call.callDurationSEC())
                         }
 
                         if (orderedConnections.size == 2) {
-                            _secondDuration.postValue(orderedConnections[1]?.call.getCallDuration())
+                            _secondDuration.postValue(orderedConnections[1]?.call.callDurationSEC())
                         }
                     }
                 }

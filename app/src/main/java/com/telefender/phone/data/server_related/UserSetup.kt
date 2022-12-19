@@ -2,8 +2,6 @@ package com.telefender.phone.data.server_related
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.Context.TELEPHONY_SERVICE
-import android.telephony.TelephonyManager
 import androidx.work.WorkInfo
 import com.android.volley.AuthFailureError
 import com.android.volley.Response
@@ -29,10 +27,9 @@ object UserSetup {
     // TODO do Volley check for not being able to connect to server (e.g., 404)
     @SuppressLint("MissingPermission", "HardwareIds")
     fun initialPostRequest(context : Context, repository: ClientRepository, scope: CoroutineScope) {
-        val tMgr = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
-        val instanceNumber : String = MiscHelpers.cleanNumber(tMgr.line1Number)!!
+        val instanceNumber = MiscHelpers.getInstanceNumber(context)
 
-        val installationRequest = DefaultRequest(instanceNumber)
+        val installationRequest = DefaultRequest(instanceNumber!!)
         var installationRequestJson : String = defaultRequestToJson(installationRequest)
 
         val url = "https://dev.scribblychat.com/callbook/requestInstallation" // TODO finalize?
@@ -117,15 +114,14 @@ object UserSetup {
 
     @SuppressLint("MissingPermission", "HardwareIds")
     fun verifyPostRequest(context : Context, repository: ClientRepository, scope: CoroutineScope) {
-        val tMgr = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
-        val instanceNumber = MiscHelpers.cleanNumber(tMgr.line1Number)!!
+        val instanceNumber = MiscHelpers.getInstanceNumber(context)
 
         // TODO integrate OTP with notifications, for now, it's hardcoded
         val OTP = 111111
         val url = "https://dev.scribblychat.com/callbook/verifyInstallation"  // TODO finalize?
         runBlocking {
             scope.launch {
-                val sessionID = repository.getSessionID(instanceNumber)
+                val sessionID = repository.getSessionID(instanceNumber!!)
                 val verifyRequest = VerifyRequest(instanceNumber, sessionID!!, OTP)
                 var verifyRequestJson : String? = RequestHelpers.verifyRequestToJson(verifyRequest)
 

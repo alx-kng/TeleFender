@@ -22,6 +22,9 @@ interface StoredMapDao {
     @Query("SELECT fireBaseToken FROM stored_map WHERE userNumber = :number")
     suspend fun getFireBaseToken(number : String) : String?
 
+    @Query("SELECT lastSyncTime FROM stored_map WHERE userNumber = :number")
+    suspend fun getLastSyncTime(number : String) : Long
+
     @Query("SELECT databaseInitialized FROM stored_map WHERE userNumber = :number")
     suspend fun databaseInitialized(number: String) : Boolean
 
@@ -34,26 +37,32 @@ interface StoredMapDao {
     @Query(
         """UPDATE stored_map SET 
         sessionID =
-        CASE
-            WHEN :sessionId IS NOT NULL
-                THEN :sessionId
-            ELSE sessionID
-        END,
+            CASE
+                WHEN :sessionId IS NOT NULL
+                    THEN :sessionId
+                ELSE sessionID
+            END,
         clientKey =
-        CASE
-            WHEN :clientKey IS NOT NULL
-                THEN :clientKey
-            ELSE clientKey
-        END,
+            CASE
+                WHEN :clientKey IS NOT NULL
+                    THEN :clientKey
+                ELSE clientKey
+            END,
         fireBaseToken =
             CASE
                 WHEN :fireBaseToken IS NOT NULL
                     THEN :fireBaseToken
                 ELSE fireBaseToken
+            END,
+        lastSyncTime = 
+            CASE
+                WHEN :lastSyncTime IS NOT NULL
+                    THEN :lastSyncTime
+                ELSE lastSyncTime
             END
         WHERE userNumber = :number"""
     )
-    suspend fun updateStoredMap(number: String, sessionId: String?, clientKey: String?, fireBaseToken : String?)
+    suspend fun updateStoredMap(number: String, sessionId: String?, clientKey: String?, fireBaseToken : String?, lastSyncTime : Long?)
 
     @Delete
     suspend fun deleteStoredMap(vararg storedMap: StoredMap)

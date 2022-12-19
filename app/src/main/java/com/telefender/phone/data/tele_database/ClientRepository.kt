@@ -55,11 +55,81 @@ class ClientRepository(
         return changeLogDao.dummyQuery()
     }
 
-    /*
-    TODO: perhaps add the data analysis queries to the CallDetailDao and create an
-     updateMiscellaneous() function (and perhaps an update call logs function), which will be called when the an observer
-     detects a change to the call logs. NEEDS TO BE FROM ACTUAL CALL LOGS
+    /***********************************************************************************************
+     * StoredMap Queries
+     **********************************************************************************************/
+
+    @WorkerThread
+    suspend fun hasCredKey(instanceNumber : String) : Boolean {
+        return storedMapDao.hasCredKey(instanceNumber)
+    }
+
+    @WorkerThread
+    suspend fun getSessionID(number: String) : String? {
+        var sessionID : String?
+        mutexStoredMap.withLock {
+            sessionID = storedMapDao.getSessionID(number)
+        }
+        return sessionID
+    }
+
+    /**
+     * getClientKey() for retrieve UUID key to push and pull changes to / from server
      */
+    @WorkerThread
+    suspend fun getClientKey(userNumber: String): String? {
+        val result : String?
+        mutexStoredMap.withLock {
+            result = storedMapDao.getCredKey(userNumber)
+        }
+        return result
+    }
+
+    @WorkerThread
+    suspend fun getFireBaseToken(number : String) : String? {
+        val result : String?
+        mutexStoredMap.withLock {
+            result = storedMapDao.getFireBaseToken(number)
+        }
+        return result
+    }
+
+    @WorkerThread
+    suspend fun getLastSyncTime(number : String) : Long {
+        val result : Long
+        mutexStoredMap.withLock {
+            result = storedMapDao.getLastSyncTime(number)
+        }
+        return result
+    }
+
+    @WorkerThread
+    suspend fun insertStoredMap(storedMap : StoredMap) {
+        mutexStoredMap.withLock {
+            storedMapDao.insertStoredMap(storedMap)
+        }
+    }
+
+    @WorkerThread
+    suspend fun updateStoredMap(
+        number : String,
+        sessionID: String? = null,
+        clientKey : String? = null,
+        token : String? = null,
+        lastSyncTime: Long? = null
+    ) {
+        mutexStoredMap.withLock {
+            storedMapDao.updateStoredMap(number, sessionID, clientKey, token, lastSyncTime)
+        }
+    }
+
+    /***********************************************************************************************
+     * TODO: perhaps add the data analysis queries to the CallDetailDao and create an
+     *  updateMiscellaneous() function (and perhaps an update call logs function), which will be
+     *  called when the observer detects a change to the ACTUAL call logs.
+     *
+     * CallDetail Queries
+     **********************************************************************************************/
 
     /**
      * getCallLogs() as an extra function just in case
@@ -83,18 +153,33 @@ class ClientRepository(
     }
 
     @WorkerThread
-    suspend fun insertDetailClient(callDetail: CallDetail) {
+    suspend fun getMostRecentCallDetailDate(): Long? {
+        val result : Long?
         mutexCallDetails.withLock {
-            callDetailDao.insertDetailClient(callDetail)
+            result = callDetailDao.getMostRecentCallDetailDate()
+        }
+        return result
+    }
+
+    @WorkerThread
+    suspend fun insertDetailSkeleton(callDetail: CallDetail) {
+        mutexCallDetails.withLock {
+            callDetailDao.insertDetailSkeleton(callDetail)
         }
     }
 
     @WorkerThread
-    suspend fun insertDetailSync(callDetail: CallDetail) {
+    suspend fun insertDetailSync(instanceNumber: String, callDetail: CallDetail) : Boolean {
+        var inserted = false
         mutexCallDetails.withLock {
-            callDetailDao.insertDetailSync(callDetail)
+            inserted = callDetailDao.insertDetailSync(instanceNumber, callDetail)
         }
+        return inserted
     }
+
+    /***********************************************************************************************
+     * SafeLog Queries
+     **********************************************************************************************/
 
     @WorkerThread
     suspend fun getSafeLogs(): List<SafeLog> {
@@ -105,43 +190,54 @@ class ClientRepository(
         return result
     }
 
-    /**
-     * getClientKey() for retrieve UUID key to push and pull changes to / from server
-     */
+    /***********************************************************************************************
+     * Instance Queries
+     **********************************************************************************************/
+
     @WorkerThread
-    suspend fun getClientKey(userNumber: String): String? {
-        val result : String?
-        mutexStoredMap.withLock {
-            result = storedMapDao.getCredKey(userNumber)
+    suspend fun hasInstance() : Boolean {
+        val result : Boolean
+        mutexInstance.withLock {
+            result = instanceDao.hasInstance()
         }
         return result
     }
 
+    /***********************************************************************************************
+     * Contact Queries
+     **********************************************************************************************/
+
     @WorkerThread
-    suspend fun getFireBaseToken(number : String) : String? {
-        val result : String?
-        mutexStoredMap.withLock {
-            result = storedMapDao.getFireBaseToken(number)
+    suspend fun getAllContacts() : List<Contact> {
+        val result : List<Contact>
+        mutexContact.withLock {
+            result = contactDao.getAllContacts()
         }
         return result
     }
+
+    /***********************************************************************************************
+     * ContactNumbers Queries
+     **********************************************************************************************/
+
+    @WorkerThread
+    suspend fun getAllContactNumbers() : List<ContactNumbers> {
+        val result : List<ContactNumbers>
+        mutexContactNumbers.withLock {
+            result = contactNumbersDao.getAllContactNumbers()
+        }
+        return result
+    }
+
+    /***********************************************************************************************
+     * ChangeLog Queries
+     **********************************************************************************************/
     
     @WorkerThread
     suspend fun getLastChangeID() : Int? {
         val result : Int?
         mutexChange.withLock {
             result = changeLogDao.getLastChangeID()
-        }
-        return result
-    }
-    /**
-     * getChangeLog() and getAllChangeLogs() for monitoring changes
-     */
-    @WorkerThread
-    suspend fun getChangeLog(changeID: String): ChangeLog {
-        val result : ChangeLog
-        mutexChange.withLock {
-            result = changeLogDao.getChangeLogRow(changeID)
         }
         return result
     }
@@ -156,6 +252,38 @@ class ClientRepository(
     }
 
     @WorkerThread
+    suspend fun getChangeLogRow(changeID : String) : ChangeLog {
+        val result : ChangeLog
+        mutexChange.withLock {
+            result = changeLogDao.getChangeLogRow(changeID)
+        }
+        return result
+    }
+
+
+    /***********************************************************************************************
+     * QueueToUpload Queries
+     **********************************************************************************************/
+
+    @WorkerThread
+    suspend fun getAllQTUByRowID() : List<QueueToUpload> {
+        val result : List<QueueToUpload>
+        mutexUpload.withLock {
+            result = queueToUploadDao.getAllQTU_rowID()
+        }
+        return result
+    }
+
+    @WorkerThread
+    suspend fun getChunkQTUByRowID() : List<QueueToUpload> {
+        val result : List<QueueToUpload>
+        mutexUpload.withLock {
+            result = queueToUploadDao.getChunkQTU_rowID()
+        }
+        return result
+    }
+
+    @WorkerThread
     suspend fun getAllQTU() : List<QueueToUpload> {
         val result : List<QueueToUpload>
         mutexUpload.withLock {
@@ -165,6 +293,45 @@ class ClientRepository(
     }
 
     @WorkerThread
+    suspend fun hasQTUs() : Boolean {
+        val result : Boolean
+        mutexUpload.withLock {
+            result = queueToUploadDao.hasQTUs()
+        }
+        return result
+    }
+
+    /**
+     * Returns all QueueToUploads with error counter > 0
+     */
+    @WorkerThread
+    suspend fun getQTUErrorLogs() : List<String> {
+        val result : List<String>
+        mutexUpload.withLock {
+            result = queueToUploadDao.getQTUErrorLogs()
+        }
+        return result
+    }
+
+    @WorkerThread
+    suspend fun deleteUploadInclusive(rowID : Int) {
+        mutexUpload.withLock {
+            queueToUploadDao.deleteUploadInclusive(rowID)
+        }
+    }
+
+    @WorkerThread
+    suspend fun deleteUploadExclusive(rowID : Int) {
+        mutexUpload.withLock {
+            queueToUploadDao.deleteUploadInclusive(rowID)
+        }
+    }
+
+    /***********************************************************************************************
+     * QueueToExecute Queries
+     **********************************************************************************************/
+
+    @WorkerThread
     suspend fun getAllQTE() : List<QueueToExecute> {
         val result : List<QueueToExecute>
         mutexExecute.withLock {
@@ -172,6 +339,31 @@ class ClientRepository(
         }
         return result
     }
+
+    @WorkerThread
+    suspend fun hasQTEs() : Boolean {
+        val result : Boolean
+        mutexExecute.withLock {
+            result = executeAgentDao.hasQTEs()
+        }
+        return result
+    }
+
+    /**
+     * Returns all QueueToExecutes with error counter > 0
+     */
+    @WorkerThread
+    suspend fun getQTEErrorLogs() : List<String> {
+        val result : List<String>
+        mutexExecute.withLock {
+            result = queueToExecuteDao.getQTEErrorLogs()
+        }
+        return result
+    }
+
+    /***********************************************************************************************
+     * Agent Queries
+     **********************************************************************************************/
 
     /**
      * executeAll() is called to execute the logs within QueueToExecute
@@ -191,82 +383,7 @@ class ClientRepository(
             mutexMiscellaneous,
         )
     }
-    
-    @WorkerThread
-    suspend fun hasQTEs() : Boolean {
-        val result : Boolean
-        mutexExecute.withLock {
-            result = executeAgentDao.hasQTEs()
-        }
-        return result
-    }
-    
-    @WorkerThread
-    suspend fun hasQTUs() : Boolean {
-        val result : Boolean
-        mutexUpload.withLock {
-            result = queueToUploadDao.hasQTUs()
-        }
-        return result
-    }
 
-    @WorkerThread
-    suspend fun hasInstance() : Boolean {
-        val result : Boolean
-        mutexInstance.withLock {
-            result = instanceDao.hasInstance()
-        }
-        return result
-    }
-
-    @WorkerThread
-    suspend fun getChangeLogRow(changeID : String) : ChangeLog {
-        val result : ChangeLog
-        mutexChange.withLock {
-            result = changeLogDao.getChangeLogRow(changeID)
-        }
-        return result
-    }
-
-    @WorkerThread
-    suspend fun deleteQTU(changeID: String) {
-        mutexUpload.withLock {
-            uploadAgentDao.deleteQTU(changeID)
-        }
-    }
-
-    @WorkerThread
-    suspend fun insertStoredMap(storedMap : StoredMap) {
-        mutexStoredMap.withLock {
-            storedMapDao.insertStoredMap(storedMap)
-        }
-    }
-
-    @WorkerThread
-    suspend fun updateStoredMap(
-        number : String,
-        sessionID: String? = null,
-        clientKey : String? = null,
-        token : String? = null
-    ) {
-        mutexStoredMap.withLock {
-            storedMapDao.updateStoredMap(number, sessionID, clientKey, token)
-        }
-    }
-    
-    @WorkerThread
-    suspend fun hasCredKey(instanceNumber : String) : Boolean {
-        return storedMapDao.hasCredKey(instanceNumber)
-    }
-
-    @WorkerThread
-    suspend fun getSessionID(number: String) : String? {
-        var sessionID : String?
-        mutexStoredMap.withLock {
-            sessionID = storedMapDao.getSessionID(number)
-        }
-        return sessionID
-    }
     /**
      * changeFromServer() should be called to handle changes that come from the server
      *
@@ -330,80 +447,12 @@ class ClientRepository(
             parentNumber,
             trustability,
             counterValue)
-        }
-
-    /**
-     * Returns all QueueToExecutes with error counter > 0
-     */
-    @WorkerThread
-    suspend fun getQTEErrorLogs() : List<String> {
-        val result : List<String>
-        mutexExecute.withLock {
-            result = queueToExecuteDao.getQTEErrorLogs()
-        }
-        return result
     }
 
-    /**
-     * Returns all QueueToUploads with error counter > 0
-     */
     @WorkerThread
-    suspend fun getQTUErrorLogs() : List<String> {
-        val result : List<String>
+    suspend fun deleteQTU(changeID: String) {
         mutexUpload.withLock {
-            result = queueToUploadDao.getQTUErrorLogs()
-        }
-        return result
-    }
-
-    @WorkerThread
-    suspend fun deleteUploadInclusive(rowID : Int) {
-        mutexUpload.withLock {
-            queueToUploadDao.deleteUploadInclusive(rowID)
+            uploadAgentDao.deleteQTU(changeID)
         }
     }
-
-    @WorkerThread
-    suspend fun deleteUploadExclusive(rowID : Int) {
-        mutexUpload.withLock {
-            queueToUploadDao.deleteUploadInclusive(rowID)
-        }
-    }
-
-    @WorkerThread
-    suspend fun getAllQTUByRowID() : List<QueueToUpload> {
-        val result : List<QueueToUpload>
-        mutexUpload.withLock {
-            result = queueToUploadDao.getAllQTU_rowID()
-        }
-        return result
-    }
-
-    @WorkerThread
-    suspend fun getChunkQTUByRowID() : List<QueueToUpload> {
-        val result : List<QueueToUpload>
-        mutexUpload.withLock {
-            result = queueToUploadDao.getChunkQTU_rowID()
-        }
-        return result
-    }
-
-    @WorkerThread
-    suspend fun getAllContacts() : List<Contact> {
-        val result : List<Contact>
-        mutexContact.withLock {
-            result = contactDao.getAllContacts()
-        }
-        return result
-    }
-
-    @WorkerThread
-    suspend fun getAllContactNumbers() : List<ContactNumbers> {
-        val result : List<ContactNumbers>
-        mutexContactNumbers.withLock {
-            result = contactNumbersDao.getAllContactNumbers()
-        }
-        return result
-    }
-
 }

@@ -3,19 +3,15 @@ package com.telefender.phone.data.tele_database.background_tasks
 import android.annotation.SuppressLint
 import android.content.ContentResolver
 import android.content.Context
-import android.content.Context.TELEPHONY_SERVICE
 import android.database.Cursor
 import android.os.Build
-import android.telephony.TelephonyManager
 import androidx.annotation.RequiresApi
-import com.telefender.phone.data.default_database.DefaultCallDetails
 import com.telefender.phone.data.default_database.DefaultContacts
 import com.telefender.phone.data.tele_database.ClientDBConstants.CHANGELOG_TYPE_CONTACT_INSERT
 import com.telefender.phone.data.tele_database.ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_INSERT
 import com.telefender.phone.data.tele_database.ClientDBConstants.CHANGELOG_TYPE_INSTANCE_INSERT
 import com.telefender.phone.data.tele_database.ClientDatabase
 import com.telefender.phone.data.tele_database.ClientRepository
-import com.telefender.phone.data.tele_database.entities.CallDetail
 import com.telefender.phone.data.tele_database.entities.ChangeLog
 import com.telefender.phone.data.tele_database.entities.QueueToExecute
 import com.telefender.phone.helpers.MiscHelpers
@@ -26,10 +22,13 @@ import java.util.*
 
 object TableInitializers {
 
-    // TODO Possibly put initializer for Misc numbers? Or better, synchronize / analyze
-    //  somewhere separate
-
     /**
+     * TODO: Changed code to basically just use TableSynchronizer. Even though pretty much all the
+     *  initializers EXCEPT initInstance() are replaceable by the synchronizer, we'll just keep
+     *  them here anyways just in case. ALTHOUGH, technically the initializers' implementations
+     *  are probably more than x2 times as fast. So, maybe it's still possible to incorporate into
+     *  first database initialization, where there is a lot of un-synced default data upfront
+     *
      * Called once to initialize the CallDetail table for the first time during database initialization.
      *
      * Inserts user's call logs into CallLogs table using DefaultCallDetails.getCallDetails()
@@ -37,21 +36,7 @@ object TableInitializers {
      */
     @RequiresApi(Build.VERSION_CODES.O)
     suspend fun initCallDetails(context: Context, repository: ClientRepository) {
-
-        val calls = DefaultCallDetails.getDefaultCallDetails(context)
-
-        for (call in calls) {
-            val log = CallDetail(
-                call.number,
-                call.callType,
-                call.callEpochDate,
-                call.callDuration,
-                call.callLocation,
-                call.callDirection
-            )
-
-            repository.insertDetailSync(log)
-        }
+        TableSynchronizer.syncCallLogs(context, repository, context.contentResolver)
     }
 
     /**
@@ -63,10 +48,8 @@ object TableInitializers {
     @SuppressLint("MissingPermission")
     suspend fun initInstance(context: Context, database: ClientDatabase) {
 
-        val tMgr = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
-
         val changeID = UUID.randomUUID().toString() // create a new changeLog
-        val instanceNumber = MiscHelpers.cleanNumber(tMgr.line1Number) // get phone # of user
+        val instanceNumber = MiscHelpers.getInstanceNumber(context) // get phone # of user
         val changeTime = Instant.now().toEpochMilli() // get epoch time
         val type = CHANGELOG_TYPE_INSTANCE_INSERT
 
@@ -158,8 +141,7 @@ object TableInitializers {
             return
         }
 
-        val tMgr = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
-        val parentNumber = MiscHelpers.cleanNumber(tMgr.line1Number)
+        val parentNumber = MiscHelpers.getInstanceNumber(context)
 
         val cChangeID = UUID.randomUUID().toString()
         val changeTime = Instant.now().toEpochMilli()
@@ -194,8 +176,7 @@ object TableInitializers {
             return
         }
 
-        val tMgr = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
-        val parentNumber = MiscHelpers.cleanNumber(tMgr.line1Number)
+        val parentNumber = MiscHelpers.getInstanceNumber(context)
 
         val cnChangeID = UUID.randomUUID().toString()
         val changeTime = Instant.now().toEpochMilli()

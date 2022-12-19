@@ -5,9 +5,8 @@ import android.content.ContentResolver
 import android.content.Context
 import android.database.Cursor
 import android.os.Build
-import android.telephony.TelephonyManager
+import android.provider.CallLog
 import androidx.annotation.RequiresApi
-import com.telefender.phone.data.default_database.DefaultCallDetails
 import com.telefender.phone.data.default_database.DefaultContacts
 import com.telefender.phone.data.tele_database.ClientDBConstants
 import com.telefender.phone.data.tele_database.ClientDatabase
@@ -21,47 +20,78 @@ import java.util.*
 
 object TableSynchronizer {
 
+    private const val checkBackPeriod = 5 * 60000
+
     /**
-     * TODO: Refactor for new call logs and make algorithm more efficient.
+     * Syncs our CallDetail database with Android's CallDetail database. Used for both periodic and
+     * immediate syncs. Periodic sync is for when user switches to different phone app for a certain
+     * amount of time, and immediate sync for after every call (since it's important for our
+     * algorithm to update logs immediately).
      *
-     * Syncs our CallDetail database with Android's CallDetail database
+     * Also, we've confirmed that checkBackPeriod is necessary.
     */
     @RequiresApi(Build.VERSION_CODES.O)
-    suspend fun syncCallLogs(database: ClientDatabase, repository: ClientRepository, contentResolver : ContentResolver) {
+    suspend fun syncCallLogs(context: Context, repository: ClientRepository, contentResolver: ContentResolver) : Boolean {
 
-        val mostRecentCallLogDate = database.callDetailDao().getMostRecentCallDetailDate() ?: "0"
+        val instanceNumber = MiscHelpers.getInstanceNumber(context)
+        val lastSyncTime = repository.getLastSyncTime(instanceNumber!!)
+
+        /*
+        For retrieving voicemail logs, which have a small chance of being placed slightly before
+        the corresponding missed / rejected / blocked call (epochDate wise).
+         */
+        val checkFromTime = if (lastSyncTime == 0L) lastSyncTime else lastSyncTime - checkBackPeriod
 
         val projection = arrayOf(
-            android.provider.CallLog.Calls.NUMBER,
-            android.provider.CallLog.Calls.TYPE,
-            android.provider.CallLog.Calls.DATE,
-            android.provider.CallLog.Calls.DURATION,
-            android.provider.CallLog.Calls.GEOCODED_LOCATION
+            CallLog.Calls.NUMBER,
+            CallLog.Calls.TYPE,
+            CallLog.Calls.DATE,
+            CallLog.Calls.DURATION,
+            CallLog.Calls.GEOCODED_LOCATION
             )
 
         val selection = "DATE > ?"
 
-        val curs : Cursor? = contentResolver.query(android.provider.CallLog.Calls.CONTENT_URI, projection, selection,
-            arrayOf(mostRecentCallLogDate.toString()), null)
+        val curs : Cursor? = contentResolver.query(
+            CallLog.Calls.CONTENT_URI,
+            projection,
+            selection,
+            arrayOf(checkFromTime.toString()),
+            CallLog.Calls.DATE + " ASC"
+        )
 
         if (curs != null) {
             while (curs.moveToNext()) {
                 val number = MiscHelpers.cleanNumber(curs.getString(0))!!
-                val type = curs.getInt(1).toString()
+                val typeInt = curs.getInt(1)
                 val date = curs.getString(2).toLong()
                 val duration = curs.getString(3).toLong()
                 val location = curs.getString(4)
-                val dir: String = DefaultCallDetails.getCallDirection(type.toInt())
+                val dir = MiscHelpers.getTrueDirection(typeInt, number)
 
-                val callDetail = CallDetail(number, type, date, duration, location, dir)
-//                Timber.i("${MiscHelpers.DEBUG_LOG_TAG} callLogSync added: %s", callDetail.toString())
-                repository.insertDetailSync(callDetail)
+                val callDetail = CallDetail(number, dir.toString(), date, duration, location, dir)
+
+                try {
+                    val inserted = repository.insertDetailSync(instanceNumber, callDetail)
+                    if (inserted) {
+                        Timber.i("${MiscHelpers.DEBUG_LOG_TAG} syncCallLogs(): SYNCED: $callDetail")
+                    } else {
+                        Timber.i("${MiscHelpers.DEBUG_LOG_TAG} syncCallLogs(): ALREADY SYNCED: $callDetail")
+                    }
+                } catch (e: Exception) {
+                    return false
+                }
             }
             curs.close()
         }
+
+        return true
     }
 
     /**********************************************************************************************
+     * TODO: Consider not inserting contacts already synced maybe?
+     * TODO: Double check that we're not writing / inserting into tables too redundantly.
+     *
      * Syncs our Contact / ContactNumbers database with Android's default Contact / PhoneNumbers database
      *
      * Idea is that we iterate through our database and see if any changes to corresponding
@@ -87,8 +117,7 @@ object TableSynchronizer {
     @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("MissingPermission")
     suspend fun checkForInserts(context: Context, database: ClientDatabase, contentResolver : ContentResolver) : HashMap<String, MutableList<ContactNumbers>> {
-        val tMgr = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-        val parentNumber = MiscHelpers.cleanNumber(tMgr.line1Number)
+        val parentNumber = MiscHelpers.getInstanceNumber(context)!!
 
         val curs: Cursor? = DefaultContacts.getContactNumberCursor(contentResolver)
 
@@ -96,7 +125,7 @@ object TableSynchronizer {
          * We need to create a hash map of all the default database contact numbers (using the
          * CID as key) so that we can quickly find the correct rows / whether a row exists
          */
-        var defaultContactHashMap = HashMap<String, MutableList<ContactNumbers>>()
+        val defaultContactHashMap = HashMap<String, MutableList<ContactNumbers>>()
 
         if (curs == null) {
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: Contact Number cursor is null; BAD")
@@ -169,10 +198,10 @@ object TableSynchronizer {
                 )
 
                 // get may return null if key doesn't yet have a list initialized with it
-                if (defaultContactHashMap.get(defCID) == null) {
-                    defaultContactHashMap.put(defCID, mutableListOf(contactNumber))
+                if (defaultContactHashMap[defCID] == null) {
+                    defaultContactHashMap[defCID] = mutableListOf(contactNumber)
                 } else {
-                    defaultContactHashMap.get(defCID)!!.add(contactNumber)
+                    defaultContactHashMap[defCID]!!.add(contactNumber)
                 }
 
                 curs.moveToNext()

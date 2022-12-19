@@ -5,6 +5,7 @@ import timber.log.Timber
 
 object RuleChecker {
 
+    // TODO: Make sure voicemails are always considered safe so that nothing fishy happens.
     fun isSafe(numberString: String?): Boolean {
 
         // For null conference host

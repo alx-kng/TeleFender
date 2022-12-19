@@ -6,13 +6,15 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 
+// TODO: Probably store current block mode in StoredMap
 @Entity(tableName = "stored_map")
 data class StoredMap(
     @PrimaryKey val userNumber: String,
     val sessionID: String? = null,
     val clientKey: String? = null,
     val fireBaseToken: String? = null,
-    val databaseInitialized: Boolean = false
+    val databaseInitialized: Boolean = false,
+    val lastSyncTime: Long = 0
 ) {
 
     override fun toString() : String {

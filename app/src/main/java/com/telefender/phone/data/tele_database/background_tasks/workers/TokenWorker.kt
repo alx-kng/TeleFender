@@ -3,7 +3,6 @@ package com.telefender.phone.data.tele_database.background_tasks.workers
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
-import android.telephony.TelephonyManager
 import androidx.annotation.RequiresApi
 import androidx.work.*
 import com.telefender.phone.App
@@ -74,8 +73,7 @@ class CoroutineTokenWorker(
         val repository: ClientRepository = (applicationContext as App).repository
         val scope = (applicationContext as App).applicationScope
 
-        val tMgr = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-        val instanceNumber : String = MiscHelpers.cleanNumber(tMgr.line1Number)!!
+        val instanceNumber = MiscHelpers.getInstanceNumber(context)!!
 
         val key = repository.getClientKey(instanceNumber)
         val token = repository.getFireBaseToken(instanceNumber)

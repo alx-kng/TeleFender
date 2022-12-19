@@ -1,6 +1,7 @@
 package com.telefender.phone.gui.adapters
 
 import android.content.Context
+import android.provider.CallLog
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -13,6 +14,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.telefender.phone.R
 import com.telefender.phone.data.tele_database.entities.GroupedCallDetail
+import com.telefender.phone.helpers.MiscHelpers
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.LocalDateTime
@@ -149,32 +151,24 @@ class RecentsAdapter(
         }
     }
 
-    private fun isRed(direction: String?): Boolean {
+    private fun isRed(direction: Int?): Boolean {
         return when (direction) {
-            "MISSED" -> true
+            CallLog.Calls.MISSED_TYPE -> true
             else -> false
         }
     }
 
-    private fun getDirectionIcon(direction: String?, number: String): Int {
-        var icon = when (direction) {
-            "INCOMING" -> R.drawable.ic_baseline_call_received_24
-            "OUTGOING" -> R.drawable.ic_baseline_call_made_24
-            "MISSED" -> R.drawable.ic_baseline_call_missed_24
-            "VOICEMAIL" -> R.drawable.ic_baseline_voicemail_24
-            "REJECTED" -> R.drawable.ic_baseline_block_24
-            "BLOCKED" -> R.drawable.ic_baseline_block_24
-            else -> R.drawable.ic_baseline_circle_24
-        }
+    private fun getDirectionIcon(direction: Int?, number: String): Int {
+        val trueDirection = MiscHelpers.getTrueDirection(direction, number)
 
-        //TODO Voicemail call log refine
-        /**
-         * Duct tape way to check if call log is a voicemail or not. Uses the idea that
-         * voicemail call logs always have a '+' in front of the number and are incoming.
-         * Don't know how this changes between carriers.
-         */
-        if (number.isNotEmpty() && number[0] == '+' && direction == "INCOMING") {
-            icon = R.drawable.ic_baseline_voicemail_24
+        val icon = when (trueDirection) {
+            CallLog.Calls.INCOMING_TYPE -> R.drawable.ic_baseline_call_received_24
+            CallLog.Calls.OUTGOING_TYPE -> R.drawable.ic_baseline_call_made_24
+            CallLog.Calls.MISSED_TYPE -> R.drawable.ic_baseline_call_missed_24
+            CallLog.Calls.VOICEMAIL_TYPE -> R.drawable.ic_baseline_voicemail_24
+            CallLog.Calls.REJECTED_TYPE -> R.drawable.ic_baseline_block_24
+            CallLog.Calls.BLOCKED_TYPE -> R.drawable.ic_baseline_block_24
+            else -> R.drawable.ic_baseline_circle_24
         }
 
         return icon

@@ -2,7 +2,6 @@ package com.telefender.phone.gui.model
 
 import android.annotation.SuppressLint
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.*
 import com.telefender.phone.data.default_database.DefaultCallDetails
 import com.telefender.phone.data.tele_database.entities.*
@@ -10,17 +9,26 @@ import com.telefender.phone.helpers.MiscHelpers
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 
-//TODO: Probably / Maybe refactor RecentsViewModel to use repository to actually query the data,
-// as the "good" app architecture suggests the repository should be a single source of truth.
-// This would require you to pass in application context to repository. See if it works.
-// OR we could just keep it here to make things not so complicated.
 
-
-// TODO: LOOK INTO PAGING FOR RECENTS AND CONTACTS
+/**
+ * TODO: Although we can identify Voicemail by +1 and incoming, maybe we should combine the calls
+ *  UI wise so that the user can't tell the difference (maybe even hide the +1).
+ *
+ * TODO: Consider also querying from Tele database so that we can differentiate UI for unallowed
+ *  and declined calls.
+ *
+ * TODO: LOOK INTO PAGING FOR RECENTS AND CONTACTS <-- prob not necessary
+ *
+ * TODO: Probably / Maybe refactor RecentsViewModel to use repository to actually query the data,
+ *  as the "good" app architecture suggests the repository should be a single source of truth.
+ *  This would require you to pass in application context to repository. See if it works.
+ *  OR we could just keep it here to make things not so complicated.
+ */
 class RecentsViewModel(app: Application) : AndroidViewModel(app) {
 
     @SuppressLint("StaticFieldLeak")
@@ -96,12 +104,10 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
      * displayed on the right of each call log number.
      */
     private suspend fun groupCallLogs(logs: List<CallDetail>) {
-        Log.i("${MiscHelpers.DEBUG_LOG_TAG}", "GROUP CALL LOG START")
+        Timber.i("${MiscHelpers.DEBUG_LOG_TAG} GROUP CALL LOG STARTING...")
         val tempGroups = mutableListOf<GroupedCallDetail>()
 
         withContext(Dispatchers.Default) {
-            Log.i("${MiscHelpers.DEBUG_LOG_TAG}", "GROUP CALL LOG MIDDLE")
-
             var prevLog: CallDetail? = null
             var currGroup: GroupedCallDetail? = null
 
@@ -125,7 +131,6 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
 
-        Log.i("${MiscHelpers.DEBUG_LOG_TAG}", "GROUP CALL LOG END")
         _groupedCallLogs = tempGroups
     }
 
@@ -136,7 +141,7 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
             val tempLogs = DefaultCallDetails.getDefaultCallDetails(context)
             groupCallLogs(tempLogs)
 
-            Log.i("${MiscHelpers.DEBUG_LOG_TAG}", "ABOUT TO ASSIGN LOGS VALUE")
+            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: ABOUT TO ASSIGN LOGS VALUE")
             _callLogs.value = tempLogs
         }
     }

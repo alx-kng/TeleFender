@@ -7,8 +7,11 @@ import android.app.NotificationManager
 import android.app.role.RoleManager
 import android.content.Context
 import android.content.Intent
+import android.database.ContentObserver
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.telecom.TelecomManager
 import android.util.Log
@@ -34,7 +37,6 @@ import com.telefender.phone.permissions.PermissionRequester
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
-//
 
 /**
  * TODO make sure the app opens up to last used fragment.
@@ -61,6 +63,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val dialerViewModel : DialerViewModel by viewModels()
+
+    private var callLogObserverUI: CallLogObserverUI? = null
 
     /**
      * TODO: Should request regular call log / phone permissions if user denies default dialer
@@ -117,6 +121,14 @@ class MainActivity : AppCompatActivity() {
              */
             recentsViewModel.activateDummy()
             contactsViewModel.activateDummy()
+
+            // Registers UI Call log observer (defined and unregistered in MainActivity)
+            callLogObserverUI = CallLogObserverUI(Handler(Looper.getMainLooper()), recentsViewModel)
+            this.applicationContext.contentResolver.registerContentObserver(
+                android.provider.CallLog.Calls.CONTENT_URI,
+                false,
+                callLogObserverUI!!
+            )
         }
 
         /**
@@ -163,6 +175,41 @@ class MainActivity : AppCompatActivity() {
         val job = (application as App).applicationScope.launch {
             repository.dummyQuery()
         }
+
+        /**
+         * Registers UI Call log observer if not registered before (in case permissions weren't
+         * granted before).
+         */
+        if (PermissionRequester.hasPermissions(this, arrayOf(
+                android.Manifest.permission.READ_CALL_LOG,
+                android.Manifest.permission.READ_CONTACTS))
+            && callLogObserverUI == null
+        ) {
+            // Registers UI Call log observer (defined and unregistered in MainActivity)
+            callLogObserverUI = CallLogObserverUI(Handler(Looper.getMainLooper()), recentsViewModel)
+            this.applicationContext.contentResolver.registerContentObserver(
+                android.provider.CallLog.Calls.CONTENT_URI,
+                false,
+                callLogObserverUI!!
+            )
+        }
+    }
+
+    override fun onDestroy() {
+        /*
+        Unregisters call log observer for UI. Might be null depending on whether permissions
+        were given.
+         */
+        callLogObserverUI?.let {
+            this.applicationContext.contentResolver.unregisterContentObserver(it)
+        }
+
+        /*
+        Seems like it needs to be after other code so that MainActivity isn't destroyed too early.
+        IncomingActivity's onDestroy() doesn't seem to have this issue, but it could be because
+        when MainActivity closes, the entire app is closed??
+         */
+        super.onDestroy()
     }
 
     /**
@@ -273,6 +320,40 @@ class MainActivity : AppCompatActivity() {
             if (binding.topAppBar.visibility != View.GONE) {
                 binding.topAppBar.visibility = View.GONE
             }
+        }
+    }
+
+    /**
+     * TODO: See why observer is called multiple times after a single call ends. Doesn't seem to
+     *  affect the UI at the moment but we should look out for it. I think the reason is that since
+     *  we are observing Calls.CONTENT_URI (might not have any other option), every change to
+     *  Default call logs (like number, direction, location, etc.) notifies the observer.
+     *
+     * TODO: Observer isn't being unregistered correctly!!!!!
+     *
+     * This CallLogObserver observes call logs purely for UI changes in RecentsFragments. The
+     * observer is registered and unregistered along with MainActivity's lifecycle.
+     */
+    class CallLogObserverUI(
+        handler: Handler,
+        private val recentsViewModel: RecentsViewModel
+    ) : ContentObserver(handler) {
+
+        /*
+        TODO: Remove id from CallLogObserverUI. Currently used to check if observer is correctly
+         unregistered or not.
+         */
+        private var id = (0..10000).random()
+
+        override fun deliverSelfNotifications(): Boolean {
+            return false
+        }
+
+        override fun onChange(selfChange: Boolean) {
+            super.onChange(selfChange)
+            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OBSERVED NEW CALL LOG - UI - id = $id")
+
+            recentsViewModel.updateCallLogs()
         }
     }
 

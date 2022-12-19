@@ -39,7 +39,11 @@ fun Call?.stateString(): String {
     return this.getStateCompat().toStateString()
 }
 
-fun Call?.getCallDuration(): Int {
+/*
+TODO: Apparently, call duration clock shouldn't depend on connectTimeMillis, but it works for now,
+ so look into it later.
+ */
+fun Call?.callDurationSEC(): Int {
     return if (this != null) {
         val connectTimeMillis = details.connectTimeMillis
         if (connectTimeMillis == 0L) {
@@ -48,6 +52,26 @@ fun Call?.getCallDuration(): Int {
         ((System.currentTimeMillis() - connectTimeMillis) / 1000).toInt()
     } else {
         0
+    }
+}
+
+fun Call?.callDurationMILLI(): Long {
+    return if (this != null) {
+        val connectTimeMillis = details.connectTimeMillis
+        if (connectTimeMillis == 0L) {
+            return 0
+        }
+        System.currentTimeMillis() - connectTimeMillis
+    } else {
+        0
+    }
+}
+
+fun Call?.createTime(): Long {
+    return if (this != null) {
+        details.creationTimeMillis
+    } else {
+        -1
     }
 }
 

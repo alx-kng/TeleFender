@@ -3,9 +3,7 @@ package com.telefender.phone.data.tele_database
 import android.annotation.SuppressLint
 import android.content.ContentResolver
 import android.content.Context
-import android.content.Context.TELEPHONY_SERVICE
 import android.os.Build
-import android.telephony.TelephonyManager
 import androidx.annotation.RequiresApi
 import androidx.room.Database
 import androidx.room.Room
@@ -97,7 +95,6 @@ abstract class ClientDatabase : RoomDatabase() {
                      time of the omega worker. Also, even if rest of database doesn't finish, it
                      should be taken care of during sync.
                      */
-                    database.initRestOfDatabase(context, contentResolver)
                 }
             }
         }
@@ -118,8 +115,7 @@ abstract class ClientDatabase : RoomDatabase() {
             return
         }
 
-        val tMgr = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
-        val instanceNumber = MiscHelpers.cleanNumber(tMgr.line1Number)
+        val instanceNumber = MiscHelpers.getInstanceNumber(context)
 
         // Initializes stored map table with user number.
         this.storedMapDao().insertStoredMap(StoredMap(instanceNumber!!))
@@ -143,12 +139,18 @@ abstract class ClientDatabase : RoomDatabase() {
     }
 
     /**
-     * TODO: DO WE NEED TO ADD PERMISSION CHECK HERE?
+     * TODO: Do we need the permission check here? Should we even use this function?
      *
      * Initializes the contact, contact number, and call log tables. Requires call log and contact
-     * permissions.
+     * permissions. Probably won't use this since rest of database can just be initialized by
+     * sync during omega worker (at the end of getDatabase())
      */
     protected suspend fun initRestOfDatabase(context: Context, contentResolver: ContentResolver) {
+        if (!PermissionRequester.hasLogPermissions(context)) {
+            Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: No log permissions in initRestOfDatabase()")
+            return
+        }
+
         val repository = (context.applicationContext as App).repository
 
         // Goes through each call log and inserts to db
@@ -270,6 +272,11 @@ abstract class ClientDatabase : RoomDatabase() {
          * TODO: Do sync somewhere on reentering app (or maybe don't because of periodic worker),
          *  since getDatabase() isn't always called.
          *
+         * TODO: Probably need more permission checks in workers just in case permission changes
+         *  mid way.
+         *
+         * TODO: REDO IMPORTANT TRANSACTIONS THAT FAIL!!!!
+         *
          * Either creates new database instance if there is no initialized one available or returns
          * the initialized instance that already exists. Called everytime the app is freshly
          * opened (no task).
@@ -301,8 +308,7 @@ abstract class ClientDatabase : RoomDatabase() {
                     instanceTemp.waitForLogPermissions(context, "getDatabase()")
 
                     // Gets user's phone number.
-                    val tMgr = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
-                    val instanceNumber = MiscHelpers.cleanNumber(tMgr.line1Number)
+                    val instanceNumber = MiscHelpers.getInstanceNumber(context)
 
                     // TODO: Probably need to restart firebase initialization process too.
                     // Waits for / restarts core database initialization and user setup.

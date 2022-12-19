@@ -1,6 +1,7 @@
 package com.telefender.phone.gui.adapters
 
 import android.content.Context
+import android.provider.CallLog
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -10,13 +11,13 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.button.MaterialButton
 import com.telefender.phone.R
 import com.telefender.phone.data.tele_database.entities.CallDetail
+import com.telefender.phone.data.tele_database.entities.CallDetailItem
 import com.telefender.phone.data.tele_database.entities.CallHistoryFooter
 import com.telefender.phone.data.tele_database.entities.CallHistoryHeader
-import com.telefender.phone.data.tele_database.entities.CallDetailItem
-import com.google.android.material.button.MaterialButton
-
+import com.telefender.phone.helpers.MiscHelpers
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -209,19 +210,17 @@ class CallHistoryAdapter (
         }
     }
 
-    private fun getDirectionString(direction: String?, number: String): String {
-        var directionString = when (direction) {
-            "INCOMING" -> "Incoming Call"
-            "OUTGOING" -> "Outgoing Call"
-            "MISSED" -> "Missed Call"
-            "VOICEMAIL" -> "Voicemail"
-            "REJECTED" -> "Declined Call"
-            "BLOCKED" -> "Blocked Call"
-            else -> "Don't know what happened Call"
-        }
+    private fun getDirectionString(direction: Int?, number: String): String {
+        val trueDirection = MiscHelpers.getTrueDirection(direction, number)
 
-        if (number.isNotEmpty() && number[0] == '+' && direction == "INCOMING") {
-            directionString = "Voicemail"
+        val directionString = when (trueDirection) {
+            CallLog.Calls.INCOMING_TYPE  -> "Incoming Call"
+            CallLog.Calls.OUTGOING_TYPE  -> "Outgoing Call"
+            CallLog.Calls.MISSED_TYPE  -> "Missed Call"
+            CallLog.Calls.VOICEMAIL_TYPE  -> "Voicemail"
+            CallLog.Calls.REJECTED_TYPE  -> "Declined Call"
+            CallLog.Calls.BLOCKED_TYPE -> "Blocked Call"
+            else -> "Don't know what happened Call"
         }
 
         return directionString

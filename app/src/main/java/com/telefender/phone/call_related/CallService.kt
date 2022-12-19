@@ -1,12 +1,16 @@
 package com.telefender.phone.call_related
 
 
+import android.provider.CallLog
 import android.telecom.Call
 import android.telecom.InCallService
 import com.telefender.phone.App
 import com.telefender.phone.data.tele_database.TeleCallDetails
+import com.telefender.phone.data.tele_database.background_tasks.workers.SyncScheduler
 import com.telefender.phone.gui.InCallActivity
 import com.telefender.phone.gui.IncomingCallActivity
+import com.telefender.phone.helpers.MiscHelpers
+import timber.log.Timber
 
 class CallService : InCallService() {
 
@@ -15,6 +19,8 @@ class CallService : InCallService() {
 
         // Sets CallService context.
         _context = this
+
+        Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: CallService onCreate()")
     }
 
     override fun onDestroy() {
@@ -22,8 +28,14 @@ class CallService : InCallService() {
 
         // Removes CallService context for safety.
         _context = null
+
+        Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: CallService onDestroy()")
     }
 
+    /**
+     * Note that voicemails are not passed to CallService, so you pretty much need to observer
+     * default database to know when user receives voicemail.
+     */
     override fun onCallAdded(call: Call) {
         super.onCallAdded(call)
 
@@ -31,10 +43,10 @@ class CallService : InCallService() {
 
         /**
          * Only launches IncomingActivity if it is an incoming call. Otherwise, InCallActivity is
-         * directly started.
+         * directly started. Also, safe calls and unsafe calls are handled separately.
          */
         if (call.getStateCompat() == Call.STATE_RINGING) {
-            if (RuleChecker.isSafe(call.number()) || CallManager.currentMode == CallManager.ALLOW_MODE) {
+            if (RuleChecker.isSafe(call.number())) {
                 safeCall()
             } else {
                 unsafeCall(call)
@@ -45,9 +57,15 @@ class CallService : InCallService() {
     }
 
     override fun onCallRemoved(call: Call) {
-        super.onCallRemoved(call)
+        /**
+         * CatchSyncWorker is more to catch voicemails that may pop up in the default call logs,
+         * as voicemails are not passed to our CallService. However, it also syncs the most
+         * immediate call log.
+         */
+        SyncScheduler.initiateCatchSyncWorker(this.applicationContext)
 
         CallManager.removeCall(call)
+        super.onCallRemoved(call)
     }
 
     private fun safeCall() {
@@ -56,16 +74,24 @@ class CallService : InCallService() {
 
     /**
      * TODO: Should set to vibrate on Silence mode if don't have permissions.
-     *  Check insertCallDetail() works.
+     *  Check insertCallDetail() works. Also, update response for unsafe calls in ALLOW_MODE,
+     *  specifically in terms of showing UI.
      */
     private fun unsafeCall(call: Call) {
-        if (CallManager.currentMode == CallManager.BLOCK_MODE) {
-            val repository = ((context?.applicationContext) as App).repository
-            TeleCallDetails.insertCallDetail(call, true, repository)
-            CallManager.hangup()
-        } else {
-            AudioHelpers.ringerSilent(this, true)
-            IncomingCallActivity.start(this, false)
+        val repository = ((this.applicationContext) as App).repository
+
+        when(CallManager.currentMode) {
+            HandleMode.BLOCK_MODE -> {
+                TeleCallDetails.insertCallDetail(repository, call, true, CallLog.Calls.BLOCKED_TYPE)
+                CallManager.hangup()
+            }
+            HandleMode.SILENCE_MODE -> {
+                AudioHelpers.ringerSilent(this, true)
+                IncomingCallActivity.start(this, false)
+            }
+            HandleMode.ALLOW_MODE -> {
+                IncomingCallActivity.start(this, true)
+            }
         }
     }
 

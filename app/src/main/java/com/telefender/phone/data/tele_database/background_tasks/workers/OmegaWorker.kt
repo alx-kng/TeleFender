@@ -20,11 +20,12 @@ import com.telefender.phone.gui.MainActivity
 import com.telefender.phone.helpers.MiscHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import timber.log.Timber
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-// TODO Change delay and backoff time later for production / optimization.
+// TODO: Change delay and backoff time later for production / optimization.
 object OmegaPeriodicScheduler {
 
     val oneTimeOmegaWorkerTag = "oneTimeOmegaWorker"
@@ -93,10 +94,12 @@ class CoroutineOmegaWorker(
     params: WorkerParameters
 ) : CoroutineWorker(context, params) {
 
-    var NOTIFICATION_ID : Int? = -1
-    val CHANNEL_ID = "alxkng5737"
+    private var NOTIFICATION_ID : Int? = -1
+    private val CHANNEL_ID = "alxkng5737"
+    private var stateVarString: String? = null
+    private val retryAmount = 5
+
     val context: Context? = context
-    var stateVarString: String? = null
     val scope = CoroutineScope(Dispatchers.IO)
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -134,9 +137,10 @@ class CoroutineOmegaWorker(
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA SYNC STARTED")
             if (!repository.hasQTEs()) {
                 TableSynchronizer.syncContacts(context, database, context.contentResolver)
-                TableSynchronizer.syncCallLogs(database, repository, context.contentResolver)
+                TableSynchronizer.syncCallLogs(context, repository, context.contentResolver)
             } else {
                 repository.executeAll()
+                delay(1000)
                 return Result.retry()
             }
 
@@ -144,9 +148,14 @@ class CoroutineOmegaWorker(
              * Downloads changes from server
              */
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA DOWNLOAD STARTED")
-            WorkerStates.setState(WorkerType.DOWNLOAD_POST, WorkInfo.State.RUNNING)
-            ServerHelpers.downloadPostRequest(context, repository, scope)
-            WorkerStates.workerWaiter(WorkerType.DOWNLOAD_POST, "DOWNLOAD")
+            for (i in 1..retryAmount) {
+                WorkerStates.setState(WorkerType.DOWNLOAD_POST, WorkInfo.State.RUNNING)
+                ServerHelpers.downloadPostRequest(context, repository, scope)
+
+                val success = WorkerStates.workerWaiter(WorkerType.DOWNLOAD_POST, "DOWNLOAD", stopOnFail = true, certainFinish = true)
+                if (success) break
+                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA DOWNLOAD RETRYING")
+            }
 
             /**
              * Executes logs in QueueToExecute
@@ -154,6 +163,7 @@ class CoroutineOmegaWorker(
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA EXECUTE STARTED")
             repository.executeAll()
             if (repository.hasQTEs()) {
+                delay(1000)
                 return Result.retry()
             }
 
@@ -177,6 +187,7 @@ class CoroutineOmegaWorker(
 
             // Makes sure everything is uploaded.
             if (repository.hasQTUs()) {
+                delay(1000)
                 return Result.retry()
             }
 

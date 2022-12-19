@@ -17,8 +17,14 @@ import timber.log.Timber
 @RequiresApi(Build.VERSION_CODES.O)
 class App : Application() {
 
-    // TODO: Maybe consider injecting dispatchers through entire app.
-    // Scope uses Dispatchers.Default
+    /**
+     * TODO: Clean up scopes to allow for better structured concurrency. I think we might be creating
+     *  too many local scopes in functions right now.
+     *
+     * TODO: Maybe consider injecting dispatchers through entire app.
+     *
+     * Scope uses Dispatchers.Default
+     */
     val applicationScope = CoroutineScope(SupervisorJob())
 
     val database by lazy { ClientDatabase.getDatabase(this, applicationScope, contentResolver) }
@@ -49,6 +55,6 @@ class App : Application() {
         }
     }
 
-    //if we want, we could add custom crashreportingtree for release that would send error messages back to server
+    //if we want, we could add custom crash reporting tree for release that would send error messages back to server
 }
  

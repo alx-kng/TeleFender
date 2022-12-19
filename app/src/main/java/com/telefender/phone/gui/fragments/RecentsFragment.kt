@@ -1,10 +1,6 @@
 package com.telefender.phone.gui.fragments
 
-import android.database.ContentObserver
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -17,9 +13,14 @@ import com.telefender.phone.gui.MainActivity
 import com.telefender.phone.gui.adapters.RecentsAdapter
 import com.telefender.phone.gui.model.RecentsViewModel
 import com.telefender.phone.gui.model.RecentsViewModelFactory
-import com.telefender.phone.helpers.MiscHelpers
 
+/*
+TODO: Handle case where permissions aren't given (or default dialer isn't granted).
 
+TODO: Sometimes Voicemail is sorted incorrectly in recents list. Particularly when you
+ call back the +1 number. In general, sometimes Voicemail number is sorted below the
+ associated missed / rejected / blocked call.
+ */
 class RecentsFragment : Fragment() {
 
     private var _binding: FragmentRecentsBinding? = null
@@ -67,13 +68,6 @@ class RecentsFragment : Fragment() {
         recentsViewModel.callLogs.observe(viewLifecycleOwner) {
             adapter.submitList(recentsViewModel.groupedCallLogs)
         }
-
-        // TODO: Handle case where permissions aren't given (or default dialer isn't granted).
-        requireActivity().applicationContext.contentResolver.registerContentObserver(
-            android.provider.CallLog.Calls.CONTENT_URI,
-            true,
-            CallLogObserver(Handler(Looper.getMainLooper()), recentsViewModel)
-        )
     }
 
     override fun onDestroyView() {
@@ -98,22 +92,4 @@ class RecentsFragment : Fragment() {
             (activity as MainActivity).displayAppBar(true)
         }
     }
-
-    class CallLogObserver(
-        handler: Handler,
-        val recentsViewModel: RecentsViewModel
-    ) : ContentObserver(handler) {
-
-        override fun deliverSelfNotifications(): Boolean {
-            return true
-        }
-
-        override fun onChange(selfChange: Boolean) {
-            super.onChange(selfChange)
-            Log.i("${MiscHelpers.DEBUG_LOG_TAG}", "NEW CALL LOG")
-
-            recentsViewModel.updateCallLogs()
-        }
-    }
-
 }

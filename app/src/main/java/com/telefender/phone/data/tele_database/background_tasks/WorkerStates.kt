@@ -6,6 +6,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
+import java.beans.PropertyChangeListener
+import java.beans.PropertyChangeSupport
 
 enum class WorkerType {
     ONE_TIME_EXEC,
@@ -16,6 +18,7 @@ enum class WorkerType {
     PERIODIC_DOWNLOAD,
     ONE_TIME_SYNC,
     PERIODIC_SYNC,
+    CATCH_SYNC,
     ONE_TIME_OMEGA,
     PERIODIC_OMEGA,
     SETUP,
@@ -27,7 +30,9 @@ enum class WorkerType {
 }
 
 // TODO Maybe convert to promises or jobs OR MAYBE NOT.
-internal object WorkerStates {
+object WorkerStates {
+
+    private val propertyChangeSupport = PropertyChangeSupport(this)
 
     /**
      * As of now, any workers should / can only use the following states in their control flow.
@@ -49,6 +54,7 @@ internal object WorkerStates {
 
     private var oneTimeSyncState : WorkInfo.State? = null
     private var periodicSyncState : WorkInfo.State? = null
+    private var catchSyncState : WorkInfo.State? = null
 
     private var oneTimeOmegaState : WorkInfo.State? = null
     private var periodicOmegaState : WorkInfo.State? = null
@@ -81,6 +87,7 @@ internal object WorkerStates {
 
     private var numOneTimeSyncWaiters = 0
     private var numPeriodicSyncWaiters = 0
+    private var numSyncCatchWaiters = 0
 
     private var numOneTimeOmegaWaiters = 0
     private var numPeriodicOmegaWaiters = 0
@@ -152,7 +159,9 @@ internal object WorkerStates {
     fun setState(workerType: WorkerType, workState: WorkInfo.State?) {
         if (workState !in allowedStates && workState != null) {
             Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: setState() - invalid workState")
+            return
         }
+
         when(workerType) {
             WorkerType.ONE_TIME_EXEC -> oneTimeExecState = workState
             WorkerType.PERIODIC_EXEC -> periodicExecState = workState
@@ -162,6 +171,7 @@ internal object WorkerStates {
             WorkerType.PERIODIC_DOWNLOAD -> periodicDownloadState = workState
             WorkerType.ONE_TIME_SYNC -> oneTimeSyncState = workState
             WorkerType.PERIODIC_SYNC -> periodicSyncState = workState
+            WorkerType.CATCH_SYNC -> catchSyncState = workState
             WorkerType.ONE_TIME_OMEGA -> oneTimeOmegaState = workState
             WorkerType.PERIODIC_OMEGA -> periodicOmegaState = workState
             WorkerType.SETUP -> setupState = workState
@@ -171,6 +181,24 @@ internal object WorkerStates {
             WorkerType.PERIODIC_TOKEN -> periodicTokenState = workState
             WorkerType.UPLOAD_TOKEN -> uploadTokenState = workState
         }
+
+        /**
+         * Notifies property listeners. oldValue is workState while newValue is workerType since
+         * propertyChangeSupport only notifies workers if it sees a change in oldValue and newValue.
+         *
+         * Technically supposed to pass in old and new value of actual workerState. However, since
+         * we have so many worker states, we just pass in the workerState and workerType in place
+         * of those values.
+         */
+        this.propertyChangeSupport.firePropertyChange("setState", workState, workerType)
+    }
+
+    fun addPropertyChangeListener(pcl: PropertyChangeListener?) {
+        propertyChangeSupport.addPropertyChangeListener(pcl)
+    }
+
+    fun removePropertyChangeListener(pcl: PropertyChangeListener?) {
+        propertyChangeSupport.removePropertyChangeListener(pcl)
     }
 
     fun getState(workerType: WorkerType) : WorkInfo.State? {
@@ -183,6 +211,7 @@ internal object WorkerStates {
             WorkerType.PERIODIC_DOWNLOAD -> periodicDownloadState
             WorkerType.ONE_TIME_SYNC -> oneTimeSyncState
             WorkerType.PERIODIC_SYNC -> periodicSyncState
+            WorkerType.CATCH_SYNC -> catchSyncState
             WorkerType.ONE_TIME_OMEGA -> oneTimeOmegaState
             WorkerType.PERIODIC_OMEGA -> periodicOmegaState
             WorkerType.SETUP -> setupState
@@ -204,6 +233,7 @@ internal object WorkerStates {
             WorkerType.PERIODIC_DOWNLOAD -> numPeriodicDownloadWaiters += changeAmount
             WorkerType.ONE_TIME_SYNC -> numOneTimeSyncWaiters += changeAmount
             WorkerType.PERIODIC_SYNC -> numPeriodicSyncWaiters += changeAmount
+            WorkerType.CATCH_SYNC -> numSyncCatchWaiters += changeAmount
             WorkerType.ONE_TIME_OMEGA -> numOneTimeOmegaWaiters += changeAmount
             WorkerType.PERIODIC_OMEGA -> numPeriodicOmegaWaiters += changeAmount
             WorkerType.SETUP -> numSetupWaiters += changeAmount
@@ -225,6 +255,7 @@ internal object WorkerStates {
             WorkerType.PERIODIC_DOWNLOAD -> numPeriodicDownloadWaiters
             WorkerType.ONE_TIME_SYNC -> numOneTimeSyncWaiters
             WorkerType.PERIODIC_SYNC -> numPeriodicSyncWaiters
+            WorkerType.CATCH_SYNC -> numSyncCatchWaiters
             WorkerType.ONE_TIME_OMEGA -> numOneTimeOmegaWaiters
             WorkerType.PERIODIC_OMEGA -> numPeriodicOmegaWaiters
             WorkerType.SETUP -> numSetupWaiters

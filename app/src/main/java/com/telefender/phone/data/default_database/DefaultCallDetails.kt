@@ -4,7 +4,6 @@ import android.content.Context
 import android.database.Cursor
 import android.os.Build
 import android.provider.CallLog
-import android.util.Log
 import androidx.annotation.RequiresApi
 import com.telefender.phone.data.tele_database.entities.CallDetail
 import com.telefender.phone.helpers.MiscHelpers
@@ -18,6 +17,9 @@ import timber.log.Timber
 object DefaultCallDetails{
 
     /**
+     * TODO: Need to find out if date is creation time or connect time.
+     * TODO: UI SHOWING WRONG ORDER (Recents should be descending instead of ascending).
+     *
      * Returns list of CallDetail objects using contentResolver.query()
      */
     @RequiresApi(Build.VERSION_CODES.O)
@@ -32,46 +34,36 @@ object DefaultCallDetails{
                 CallLog.Calls.GEOCODED_LOCATION
             )
 
-            val curs: Cursor = context.contentResolver.query(
+            val curs : Cursor? = context.contentResolver.query(
                 CallLog.Calls.CONTENT_URI,
                 projection,
                 null,
+                null,
                 null
-            )!!
+            )
 
             val calls: MutableList<CallDetail> = mutableListOf()
 
-            while (curs.moveToNext()) {
-                val number = curs.getString(0)
-                val type = curs.getInt(1).toString()
-                // Epoch date is in milliseconds
-                val date = curs.getString(2).toLong()
-                val duration = curs.getString(3).toLong()
-                val location = curs.getString(4)
-                val dir: String = getCallDirection(type.toInt())
+            if (curs != null) {
+                while (curs.moveToNext()) {
+                    val number = curs.getString(0)
+                    val typeInt = curs.getInt(1)
+                    // Epoch date is in milliseconds
+                    val date = curs.getString(2).toLong()
+                    val duration = curs.getString(3).toLong()
+                    val location = curs.getString(4)
+                    val dir = MiscHelpers.getTrueDirection(typeInt, number)
 
-                val callDetail = CallDetail(number, type, date, duration, location, dir)
-                calls.add(callDetail)
+                    val callDetail = CallDetail(number, dir.toString(), date, duration, location, dir)
+                    calls.add(callDetail)
+                }
+                curs.close()
             }
-            curs.close()
 
-            Log.i("${MiscHelpers.DEBUG_LOG_TAG}","CALL LOG RETRIEVAL FINISHED")
+            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: CALL LOG RETRIEVAL FINISHED")
             return@withContext calls
         }
     }
-
-    fun getCallDirection(directionCode: Int) : String {
-        return when (directionCode) {
-            CallLog.Calls.INCOMING_TYPE -> "INCOMING"
-            CallLog.Calls.OUTGOING_TYPE -> "OUTGOING"
-            CallLog.Calls.MISSED_TYPE -> "MISSED"
-            CallLog.Calls.VOICEMAIL_TYPE -> "VOICEMAIL"
-            CallLog.Calls.REJECTED_TYPE -> "REJECTED"
-            CallLog.Calls.BLOCKED_TYPE -> "BLOCKED"
-            else -> "UNKNOWN DIRECTION"
-        }
-    }
-
 
     /**
      * Returns list of CallDetail objects using contentResolver.query()
@@ -92,13 +84,13 @@ object DefaultCallDetails{
         var calls: MutableList<CallDetail> = mutableListOf()
         while (curs.moveToNext()) {
             val number = curs.getString(0)
-            val type = curs.getInt(1).toString()
+            val typeInt = curs.getInt(1)
             val date = curs.getString(2).toLong()
             val duration = curs.getString(3).toLong()
             val location = curs.getString(4)
-            val dir: String = getCallDirection(type.toInt())
+            val dir = MiscHelpers.getTrueDirection(typeInt, number)
 
-            val callDetail = CallDetail(number, type, date, duration, location, dir)
+            val callDetail = CallDetail(number, dir.toString(), date, duration, location, dir)
             calls.add(callDetail)
         }
         curs.close()

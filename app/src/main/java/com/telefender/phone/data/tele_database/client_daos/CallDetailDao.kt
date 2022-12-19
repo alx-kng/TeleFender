@@ -5,29 +5,77 @@ import com.telefender.phone.data.tele_database.entities.CallDetail
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface CallDetailDao {
+interface CallDetailDao: StoredMapDao {
 
     @Transaction
-    suspend fun insertDetailSync(callDetail: CallDetail) {
-        if (callDetailExists(callDetail.callEpochDate)) {
-            syncDetail(
-                callDetail.callEpochDate,
-                callDetail.callType,
-                callDetail.callLocation,
-                callDetail.callDuration,
-                callDetail.callDirection
-            )
-        } else {
-            insertDetailIgnore(callDetail)
+    suspend fun insertDetailSync(instanceNumber: String, callDetail: CallDetail) : Boolean {
+        with(callDetail) {
+            if (callDetailExists(callEpochDate)) {
+                /*
+                Makes sure call is not synced before setting values. Preserves memory lifetime
+                by decreasing unnecessary writes.
+                 */
+                if (callSynced(callEpochDate) == null) {
+                    syncDetail(
+                        callEpochDate,
+                        callType,
+                        callLocation,
+                        callDuration,
+                        callDirection
+                    )
+
+                    updateStoredMap(
+                        instanceNumber,
+                        null,
+                        null,
+                        null,
+                        callEpochDate
+                    )
+
+                    return true
+                }
+            } else {
+                insertDetailIgnore(this)
+
+                updateStoredMap(
+                    instanceNumber,
+                    null,
+                    null,
+                    null,
+                    callEpochDate
+                )
+
+                return true
+            }
+
+            return false
         }
     }
 
+    /**
+     * Purposely don't set callType so that sync knows that this CallDetail is not synced
+     * (only if inserted first <-> else statement).
+     */
     @Transaction
-    suspend fun insertDetailClient(callDetail: CallDetail) {
+    suspend fun insertDetailSkeleton(callDetail: CallDetail) {
         if (callDetailExists(callDetail.callEpochDate)) {
-            updateUnallowed(callDetail.callEpochDate, callDetail.unallowed)
+            with(callDetail) {
+                updateUnallowed(callEpochDate, unallowed)
+            }
         } else {
-            insertDetailIgnore(callDetail)
+            val unSyncedCallDetail = with(callDetail) {
+                CallDetail(
+                    number,
+                    null,
+                    callEpochDate,
+                    callDuration,
+                    callLocation,
+                    callDirection,
+                    unallowed
+                )
+            }
+
+            insertDetailIgnore(unSyncedCallDetail)
         }
     }
 
@@ -47,7 +95,7 @@ interface CallDetailDao {
         callType: String?,
         callLocation: String?,
         callDuration: Long?,
-        callDirection: String?
+        callDirection: Int?,
     )
 
     @Query("""
@@ -62,6 +110,12 @@ interface CallDetailDao {
 
     @Query("SELECT EXISTS (SELECT * FROM call_detail WHERE callEpochDate = :callEpochDate)")
     suspend fun callDetailExists(callEpochDate: Long) : Boolean
+
+    /**
+     * Check synced by whether or not callType was set or not.
+     */
+    @Query("SELECT callType FROM call_detail WHERE callEpochDate = :callEpochDate")
+    suspend fun callSynced(callEpochDate: Long) : String?
 
     @Query("SELECT * FROM call_detail ORDER BY callEpochDate DESC")
     fun getFlowCallDetails(): Flow<List<CallDetail>>

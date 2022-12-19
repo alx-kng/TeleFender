@@ -29,8 +29,7 @@ object ServerHelpers {
     
     @SuppressLint("MissingPermission")
     suspend fun downloadPostRequest(context: Context, repository: ClientRepository, scope: CoroutineScope) {
-        val tMgr = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
-        val instanceNumber = MiscHelpers.cleanNumber(tMgr.line1Number)!!
+        val instanceNumber = MiscHelpers.getInstanceNumber(context)
 
         var downloadRequestJson: String? = null
         val url = "https://dev.scribblychat.com/callbook/downloadChanges"
@@ -40,7 +39,7 @@ object ServerHelpers {
          * server changeID to communicate with server correctly
          */
         withContext(Dispatchers.IO) {
-            val key = repository.getClientKey(instanceNumber)
+            val key = repository.getClientKey(instanceNumber!!)
             val lastChangeID = repository.getLastChangeID()
 
             if (key != null) {
@@ -329,10 +328,7 @@ object ServerHelpers {
         scope: CoroutineScope,
         token: String
     ) {
-        val tMgr = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
-        val instanceNumber: String = MiscHelpers.cleanNumber(tMgr.line1Number)!!
-
-
+        val instanceNumber = MiscHelpers.getInstanceNumber(context)!!
         val url = "" // TODO unknown
 
         withContext(Dispatchers.IO) {

@@ -82,15 +82,25 @@ class Connection(val call: Call?) {
     }
 }
 
+enum class HandleMode {
+    BLOCK_MODE, SILENCE_MODE, ALLOW_MODE;
+
+    fun toInt() : Int {
+        return this.ordinal
+    }
+
+    companion object {
+        fun Int.toHandleMode() : HandleMode {
+            return values()[this]
+        }
+    }
+}
+
 object CallManager {
 
-    val BLOCK_MODE = 0
-    val SILENCE_MODE = 1
-    val ALLOW_MODE = 2
-
     // TODO: Store current block mode in database.
-    private var _currentMode = SILENCE_MODE
-    val currentMode : Int
+    private var _currentMode = HandleMode.SILENCE_MODE
+    val currentMode : HandleMode
         get() = _currentMode
 
     /**
@@ -148,10 +158,8 @@ object CallManager {
      */
     fun updateFocusedConnection() {
         for (connection in connections) {
-            if (connection.state == Call.STATE_RINGING
-                || connection.state == Call.STATE_CONNECTING
-                || connection.state == Call.STATE_DIALING
-                || connection.state == Call.STATE_NEW
+            if (connection.state in listOf(
+                    Call.STATE_RINGING, Call.STATE_CONNECTING, Call.STATE_DIALING, Call.STATE_NEW)
             ) {
                 _focusedConnection.value = connection
                 return
@@ -323,6 +331,7 @@ object CallManager {
     }
 
     fun answer() {
+        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: ANSWER PRESSED ==============================================")
         focusedConnection.value?.call?.answer(VideoProfile.STATE_AUDIO_ONLY)
     }
 

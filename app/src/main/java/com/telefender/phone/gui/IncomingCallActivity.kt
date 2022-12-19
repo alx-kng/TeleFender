@@ -6,14 +6,12 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
-import android.telecom.Call
+import android.provider.CallLog
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Observer
 import com.telefender.phone.App
-import com.telefender.phone.call_related.AudioHelpers
-import com.telefender.phone.call_related.CallManager
-import com.telefender.phone.call_related.getStateCompat
-import com.telefender.phone.call_related.number
+import com.telefender.phone.call_related.*
 import com.telefender.phone.data.tele_database.TeleCallDetails
 import com.telefender.phone.databinding.ActivityIncomingCallBinding
 import com.telefender.phone.helpers.MiscHelpers
@@ -21,11 +19,41 @@ import kotlinx.coroutines.*
 import timber.log.Timber
 
 
+/*
+TODO: Provide way to access incoming activity from main activity in case user gets rid of this
+ activity from the Recents screen.
+
+TODO: Just saw another small bug where the original default dialer suddenly took over during
+ incoming call (after leaving phone all night). However, our app returned after we reentered app.
+ Don't know how big of a problem this is.
+ */
 class IncomingCallActivity : AppCompatActivity() {
 
-    private val silenceDelay: Long = 10000L
     private lateinit var binding: ActivityIncomingCallBinding
     private val scope = CoroutineScope(Dispatchers.Default)
+
+    private val silenceDelay: Long = 10000L
+    private val incomingCall = CallManager.focusedCall
+    private var answered = false
+    private var unallowed = false
+    private var rejected = false
+
+    /**
+     * Finishes activity if there is no incoming call. Used to finish activity for all cases,
+     * including other user hangup, unallowed hangup, user answer / hangup.
+     *
+     * NOTE: In order to cancel [observer], you must use the Observer constructor with lambda,
+     * other wise, removeObserver() won't be able to find a reference to the observer.
+     */
+    private val observer = Observer { isIncoming: Boolean->
+        if (!isIncoming) {
+            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: INCOMING FINISHED: focusedCall state: ${
+                CallManager.callStateString(CallManager.focusedCall.getStateCompat())}")
+
+            scope.cancel()
+            finish()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,42 +69,30 @@ class IncomingCallActivity : AppCompatActivity() {
          */
         Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: SAFE - ${intent.extras?.getBoolean("Safe")}")
         val safe = intent.extras?.getBoolean("Safe") ?: true
-        if (!safe && CallManager.currentMode == CallManager.SILENCE_MODE) {
+        if (!safe && CallManager.currentMode == HandleMode.SILENCE_MODE) {
             scope.launch {
                 silenceHangup()
             }
         }
 
-        /**
-         * Finishes activity if there is no incoming call. Used for case where other user hangs up.
-         */
-        CallManager.incomingCallLiveData.observe(this) { isIncoming ->
-            if (!isIncoming) {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: INCOMING FINISHED: focusedCall state: ${
-                    CallManager.callStateString(CallManager.focusedCall.getStateCompat())}")
-
-                scope.cancel()
-                finish()
-            }
-        }
+        CallManager.incomingCallLiveData.observeForever(observer)
 
         binding.displayNumber.text = CallManager.focusedCall.number() ?: "Unknown number"
 
         binding.answerIncoming.setOnClickListener {
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: ANSWER PRESSED")
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: Silence Block Action: No block action taken because call was answered by user.")
 
             CallManager.lastAnsweredCall = CallManager.focusedCall
+            scope.cancel()
+            answered = true
             CallManager.answer()
             InCallActivity.start(this)
-            scope.cancel()
-            finish()
         }
 
         binding.hangupIncoming.setOnClickListener {
-            CallManager.hangup()
             scope.cancel()
-            finish()
+            rejected = true
+            CallManager.hangup()
         }
     }
 
@@ -85,15 +101,34 @@ class IncomingCallActivity : AppCompatActivity() {
         _running = true
     }
 
+    /**
+     * TODO: If incoming call is hanged up too quickly, very rarely unallowed is null somehow?
+     */
+    override fun finish() {
+        CallManager.incomingCallLiveData.removeObserver(observer)
+
+        if (!answered) {
+            val repository = ((CallService.context?.applicationContext) as App).repository
+
+            val direction = when (unallowed) {
+                true -> CallLog.Calls.BLOCKED_TYPE
+                false -> if (rejected) CallLog.Calls.REJECTED_TYPE else CallLog.Calls.MISSED_TYPE
+            }
+            TeleCallDetails.insertCallDetail(repository, incomingCall!!, unallowed, direction)
+        }
+
+        super.finish()
+    }
+
     override fun onDestroy() {
-        super.onDestroy()
-
-        _running = false
-
         /**
-         * Sets the ringer mode back to normal. Using a runnable doesn't seem necessary.
+         * Sets the running status to false and ringer mode back to normal.
+         * Using a runnable doesn't seem necessary.
          */
+        _running = false
         AudioHelpers.ringerSilent(this, false)
+
+        super.onDestroy()
     }
 
     /**
@@ -104,32 +139,28 @@ class IncomingCallActivity : AppCompatActivity() {
     }
 
     /**
-     * TODO: Double check if focusedCall correctly used here. Additionally, does this match with the
-     *  scope.cancel() usage. The problem is that if the scope.cancel() is called due to hangup,
-     *  should we still set unallowed in call logs??? Maybe shouldn't handle answer case here as
-     *  well, since it doesn't do anythign.
+     * TODO: Double check logic
      *
-     *  Hangup in silence mode if unsafe call isn't already answered or declined.
-     *  If incoming unsafe call is successfully unallowed using silenceHangup() (that is, before
-     *  the scope is cancelled due to user answer or decline), then
+     * Hangup in silence mode if unsafe call isn't already answered, declined, or disconnected.
+     * If incoming unsafe call is successfully unallowed using silenceHangup() (that is, before
+     * the scope is cancelled due to user answer or decline), then insert into CallDetail table
+     * that the call was unallowed. If incoming unsafe call is hung up by other user, then do
+     * nothing, as CallDetail was already inserted into CallDetail table inside observer.
      *
+     * Don't need to check call state, since case when other user / phone disconnects is handled
+     * by incomingCall observer (as well as answer and hangup cases).
      */
     private suspend fun silenceHangup() {
-        val callState = CallManager.focusedCall.getStateCompat()
-
-        delay(silenceDelay)
-
-        if (callState != Call.STATE_DISCONNECTED
-            && callState != Call.STATE_DISCONNECTING) {
-
-            val repository = (applicationContext as App).repository
-            TeleCallDetails.insertCallDetail(CallManager.focusedCall!!, true, repository)
-
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: " +
-                "Silence Block Action: Block action was taken because call was not answered or disconnected by user.")
-
-            CallManager.hangup()
+        for (i in 1..10) {
+            Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: INSIDE SILENCE HANGUP $i")
+            delay(silenceDelay / 10)
         }
+
+        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: " +
+            "Silence Block Action: Block action was taken because call was not answered or disconnected by user.")
+
+        unallowed = true
+        CallManager.hangup()
     }
 
     /**
@@ -137,7 +168,7 @@ class IncomingCallActivity : AppCompatActivity() {
      *
      * Shows activity over lock screen.
      */
-    fun showOverLockScreen() {
+    private fun showOverLockScreen() {
 
         /**
          * Only wake screen if screen isn't on. Otherwise, just set to show over lock screen.

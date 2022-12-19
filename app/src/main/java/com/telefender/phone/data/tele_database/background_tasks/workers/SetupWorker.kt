@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
-import android.telephony.TelephonyManager
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.work.*
@@ -17,6 +16,7 @@ import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkerType
 import com.telefender.phone.gui.MainActivity
 import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.permissions.PermissionRequester
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import timber.log.Timber
@@ -26,7 +26,12 @@ import java.util.concurrent.TimeUnit
 object SetupScheduler {
     val setupTag = "setupWorker"
 
-    fun initiateSetupWorker(context: Context): UUID {
+    fun initiateSetupWorker(context: Context): UUID? {
+        if (!PermissionRequester.hasLogPermissions(context)) {
+            Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: No log permissions in initiateSetupWorker()")
+            return null
+        }
+
         WorkerStates.setState(WorkerType.SETUP, WorkInfo.State.RUNNING)
 
         val uploadRequest = OneTimeWorkRequestBuilder<CoroutineSetupWorker>()
@@ -54,6 +59,7 @@ class CoroutineSetupWorker(
 
     var NOTIFICATION_ID = 4324
     val CHANNEL_ID = "alxkng5737"
+    val scope = CoroutineScope(Dispatchers.IO)
 
     @RequiresApi(Build.VERSION_CODES.O)
     override suspend fun doWork() : Result {
@@ -66,11 +72,9 @@ class CoroutineSetupWorker(
         }
 
         val repository : ClientRepository = (applicationContext as App).repository
-        val scope = CoroutineScope(Dispatchers.IO)
+        val instanceNumber = MiscHelpers.getInstanceNumber(context)
 
         // Stops worker if user is already setup.
-        val tMgr = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-        val instanceNumber = MiscHelpers.cleanNumber(tMgr.line1Number)
         if (repository.hasCredKey(instanceNumber!!)) {
             return Result.success()
         }
