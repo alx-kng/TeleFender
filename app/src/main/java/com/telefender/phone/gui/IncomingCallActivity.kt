@@ -35,7 +35,7 @@ class IncomingCallActivity : AppCompatActivity() {
     private val silenceDelay: Long = 10000L
     private val incomingCall = CallManager.focusedCall
     private var answered = false
-    private var unallowed = false
+    private var unallowed : Boolean? = false
     private var rejected = false
 
     /**
@@ -103,6 +103,8 @@ class IncomingCallActivity : AppCompatActivity() {
 
     /**
      * TODO: If incoming call is hanged up too quickly, very rarely unallowed is null somehow?
+     *  Only happened once and hasn't happened since, but keep an eye on it.
+     *  For now, we make unallowed nullable just in case.
      */
     override fun finish() {
         CallManager.incomingCallLiveData.removeObserver(observer)
@@ -112,9 +114,13 @@ class IncomingCallActivity : AppCompatActivity() {
 
             val direction = when (unallowed) {
                 true -> CallLog.Calls.BLOCKED_TYPE
-                false -> if (rejected) CallLog.Calls.REJECTED_TYPE else CallLog.Calls.MISSED_TYPE
+                false, null -> {
+                    if (rejected) CallLog.Calls.REJECTED_TYPE else CallLog.Calls.MISSED_TYPE
+                }
             }
-            TeleCallDetails.insertCallDetail(repository, incomingCall!!, unallowed, direction)
+
+            val unallowedParam = unallowed ?: false
+            TeleCallDetails.insertCallDetail(repository, incomingCall!!, unallowedParam, direction)
         }
 
         super.finish()
