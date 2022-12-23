@@ -6,13 +6,14 @@ import androidx.annotation.RequiresApi
 import androidx.room.Dao
 import androidx.room.Transaction
 import com.telefender.phone.data.tele_database.ClientRepository
-import com.telefender.phone.helpers.MiscHelpers
 import com.telefender.phone.data.tele_database.entities.ChangeLog
+import com.telefender.phone.helpers.MiscHelpers
 
+// TODO: Can we still use UploadAgent? It seems like it could be a good structure.
 @Deprecated("UploadAgentDao shouldn't be used. Use ServerHelpers")
 @Dao
-interface UploadAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
-    ChangeLogDao, QueueToExecuteDao, QueueToUploadDao {
+interface UploadAgentDao: InstanceDao, ContactDao, ContactNumberDao,
+    ChangeLogDao, ExecuteQueueDao, UploadQueueDao {
 
     @RequiresApi(Build.VERSION_CODES.N)
     suspend fun uploadAll(context : Context, repository: ClientRepository) {
@@ -34,16 +35,7 @@ interface UploadAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
         val changeLog = getChangeLogRow(firstID)
 
         uploadToServer(
-            changeLog.changeID,
-            changeLog.instanceNumber,
-            changeLog.changeTime,
-            changeLog.type,
-            changeLog.CID,
-            changeLog.oldNumber,
-            changeLog.number,
-            changeLog.parentNumber,
-            changeLog.trustability,
-            changeLog.counterValue,
+            changeLog,
             context, 
             repository
         )
@@ -53,43 +45,37 @@ interface UploadAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
      */
     @RequiresApi(Build.VERSION_CODES.N)
     suspend fun uploadToServer(
-        changeID: String,
-        instanceNumber: String?,
-        changeTime: Long,
-        type: String,
-        CID : String?,
-        oldNumber : String?,
-        number : String?,
-        parentNumber : String?,
-        trustability : Int?,
-        counterValue : Int?,
+        changeLog: ChangeLog,
         context : Context,
         repository: ClientRepository
     ) {
 
-        val cleanInstanceNumber = MiscHelpers.cleanNumber(instanceNumber)
-        val cleanOldNumber = MiscHelpers.cleanNumber(oldNumber)
-        val cleanNumber = MiscHelpers.cleanNumber(number)
-        val cleanParentNumber = MiscHelpers.cleanNumber(parentNumber)
+        with(changeLog) {
+            val cleanInstanceNumber = MiscHelpers.cleanNumber(instanceNumber)
+            val cleanOldNumber = MiscHelpers.cleanNumber(oldNumber)
+            val cleanNumber = MiscHelpers.cleanNumber(number)
 
-        val changeLog = ChangeLog(
-            changeID,
-            cleanInstanceNumber,
-            changeTime,
-            type,
-            CID,
-            cleanOldNumber,
-            cleanNumber,
-            cleanParentNumber,
-            trustability,
-            counterValue
-        )
+            val cleanedChangeLog = ChangeLog(
+                changeID = changeID,
+                instanceNumber = cleanInstanceNumber,
+                changeTime = changeTime,
+                type = type,
+                CID = CID,
+                oldNumber = cleanOldNumber,
+                number = cleanNumber,
+                blocked = blocked,
+                degree = degree,
+                counterValue = counterValue,
+                errorCounter = errorCounter,
+                serverChangeID = serverChangeID,
+            )
 
-        //val changeLogAsJson = changeLogToJson(changeLog)
-        val url = " " // TODO url?
-        //uploadPostRequest(changeLogAsJson, url, context, repository)
-        
-        // TODO get result code from post to server so we can delete corresponding QTU
+            //val changeLogAsJson = changeLogToJson(changeLog)
+            val url = " " // TODO url?
+            //uploadPostRequest(changeLogAsJson, url, context, repository)
+
+            // TODO get result code from post to server so we can delete corresponding QTU
+        }
     }
 
     @Transaction

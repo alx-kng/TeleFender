@@ -82,15 +82,3 @@ data class CallDetail(
         )
     }
 }
-
-@Entity(tableName = "safe_log")
-data class SafeLog(
-    @PrimaryKey val number: String,
-    val callEpochDate: Long
-    ) {
-
-    override fun toString(): String {
-        return "number: $number callEpochDate: $callEpochDate"
-    }
-}
-

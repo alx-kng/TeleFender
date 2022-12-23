@@ -121,13 +121,16 @@ object DefaultContacts {
     }
 
     /**
+     * TODO: Look into whether using _ID is correct. That is, we don't want the id of a default
+     *  contact to change, as our CID depends on it.
+     *
      * Returns a cursor containing all aggregate column rows in Android's Contact table
      */
     fun getContactCursor(
         contactHelper: ContentResolver
     ): Cursor? {
         val projection = arrayOf(
-            ContactsContract.Contacts._ID,
+            ContactsContract.Contacts._ID
         )
         var cur: Cursor? = null
         try {

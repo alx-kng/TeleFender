@@ -17,7 +17,7 @@ import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkerType
 import com.telefender.phone.data.tele_database.entities.ChangeLog
-import com.telefender.phone.data.tele_database.entities.QueueToUpload
+import com.telefender.phone.data.tele_database.entities.UploadQueue
 import com.telefender.phone.helpers.MiscHelpers
 import kotlinx.coroutines.*
 import org.json.JSONException
@@ -94,19 +94,7 @@ object ServerHelpers {
                                                 if (changeLog.serverChangeID != null) {
 
                                                     // Inserts each change log into right tables
-                                                    repository.changeFromServer(
-                                                        changeLog.changeID,
-                                                        changeLog.instanceNumber,
-                                                        changeLog.changeTime,
-                                                        changeLog.type,
-                                                        changeLog.CID,
-                                                        changeLog.oldNumber,
-                                                        changeLog.number,
-                                                        changeLog.parentNumber,
-                                                        changeLog.trustability,
-                                                        changeLog.counterValue,
-                                                        changeLog.serverChangeID
-                                                    )
+                                                    repository.changeFromServer(changeLog)
 
                                                 } else {
                                                     Timber.i(
@@ -183,7 +171,7 @@ object ServerHelpers {
         val tMgr: TelephonyManager = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
         val instanceNumber = MiscHelpers.cleanNumber(tMgr.line1Number)!!
 
-        var uploadLogs: List<QueueToUpload>?
+        var uploadLogs: List<UploadQueue>?
         var uploadRequestJson: String? = null
         val url = "https://dev.scribblychat.com/callbook/uploadChanges"
 
@@ -233,7 +221,7 @@ object ServerHelpers {
                             }
                         /**
                          * If all upload logs are uploaded to the server successfully, we will delete
-                         * the corresponding upload logs from the QueueToUpload table
+                         * the corresponding upload logs from the UploadQueue table
                          */
                         scope.launch {
                             withContext(Dispatchers.IO) {

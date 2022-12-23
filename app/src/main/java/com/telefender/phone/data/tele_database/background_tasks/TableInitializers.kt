@@ -13,7 +13,6 @@ import com.telefender.phone.data.tele_database.ClientDBConstants.CHANGELOG_TYPE_
 import com.telefender.phone.data.tele_database.ClientDatabase
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.entities.ChangeLog
-import com.telefender.phone.data.tele_database.entities.QueueToExecute
 import com.telefender.phone.helpers.MiscHelpers
 import com.telefender.phone.permissions.PermissionRequester
 import timber.log.Timber
@@ -41,42 +40,30 @@ object TableInitializers {
 
     /**
      * Called once to initialize the Instance table for the first time during database initialization.
-     *
-     * Calls changeFromClient() to insert the instance insert change into QueueToExecute and ChangeLog
+     * Calls changeFromClient() to insert the instance insert change into ExecuteQueue and ChangeLog
      */
     @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("MissingPermission")
     suspend fun initInstance(context: Context, database: ClientDatabase) {
-
-        val changeID = UUID.randomUUID().toString() // create a new changeLog
-        val instanceNumber = MiscHelpers.getInstanceNumber(context) // get phone # of user
+        val changeID = UUID.randomUUID().toString()
         val changeTime = Instant.now().toEpochMilli() // get epoch time
-        val type = CHANGELOG_TYPE_INSTANCE_INSERT
+        val instanceNumber = MiscHelpers.getInstanceNumber(context) // get phone # of user
 
-        val changeLog = ChangeLog(
-            changeID,
-            instanceNumber,
-            changeTime,
-            type,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
+        database.changeAgentDao().changeFromClient(
+            ChangeLog(
+                changeID = changeID,
+                changeTime = changeTime,
+                type = CHANGELOG_TYPE_INSTANCE_INSERT,
+                instanceNumber = instanceNumber
+            )
         )
-
-        database.changeLogDao().insertChangeLog(changeLog)
-
-        val execLog = QueueToExecute(changeID, changeTime)
-        database.queueToExecuteDao().insertQTE(execLog)
     }
 
     /**
      * Called once to initialize the Contact table for the first time during database initialization.
      *
      * Uses getContactCursor() to get all Contacts from Android database and calls cursContactInsert
-     * for every item in the cursor, which adds the change to the QueueToExecute and ChangeLog using
+     * for every item in the cursor, which adds the change to the ExecuteQueue and ChangeLog using
      * changeFromClient()
      */
     @RequiresApi(Build.VERSION_CODES.O)
@@ -103,7 +90,7 @@ object TableInitializers {
     /**
      * Called once to initialize the ContactNumber table for the first time during database initialization.
      *
-     * Uses getContactNumberCursor() to get all ContactNumbers from Android database and calls
+     * Uses getContactNumberCursor() to get all ContactNumber from Android database and calls
      * cursContactNumberInsert() for every item in the cursor, which adds the change to the QueuetoExecute
      * and ChangeLog using changeFromClient()
      */
@@ -128,74 +115,70 @@ object TableInitializers {
     }
 
     /**
-     * Helper function to initContact(), adds current cursor item's Contact to QueueToExecute and
+     * TODO: Retrieve blocked status from default database?
+     *
+     * Helper function to initContact(), adds current cursor item's Contact to ExecuteQueue and
      * ChangeLog using changeFromClient(), also responsible for generating changeID, changeTime, and CID.
      * changeID is random, but CID is based on the ByteArray of the original Contact's ID along with parentNumber
      */
     @SuppressLint("MissingPermission")
     @RequiresApi(Build.VERSION_CODES.O)
     suspend fun cursContactInsert(cursor: Cursor, context : Context, database: ClientDatabase) {
-
         if (!PermissionRequester.hasLogPermissions(context)) {
             Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: No log permissions in cursContactInsert()")
             return
         }
 
-        val parentNumber = MiscHelpers.getInstanceNumber(context)
-
-        val cChangeID = UUID.randomUUID().toString()
+        val changeID = UUID.randomUUID().toString()
+        val instanceNumber = MiscHelpers.getInstanceNumber(context)
+        val CID = UUID.nameUUIDFromBytes((cursor.getString(0) + instanceNumber).toByteArray()).toString()
         val changeTime = Instant.now().toEpochMilli()
-        val CID = UUID.nameUUIDFromBytes((cursor.getString(0) + parentNumber).toByteArray()).toString()
+
 
         // To insert into Contacts table
         database.changeAgentDao().changeFromClient(
-            cChangeID,
-            null, // instanceNumber is only for inserting into the Instance table
-            changeTime,
-            CHANGELOG_TYPE_CONTACT_INSERT,
-            CID,
-            null,
-            null,
-            parentNumber,
-            null,
-            null
+            ChangeLog(
+                changeID = changeID,
+                changeTime = changeTime,
+                type = CHANGELOG_TYPE_CONTACT_INSERT,
+                instanceNumber = instanceNumber,
+                CID = CID
+            )
         )
     }
 
     /**
-     * Helper function to initContactNumber(), adds current cursor item's ContactNumber to QueueToExecute and
+     * Helper function to initContactNumber(), adds current cursor item's ContactNumber to ExecuteQueue and
      * ChangeLog using changeFromClient(), also responsible for generating changeID, changeTime, and CID.
-     * changeID is random, but CID is based on the ByteArray of the original ContactNumbers ID and parentNumber
+     * changeID is random, but CID is based on the ByteArray of the original ContactNumber ID and parentNumber
      */
     @SuppressLint("MissingPermission")
     @RequiresApi(Build.VERSION_CODES.O)
     suspend fun cursContactNumberInsert(cursor: Cursor, context : Context, database: ClientDatabase) {
-
         if (!PermissionRequester.hasLogPermissions(context)) {
             Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: No log permissions in cursContactNumberInsert()")
             return
         }
 
-        val parentNumber = MiscHelpers.getInstanceNumber(context)
-
-        val cnChangeID = UUID.randomUUID().toString()
+        val changeID = UUID.randomUUID().toString()
         val changeTime = Instant.now().toEpochMilli()
-        val CID = UUID.nameUUIDFromBytes((cursor.getString(0) + parentNumber).toByteArray()).toString()
+        val instanceNumber = MiscHelpers.getInstanceNumber(context)
+        val CID = UUID.nameUUIDFromBytes((cursor.getString(0) + instanceNumber).toByteArray()).toString()
         val number = cursor.getString(1)
         val versionNumber = cursor.getString(2).toInt()
 
-        // To insert into ContactNumbers table
+        // To insert into ContactNumber table
         database.changeAgentDao().changeFromClient(
-            cnChangeID,
-            null,
-            changeTime,
-            CHANGELOG_TYPE_CONTACT_NUMBER_INSERT,
-            CID,
-            null,
-            number,
-            null,
-            null,
-            versionNumber // Use counterValue column to pass in versionNumber change
+            ChangeLog(
+                changeID = changeID,
+                changeTime = changeTime,
+                type = CHANGELOG_TYPE_CONTACT_NUMBER_INSERT,
+                instanceNumber = instanceNumber,
+                CID = CID,
+                number = number,
+                degree = 0, // 0 means direct contact number
+                counterValue = versionNumber // Use counterValue column to pass in versionNumber change
+            )
         )
     }
 }

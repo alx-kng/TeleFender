@@ -15,6 +15,18 @@ interface StoredMapDao {
     suspend fun hasCredKey(instanceNumber: String) : Boolean {
         return getCredKey(instanceNumber) != null
     }
+
+    suspend fun getUserNumber() : String? {
+        val storedMap = getStoredMapAsList().firstOrNull()
+        return storedMap?.userNumber
+    }
+
+    /**
+     * Specifically used for retrieving user's number. Since we're retrieving without PK, we need
+     * to return a list of StoredMap.
+     */
+    @Query("SELECT * FROM stored_map")
+    suspend fun getStoredMapAsList(): List<StoredMap>
     
     @Query("SELECT sessionID FROM stored_map WHERE userNumber = :number")
     suspend fun getSessionID(number: String?): String?
@@ -37,11 +49,11 @@ interface StoredMapDao {
     @Query(
         """UPDATE stored_map SET 
         sessionID =
-            CASE
-                WHEN :sessionId IS NOT NULL
-                    THEN :sessionId
-                ELSE sessionID
-            END,
+        CASE
+            WHEN :sessionId IS NOT NULL
+                THEN :sessionId
+            ELSE sessionID
+        END,
         clientKey =
             CASE
                 WHEN :clientKey IS NOT NULL

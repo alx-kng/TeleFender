@@ -18,7 +18,7 @@ data class StoredMap(
 ) {
 
     override fun toString() : String {
-        return "STOREDMAP - number" + this.userNumber + " sessionID: " + this.sessionID + " clientKey: " + this.clientKey + " fireBaseToken: " + this.fireBaseToken
+        return "STORED MAP - number" + this.userNumber + " sessionID: " + this.sessionID + " clientKey: " + this.clientKey + " fireBaseToken: " + this.fireBaseToken
     }
 }
 
@@ -31,48 +31,60 @@ data class Instance(
     }
 }
 
+// TODO: Make sure that nothing uses the Cascade delete in its calculations.
 @Entity(tableName = "contact",
     foreignKeys = [ForeignKey(
         entity = Instance::class,
         parentColumns = arrayOf("number"),
-        childColumns = arrayOf("parentNumber"),
-        onDelete = ForeignKey.CASCADE
+        childColumns = arrayOf("instanceNumber"),
+        onDelete = ForeignKey.NO_ACTION
     )],
-    indices = [Index(value = ["parentNumber"])]
+    indices = [Index(value = ["instanceNumber"])]
 )
 data class Contact(
     @PrimaryKey val CID: String,
-    val parentNumber : String) {
+    val instanceNumber : String,
+    val blocked: Boolean = false) {
 
     override fun toString() : String {
-        return "CONTACT -  CID: " + this.CID  +  " parentNumber: " + this.parentNumber
+        return "CONTACT -  CID: $CID instanceNumber: $instanceNumber blocked: $blocked"
     }
 }
 
-@Entity(tableName = "contact_numbers",
+// TODO: Finish adding instance number column.
+@Entity(tableName = "contact_number",
     primaryKeys = ["CID", "number"],
-    foreignKeys = [ForeignKey(
+    foreignKeys = [
+        ForeignKey(
             entity = Contact::class,
             parentColumns = arrayOf("CID"),
             childColumns = arrayOf("CID"),
-            onDelete = ForeignKey.CASCADE 
-            )],
+            onDelete = ForeignKey.NO_ACTION
+            ),
+        ForeignKey(
+            entity = Instance::class,
+            parentColumns = arrayOf("number"),
+            childColumns = arrayOf("instanceNumber"),
+            onDelete = ForeignKey.NO_ACTION
+        )],
     indices = [Index(value = ["number"])]
 )
-data class ContactNumbers(
+data class ContactNumber(
     val CID: String,
-    val number : String,
-    val versionNumber: Int = 0
+    val number: String,
+    val instanceNumber: String,
+    val versionNumber: Int = 0,
+    val degree: Int
 ) {
     override fun equals(other: Any?): Boolean {
-        if (other is ContactNumbers) {
-            return (this.CID == other.CID && this.number == other.number)
+        return if (other is ContactNumber) {
+            (this.CID == other.CID && this.number == other.number)
         } else {
-            return false
+            false
         }
     }
     override fun toString() : String {
-        return "CONTACTNUMBER -  CID: " + this.CID  +  " number: " + this.number +
+        return "CONTACT NUMBER -  CID: " + this.CID  +  " number: " + this.number +
             " versionNumber: " + this.versionNumber
     }
 
@@ -84,34 +96,36 @@ data class ContactNumbers(
     }
 }
 
-@Entity(tableName = "trusted_numbers")
-data class TrustedNumbers(
+/**
+ * Currently not using [algoAllowed]. Instead, we will calculate on the spot.
+ */
+@Entity(tableName = "analyzed_number")
+data class AnalyzedNumber(
     @PrimaryKey val number: String,
-    val counter: Int = 1) {
+    val algoAllowed: Boolean? = null, // currently not using this value.
+    val notifyGate: Int? = null,
+    val lastCallTime: Long? = null,
+    val numIncoming: Int? = null,
+    val numOutgoing: Int? = null,
+    val maxDuration: Long? = null,
+    val avgDuration: Long? = null,
+    val smsVerified: Boolean? = null,
+    val markedSafe: Boolean? = null,
+    val isBlocked: Boolean? = null,
+    val numMarkedBlocked: Int? = null,
+    val numSharedContacts: Int? = null,
+    val isOrganization: Boolean? = null,
+    val minDegree: Int? = null,
+    val numTreeContacts: Int? = null,
+    val degreeString: String? = null
+) {
 
     override fun toString() : String {
-        return "TRUSTEDNUMBER - number : " + this.number + " counter: " + this.counter
+        return "ANALYZED NUMBER: number: $number algoAllowed: $algoAllowed notifyGate: $notifyGate" +
+            " lastCallTime: $lastCallTime numIncoming: $numIncoming numOutgoing: $numOutgoing" +
+            " maxDuration: $maxDuration avgDuration: $avgDuration smsVerified: $smsVerified" +
+            " markedSafe: $markedSafe isBlocked: $isBlocked numMarkedBlocked: $numMarkedBlocked" +
+            " numSharedContacts: $numSharedContacts isOrganization: $isOrganization" +
+            " minDegree: $minDegree numTreeContacts: $numTreeContacts degreeString: $degreeString"
     }
 }
-
-@Entity(tableName = "organizations")
-data class Organizations(
-    @PrimaryKey val number: String,
-    val counter: Int = 1) {
-
-    override fun toString() : String {
-        return "ORGANIZATIONS - number : " + this.number + " counter: " + this.counter
-    }
-}
-
-@Entity(tableName = "miscellaneous")
-data class Miscellaneous(
-    @PrimaryKey val number: String,
-    val counter: Int = 1,
-    val trustability: Int = 1) {
-
-    override fun toString() : String {
-        return "MISCELLANEOUS - number : " + this.number + " counter: " + this.counter  + " trustability: " + this.trustability
-    }
-}
-

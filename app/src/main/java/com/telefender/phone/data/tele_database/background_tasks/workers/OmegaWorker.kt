@@ -158,7 +158,7 @@ class CoroutineOmegaWorker(
             }
 
             /**
-             * Executes logs in QueueToExecute
+             * Executes logs in ExecuteQueue
              */
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA EXECUTE STARTED")
             repository.executeAll()

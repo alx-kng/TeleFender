@@ -31,33 +31,32 @@ import kotlinx.coroutines.runBlocking
 import timber.log.Timber
 
 @Database(entities = [
-    CallDetail::class,
+    ChangeLog::class,
+    ExecuteQueue::class,
+    UploadQueue::class,
     StoredMap::class,
+    CallDetail::class,
     Instance::class,
     Contact::class,
-    ContactNumbers::class,
-    TrustedNumbers::class,
-    Organizations::class,
-    Miscellaneous::class,
-    ChangeLog::class,
-    QueueToExecute::class,
-    QueueToUpload::class,
-    SafeLog::class
+    ContactNumber::class,
+    AnalyzedNumber::class
 ], version = 1, exportSchema = false)
 abstract class ClientDatabase : RoomDatabase() {
 
-    abstract fun instanceDao() : InstanceDao
-    abstract fun callDetailDao() : CallDetailDao
     abstract fun changeAgentDao() : ChangeAgentDao
-    abstract fun changeLogDao() : ChangeLogDao
     abstract fun uploadAgentDao() : UploadAgentDao
     abstract fun executeAgentDao() : ExecuteAgentDao
+
+    abstract fun changeLogDao() : ChangeLogDao
+    abstract fun executeQueueDao() : ExecuteQueueDao
+    abstract fun uploadQueueDao() : UploadQueueDao
     abstract fun storedMapDao() : StoredMapDao
-    abstract fun queueToExecuteDao() : QueueToExecuteDao
-    abstract fun queueToUploadDao() : QueueToUploadDao
+
+    abstract fun callDetailDao() : CallDetailDao
+    abstract fun instanceDao() : InstanceDao
     abstract fun contactDao() : ContactDao
-    abstract fun contactNumbersDao() : ContactNumbersDao
-    abstract fun safeLogDao() : SafeLogDao
+    abstract fun contactNumberDao() : ContactNumberDao
+    abstract fun analyzedNumberDao() : AnalyzedNumberDao
 
     private class ClientDatabaseCallback(
         private val scope: CoroutineScope,

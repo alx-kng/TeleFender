@@ -12,11 +12,14 @@ interface ContactDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertContact(vararg contact: Contact)
 
-    @Query("SELECT ParentNumber FROM contact WHERE CID = :CID")
-    suspend fun getParentNumber(CID: String): String
+    @Query("UPDATE contact SET blocked = :blocked WHERE CID = :CID")
+    suspend fun updateContactBlocked(CID: String, blocked: Boolean)
+
+    @Query("SELECT instanceNumber FROM contact WHERE CID = :CID")
+    suspend fun getInstanceNumber(CID: String): String
     
-    @Query("SELECT * FROM contact WHERE parentNumber = :parentNumber")
-    suspend fun getContacts_ParentNumber(parentNumber : String) : List<Contact>
+    @Query("SELECT * FROM contact WHERE instanceNumber = :instanceNumber")
+    suspend fun getContactsByInstance(instanceNumber : String) : List<Contact>
     
     @Query("SELECT * FROM contact WHERE CID = :CID")
     suspend fun getContactRow(CID: String): Contact

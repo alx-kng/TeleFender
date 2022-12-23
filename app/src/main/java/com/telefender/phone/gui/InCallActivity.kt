@@ -14,6 +14,10 @@ import com.telefender.phone.databinding.ActivityInCallBinding
 import com.telefender.phone.helpers.MiscHelpers
 import timber.log.Timber
 
+/**
+ * TODO: Rare bug where call is sent even after you press hangup (particularly, when you hangup
+ *  immediately after sending call), and the call connects, but the InCallActivity doesn't show.
+ */
 class InCallActivity : AppCompatActivity() {
 
     private val CHANNEL_ID = "alxkng5737"

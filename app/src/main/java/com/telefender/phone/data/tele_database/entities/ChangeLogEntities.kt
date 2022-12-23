@@ -6,38 +6,36 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.squareup.moshi.JsonClass
 
+
+// TODO: Why is rowID the PK?
 @JsonClass(generateAdapter = true)
 @Entity(tableName = "change_log",
     indices = [Index(value = ["changeID"], unique = true)],
-
 )
 data class ChangeLog(
-
-    val changeID: String, 
-    val instanceNumber: String?,
+    val changeID: String,
     val changeTime: Long,
     val type: String,
-    val CID : String?,
-    val oldNumber : String?,
-    val number : String?,
-    val parentNumber : String?,
-    val trustability : Int?,
-    val counterValue : Int?,
+    val instanceNumber: String? = null,
+    val CID : String? = null,
+    val number : String? = null,
+    val oldNumber : String? = null,
+    val blocked : Boolean? = null,
+    val degree : Int? = null,
+    val counterValue : Int? = null,
     val errorCounter : Int = 0,
     val serverChangeID : Int? = null,
     @PrimaryKey(autoGenerate = true)
     val rowID : Int = 0
-
 ) {
-
     override fun toString(): String {
-        return ("CHANGELOG: rowID: " + this.rowID + " changeID: " + this.changeID + " TYPE: " + this.type + " instanceNumber: " + this.instanceNumber +
-            " changeTime: " + this.changeTime + " CID: " + this.CID +
-            " number: " + this.number + " parentNumber: " + this.parentNumber)
+        return "CHANGELOG: rowID: $rowID changeID: $changeID TYPE: $type " +
+            "instanceNumber: $instanceNumber changeTime: $changeTime CID: $CID " +
+            "number: $number"
     }
 }
 
-@Entity(tableName = "queue_to_upload",
+@Entity(tableName = "upload_queue",
     foreignKeys = [
         ForeignKey(
             entity = ChangeLog::class,
@@ -45,31 +43,30 @@ data class ChangeLog(
             childColumns = arrayOf("changeID"),
             onDelete = ForeignKey.CASCADE),
     ])
-data class QueueToUpload(
+data class UploadQueue(
     @PrimaryKey val changeID: String,
     val createTime: Long,
     val rowID: Int,
     val errorCounter: Int = 0
-
     ) {
     override fun toString() : String {
-        return ("UPLOADLOG: changeID: " + this.changeID + " createTime: " + this.createTime + " errorCounter: " + this.errorCounter)
+        return ("UPLOAD LOG: changeID: " + this.changeID + " createTime: " + this.createTime + " errorCounter: " + this.errorCounter)
     }
 }
 
-@Entity(tableName = "queue_to_execute",
+@Entity(tableName = "execute_queue",
    foreignKeys = [ForeignKey(
             entity = ChangeLog::class,
             parentColumns = arrayOf("changeID"),
             childColumns = arrayOf("changeID"),
             onDelete = ForeignKey.CASCADE
        )])
-data class QueueToExecute(
+data class ExecuteQueue(
     @PrimaryKey val changeID: String,
     val createTime : Long,
     val errorCounter : Int = 0
 ) {
     override fun toString() : String {
-        return ("EXECUTELOG: changeID: " + this.changeID + " createTime: " + this.createTime.toString() + " errorCounter: " + this.errorCounter)
+        return ("EXECUTE LOG: changeID: " + this.changeID + " createTime: " + this.createTime.toString() + " errorCounter: " + this.errorCounter)
     }
 }

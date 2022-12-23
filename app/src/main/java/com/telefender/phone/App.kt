@@ -32,18 +32,20 @@ class App : Application() {
     // TODO: See if this repository application context works
     val repository by lazy {
         ClientRepository(
-            database.callDetailDao(),
-            database.changeAgentDao(),
-            database.uploadAgentDao(),
-            database.changeLogDao(),
-            database.executeAgentDao(),
-            database.storedMapDao(),
-            database.queueToExecuteDao(),
-            database.queueToUploadDao(),
-            database.instanceDao(),
-            database.contactDao(),
-            database.contactNumbersDao(),
-            database.safeLogDao()
+            executeAgentDao = database.executeAgentDao(),
+            changeAgentDao = database.changeAgentDao(),
+            uploadAgentDao = database.uploadAgentDao(),
+
+            executeQueueDao = database.executeQueueDao(),
+            uploadQueueDao = database.uploadQueueDao(),
+            changeLogDao = database.changeLogDao(),
+            storedMapDao = database.storedMapDao(),
+
+            callDetailDao = database.callDetailDao(),
+            instanceDao = database.instanceDao(),
+            contactDao = database.contactDao(),
+            contactNumberDao = database.contactNumberDao(),
+            analyzedNumberDao = database.analyzedNumberDao()
         )
     }
 

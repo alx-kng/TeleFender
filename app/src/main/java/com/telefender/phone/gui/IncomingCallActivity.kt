@@ -103,7 +103,7 @@ class IncomingCallActivity : AppCompatActivity() {
 
     /**
      * TODO: If incoming call is hanged up too quickly, very rarely unallowed is null somehow?
-     *  Only happened once and hasn't happened since, but keep an eye on it.
+     *  Only happened once and hasn't happened since (in hundreds of calls), but keep an eye on it.
      *  For now, we make unallowed nullable just in case.
      */
     override fun finish() {

@@ -122,7 +122,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:id="@+id/historyButtons"
-                android:weightSum="100"
+                android:weightSum="2"
                 android:orientation="horizontal"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -133,7 +133,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="1sp"
-                    android:layout_weight="65"
+                    android:layout_weight="1"
                     android:padding="10sp"
                     android:text="Block"
                     android:textSize="17sp"
@@ -145,17 +145,20 @@
                 </com.google.android.material.button.MaterialButton>
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/business_button"
+                    android:id="@+id/safe_button"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="1sp"
-                    android:layout_weight="35"
+                    android:layout_weight="1"
                     android:padding="10sp"
-                    android:text="Mark Organization"
+                    android:text="Safe"
                     android:textSize="17sp"
                     android:textAllCaps="false"
-                    android:textColor="@color/business_green"
+                    android:textColor="@color/business_blue"
                     android:backgroundTint="@color/grey"
+                    tools:text="Unsafe"
+                    tools:backgroundTint="#4CAF50"
+                    tools:textColor="@color/white"
                     app:shapeAppearance="@style/ShapeAppearanceOverlay.Dodo.Button.RightRounded">
 
                 </com.google.android.material.button.MaterialButton>

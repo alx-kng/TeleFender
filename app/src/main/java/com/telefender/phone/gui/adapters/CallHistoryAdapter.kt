@@ -55,7 +55,7 @@ class CallHistoryAdapter (
         val number : TextView = view.findViewById(R.id.call_history_number)
         val date: TextView = view.findViewById(R.id.call_history_date)
         val blockButton: MaterialButton = view.findViewById(R.id.block_button)
-        val businessButton: MaterialButton = view.findViewById(R.id.business_button)
+        val businessButton: MaterialButton = view.findViewById(R.id.safe_button)
         val infoImage: MaterialButton = view.findViewById(R.id.info_image)
     }
 
@@ -184,8 +184,8 @@ class CallHistoryAdapter (
                  */
                 holder.businessButton.setOnClickListener { view ->
                     val button = view as MaterialButton
-                    if (button.text.toString().lowercase() == "mark organization") {
-                        button.text = "Unmark Organization"
+                    if (button.text.toString().lowercase() == "safe") {
+                        button.text = "Unsafe"
                         if (holder.blockButton.text.toString().lowercase() == "unblock") {
                             holder.blockButton.text = "Block"
                             holder.blockButton.setTextColor(ContextCompat.getColor(context, R.color.block_red))
@@ -193,10 +193,10 @@ class CallHistoryAdapter (
                         button.setTextColor(ContextCompat.getColor(context, R.color.business_blue))
 
                         // Set info image outline to show organization status
-                        holder.infoImage.setStrokeColorResource(R.color.business_green)
+                        holder.infoImage.setStrokeColorResource(R.color.business_blue)
                     } else {
-                        button.text = "Mark Organization"
-                        button.setTextColor(ContextCompat.getColor(context, R.color.business_green))
+                        button.text = "Safe"
+                        button.setTextColor(ContextCompat.getColor(context, R.color.business_blue))
 
                         // Set info image outline to show not organization status
                         holder.infoImage.setStrokeColorResource(R.color.grey)

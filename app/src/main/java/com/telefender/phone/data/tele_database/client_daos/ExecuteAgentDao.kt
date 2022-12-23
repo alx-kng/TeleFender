@@ -2,54 +2,25 @@ package com.telefender.phone.data.tele_database.client_daos
 
 import androidx.room.Dao
 import androidx.room.Transaction
-import com.telefender.phone.data.tele_database.ClientDBConstants.CHANGELOG_TYPE_CONTACT_DELETE
-import com.telefender.phone.data.tele_database.ClientDBConstants.CHANGELOG_TYPE_CONTACT_INSERT
-import com.telefender.phone.data.tele_database.ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_DELETE
-import com.telefender.phone.data.tele_database.ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_INSERT
-import com.telefender.phone.data.tele_database.ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_UPDATE
-import com.telefender.phone.data.tele_database.ClientDBConstants.CHANGELOG_TYPE_INSTANCE_DELETE
-import com.telefender.phone.data.tele_database.ClientDBConstants.CHANGELOG_TYPE_INSTANCE_INSERT
-import com.telefender.phone.data.tele_database.entities.Contact
-import com.telefender.phone.data.tele_database.entities.ContactNumbers
-import com.telefender.phone.data.tele_database.entities.Instance
-import kotlinx.coroutines.sync.Mutex
+import com.telefender.phone.data.tele_database.ClientDBConstants
+import com.telefender.phone.data.tele_database.MutexType
+import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
+import com.telefender.phone.data.tele_database.entities.*
+import com.telefender.phone.helpers.MiscHelpers
 import kotlinx.coroutines.sync.withLock
+import timber.log.Timber
 
 @Dao
-interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
-    ChangeLogDao, QueueToExecuteDao, QueueToUploadDao, TrustedNumbersDao {
+interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, AnalyzedNumberDao,
+    ChangeLogDao, ExecuteQueueDao, UploadQueueDao, StoredMapDao {
     
-    suspend fun executeAll(
-        mutexExecute: Mutex,
-        mutexChange: Mutex,
-        mutexKey: Mutex,
-        mutexInstance : Mutex,
-        mutexContact : Mutex,
-        mutexContactNumbers : Mutex,
-        mutexTrustedNumbers : Mutex,
-        mutexOrganizations : Mutex,
-        mutexMiscellaneous : Mutex
-    ){
+    suspend fun executeAll(){
+        val mutexExecute = mutexLocks[MutexType.EXECUTE]!!
+        var hasQTEs = mutexExecute.withLock { return@withLock hasQTEs() }
 
-        var hasQTEs = mutexExecute.withLock {
-            return@withLock hasQTEs()
-        }
         while (hasQTEs) {
-            executeFirst(
-                mutexExecute,
-                mutexChange,
-                mutexKey,
-                mutexInstance,
-                mutexContact,
-                mutexContactNumbers,
-                mutexTrustedNumbers,
-                mutexOrganizations,
-                mutexMiscellaneous,
-            )
-
-            hasQTEs = mutexExecute.withLock {
-                return@withLock hasQTEs()
-            }
+            executeFirst()
+            hasQTEs = mutexExecute.withLock { return@withLock hasQTEs() }
         }
     }
 
@@ -57,279 +28,344 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumbersDao,
      * Finds first task to execute and passes it's corresponding ChangeLog to
      * helper function executeFirstTransaction.
      */
-    suspend fun executeFirst(
-        mutexExecute: Mutex,
-        mutexChange: Mutex,
-        mutexKey: Mutex,
-        mutexInstance : Mutex,
-        mutexContact : Mutex,
-        mutexContactNumbers : Mutex,
-        mutexTrustedNumbers : Mutex,
-        mutexOrganizations : Mutex,
-        mutexMiscellaneous : Mutex
-    ) {
-
+    suspend fun executeFirst() {
+        val mutexExecute = mutexLocks[MutexType.EXECUTE]!!
         mutexExecute.withLock {
             val firstJob = getFirstQTE()
             val firstID = firstJob.changeID
             updateQTEErrorCounter_Delta(firstID, 1)
 
             val changeLog = getChangeLogRow(firstID)
-
-            executeFirstTransaction(
-                changeLog.changeID,
-                changeLog.instanceNumber,
-                changeLog.changeTime,
-                changeLog.type,
-                changeLog.CID,
-                changeLog.oldNumber,
-                changeLog.number,
-                changeLog.parentNumber,
-                changeLog.trustability,
-                changeLog.counterValue,
-                mutexExecute,
-                mutexChange,
-                mutexKey,
-                mutexInstance,
-                mutexContact,
-                mutexContactNumbers,
-                mutexTrustedNumbers,
-                mutexOrganizations,
-                mutexMiscellaneous,
-            )
+            executeChange(changeLog, true)
         }
     }
 
     /**
      * Takes ChangeLog arguments and executes the corresponding database function in a single
-     * transaction based on the type of change (eg instance insert), then deletes the task from
-     * the QueueToExecute.
+     * transaction based on the type of change (e.g., instance insert), then deletes the task from
+     * the ExecuteQueue. We have also already confirmed that deadlock is not possible with our
+     * mutex lock usage.
+     */
+    suspend fun executeChange(changeLog: ChangeLog, fromServer: Boolean = false) {
+        if (changeLog.type == ClientDBConstants.CHANGELOG_TYPE_INSTANCE_DELETE) {
+            executeChangeINSD(changeLog)
+        } else {
+            executeChangeNORM(changeLog, fromServer)
+        }
+    }
+
+    /**
+     * We separated out instance deletes so they won't fall under one huge Transaction. Additionally,
+     * we will handle mutex locking more fine grained in insDelete because one instance
+     * delete might take a while (still probably less than a few seconds), and we
+     * wouldn't want the data to be inaccessible during that time.
+     */
+    suspend fun executeChangeINSD(changeLog: ChangeLog) {
+        with(changeLog) {
+            if (changeLog.type ==  ClientDBConstants.CHANGELOG_TYPE_INSTANCE_DELETE) {
+                insDelete(this, instanceNumber)
+            } else {
+                Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: Not instance delete type!!!")
+            }
+        }
+    }
+
+    /**
+     * TODO: HANDLE TRANSACTIONS FOR RETRY.
+     *
+     * Other part of executeChange(). Handles all non-instance-delete actions.
      */
     @Transaction
-    open suspend fun executeFirstTransaction(
-        changeID: String,
-        instanceNumber: String?,
-        changeTime: Long,
-        type: String,
-        CID : String?,
-        oldNumber : String?,
-        number : String?,
-        parentNumber : String?,
-        trustability : Int?,
-        counterValue : Int?,
-        mutexExecute: Mutex,
-        mutexChange: Mutex,
-        mutexKey: Mutex,
-        mutexInstance : Mutex,
-        mutexContact : Mutex,
-        mutexContactNumbers : Mutex,
-        mutexTrustedNumbers : Mutex,
-        mutexOrganizations : Mutex,
-        mutexMiscellaneous : Mutex
-    ) {
+    suspend fun executeChangeNORM(changeLog: ChangeLog, fromServer: Boolean) {
+        val mutexInstance = mutexLocks[MutexType.INSTANCE]!!
+        val mutexContact = mutexLocks[MutexType.CONTACT]!!
+        val mutexContactNumber = mutexLocks[MutexType.CONTACT_NUMBER]!!
+        val mutexAnalyzed = mutexLocks[MutexType.ANALYZED]!!
 
-        when (type) {
-            CHANGELOG_TYPE_CONTACT_INSERT -> mutexContact.withLock {
-                cInsert(CID, parentNumber)
-            }
-            CHANGELOG_TYPE_CONTACT_DELETE -> mutexContact.withLock {
-                mutexContactNumbers.withLock {
-                    mutexTrustedNumbers.withLock {
-                        cDelete(CID)
+        with(changeLog) {
+            when (type) {
+                ClientDBConstants.CHANGELOG_TYPE_CONTACT_INSERT -> mutexContact.withLock {
+                    cInsert(CID, instanceNumber)
+                }
+                ClientDBConstants.CHANGELOG_TYPE_CONTACT_UPDATE -> mutexAnalyzed.withLock {
+                    mutexContact.withLock {
+                        mutexContactNumber.withLock {
+                            cUpdate(CID, instanceNumber, blocked)
+                        }
                     }
                 }
-            }
-            CHANGELOG_TYPE_CONTACT_NUMBER_INSERT -> mutexContactNumbers.withLock {
-                mutexTrustedNumbers.withLock {
-                    cnInsert(CID, number, counterValue)
+                ClientDBConstants.CHANGELOG_TYPE_CONTACT_DELETE -> mutexAnalyzed.withLock {
+                    mutexContact.withLock {
+                        mutexContactNumber.withLock {
+                            cDelete(CID)
+                        }
+                    }
                 }
-            }
-            CHANGELOG_TYPE_CONTACT_NUMBER_UPDATE -> mutexContactNumbers.withLock {
-                mutexTrustedNumbers.withLock {
-                    cnUpdate(CID, oldNumber, number, counterValue)
+                ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_INSERT -> mutexAnalyzed.withLock {
+                    mutexContactNumber.withLock {
+                        cnInsert(CID, number, instanceNumber, counterValue, degree)
+                    }
                 }
-            }
-            CHANGELOG_TYPE_CONTACT_NUMBER_DELETE -> mutexContactNumbers.withLock {
-                mutexTrustedNumbers.withLock {
-                    cnDelete(CID, number)
+                ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_UPDATE -> mutexAnalyzed.withLock {
+                    mutexContactNumber.withLock {
+                        cnUpdate(CID, oldNumber, number, counterValue)
+                    }
                 }
-            }
-            CHANGELOG_TYPE_INSTANCE_INSERT -> mutexInstance.withLock {
-                mutexTrustedNumbers.withLock {
+                ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_DELETE -> mutexAnalyzed.withLock {
+                    mutexContactNumber.withLock {
+                        cnDelete(CID, number, instanceNumber, degree)
+                    }
+                }
+                ClientDBConstants.CHANGELOG_TYPE_INSTANCE_INSERT -> mutexInstance.withLock {
                     insInsert(instanceNumber)
                 }
             }
-            CHANGELOG_TYPE_INSTANCE_DELETE -> mutexInstance.withLock {
-                mutexContact.withLock {
-                    mutexContactNumbers.withLock {
-                        insDelete(number)
-                    }
+
+            // If from server, delete associated QTE.
+            if (fromServer) {
+                val mutexExecute = mutexLocks[MutexType.EXECUTE]!!
+                mutexExecute.withLock {
+                    deleteQTE_ChangeID(changeID)
                 }
             }
         }
-        deleteQTE_ChangeID(changeID)
     }
 
-    // TODO check if TrustedNumbers changes are correct
     /**
-     * Inserts contact given CID, parentNumber, and Name. Higher level function than the corresponding
-     * DAO function as it also verifies arguments are not Null and catches exceptions.
+     * TODO: Maybe redundant transaction annotation with higher level functions.
+     *
+     * Inserts contact given CID, instance. Higher level function than the corresponding
+     * DAO function as it automatically modifies AnalyzedNumbers and provides a more
+     * detailed NullPointerException.
      */
-    suspend fun cInsert(CID: String?, parentNumber: String?) {
-        try {
-            if (CID == null || parentNumber == null) {
-                throw NullPointerException("CID or parentNumber was null for cInsert")
-            } else {
-                val contact = Contact(CID, parentNumber)
-                insertContact(contact)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
+    @Transaction
+    suspend fun cInsert(CID: String?, instanceNumber: String?) {
+        if (null in listOf(CID, instanceNumber)) {
+            throw NullPointerException("CID || instanceNumber was null for cInsert")
+        } else {
+            val contact = Contact(CID!!, instanceNumber!!)
+            insertContact(contact)
         }
     }
 
     /**
-     * Deletes Contact given CID. Higher level function than the corresponding
-     * DAO function as it also iterates through contact's corresponding ContactNumbers and deletes those
-     * as well, verifies arguments are not Null, and catches exceptions.
+     * Updates contact given CID, instanceNumber, and blocked status. Primarily used to update
+     * blocked status.
      */
-    suspend fun cDelete(CID: String?) {
-        try {
-            if (CID == null) {
-                throw NullPointerException("CID was null for cDelete")
-            } else {
-                /*
-                Gets all contact numbers associated with that contact and deletes
-                them as well (this includes removing from the Trusted Numbers table
-                through cnDelete())
-                 */
-                val contactNumberChildren : List<ContactNumbers> = getContactNumbers_CID(CID)
+    @Transaction
+    suspend fun cUpdate(CID: String?, instanceNumber: String?, blocked: Boolean?) {
+        if (null in listOf(CID, instanceNumber, blocked)) {
+            throw NullPointerException("CID || instanceNumber || blocked was null for cUpdate")
+        } else {
+            updateContactBlocked(CID!!, blocked!!)
+
+            /*
+            Only update AnalyzedNumbers for child ContactNumbers if the Contact's instance number
+            is the same as user number. That is, the contact is the user's direct contact.
+             */
+            if (instanceNumber == getUserNumber()) {
+                val contactNumberChildren : List<ContactNumber> = getContactNumbers_CID(CID)
                 for (contactNumber in contactNumberChildren) {
-                    cnDelete(CID, contactNumber.number)
-                }
+                    val number = contactNumber.number
+                    val numBlockedDelta = if (blocked) 1 else -1
+                    val oldAnalyzed = getAnalyzed(number)
 
-                deleteContact_CID(CID)
+                    updateAnalyzed(
+                        AnalyzedNumber(
+                            number = number,
+                            isBlocked = blocked,
+                            numMarkedBlocked = oldAnalyzed.numMarkedBlocked?.plus(numBlockedDelta)
+                        )
+                    )
+                }
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        }
+    }
+
+    /**
+     * TODO: Add in AnalyzedNumbers to this
+     *
+     * Deletes Contact given CID. Higher level function than the corresponding
+     * DAO function as it automatically modifies AnalyzedNumbers and provides a more
+     * detailed NullPointerException.
+     */
+    @Transaction
+    suspend fun cDelete(CID: String?) {
+        if (CID == null) {
+            throw NullPointerException("CID was null for cDelete")
+        } else {
+            /*
+            Gets all contact numbers associated with that contact and deletes them as well.
+             */
+            val contactNumberChildren : List<ContactNumber> = getContactNumbers_CID(CID)
+            for (contactNumber in contactNumberChildren) {
+                with(contactNumber) {
+                    cnDelete(CID, number, instanceNumber, degree)
+                }
+            }
+
+            deleteContact_CID(CID)
         }
     }
 
     /**
      * Inserts ContactNumber given CID, number, and versionNumber. Higher level function than the corresponding
-     * DAO function as it also inserts number into TrustedNumbers, verifies arguments are not Null,
-     * and catches exceptions.
+     * DAO function as it automatically modifies AnalyzedNumbers and provides a more
+     * detailed NullPointerException.
      */
-    suspend fun cnInsert(CID: String?, number: String?, versionNumber: Int?){
-        try {
-            if (CID == null || number == null || versionNumber == null) {
-                throw NullPointerException("CID, number, or versionNumber was null for cnInsert")
-            } else {
-                val contactNumber = ContactNumbers(CID, number, versionNumber)
-
-                insertContactNumbers(contactNumber)
-                insertTrustedNumbers(number)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
+    @Transaction
+    suspend fun cnInsert(CID: String?, number: String?, instanceNumber: String?, versionNumber: Int?, degree: Int?){
+        if (null in listOf(CID, number, instanceNumber, versionNumber, degree)) {
+            throw NullPointerException("CID || number || versionNumber || counterValue || degree was null for cnInsert")
+        } else {
+            val contactNumber = ContactNumber(CID!!, number!!, instanceNumber!!, versionNumber!!, degree!!)
+            insertContactNumbers(contactNumber)
         }
     }
 
     /**
+     * TODO: Make sure nothing is fishy with versionNumber, specifically, with the default value.
+     *
      * Updates ContactNumber given CID, oldNumber, and new number. Higher level function than the corresponding
-     * DAO function as it also updates TrustedNumbers, verifies arguments are not Null, and catches exceptions.
+     * DAO function as it automatically modifies AnalyzedNumbers and provides a more
+     * detailed NullPointerException.
      */
+    @Transaction
     suspend fun cnUpdate(CID: String?, oldNumber: String?, number: String?, versionNumber: Int?) {
-        try {
-            if (CID == null || oldNumber == null || number == null) {
-                throw NullPointerException("oldNumber or number was null for cnUpdate")
-            } else {
-                updateContactNumbers(CID, oldNumber, number, versionNumber)
-                updateTrustedNumbers(oldNumber, number)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        if (null in listOf(CID, oldNumber, number)) {
+            throw NullPointerException("CID || oldNumber || number was null for cnUpdate")
+        } else {
+            updateContactNumbers(CID!!, oldNumber!!, number!!, versionNumber)
         }
     }
 
     /**
      * Deletes ContactNumber given CID and number. Higher level function than the corresponding
-     * DAO function as it also deletes corresponding TrustedNumber, verifies arguments are not Null,
-     * and catches exceptions.
+     * DAO function as it automatically modifies AnalyzedNumbers and provides a more
+     * detailed NullPointerException.
      */
-    suspend fun cnDelete(CID: String?, number: String?) {
-        try {
-            if (CID == null || number == null) {
-                throw NullPointerException("CID or number was null for cnDelete")
-            } else {
-                deleteContactNumbers_PK(CID, number)
-                deleteTrustedNumbers(number)
+    @Transaction
+    suspend fun cnDelete(CID: String?, number: String?, instanceNumber: String?, degree: Int?) {
+        if (null in listOf(CID, number, instanceNumber, degree)) {
+            throw NullPointerException("CID || number || instanceNumber || degree was null for cnDelete")
+        } else {
+
+            /*
+            If instanceNumber is same as user contact (number is a direct contact of user), then
+            decrement numMarkedBlocked and numSharedContacts. If not direct contact, then just
+            decrement numTreeContacts. Additionally, no matter if the contact number is a direct
+            contact or not, recalculate minDegree and degreeString.
+             */
+            val oldAnalyzed = getAnalyzed(number!!)
+            with(oldAnalyzed) {
+                val newDegreeString = changeDegreeString(degreeString, degree, true)
+                if (instanceNumber == getUserNumber()) {
+                    updateAnalyzed(
+                        AnalyzedNumber(
+                            number = number,
+                            numMarkedBlocked = numMarkedBlocked?.minus(1),
+                            numSharedContacts = numSharedContacts?.minus(1),
+                            minDegree = getMinDegree(newDegreeString),
+                            degreeString = newDegreeString
+                        )
+                    )
+                } else {
+                    updateAnalyzed(
+                        AnalyzedNumber(
+                            number = number,
+                            numTreeContacts = numTreeContacts?.minus(1),
+                            minDegree = getMinDegree(newDegreeString),
+                            degreeString = newDegreeString
+                        )
+                    )
+                }
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+
+            deleteContactNumbers_PK(CID!!, number)
         }
     }
 
     /**
      * Inserts Instance given instanceNumber. Higher level function than the corresponding
-     * DAO function as it also inserts number into TrustedNumbers, verifies arguments are not Null and catches exceptions.
+     * DAO function as it automatically modifies AnalyzedNumbers and provides a more
+     * detailed NullPointerException.
      */
     suspend fun insInsert(instanceNumber: String?) {
-        try {
-            if (instanceNumber == null) {
-                throw NullPointerException("number was null for insInsert")
-            } else {
-                val instance = Instance(instanceNumber)
-
-                insertInstanceNumbers(instance)
-                insertTrustedNumbers(instanceNumber)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        if (instanceNumber == null) {
+            throw NullPointerException("instanceNumber was null for insInsert")
+        } else {
+            val instance = Instance(instanceNumber)
+            insertInstanceNumbers(instance)
         }
     }
 
     /**
+     * TODO: MAKE SURE WE'RE NOT USING CASCADING DELETE FOR FOREIGN KEYS, SINCE WE NEED TO
+     *  INDIVIDUALLY DELETE SO WE CAN UPDATE ANALYZED_NUMBERS!!!
+     *
      * Deletes Instance given instanceNumber. Higher level function than the corresponding
-     * DAO function as it also deletes number from TrustedNumbers, verifies arguments are not Null,
-     * and catches exceptions.
+     * DAO function as it automatically modifies AnalyzedNumbers and provides a more
+     * detailed NullPointerException.
      */
-    suspend fun insDelete(instanceNumber: String?) {
-        try {
-            if (instanceNumber == null) {
-                throw NullPointerException("number was null for insDelete")
-            } else {
-                val instance = Instance(instanceNumber)
+    suspend fun insDelete(changeLog: ChangeLog, instanceNumber: String?) {
+        if (instanceNumber == null) {
+            throw NullPointerException("instanceNumber was null for insDelete")
+        } else {
+            val mutexInstance = mutexLocks[MutexType.INSTANCE]!!
+            val mutexExecute = mutexLocks[MutexType.EXECUTE]!!
+            val mutexContact = mutexLocks[MutexType.CONTACT]!!
+            val mutexContactNumber = mutexLocks[MutexType.CONTACT_NUMBER]!!
+            val mutexAnalyzed = mutexLocks[MutexType.ANALYZED]!!
 
-                /*
-                Gets all contacts associated with instance number and calls cDelete() on each one,
-                which takes care of corresponding contact numbers and trusted numbers
-                 */
-                val contactChildren : List<Contact> = getContacts_ParentNumber(instanceNumber)
-                for (contact in contactChildren) {
-                    cDelete(contact.CID)
+            /*
+            Gets all contacts associated with instance number and calls cDelete() on each one,
+            which takes care of corresponding contact numbers and trusted numbers
+             */
+            val contactChildren : List<Contact> = getContactsByInstance(instanceNumber)
+            for (contact in contactChildren) {
+                mutexAnalyzed.withLock {
+                    mutexContact.withLock {
+                        mutexContactNumber.withLock {
+                            cDelete(contact.CID)
+                        }
+                    }
                 }
 
-                deleteInstanceNumbers(instance)
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+
+            mutexInstance.withLock {
+                mutexExecute.withLock {
+                    finalDelete(changeLog, Instance(instanceNumber))
+                }
+            }
         }
     }
 
     /**
-     * No real need to update instances, potentially just delete and create new?
+     * Deleting instance number and QTE is wrapped under one transaction to force either both
+     * to succeed or both to fail.
      */
-//    suspend fun insUpdate(oldNumber: String?, number: String?) {
-//        try {
-//            if (oldNumber == null || number == null) {
-//                throw NullPointerException("oldNumber or number was null for insUpdate")
-//            } else {
-//                updateInstanceNumbers(oldNumber, number)
-//            }
-//        } catch (e: Exception) {
-//            e.printStackTrace()
-//        }
-//    }
+    @Transaction
+    suspend fun finalDelete(changeLog: ChangeLog, instance: Instance) {
+        deleteInstanceNumbers(instance)
 
+        // Instance delete must be from server, so delete associated QTE.
+        deleteQTE_ChangeID(changeLog.changeID)
+    }
+
+    suspend fun changeDegreeString(degreeString: String?, degree: Int?, remove: Boolean) : String? {
+        if (degreeString == null || degree == null) {
+            return degreeString
+        }
+
+        return if (remove) {
+            degreeString.replaceFirst(degree.toString(), "")
+        } else {
+            degreeString + degree
+        }
+    }
+
+    suspend fun getMinDegree(degreeString: String?) : Int? {
+        return degreeString?.minOrNull()?.digitToIntOrNull()
+    }
 }

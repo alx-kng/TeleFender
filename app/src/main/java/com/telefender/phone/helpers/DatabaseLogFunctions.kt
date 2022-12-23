@@ -24,7 +24,7 @@ object DatabaseLogFunctions {
 
     fun logContactNumbers(database: ClientDatabase?, repository : ClientRepository?) {
         CoroutineScope(Dispatchers.Default).launch {
-            val contactNumbers = (database?.contactNumbersDao()?.getAllContactNumbers() ?: repository?.getAllContactNumbers()) ?: listOf()
+            val contactNumbers = (database?.contactNumberDao()?.getAllContactNumbers() ?: repository?.getAllContactNumbers()) ?: listOf()
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: CONTACT NUMBERS SIZE: %s", contactNumbers.size.toString())
             for (contactNumber in contactNumbers) {
                 Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: %s", contactNumber.toString())
@@ -46,7 +46,7 @@ object DatabaseLogFunctions {
 
     fun logExecuteLogs(database : ClientDatabase?, repository: ClientRepository?) {
         CoroutineScope(Dispatchers.Default).launch {
-            val executeLogs = (database?.queueToExecuteDao()?.getAllQTEs() ?: repository?.getAllQTE()) ?: listOf()
+            val executeLogs = (database?.executeQueueDao()?.getAllQTEs() ?: repository?.getAllQTE()) ?: listOf()
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: EXECUTE LOG SIZE: %s", executeLogs.size.toString())
 
             for (executeLog in executeLogs) {
@@ -68,7 +68,7 @@ object DatabaseLogFunctions {
 
     fun logUploadLogs(database : ClientDatabase?, repository: ClientRepository?) {
         CoroutineScope(Dispatchers.Default).launch {
-            val uploadLogs = (database?.queueToUploadDao()?.getAllQTU() ?: repository?.getAllQTU()) ?: listOf()
+            val uploadLogs = (database?.uploadQueueDao()?.getAllQTU() ?: repository?.getAllQTU()) ?: listOf()
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: UPLOAD LOG SIZE: %s", uploadLogs.size.toString())
 
             for (uploadLog in uploadLogs) {

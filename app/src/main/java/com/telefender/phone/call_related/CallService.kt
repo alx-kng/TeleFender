@@ -56,6 +56,9 @@ class CallService : InCallService() {
         }
     }
 
+    /**
+     * TODO: MAKE SURE WE DIRECT USERS TO VOICEMAIL BOX. CAUSE IF FULL, NOTHING COMES THROUGH!!!!
+     */
     override fun onCallRemoved(call: Call) {
         /**
          * CatchSyncWorker is more to catch voicemails that may pop up in the default call logs,

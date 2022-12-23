@@ -2,104 +2,85 @@ package com.telefender.phone.data.tele_database.client_daos
 
 import androidx.room.Dao
 import androidx.room.Transaction
-import com.telefender.phone.data.tele_database.entities.ChangeLog
 import com.telefender.phone.data.tele_database.ClientDBConstants.RESPONSE_OK
+import com.telefender.phone.data.tele_database.MutexType
+import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
+import com.telefender.phone.data.tele_database.entities.ChangeLog
+import com.telefender.phone.data.tele_database.entities.ExecuteQueue
+import com.telefender.phone.data.tele_database.entities.UploadQueue
 import com.telefender.phone.helpers.MiscHelpers
-import com.telefender.phone.data.tele_database.entities.QueueToExecute
-import com.telefender.phone.data.tele_database.entities.QueueToUpload
+import kotlinx.coroutines.sync.withLock
 
 @Dao
-abstract class ChangeAgentDao: ChangeLogDao, QueueToExecuteDao, QueueToUploadDao {
+abstract class ChangeAgentDao: ChangeLogDao, ExecuteAgentDao, ExecuteQueueDao, UploadQueueDao {
+
 
     /**
-     * Function to handle a change (in the form of a ChangeLog's argument) from Server.
-     * Adds change to the ChangeLog and QueueToExecute.
+     * TODO: HANDLE TRANSACTIONS FOR RETRY.
+     * TODO: Do we still need to clean here??
+     *
+     * Function to handle a change (as a ChangeLog) from Server.
+     * Adds change to the ChangeLog and ExecuteQueue.
      */
     @Transaction
-    open suspend fun changeFromServer(
-        changeID : String,
-        instanceNumber : String?,
-        changeTime: Long,
-        type: String,
-        CID: String?,
-        oldNumber: String?,
-        number: String?,
-        parentNumber: String?,
-        trustability: Int?,
-        counterValue: Int?,
-        serverChangeID: Int
-    ) : Int {
+    open suspend fun changeFromServer(changeLog: ChangeLog) : Int{
+        with(changeLog) {
+            val cleanInstanceNumber = MiscHelpers.cleanNumber(instanceNumber)
+            val cleanOldNumber = MiscHelpers.cleanNumber(oldNumber)
+            val cleanNumber = MiscHelpers.cleanNumber(number)
 
-        val cleanInstanceNumber = MiscHelpers.cleanNumber(instanceNumber)
-        val cleanOldNumber = MiscHelpers.cleanNumber(oldNumber)
-        val cleanNumber = MiscHelpers.cleanNumber(number)
-        val cleanParentNumber = MiscHelpers.cleanNumber(parentNumber)
+            val cleanedChangeLog = this.copy(
+                instanceNumber = cleanInstanceNumber,
+                oldNumber = cleanOldNumber,
+                number = cleanNumber
+            )
 
-        val changeLog = ChangeLog(
-            changeID,
-            cleanInstanceNumber,
-            changeTime,
-            type,
-            CID,
-            cleanOldNumber,
-            cleanNumber,
-            cleanParentNumber,
-            trustability,
-            counterValue,
-            serverChangeID
-        )
+            mutexLocks[MutexType.CHANGE]!!.withLock {
+                insertChangeLog(cleanedChangeLog)
+            }
 
-        val execLog = QueueToExecute(changeID, changeTime)
-
-        insertChangeLog(changeLog)
-        insertQTE(execLog)
+            mutexLocks[MutexType.EXECUTE]!!.withLock {
+                val execLog = ExecuteQueue(changeID, changeTime)
+                insertQTE(execLog)
+            }
+        }
 
         return RESPONSE_OK
     }
 
     /**
-     * Function to handle a change (in the form of a ChangeLog's arguments) from Client.
-     * Adds change to the ChangeLog and QueueToUpload.
+     * TODO: HANDLE TRANSACTIONS FOR RETRY.
+     * TODO: Do we still need to clean here??
+     *
+     * Function to handle a change (as a ChangeLog) from Client.
+     * Inserts changes into actual tables (e.g., Instance, Contact, etc...) and adds change
+     * to the ChangeLog and UploadQueue. We can put Transaction over changeFromClient() because
+     * we know there won't be any instance delete changes from client.
      */
     @Transaction
-    open suspend fun changeFromClient(
-        changeID : String,
-        instanceNumber : String?,
-        changeTime: Long,
-        type: String,
-        CID: String?,
-        oldNumber : String?,
-        number: String?,
-        parentNumber: String?,
-        trustability: Int?,
-        counterValue: Int?,
-    ) {
-        val cleanInstanceNumber = MiscHelpers.cleanNumber(instanceNumber)
-        val cleanOldNumber = MiscHelpers.cleanNumber(oldNumber)
-        val cleanNumber = MiscHelpers.cleanNumber(number)
-        val cleanParentNumber = MiscHelpers.cleanNumber(parentNumber)
-        
-        val changeLog = ChangeLog(
-            changeID,
-            cleanInstanceNumber,
-            changeTime,
-            type,
-            CID,
-            cleanOldNumber,
-            cleanNumber,
-            cleanParentNumber,
-            trustability,
-            counterValue)
+    open suspend fun changeFromClient(changeLog: ChangeLog) {
+        with(changeLog) {
+            val cleanInstanceNumber = MiscHelpers.cleanNumber(instanceNumber)
+            val cleanOldNumber = MiscHelpers.cleanNumber(oldNumber)
+            val cleanNumber = MiscHelpers.cleanNumber(number)
 
-        insertChangeLog(changeLog)
+            val cleanedChangeLog = this.copy(
+                instanceNumber = cleanInstanceNumber,
+                oldNumber = cleanOldNumber,
+                number = cleanNumber
+            )
 
-        val execLog = QueueToExecute(changeID, changeTime)
+            executeChange(changeLog)
 
-        val upLog = QueueToUpload(changeID, changeTime, getRowID(changeID))
+            mutexLocks[MutexType.CHANGE]!!.withLock {
+                insertChangeLog(cleanedChangeLog)
+            }
 
-        insertQTE(execLog)
-        insertQTU(upLog)
+            mutexLocks[MutexType.UPLOAD]!!.withLock {
+                val upLog = UploadQueue(changeID, changeTime, getRowID(changeID))
+                insertQTU(upLog)
+            }
+
+        }
     }
-
-
 }
