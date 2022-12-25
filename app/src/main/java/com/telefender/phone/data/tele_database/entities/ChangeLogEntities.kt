@@ -16,9 +16,11 @@ data class ChangeLog(
     val changeID: String,
     val changeTime: Long,
     val type: String,
-    val instanceNumber: String? = null,
+    val instanceNumber: String,
     val CID : String? = null,
-    val number : String? = null,
+    val cleanNumber : String? = null,
+    val defaultCID: String? = null,
+    val rawNumber: String? = null,
     val oldNumber : String? = null,
     val blocked : Boolean? = null,
     val degree : Int? = null,
@@ -31,7 +33,7 @@ data class ChangeLog(
     override fun toString(): String {
         return "CHANGELOG: rowID: $rowID changeID: $changeID TYPE: $type " +
             "instanceNumber: $instanceNumber changeTime: $changeTime CID: $CID " +
-            "number: $number"
+            "number: $cleanNumber"
     }
 }
 

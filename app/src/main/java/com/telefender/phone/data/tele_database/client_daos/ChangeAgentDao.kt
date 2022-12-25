@@ -20,23 +20,15 @@ abstract class ChangeAgentDao: ChangeLogDao, ExecuteAgentDao, ExecuteQueueDao, U
      * TODO: Do we still need to clean here??
      *
      * Function to handle a change (as a ChangeLog) from Server.
-     * Adds change to the ChangeLog and ExecuteQueue.
+     * Adds change to the ChangeLog and ExecuteQueue. Contrary to changeFromClient(), we don't
+     * need a mutexSync lock around any of these actions because changes from the server only
+     * affect tree data, which doesn't interfere with the sync process.
      */
     @Transaction
     open suspend fun changeFromServer(changeLog: ChangeLog) : Int{
         with(changeLog) {
-            val cleanInstanceNumber = MiscHelpers.cleanNumber(instanceNumber)
-            val cleanOldNumber = MiscHelpers.cleanNumber(oldNumber)
-            val cleanNumber = MiscHelpers.cleanNumber(number)
-
-            val cleanedChangeLog = this.copy(
-                instanceNumber = cleanInstanceNumber,
-                oldNumber = cleanOldNumber,
-                number = cleanNumber
-            )
-
             mutexLocks[MutexType.CHANGE]!!.withLock {
-                insertChangeLog(cleanedChangeLog)
+                insertChangeLog(this)
             }
 
             mutexLocks[MutexType.EXECUTE]!!.withLock {
@@ -51,29 +43,48 @@ abstract class ChangeAgentDao: ChangeLogDao, ExecuteAgentDao, ExecuteQueueDao, U
     /**
      * TODO: HANDLE TRANSACTIONS FOR RETRY.
      * TODO: Do we still need to clean here??
+     * TODO: Require instanceNumber in changeLog
+     * TODO: Debating whether or not we should handle default database changes here to. But on
+     *  second thought, since this a DAO, we shouldn't mix between our database and the default
+     *  database. Perhaps we should make an enveloping function in the repository or something
+     *  to call our changeFromClient() and handle the default database changes.
+     * TODO: Manage non-contact changes.
      *
      * Function to handle a change (as a ChangeLog) from Client.
      * Inserts changes into actual tables (e.g., Instance, Contact, etc...) and adds change
      * to the ChangeLog and UploadQueue. We can put Transaction over changeFromClient() because
-     * we know there won't be any instance delete changes from client.
+     * we know there won't be any instance delete changes from client. Moreover, we should pass
+     * in instanceNumber no matter what, so that we know whether the change was associated with
+     * users direct contacts or with tree contacts.
+     *
+     * NOTE: When a direct contact change occurs, the
+     * change is locked with mutexSync to prevent any parallelism problems with the sync process.
+     * Since tree contact changes don't affect sync, we have no need to wrap with mutexSync (which
+     * also practically restricts to one client side change at a time), which also makes the rare
+     * case of a tree instance delete not super blocking to the database.
      */
     @Transaction
-    open suspend fun changeFromClient(changeLog: ChangeLog) {
+    open suspend fun changeFromClient(changeLog: ChangeLog, fromSync: Boolean) {
         with(changeLog) {
-            val cleanInstanceNumber = MiscHelpers.cleanNumber(instanceNumber)
-            val cleanOldNumber = MiscHelpers.cleanNumber(oldNumber)
-            val cleanNumber = MiscHelpers.cleanNumber(number)
+            /*
+            fromSync indicates whether or not the change was initiated from a sync. As mentioned
+            in TableSynchronizer, the final sync queries (e.g., inserting into our database if we
+            don't have it but the default database does) need to be uninterrupted by other insert
+            / delete contact number queries. We can fix this by using the mutexSync lock. However,
+            since we will be directly using the mutexSync inside TableSynchronizer, we need to
+            make sure the lock isn't called again when it reaches changeFromClient().
+             */
+            if (fromSync || instanceNumber != getUserNumber()) {
+                executeChange(changeLog)
+            } else {
+                mutexLocks[MutexType.SYNC]!!.withLock {
+                    executeChange(changeLog)
+                }
+            }
 
-            val cleanedChangeLog = this.copy(
-                instanceNumber = cleanInstanceNumber,
-                oldNumber = cleanOldNumber,
-                number = cleanNumber
-            )
-
-            executeChange(changeLog)
 
             mutexLocks[MutexType.CHANGE]!!.withLock {
-                insertChangeLog(cleanedChangeLog)
+                insertChangeLog(this)
             }
 
             mutexLocks[MutexType.UPLOAD]!!.withLock {

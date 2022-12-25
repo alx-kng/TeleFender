@@ -103,17 +103,17 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, AnalyzedNu
                 }
                 ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_INSERT -> mutexAnalyzed.withLock {
                     mutexContactNumber.withLock {
-                        cnInsert(CID, number, instanceNumber, counterValue, degree)
+                        cnInsert(CID, cleanNumber, defaultCID, rawNumber, instanceNumber, counterValue, degree)
                     }
                 }
                 ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_UPDATE -> mutexAnalyzed.withLock {
                     mutexContactNumber.withLock {
-                        cnUpdate(CID, oldNumber, number, counterValue)
+                        cnUpdate(CID, oldNumber, cleanNumber, counterValue)
                     }
                 }
                 ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_DELETE -> mutexAnalyzed.withLock {
                     mutexContactNumber.withLock {
-                        cnDelete(CID, number, instanceNumber, degree)
+                        cnDelete(CID, cleanNumber, instanceNumber, degree)
                     }
                 }
                 ClientDBConstants.CHANGELOG_TYPE_INSTANCE_INSERT -> mutexInstance.withLock {
@@ -166,7 +166,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, AnalyzedNu
             if (instanceNumber == getUserNumber()) {
                 val contactNumberChildren : List<ContactNumber> = getContactNumbers_CID(CID)
                 for (contactNumber in contactNumberChildren) {
-                    val number = contactNumber.number
+                    val number = contactNumber.cleanNumber
                     val numBlockedDelta = if (blocked) 1 else -1
                     val oldAnalyzed = getAnalyzed(number)
 
@@ -200,7 +200,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, AnalyzedNu
             val contactNumberChildren : List<ContactNumber> = getContactNumbers_CID(CID)
             for (contactNumber in contactNumberChildren) {
                 with(contactNumber) {
-                    cnDelete(CID, number, instanceNumber, degree)
+                    cnDelete(CID, cleanNumber, instanceNumber, degree)
                 }
             }
 
@@ -214,28 +214,80 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, AnalyzedNu
      * detailed NullPointerException.
      */
     @Transaction
-    suspend fun cnInsert(CID: String?, number: String?, instanceNumber: String?, versionNumber: Int?, degree: Int?){
-        if (null in listOf(CID, number, instanceNumber, versionNumber, degree)) {
-            throw NullPointerException("CID || number || versionNumber || counterValue || degree was null for cnInsert")
+    suspend fun cnInsert(
+        CID: String?,
+        cleanNumber: String?,
+        defaultCID: String?,
+        rawNumber: String?,
+        instanceNumber: String,
+        versionNumber: Int?,
+        degree: Int?
+    ){
+        if (null in listOf(CID, cleanNumber, defaultCID, rawNumber, versionNumber, degree)) {
+            throw NullPointerException("CID || number || defaultCID || versionNumber || degree was null for cnInsert")
         } else {
-            val contactNumber = ContactNumber(CID!!, number!!, instanceNumber!!, versionNumber!!, degree!!)
+            val contactNumber = ContactNumber(
+                CID!!,
+                cleanNumber!!,
+                defaultCID!!,
+                rawNumber!!,
+                instanceNumber,
+                versionNumber!!,
+                degree!!
+            )
             insertContactNumbers(contactNumber)
+
+            /*
+            If number is added as a direct contact (instanceNumber = userNumber), set isBlocked to
+            false, increment numSharedContacts.
+            If number is not added as a direct contact, increment numTreeContacts.
+            ADDITIONALLY, for both direct / tree contacts, reset notifyGate, and recalculate
+            minDegree and degreeString
+             */
+            val oldAnalyzed = getAnalyzed(cleanNumber)
+            with(oldAnalyzed) {
+                val newDegreeString = changeDegreeString(degreeString, degree, false)
+                if (instanceNumber == getUserNumber()) {
+                    updateAnalyzed(
+                        AnalyzedNumber(
+                            number = cleanNumber,
+                            notifyGate = 2,
+                            isBlocked = false,
+                            numSharedContacts = numSharedContacts?.plus(1),
+                            minDegree = 0,
+                            degreeString = newDegreeString
+                        )
+                    )
+                } else {
+                    updateAnalyzed(
+                        AnalyzedNumber(
+                            number = cleanNumber,
+                            notifyGate = 2,
+                            numTreeContacts = numTreeContacts?.plus(1),
+                            minDegree = getMinDegree(newDegreeString),
+                            degreeString = newDegreeString
+                        )
+                    )
+                }
+            }
+
         }
     }
 
     /**
      * TODO: Make sure nothing is fishy with versionNumber, specifically, with the default value.
+     * TODO: Fix cnUpdate to include cleanNumber.
      *
      * Updates ContactNumber given CID, oldNumber, and new number. Higher level function than the corresponding
      * DAO function as it automatically modifies AnalyzedNumbers and provides a more
      * detailed NullPointerException.
      */
     @Transaction
-    suspend fun cnUpdate(CID: String?, oldNumber: String?, number: String?, versionNumber: Int?) {
-        if (null in listOf(CID, oldNumber, number)) {
-            throw NullPointerException("CID || oldNumber || number was null for cnUpdate")
+    suspend fun cnUpdate(CID: String?, oldNumber: String?, rawNumber: String?, versionNumber: Int?) {
+        if (null in listOf(CID, oldNumber, rawNumber)) {
+            throw NullPointerException("CID || oldNumber || rawNumber was null for cnUpdate")
         } else {
-            updateContactNumbers(CID!!, oldNumber!!, number!!, versionNumber)
+            updateContactNumbers(CID!!, oldNumber!!, rawNumber!!, versionNumber)
         }
     }
 
@@ -245,25 +297,29 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, AnalyzedNu
      * detailed NullPointerException.
      */
     @Transaction
-    suspend fun cnDelete(CID: String?, number: String?, instanceNumber: String?, degree: Int?) {
-        if (null in listOf(CID, number, instanceNumber, degree)) {
+    suspend fun cnDelete(CID: String?, cleanNumber: String?, instanceNumber: String?, degree: Int?) {
+        if (null in listOf(CID, cleanNumber, instanceNumber, degree)) {
             throw NullPointerException("CID || number || instanceNumber || degree was null for cnDelete")
         } else {
 
             /*
             If instanceNumber is same as user contact (number is a direct contact of user), then
-            decrement numMarkedBlocked and numSharedContacts. If not direct contact, then just
-            decrement numTreeContacts. Additionally, no matter if the contact number is a direct
-            contact or not, recalculate minDegree and degreeString.
+            decrement numSharedContacts. Moreover, if the contact associated with the number is
+            blocked, then decrement numBlockedContacts. Remember, deleting contacts doesn't change
+            its isBlocked value.
+            If not direct contact, then just decrement numTreeContacts. Additionally, no matter if
+            the contact number is a direct contact or not, recalculate minDegree and degreeString.
              */
-            val oldAnalyzed = getAnalyzed(number!!)
+            val oldAnalyzed = getAnalyzed(cleanNumber!!)
             with(oldAnalyzed) {
                 val newDegreeString = changeDegreeString(degreeString, degree, true)
                 if (instanceNumber == getUserNumber()) {
+                    val numBlockedDelta = if (contactBlocked(CID!!) == true) 1 else 0
+
                     updateAnalyzed(
                         AnalyzedNumber(
-                            number = number,
-                            numMarkedBlocked = numMarkedBlocked?.minus(1),
+                            number = cleanNumber,
+                            numMarkedBlocked = numMarkedBlocked?.minus(numBlockedDelta),
                             numSharedContacts = numSharedContacts?.minus(1),
                             minDegree = getMinDegree(newDegreeString),
                             degreeString = newDegreeString
@@ -272,7 +328,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, AnalyzedNu
                 } else {
                     updateAnalyzed(
                         AnalyzedNumber(
-                            number = number,
+                            number = cleanNumber,
                             numTreeContacts = numTreeContacts?.minus(1),
                             minDegree = getMinDegree(newDegreeString),
                             degreeString = newDegreeString
@@ -281,7 +337,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, AnalyzedNu
                 }
             }
 
-            deleteContactNumbers_PK(CID!!, number)
+            deleteContactNumbers_PK(CID!!, cleanNumber)
         }
     }
 

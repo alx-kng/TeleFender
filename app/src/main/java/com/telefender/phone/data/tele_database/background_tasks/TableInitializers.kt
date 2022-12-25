@@ -55,7 +55,8 @@ object TableInitializers {
                 changeTime = changeTime,
                 type = CHANGELOG_TYPE_INSTANCE_INSERT,
                 instanceNumber = instanceNumber
-            )
+            ),
+            fromSync = false
         )
     }
 
@@ -142,8 +143,9 @@ object TableInitializers {
                 changeTime = changeTime,
                 type = CHANGELOG_TYPE_CONTACT_INSERT,
                 instanceNumber = instanceNumber,
-                CID = CID
-            )
+                CID = CID,
+            ),
+            fromSync = false
         )
     }
 
@@ -163,8 +165,10 @@ object TableInitializers {
         val changeID = UUID.randomUUID().toString()
         val changeTime = Instant.now().toEpochMilli()
         val instanceNumber = MiscHelpers.getInstanceNumber(context)
-        val CID = UUID.nameUUIDFromBytes((cursor.getString(0) + instanceNumber).toByteArray()).toString()
-        val number = cursor.getString(1)
+        val defaultCID = cursor.getString(0)
+        val CID = UUID.nameUUIDFromBytes((defaultCID + instanceNumber).toByteArray()).toString()
+        val rawNumber = cursor.getString(1)
+        val cleanNumber = MiscHelpers.cleanNumber(rawNumber)
         val versionNumber = cursor.getString(2).toInt()
 
         // To insert into ContactNumber table
@@ -175,10 +179,13 @@ object TableInitializers {
                 type = CHANGELOG_TYPE_CONTACT_NUMBER_INSERT,
                 instanceNumber = instanceNumber,
                 CID = CID,
-                number = number,
+                cleanNumber = cleanNumber,
+                defaultCID = defaultCID,
+                rawNumber = rawNumber,
                 degree = 0, // 0 means direct contact number
                 counterValue = versionNumber // Use counterValue column to pass in versionNumber change
-            )
+            ),
+            fromSync = false
         )
     }
 }

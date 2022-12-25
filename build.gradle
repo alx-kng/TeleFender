@@ -1,5 +1,5 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
-
+// TODO: Look into updating kotlinVersion to 1.7.0 with chrome bookmark and updating gradle.
 buildscript {
 
     ext {

@@ -96,12 +96,34 @@ object DefaultContacts {
     }
 
     /**
+     * TODO: Look into whether using _ID is correct. That is, we don't want the id of a default
+     *  contact to change, as our CID depends on it.
+     *
+     * Returns a cursor containing all aggregate column rows in Android's Contact table
+     */
+    fun getContactCursor(contentResolver: ContentResolver): Cursor? {
+        val projection = arrayOf(
+            ContactsContract.Contacts._ID
+        )
+        var cur: Cursor? = null
+        try {
+            cur = contentResolver.query(
+                ContactsContract.Contacts.CONTENT_URI,
+                projection, null, null, null
+            )
+
+            cur!!.moveToFirst()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return cur
+    }
+
+    /**
      * Returns a cursor containing all numbers in Android's Phone table.
      * Also contains data_version column for syncing
      */
-    fun getContactNumberCursor(
-        contactHelper: ContentResolver
-    ): Cursor? {
+    fun getContactNumberCursor(contentResolver: ContentResolver): Cursor? {
         val projection = arrayOf(
             Phone.CONTACT_ID,
             Phone.NUMBER,
@@ -109,7 +131,7 @@ object DefaultContacts {
         )
         var cur: Cursor? = null
         try {
-            cur = contactHelper.query(
+            cur = contentResolver.query(
                 Phone.CONTENT_URI,
                 projection, null, null, null
             )
@@ -121,29 +143,60 @@ object DefaultContacts {
     }
 
     /**
-     * TODO: Look into whether using _ID is correct. That is, we don't want the id of a default
-     *  contact to change, as our CID depends on it.
+     * TODO: Test and check this logic.
      *
-     * Returns a cursor containing all aggregate column rows in Android's Contact table
+     * Check if contact exists in default database given the _ID (our defaultCID).
      */
-    fun getContactCursor(
-        contactHelper: ContentResolver
-    ): Cursor? {
+    fun contactExists(
+        contentResolver: ContentResolver,
+        defaultCID: String
+    ) : Boolean {
         val projection = arrayOf(
             ContactsContract.Contacts._ID
         )
-        var cur: Cursor? = null
-        try {
-            cur = contactHelper.query(
-                ContactsContract.Contacts.CONTENT_URI,
-                projection, null, null, null
-            )
 
-            cur!!.moveToFirst()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        return cur
+        val selection = "${ContactsContract.Contacts._ID} = ?"
+
+        val curs = contentResolver.query(
+            ContactsContract.Contacts.CONTENT_URI,
+            projection,
+            selection,
+            arrayOf(defaultCID),
+            null
+        )
+
+        return curs != null && curs.moveToFirst()
+    }
+
+    /**
+     * TODO: Test and check this logic.
+     *
+     * Check if contact exists in default database given the _ID (our defaultCID) and number
+     * (our rawNumber).
+     */
+    fun contactNumberExists(
+        contentResolver: ContentResolver,
+        defaultCID: String,
+        rawNumber: String
+    ) : Boolean {
+        val projection = arrayOf(
+            Phone.CONTACT_ID,
+            Phone.NUMBER
+        )
+
+        val selection =
+            "${Phone.CONTACT_ID} = ? AND" +
+            "${Phone.NUMBER} = ?"
+
+        val curs = contentResolver.query(
+            Phone.CONTENT_URI,
+            projection,
+            selection,
+            arrayOf(defaultCID, rawNumber),
+            null
+        )
+
+        return curs != null && curs.moveToFirst()
     }
 
     private fun getContactID(

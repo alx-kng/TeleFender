@@ -32,6 +32,7 @@ data class Instance(
 }
 
 // TODO: Make sure that nothing uses the Cascade delete in its calculations.
+// TODO: Should we add defaultCID column to Contact table?
 @Entity(tableName = "contact",
     foreignKeys = [ForeignKey(
         entity = Instance::class,
@@ -51,9 +52,13 @@ data class Contact(
     }
 }
 
-// TODO: Finish adding instance number column.
+/*
+TODO: Finish adding instance number column.
+TODO: Implement changes with cleanNumber and rawNumber. cleanNumber used for AnalyzedNumber (that
+ way the tree numbers are assimilated in the same row).
+ */
 @Entity(tableName = "contact_number",
-    primaryKeys = ["CID", "number"],
+    primaryKeys = ["CID", "cleanNumber"],
     foreignKeys = [
         ForeignKey(
             entity = Contact::class,
@@ -67,30 +72,32 @@ data class Contact(
             childColumns = arrayOf("instanceNumber"),
             onDelete = ForeignKey.NO_ACTION
         )],
-    indices = [Index(value = ["number"])]
+    indices = [Index(value = ["cleanNumber"]), Index(value = ["rawNumber"]), Index(value = ["instanceNumber"])]
 )
 data class ContactNumber(
     val CID: String,
-    val number: String,
+    val cleanNumber: String,
+    val defaultCID: String,
+    val rawNumber: String,
     val instanceNumber: String,
     val versionNumber: Int = 0,
     val degree: Int
 ) {
     override fun equals(other: Any?): Boolean {
         return if (other is ContactNumber) {
-            (this.CID == other.CID && this.number == other.number)
+            (this.CID == other.CID && this.cleanNumber == other.cleanNumber)
         } else {
             false
         }
     }
     override fun toString() : String {
-        return "CONTACT NUMBER -  CID: " + this.CID  +  " number: " + this.number +
+        return "CONTACT NUMBER -  CID: " + this.CID  +  " number: " + this.cleanNumber +
             " versionNumber: " + this.versionNumber
     }
 
     override fun hashCode(): Int {
         var result = CID.hashCode()
-        result = 31 * result + number.hashCode()
+        result = 31 * result + cleanNumber.hashCode()
         result = 31 * result + versionNumber
         return result
     }
@@ -101,7 +108,7 @@ data class ContactNumber(
  */
 @Entity(tableName = "analyzed_number")
 data class AnalyzedNumber(
-    @PrimaryKey val number: String,
+    @PrimaryKey val number: String, // should use cleaned number
     val algoAllowed: Boolean? = null, // currently not using this value.
     val notifyGate: Int? = null,
     val lastCallTime: Long? = null,

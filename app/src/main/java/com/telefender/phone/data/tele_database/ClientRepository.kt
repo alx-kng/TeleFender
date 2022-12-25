@@ -10,7 +10,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 enum class MutexType {
-    EXECUTE, UPLOAD, CHANGE, STORED_MAP, INSTANCE, CONTACT, CONTACT_NUMBER, CALL_DETAIL, ANALYZED
+    EXECUTE, UPLOAD, CHANGE, STORED_MAP, INSTANCE, CONTACT, CONTACT_NUMBER, CALL_DETAIL, ANALYZED,
+    SYNC
 }
 
 /**
@@ -30,6 +31,8 @@ object TeleLocks {
     val mutexContactNumber = Mutex()
     val mutexAnalyzed = Mutex()
 
+    val mutexSync = Mutex()
+
     val mutexLocks = mapOf(
         MutexType.EXECUTE to mutexExecute,
         MutexType.UPLOAD to mutexUpload,
@@ -39,7 +42,8 @@ object TeleLocks {
         MutexType.INSTANCE to mutexInstance,
         MutexType.CONTACT to mutexContact,
         MutexType.CONTACT_NUMBER to mutexContactNumber,
-        MutexType.ANALYZED to mutexAnalyzed
+        MutexType.ANALYZED to mutexAnalyzed,
+        MutexType.SYNC to mutexSync
     )
 }
 
@@ -315,12 +319,15 @@ class ClientRepository(
     }
 
     /**
+     * TODO: Do we even need fromSync option in repository?
+     *  Do we even need to have changeFromClient() in the repository for that matter?
+     *
      * changeFromClient() should be called to handle changes that come from the client
      * See documentation for changeAgentDao.changeFromClient(). Locks handled at ExecuteAgent level.
      */
     @WorkerThread
-    suspend fun changeFromClient(changeLog: ChangeLog) {
-        changeAgentDao.changeFromClient(changeLog)
+    suspend fun changeFromClient(changeLog: ChangeLog, fromSync: Boolean) {
+        changeAgentDao.changeFromClient(changeLog, fromSync)
     }
 
     @WorkerThread

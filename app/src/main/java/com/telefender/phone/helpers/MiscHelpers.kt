@@ -13,7 +13,7 @@ object MiscHelpers {
     /**
      * Gets user's phone number.
      */
-    fun getInstanceNumber(context: Context) : String? {
+    fun getInstanceNumber(context: Context) : String {
         val tMgr = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
         return cleanNumber(tMgr.line1Number)
     }
@@ -21,8 +21,8 @@ object MiscHelpers {
     /**
      * Gets rid of non-numerical symbols from number.
      */
-    fun cleanNumber(number : String?) : String? {
-        return number?.replace("(\\s|\\(|\\)|-|\\.|,)".toRegex(), "")
+    fun cleanNumber(number : String?) : String {
+        return number?.replace("(\\s|\\(|\\)|-|\\.|,)".toRegex(), "") ?: "NULL NUMBER"
     }
 
     /**

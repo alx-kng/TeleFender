@@ -12,19 +12,21 @@ interface ContactNumberDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertContactNumbers(vararg contactNumbers: ContactNumber)
 
-    @Query("""
-        UPDATE contact_number SET number = :number,
+    @Query(
+        """
+        UPDATE contact_number SET cleanNumber = :number,
             versionNumber =
                 CASE
                     WHEN :versionNumber IS NOT NULL
                         THEN :versionNumber
                     ELSE versionNumber
                 END
-            WHERE CID = :CID AND number = :oldNumber
-        """)
+            WHERE CID = :CID AND cleanNumber = :oldNumber
+        """
+    )
     suspend fun updateContactNumbers(CID: String, oldNumber: String, number: String, versionNumber: Int?)
 
-    @Query("SELECT * FROM contact_number WHERE CID = :CID AND number = :number")
+    @Query("SELECT * FROM contact_number WHERE CID = :CID AND cleanNumber = :number")
     suspend fun getContactNumbersRow(CID: String, number: String): ContactNumber?
 
     @Query("SELECT * FROM contact_number WHERE CID = :CID")
@@ -39,10 +41,10 @@ interface ContactNumberDao {
     @Query("SELECT COUNT(CID) FROM contact_number")
     suspend fun getContactNumberSize() : Int?
 
-    @Query("DELETE FROM contact_number WHERE CID = :CID AND number = :number")
+    @Query("DELETE FROM contact_number WHERE CID = :CID AND cleanNumber = :number")
     suspend fun deleteContactNumbers_PK(CID: String, number: String)
 
-    @Query("DELETE FROM contact_number WHERE number = :number")
+    @Query("DELETE FROM contact_number WHERE cleanNumber = :number")
     suspend fun deleteContactNumbers_Number(number: String)
 
     @Query("DELETE FROM contact_number")

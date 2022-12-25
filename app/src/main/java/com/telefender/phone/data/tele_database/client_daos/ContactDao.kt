@@ -16,13 +16,16 @@ interface ContactDao {
     suspend fun updateContactBlocked(CID: String, blocked: Boolean)
 
     @Query("SELECT instanceNumber FROM contact WHERE CID = :CID")
-    suspend fun getInstanceNumber(CID: String): String
-    
+    suspend fun getInstanceNumber(CID: String): String?
+
+    @Query("SELECT blocked FROM contact WHERE CID = :CID")
+    suspend fun contactBlocked(CID: String): Boolean?
+
     @Query("SELECT * FROM contact WHERE instanceNumber = :instanceNumber")
     suspend fun getContactsByInstance(instanceNumber : String) : List<Contact>
     
     @Query("SELECT * FROM contact WHERE CID = :CID")
-    suspend fun getContactRow(CID: String): Contact
+    suspend fun getContactRow(CID: String): Contact?
 
     @Query("SELECT * FROM contact")
     suspend fun getAllContacts(): List<Contact>
