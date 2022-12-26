@@ -114,6 +114,8 @@ abstract class ClientDatabase : RoomDatabase() {
             return
         }
 
+        Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: initCoreDatabase()")
+
         val instanceNumber = MiscHelpers.getInstanceNumber(context)
 
         // Initializes stored map table with user number.
@@ -207,7 +209,7 @@ abstract class ClientDatabase : RoomDatabase() {
              * initializationRunning = true not put in scope so that initializationRunning is
              * up-to-date for check in next while loop iteration.
              */
-            if (!initializationRunning) {
+            if (!initializationRunning && !isInitialized(instanceNumber)) {
                 initializationRunning = true
                 scope.launch {
                     initCoreDatabase(context)

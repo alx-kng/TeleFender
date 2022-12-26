@@ -97,9 +97,11 @@ object DefaultContacts {
 
     /**
      * TODO: Look into whether using _ID is correct. That is, we don't want the id of a default
-     *  contact to change, as our CID depends on it.
+     *  contact to change, as our CID depends on it. <-- Think it is correct...
      *
-     * Returns a cursor containing all aggregate column rows in Android's Contact table
+     * Returns a cursor containing all aggregate column rows in Android's Contact table.
+     *
+     * NOTE: Make sure that calling function closes the cursor.
      */
     fun getContactCursor(contentResolver: ContentResolver): Cursor? {
         val projection = arrayOf(
@@ -121,7 +123,9 @@ object DefaultContacts {
 
     /**
      * Returns a cursor containing all numbers in Android's Phone table.
-     * Also contains data_version column for syncing
+     * Also contains data_version column for syncing (probably not used anymore).
+     *
+     * NOTE: Make sure that calling function closes the cursor.
      */
     fun getContactNumberCursor(contentResolver: ContentResolver): Cursor? {
         val projection = arrayOf(
@@ -143,7 +147,7 @@ object DefaultContacts {
     }
 
     /**
-     * TODO: Test and check this logic.
+     * TODO: Double check logic.
      *
      * Check if contact exists in default database given the _ID (our defaultCID).
      */
@@ -165,11 +169,12 @@ object DefaultContacts {
             null
         )
 
-        return curs != null && curs.moveToFirst()
+        val exists = curs != null && curs.moveToFirst()
+        curs?.close()
+        return exists
     }
 
     /**
-     * TODO: Test and check this logic.
      *
      * Check if contact exists in default database given the _ID (our defaultCID) and number
      * (our rawNumber).
@@ -185,7 +190,7 @@ object DefaultContacts {
         )
 
         val selection =
-            "${Phone.CONTACT_ID} = ? AND" +
+            "${Phone.CONTACT_ID} = ? AND " +
             "${Phone.NUMBER} = ?"
 
         val curs = contentResolver.query(
@@ -196,7 +201,11 @@ object DefaultContacts {
             null
         )
 
-        return curs != null && curs.moveToFirst()
+        Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: contactNumber: $rawNumber exists = ${curs != null && curs.moveToFirst()}")
+
+        val exists = curs != null && curs.moveToFirst()
+        curs?.close()
+        return exists
     }
 
     private fun getContactID(

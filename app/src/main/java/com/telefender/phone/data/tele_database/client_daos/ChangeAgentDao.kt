@@ -48,7 +48,7 @@ abstract class ChangeAgentDao: ChangeLogDao, ExecuteAgentDao, ExecuteQueueDao, U
      *  second thought, since this a DAO, we shouldn't mix between our database and the default
      *  database. Perhaps we should make an enveloping function in the repository or something
      *  to call our changeFromClient() and handle the default database changes.
-     * TODO: Manage non-contact changes.
+     * TODO: Manage non-contact changes / call log changes.
      *
      * Function to handle a change (as a ChangeLog) from Client.
      * Inserts changes into actual tables (e.g., Instance, Contact, etc...) and adds change

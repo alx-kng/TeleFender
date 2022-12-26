@@ -10,10 +10,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-//TODO: Probably / Maybe refactor ContactsViewModel to use repository to actually query the data,
-// as the "good" app architecture suggests the repository should be a single source of truth.
 
-// TODO: LOOK INTO PAGING FOR RECENTS AND CONTACTS
+/*
+TODO: Probably / Maybe refactor ContactsViewModel to use repository to actually query the data,
+ as the "good" app architecture suggests the repository should be a single source of truth.
+TODO: LOOK INTO PAGING FOR RECENTS AND CONTACTS
+TODO: Leftover gray divider bar when there are no contacts.
+ */
 class ContactsViewModel(app: Application) : AndroidViewModel(app) {
 
     @SuppressLint("StaticFieldLeak")

@@ -130,7 +130,7 @@ object TableSynchronizer {
     }
 
     /**
-     * TODO: New sync safety logic put in, but double check.
+     * TODO: New sync safety logic already put in, but double check.
      *
      * Deals with any potential insertions into the Android default database and updates ours, as
      * well as returning a HashMap of all ContactNumber for use in checking for updates and deletes

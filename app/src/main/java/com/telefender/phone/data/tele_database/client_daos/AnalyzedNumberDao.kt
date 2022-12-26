@@ -13,11 +13,57 @@ interface AnalyzedNumberDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAnalyzed(vararg analyzedNumber: AnalyzedNumber)
 
+    /**
+     * Gets AnalyzedNumber row given number and also initializes row if it doesn't already exist.
+     */
+    suspend fun getAnalyzed(number: String) : AnalyzedNumber {
+        // If no AnalyzedNumber row for number, then create row and initialize values
+        initAnalyzed(number)
+        return getAnalyzedQuery(number)!!
+    }
+
+    /**
+     * TODO: Check if we're initializing the right values.
+     *
+     * Initializes AnalyzedNumber row for number if it doesn't already exist.
+     */
+    suspend fun initAnalyzed(number: String) : Boolean {
+        if (getAnalyzedQuery(number) == null) {
+            insertAnalyzed(
+                AnalyzedNumber(
+                    number = number,
+                    notifyGate = 2,
+                    lastCallTime = null,
+                    numIncoming = 0,
+                    numOutgoing = 0,
+                    maxDuration = 0,
+                    avgDuration = 0,
+                    smsVerified = false,
+                    markedSafe = false,
+                    isBlocked = false,
+                    numMarkedBlocked = 0,
+                    numSharedContacts = 0,
+                    isOrganization = false,
+                    minDegree = null,
+                    numTreeContacts = 0,
+                    degreeString = ""
+                )
+            )
+
+            return true
+        } else {
+            return false
+        }
+    }
+
     @Query("SELECT * FROM analyzed_number WHERE number = :number")
-    suspend fun getAnalyzed(number: String) : AnalyzedNumber
+    suspend fun getAnalyzedQuery(number: String) : AnalyzedNumber?
 
     suspend fun updateAnalyzed(analyzedNumber: AnalyzedNumber) {
         with(analyzedNumber) {
+            // If no AnalyzedNumber row for number, then create row and initialize values
+            initAnalyzed(number)
+
             updateAnalyzedQuery(
                 number = number,
                 algoAllowed = algoAllowed,
