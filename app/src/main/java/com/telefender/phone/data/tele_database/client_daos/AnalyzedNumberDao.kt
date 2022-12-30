@@ -16,10 +16,10 @@ interface AnalyzedNumberDao {
     /**
      * Gets AnalyzedNumber row given number and also initializes row if it doesn't already exist.
      */
-    suspend fun getAnalyzed(number: String) : AnalyzedNumber {
+    suspend fun getAnalyzed(normalizedNumber: String) : AnalyzedNumber {
         // If no AnalyzedNumber row for number, then create row and initialize values
-        initAnalyzed(number)
-        return getAnalyzedQuery(number)!!
+        initAnalyzed(normalizedNumber)
+        return getAnalyzedQuery(normalizedNumber)!!
     }
 
     /**
@@ -31,7 +31,7 @@ interface AnalyzedNumberDao {
         if (getAnalyzedQuery(number) == null) {
             insertAnalyzed(
                 AnalyzedNumber(
-                    number = number,
+                    normalizedNumber = number,
                     notifyGate = 2,
                     lastCallTime = null,
                     numIncoming = 0,
@@ -56,16 +56,16 @@ interface AnalyzedNumberDao {
         }
     }
 
-    @Query("SELECT * FROM analyzed_number WHERE number = :number")
-    suspend fun getAnalyzedQuery(number: String) : AnalyzedNumber?
+    @Query("SELECT * FROM analyzed_number WHERE normalizedNumber = :normalizedNumber")
+    suspend fun getAnalyzedQuery(normalizedNumber: String) : AnalyzedNumber?
 
     suspend fun updateAnalyzed(analyzedNumber: AnalyzedNumber) {
         with(analyzedNumber) {
             // If no AnalyzedNumber row for number, then create row and initialize values
-            initAnalyzed(number)
+            initAnalyzed(normalizedNumber)
 
             updateAnalyzedQuery(
-                number = number,
+                normalizedNumber = normalizedNumber,
                 algoAllowed = algoAllowed,
                 notifyGate = notifyGate,
                 lastCallTime = lastCallTime,
@@ -184,10 +184,10 @@ interface AnalyzedNumberDao {
                     THEN :degreeString
                 ELSE degreeString
             END
-        WHERE number = :number"""
+        WHERE normalizedNumber = :normalizedNumber"""
     )
     suspend fun updateAnalyzedQuery(
-        number: String,
+        normalizedNumber: String,
         algoAllowed: Boolean?,
         notifyGate: Int?,
         lastCallTime: Long?,

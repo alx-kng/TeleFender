@@ -168,8 +168,7 @@ object ServerHelpers {
      */
     @SuppressLint("MissingPermission", "HardwareIds")
     suspend fun uploadPostRequest(context: Context, repository: ClientRepository, scope: CoroutineScope) {
-        val tMgr: TelephonyManager = context.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
-        val instanceNumber = MiscHelpers.cleanNumber(tMgr.line1Number)!!
+        val instanceNumber = MiscHelpers.getInstanceNumber(context)
 
         var uploadLogs: List<UploadQueue>?
         var uploadRequestJson: String? = null

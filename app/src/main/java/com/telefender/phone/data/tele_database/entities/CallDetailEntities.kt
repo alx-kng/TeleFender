@@ -8,9 +8,9 @@ import com.telefender.phone.helpers.MiscHelpers
  * For RecentsFragment
  **************************************************************************************************/
 
+// TODO: Make this also include normalized number for UI.
 data class GroupedCallDetail(
-    val number: String,
-    val callType: String?,
+    val rawNumber: String,
     var callEpochDate: Long,
     var callLocation: String?,
     val callDirection: Int?,
@@ -19,7 +19,7 @@ data class GroupedCallDetail(
     var firstEpochID: Long) {
 
     override fun toString() : String {
-        return "number: $number callType: $callType callEpochDate: $callEpochDate" +
+        return "rawNumber: $rawNumber callEpochDate: $callEpochDate" +
             " callLocation: $callLocation callDirection: ${MiscHelpers.getDirectionString(callDirection)}" +
             " unallowed: $unallowed"
     }
@@ -53,32 +53,33 @@ object CallHistoryFooter : CallDetailItem
  */
 @Entity(tableName = "call_detail")
 data class CallDetail(
-    val number: String,
+    val rawNumber: String,
+    val normalizedNumber: String,
     val callType: String?,
     @PrimaryKey val callEpochDate: Long,
     val callDuration: Long?,
     val callLocation: String?,
     val callDirection: Int?,
+    val instanceNumber: String,
     val unallowed: Boolean = false
 ) : CallDetailItem {
 
     override fun toString() : String {
-        return "number: $number callType: $callType callEpochDate: $callEpochDate callDuration: " +
+        return "rawNumber: $rawNumber callType: $callType callEpochDate: $callEpochDate callDuration: " +
             "$callDuration callLocation: $callLocation " +
             "callDirection: ${MiscHelpers.getDirectionString(callDirection)} " +
-            "unallowed: $unallowed"
+            "unallowed: $unallowed normalizedNumber: $normalizedNumber"
     }
 
     fun createGroup() : GroupedCallDetail {
         return GroupedCallDetail(
-            number,
-            callType,
-            callEpochDate,
-            callLocation,
-            callDirection,
-            unallowed,
-            1,
-            callEpochDate
+            rawNumber = rawNumber,
+            callEpochDate = callEpochDate,
+            callLocation = callLocation,
+            callDirection = callDirection,
+            unallowed = unallowed,
+            amount = 1,
+            firstEpochID = callEpochDate
         )
     }
 }

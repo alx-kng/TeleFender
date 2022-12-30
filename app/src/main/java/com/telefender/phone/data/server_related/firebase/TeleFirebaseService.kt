@@ -48,7 +48,7 @@ class TeleFirebaseService : FirebaseMessagingService() {
 //                }
 //
 //                val tMgr = applicationContext.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
-//                val instanceNumber : String = MiscHelpers.cleanNumber(tMgr.line1Number)!!
+//                val instanceNumber : String = MiscHelpers.normalizedNumber(tMgr.line1Number)!!
 //                val repository : ClientRepository? = (application as App).repository
 //
 //                var isSetup = repository?.hasCredKey(instanceNumber!!) ?: false

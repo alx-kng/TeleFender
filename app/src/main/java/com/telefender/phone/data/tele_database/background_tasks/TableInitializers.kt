@@ -44,10 +44,9 @@ object TableInitializers {
      */
     @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("MissingPermission")
-    suspend fun initInstance(context: Context, database: ClientDatabase) {
+    suspend fun initInstance(context: Context, database: ClientDatabase, instanceNumber: String) {
         val changeID = UUID.randomUUID().toString()
         val changeTime = Instant.now().toEpochMilli() // get epoch time
-        val instanceNumber = MiscHelpers.getInstanceNumber(context) // get phone # of user
 
         database.changeAgentDao().changeFromClient(
             ChangeLog(
@@ -166,10 +165,12 @@ object TableInitializers {
         val changeTime = Instant.now().toEpochMilli()
         val instanceNumber = MiscHelpers.getInstanceNumber(context)
         val defaultCID = cursor.getString(0)
-        val CID = UUID.nameUUIDFromBytes((defaultCID + instanceNumber).toByteArray()).toString()
+        val teleCID = UUID.nameUUIDFromBytes((defaultCID + instanceNumber).toByteArray()).toString()
         val rawNumber = cursor.getString(1)
-        val cleanNumber = MiscHelpers.cleanNumber(rawNumber)
-        val versionNumber = cursor.getString(2).toInt()
+        val normalizedNumber = cursor.getString(2)
+            ?: MiscHelpers.normalizedNumber(rawNumber)
+            ?: MiscHelpers.bareNumber(rawNumber)
+        val versionNumber = cursor.getString(3).toInt()
 
         // To insert into ContactNumber table
         database.changeAgentDao().changeFromClient(
@@ -178,8 +179,8 @@ object TableInitializers {
                 changeTime = changeTime,
                 type = CHANGELOG_TYPE_CONTACT_NUMBER_INSERT,
                 instanceNumber = instanceNumber,
-                CID = CID,
-                cleanNumber = cleanNumber,
+                CID = teleCID,
+                normalizedNumber = normalizedNumber,
                 defaultCID = defaultCID,
                 rawNumber = rawNumber,
                 degree = 0, // 0 means direct contact number

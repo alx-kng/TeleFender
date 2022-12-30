@@ -118,18 +118,19 @@ abstract class ClientDatabase : RoomDatabase() {
 
         val instanceNumber = MiscHelpers.getInstanceNumber(context)
 
-        // Initializes stored map table with user number.
-        this.storedMapDao().insertStoredMap(StoredMap(instanceNumber!!))
+        // Makes sure that retrieved instanceNumber isn't invalid (due to errors or something).
+        if (instanceNumber != MiscHelpers.INVALID_NUMBER) {
+            // Initializes stored map table with user number.
+            this.storedMapDao().insertStoredMap(StoredMap(instanceNumber))
 
-        // Inserts the single user instance with changeAgentDao
-        TableInitializers.initInstance(context, this)
+            // Inserts the single user instance with changeAgentDao
+            TableInitializers.initInstance(context, this, instanceNumber)
 
-        // Actually makes sure that instance is inserted into table
-        ExecuteScheduler.initiateOneTimeExecuteWorker(context)
-        WorkerStates.workerWaiter(WorkerType.ONE_TIME_EXEC)
-
-        // Set databaseInitialized status in StoredMap table
-        this.storedMapDao().updateDatabaseInitialized(instanceNumber, true)
+            // Set databaseInitialized status in StoredMap table if Instance successfully inserted.
+            if (this.instanceDao().hasInstance(instanceNumber)) {
+                this.storedMapDao().updateDatabaseInitialized(instanceNumber, true)
+            }
+        }
 
         initializationRunning = false
     }
@@ -162,10 +163,6 @@ abstract class ClientDatabase : RoomDatabase() {
 
         // Goes through contact numbers and inserts numbers into db
         TableInitializers.initContactNumber(context, this, contentResolver)
-
-        // Actually makes sure that values are inserted into the tables.
-        ExecuteScheduler.initiateOneTimeExecuteWorker(context)
-        WorkerStates.workerWaiter(WorkerType.ONE_TIME_EXEC)
 
         DatabaseLogFunctions.logSelect(null, repository, listOf(0, 1, 2, 3, 4, 5))
     }
@@ -200,7 +197,9 @@ abstract class ClientDatabase : RoomDatabase() {
      * Not only waits for core database initialization, but also restarts initialization if it not
      * initialized and no exec worker running.
      */
-    private suspend fun waitForInitialization(scope: CoroutineScope, context: Context, instanceNumber: String) {
+    private suspend fun waitForInitialization(scope: CoroutineScope, context: Context) {
+        val instanceNumber = MiscHelpers.getInstanceNumber(context)
+
         while (!isInitialized(instanceNumber)) {
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: getDatabase() - DATABASE INITIALIZED = FALSE")
             delay(500)
@@ -228,8 +227,9 @@ abstract class ClientDatabase : RoomDatabase() {
             return false
         }
 
-        return this.instanceDao().hasInstance()
-            && this.storedMapDao().databaseInitialized(userNumber)
+        return userNumber != MiscHelpers.INVALID_NUMBER
+            && this.instanceDao().hasInstance(userNumber)
+            && this.storedMapDao().databaseInitialized(userNumber) == true
     }
 
     /**
@@ -244,7 +244,9 @@ abstract class ClientDatabase : RoomDatabase() {
      * Also, we don't need to consider case where isSetup() is false but worker state is null,
      * because the setup status is changed in the database before the worker state is changed.
      */
-    private suspend fun waitForSetup(context: Context, instanceNumber: String) {
+    private suspend fun waitForSetup(context: Context) {
+        val instanceNumber = MiscHelpers.getInstanceNumber(context)
+
         while (!isSetup(instanceNumber)) {
             delay(500)
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: getDatabase() - USER SETUP = FALSE")
@@ -308,13 +310,10 @@ abstract class ClientDatabase : RoomDatabase() {
                 scope.launch {
                     instanceTemp.waitForLogPermissions(context, "getDatabase()")
 
-                    // Gets user's phone number.
-                    val instanceNumber = MiscHelpers.getInstanceNumber(context)
-
                     // TODO: Probably need to restart firebase initialization process too.
                     // Waits for / restarts core database initialization and user setup.
-                    instanceTemp.waitForInitialization(scope, context, instanceNumber!!)
-                    instanceTemp.waitForSetup(context, instanceNumber)
+                    instanceTemp.waitForInitialization(scope, context)
+                    instanceTemp.waitForSetup(context)
 
                     OmegaPeriodicScheduler.initiateOneTimeOmegaWorker(context)
                     WorkerStates.workerWaiter(WorkerType.ONE_TIME_OMEGA)

@@ -51,18 +51,14 @@ interface UploadAgentDao: InstanceDao, ContactDao, ContactNumberDao,
     ) {
 
         with(changeLog) {
-            val cleanInstanceNumber = MiscHelpers.cleanNumber(instanceNumber)
-            val cleanOldNumber = MiscHelpers.cleanNumber(oldNumber)
-            val cleanNumber = MiscHelpers.cleanNumber(cleanNumber)
-
             val cleanedChangeLog = ChangeLog(
                 changeID = changeID,
-                instanceNumber = cleanInstanceNumber,
+                instanceNumber = instanceNumber,
                 changeTime = changeTime,
                 type = type,
                 CID = CID,
-                oldNumber = cleanOldNumber,
-                cleanNumber = cleanNumber,
+                oldNumber = oldNumber,
+                normalizedNumber = normalizedNumber,
                 degree = degree,
                 counterValue = counterValue,
                 errorCounter = errorCounter,

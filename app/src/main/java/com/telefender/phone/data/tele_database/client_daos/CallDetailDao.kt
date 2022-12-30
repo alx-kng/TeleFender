@@ -7,29 +7,33 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface CallDetailDao: StoredMapDao {
 
-    @Transaction
-    suspend fun insertDetailSync(instanceNumber: String, callDetail: CallDetail) : Boolean {
+    /**
+     * TODO: Double check that Transaction is unnecessary here since insertDetailSync() is
+     *  already wrapped in a Transaction inside ExecuteAgent's logInsert().
+     */
+    suspend fun insertDetailSync(callDetail: CallDetail) : Boolean {
         with(callDetail) {
+            val instanceNumber = getUserNumber()!!
+
             if (callDetailExists(callEpochDate)) {
                 /*
                 Makes sure call is not synced before setting values. Preserves memory lifetime
                 by decreasing unnecessary writes.
                  */
-                if (callSynced(callEpochDate) == null) {
+                if (!callSynced(callEpochDate)) {
                     syncDetail(
-                        callEpochDate,
-                        callType,
-                        callLocation,
-                        callDuration,
-                        callDirection
+                        rawNumber = rawNumber,
+                        normalizedNumber = normalizedNumber,
+                        callType = callType,
+                        callEpochDate = callEpochDate,
+                        callLocation = callLocation,
+                        callDuration = callDuration,
+                        callDirection = callDirection
                     )
 
                     updateStoredMap(
-                        instanceNumber,
-                        null,
-                        null,
-                        null,
-                        callEpochDate
+                        number = instanceNumber,
+                        lastSyncTime = callEpochDate
                     )
 
                     return true
@@ -38,11 +42,8 @@ interface CallDetailDao: StoredMapDao {
                 insertDetailIgnore(this)
 
                 updateStoredMap(
-                    instanceNumber,
-                    null,
-                    null,
-                    null,
-                    callEpochDate
+                    number = instanceNumber,
+                    lastSyncTime = callEpochDate
                 )
 
                 return true
@@ -65,13 +66,15 @@ interface CallDetailDao: StoredMapDao {
         } else {
             val unSyncedCallDetail = with(callDetail) {
                 CallDetail(
-                    number,
-                    null,
-                    callEpochDate,
-                    callDuration,
-                    callLocation,
-                    callDirection,
-                    unallowed
+                    rawNumber = rawNumber,
+                    normalizedNumber = normalizedNumber,
+                    callType = null,
+                    callEpochDate = callEpochDate,
+                    callDuration = callDuration,
+                    callLocation = callLocation,
+                    callDirection = callDirection,
+                    instanceNumber = instanceNumber,
+                    unallowed = unallowed
                 )
             }
 
@@ -82,17 +85,25 @@ interface CallDetailDao: StoredMapDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertDetailIgnore(vararg callDetail: CallDetail)
 
+    /**
+     * TODO: Maybe check for null values to make sure that null values don't override non-null
+     *  columns. Also, maybe check that the values are different before updating column.
+     */
     @Query("""
         UPDATE call_detail 
-        SET callType = :callType,
+        SET rawNumber = :rawNumber,
+            normalizedNumber = :normalizedNumber,
+            callType = :callType,
             callDuration = :callDuration,
             callLocation = :callLocation,
             callDirection = :callDirection
         WHERE callEpochDate = :callEpochDate
         """)
     suspend fun syncDetail(
-        callEpochDate: Long,
+        rawNumber: String?,
+        normalizedNumber: String?,
         callType: String?,
+        callEpochDate: Long,
         callLocation: String?,
         callDuration: Long?,
         callDirection: Int?,
@@ -114,8 +125,8 @@ interface CallDetailDao: StoredMapDao {
     /**
      * Check synced by whether or not callType was set or not.
      */
-    @Query("SELECT callType FROM call_detail WHERE callEpochDate = :callEpochDate")
-    suspend fun callSynced(callEpochDate: Long) : String?
+    @Query("SELECT EXISTS (SELECT callType FROM call_detail WHERE callEpochDate = :callEpochDate)")
+    suspend fun callSynced(callEpochDate: Long) : Boolean
 
     @Query("SELECT * FROM call_detail ORDER BY callEpochDate DESC")
     fun getFlowCallDetails(): Flow<List<CallDetail>>

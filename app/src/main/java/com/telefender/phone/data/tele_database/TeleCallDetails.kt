@@ -43,24 +43,29 @@ object TeleCallDetails {
      * looking at the default database during sync.
      *
      * NOTE: You should call insertCallDetail() AS CLOSE TO THE END OF CALL AS POSSIBLE so that
-     * duration.
+     * calculated call duration is more accurate.
      */
     fun insertCallDetail(repository: ClientRepository?, call: Call, unallowed: Boolean, direction: Int?) {
         if (repository == null) { return }
 
         CoroutineScope(Dispatchers.Default).launch {
-            val number = MiscHelpers.cleanNumber(call.number())
+            val instanceNumber = repository.getInstanceNumber()
+            val rawNumber = call.number()
+            val normalizedNumber = MiscHelpers.normalizedNumber(rawNumber)
+                ?: MiscHelpers.bareNumber(rawNumber)
             val epochDate = call.createTime()
             val duration = call.callDurationMILLI()
 
             val callDetail = CallDetail(
-                    number!!,
-                    null,
-                    epochDate,
-                    duration,
-                null,
-                    direction,
-                    unallowed
+                rawNumber = rawNumber ?: MiscHelpers.INVALID_NUMBER,
+                normalizedNumber = normalizedNumber,
+                callType = null,
+                callEpochDate = epochDate,
+                callDuration = duration,
+                callLocation = null,
+                callDirection = direction,
+                instanceNumber = instanceNumber!!,
+                unallowed = unallowed
             )
 
             Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: $callDetail")

@@ -31,7 +31,6 @@ data class Instance(
     }
 }
 
-// TODO: Make sure that nothing uses the Cascade delete in its calculations.
 // TODO: Should we add defaultCID column to Contact table?
 @Entity(tableName = "contact",
     foreignKeys = [ForeignKey(
@@ -52,13 +51,11 @@ data class Contact(
     }
 }
 
-/*
-TODO: Finish adding instance number column.
-TODO: Implement changes with cleanNumber and rawNumber. cleanNumber used for AnalyzedNumber (that
- way the tree numbers are assimilated in the same row).
+/**
+ * TODO: Consider using E164 representation (normalized) for rawNumber.
  */
 @Entity(tableName = "contact_number",
-    primaryKeys = ["CID", "cleanNumber"],
+    primaryKeys = ["CID", "normalizedNumber"],
     foreignKeys = [
         ForeignKey(
             entity = Contact::class,
@@ -72,32 +69,40 @@ TODO: Implement changes with cleanNumber and rawNumber. cleanNumber used for Ana
             childColumns = arrayOf("instanceNumber"),
             onDelete = ForeignKey.NO_ACTION
         )],
-    indices = [Index(value = ["cleanNumber"]), Index(value = ["rawNumber"]), Index(value = ["instanceNumber"])]
+    indices = [
+        Index(value = ["normalizedNumber"]),
+        Index(value = ["rawNumber"]),
+        Index(value = ["instanceNumber"]),
+        Index(value = ["CID"])
+    ]
 )
 data class ContactNumber(
     val CID: String,
-    val cleanNumber: String,
+    val normalizedNumber: String,
     val defaultCID: String,
     val rawNumber: String,
     val instanceNumber: String,
     val versionNumber: Int = 0,
     val degree: Int
 ) {
+    /**
+     * Returns true if PK of two ContactNumbers are equal.
+     */
     override fun equals(other: Any?): Boolean {
         return if (other is ContactNumber) {
-            (this.CID == other.CID && this.cleanNumber == other.cleanNumber)
+            (this.CID == other.CID && this.normalizedNumber == other.normalizedNumber)
         } else {
             false
         }
     }
     override fun toString() : String {
-        return "CONTACT NUMBER -  CID: " + this.CID  +  " number: " + this.cleanNumber +
+        return "CONTACT NUMBER -  CID: " + this.CID  +  " number: " + this.normalizedNumber +
             " versionNumber: " + this.versionNumber
     }
 
     override fun hashCode(): Int {
         var result = CID.hashCode()
-        result = 31 * result + cleanNumber.hashCode()
+        result = 31 * result + normalizedNumber.hashCode()
         result = 31 * result + versionNumber
         return result
     }
@@ -108,7 +113,7 @@ data class ContactNumber(
  */
 @Entity(tableName = "analyzed_number")
 data class AnalyzedNumber(
-    @PrimaryKey val number: String, // should use cleaned number
+    @PrimaryKey val normalizedNumber: String, // should use cleaned number
     val algoAllowed: Boolean? = null, // currently not using this value.
     val notifyGate: Int? = null,
     val lastCallTime: Long? = null,
@@ -128,7 +133,7 @@ data class AnalyzedNumber(
 ) {
 
     override fun toString() : String {
-        return "ANALYZED NUMBER: number: $number algoAllowed: $algoAllowed notifyGate: $notifyGate" +
+        return "ANALYZED NUMBER: number: $normalizedNumber algoAllowed: $algoAllowed notifyGate: $notifyGate" +
             " lastCallTime: $lastCallTime numIncoming: $numIncoming numOutgoing: $numOutgoing" +
             " maxDuration: $maxDuration avgDuration: $avgDuration smsVerified: $smsVerified" +
             " markedSafe: $markedSafe isBlocked: $isBlocked numMarkedBlocked: $numMarkedBlocked" +

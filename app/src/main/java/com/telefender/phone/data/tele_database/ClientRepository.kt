@@ -92,6 +92,11 @@ class ClientRepository(
         return storedMapDao.getSessionID(number)
     }
 
+    @WorkerThread
+    suspend fun getInstanceNumber() : String? {
+        return storedMapDao.getUserNumber()
+    }
+
     /**
      * getClientKey() for retrieve UUID key to push and pull changes to / from server
      */
@@ -108,13 +113,6 @@ class ClientRepository(
     @WorkerThread
     suspend fun getLastSyncTime(number : String) : Long {
         return storedMapDao.getLastSyncTime(number)
-    }
-
-    @WorkerThread
-    suspend fun insertStoredMap(storedMap : StoredMap) {
-        mutexStoredMap.withLock {
-            storedMapDao.insertStoredMap(storedMap)
-        }
     }
 
     @WorkerThread
@@ -163,15 +161,6 @@ class ClientRepository(
         }
     }
 
-    @WorkerThread
-    suspend fun insertDetailSync(instanceNumber: String, callDetail: CallDetail) : Boolean {
-        var inserted: Boolean
-        mutexCallDetails.withLock {
-            inserted = callDetailDao.insertDetailSync(instanceNumber, callDetail)
-        }
-        return inserted
-    }
-
     /***********************************************************************************************
      * AnalyzedNumber Queries
      **********************************************************************************************/
@@ -186,8 +175,8 @@ class ClientRepository(
      **********************************************************************************************/
 
     @WorkerThread
-    suspend fun hasInstance() : Boolean {
-        return instanceDao.hasInstance()
+    suspend fun hasInstance(instanceNumber: String) : Boolean {
+        return instanceDao.hasInstance(instanceNumber)
     }
 
     /***********************************************************************************************
@@ -316,6 +305,15 @@ class ClientRepository(
     @WorkerThread
     suspend fun changeFromServer(changeLog: ChangeLog) {
         changeAgentDao.changeFromServer(changeLog)
+    }
+
+    /**
+     * Used to add CallDetail to database and update AnalyzedNumber. Returns whether the CallDetail
+     * was inserted or not (may not be inserted if log already exists and is synced).
+     */
+    @WorkerThread
+    suspend fun callFromClient(callDetail: CallDetail) : Boolean {
+        return changeAgentDao.callFromClient(callDetail)
     }
 
     /**

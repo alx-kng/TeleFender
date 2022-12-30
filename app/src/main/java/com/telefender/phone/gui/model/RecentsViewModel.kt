@@ -112,10 +112,9 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
             var currGroup: GroupedCallDetail? = null
 
             for (log in logs) {
-
                 // If the log fits in the current group, then increment the group size.
                 if (prevLog != null && currGroup != null
-                    && log.number == prevLog.number
+                    && log.rawNumber == prevLog.rawNumber
                     && log.callDirection == prevLog.callDirection
                     && log.callEpochDate in dayPeriod(prevLog.callEpochDate)) {
 
@@ -154,7 +153,7 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
     private fun dayLogFilter() {
         _dayLogs = _callLogs.value
             ?.filter { it.callEpochDate in startOfDay..endOfDay}
-            ?.filter { it.number == selectNumber }
+            ?.filter { it.rawNumber == selectNumber }
             ?.toMutableList()
             ?: mutableListOf()
 

@@ -17,8 +17,7 @@ import timber.log.Timber
 object DefaultCallDetails{
 
     /**
-     * TODO: Need to find out if date is creation time or connect time.
-     * TODO: UI SHOWING WRONG ORDER (Recents should be descending instead of ascending).
+     * TODO: Use cached normalizedNumber
      *
      * Returns list of CallDetail objects using contentResolver.query()
      */
@@ -26,12 +25,14 @@ object DefaultCallDetails{
     suspend fun getDefaultCallDetails(context: Context): MutableList<CallDetail> {
 
         return withContext(Dispatchers.IO) {
+            val instanceNumber = MiscHelpers.getInstanceNumber(context)
+
             val projection = arrayOf(
                 CallLog.Calls.NUMBER,
                 CallLog.Calls.TYPE,
                 CallLog.Calls.DATE,
                 CallLog.Calls.DURATION,
-                CallLog.Calls.GEOCODED_LOCATION
+                CallLog.Calls.GEOCODED_LOCATION,
             )
 
             val curs : Cursor? = context.contentResolver.query(
@@ -43,18 +44,29 @@ object DefaultCallDetails{
             )
 
             val calls: MutableList<CallDetail> = mutableListOf()
-
             if (curs != null) {
                 while (curs.moveToNext()) {
-                    val number = curs.getString(0)
+                    val rawNumber = curs.getString(0)
+                    // If normalizedNumber is null, use bareNumber() cleaning of rawNumber.
+                    val normalizedNumber = MiscHelpers.normalizedNumber(rawNumber)
+                        ?: MiscHelpers.bareNumber(rawNumber)
                     val typeInt = curs.getInt(1)
-                    // Epoch date is in milliseconds
+                    // Epoch date is in milliseconds and is the creation time.
                     val date = curs.getString(2).toLong()
                     val duration = curs.getString(3).toLong()
                     val location = curs.getString(4)
-                    val dir = MiscHelpers.getTrueDirection(typeInt, number)
+                    val dir = MiscHelpers.getTrueDirection(typeInt, rawNumber)
 
-                    val callDetail = CallDetail(number, dir.toString(), date, duration, location, dir)
+                    val callDetail = CallDetail(
+                        rawNumber = rawNumber,
+                        normalizedNumber = normalizedNumber,
+                        callType = dir.toString(),
+                        callEpochDate = date,
+                        callDuration = duration,
+                        callLocation = location,
+                        callDirection = dir,
+                        instanceNumber = instanceNumber
+                    )
                     calls.add(callDetail)
                 }
                 curs.close()
@@ -63,38 +75,6 @@ object DefaultCallDetails{
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: CALL LOG RETRIEVAL FINISHED")
             return@withContext calls
         }
-    }
-
-    /**
-     * Returns list of CallDetail objects using contentResolver.query()
-     */
-    @RequiresApi(Build.VERSION_CODES.O)
-    fun getCallLogs(context: Context): MutableList<CallDetail> {
-
-        val projection = arrayOf(
-            CallLog.Calls.NUMBER,
-            CallLog.Calls.TYPE,
-            CallLog.Calls.DATE,
-            CallLog.Calls.DURATION,
-            CallLog.Calls.GEOCODED_LOCATION
-            )
-
-        val curs: Cursor = context.contentResolver.query(CallLog.Calls.CONTENT_URI, projection, null, null)!!
-
-        var calls: MutableList<CallDetail> = mutableListOf()
-        while (curs.moveToNext()) {
-            val number = curs.getString(0)
-            val typeInt = curs.getInt(1)
-            val date = curs.getString(2).toLong()
-            val duration = curs.getString(3).toLong()
-            val location = curs.getString(4)
-            val dir = MiscHelpers.getTrueDirection(typeInt, number)
-
-            val callDetail = CallDetail(number, dir.toString(), date, duration, location, dir)
-            calls.add(callDetail)
-        }
-        curs.close()
-        return calls
     }
 
     /**

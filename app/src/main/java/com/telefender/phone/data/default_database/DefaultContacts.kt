@@ -68,7 +68,7 @@ object DefaultContacts {
         return withContext(Dispatchers.IO) {
             val projection = arrayOf(
                 ContactsContract.Contacts._ID,
-                ContactsContract.Contacts.DISPLAY_NAME_PRIMARY
+                ContactsContract.Contacts.DISPLAY_NAME_PRIMARY,
             )
 
             val cur: Cursor = context.contentResolver.query(
@@ -79,7 +79,7 @@ object DefaultContacts {
                 Phone.DISPLAY_NAME + " ASC"
             )!!
 
-            var contacts : MutableList<ContactDetail> = mutableListOf()
+            val contacts : MutableList<ContactDetail> = mutableListOf()
 
             while (cur.moveToNext()) {
                 val id = cur.getString(0).toInt()
@@ -122,6 +122,9 @@ object DefaultContacts {
     }
 
     /**
+     * TODO: Need to retrieve blocked status.
+     * TODO: Consider using E164 representation (normalized) for number.
+     *
      * Returns a cursor containing all numbers in Android's Phone table.
      * Also contains data_version column for syncing (probably not used anymore).
      *
@@ -131,6 +134,7 @@ object DefaultContacts {
         val projection = arrayOf(
             Phone.CONTACT_ID,
             Phone.NUMBER,
+            Phone.NORMALIZED_NUMBER,
             Phone.DATA_VERSION
         )
         var cur: Cursor? = null
@@ -186,7 +190,7 @@ object DefaultContacts {
     ) : Boolean {
         val projection = arrayOf(
             Phone.CONTACT_ID,
-            Phone.NUMBER
+            Phone.NUMBER,
         )
 
         val selection =

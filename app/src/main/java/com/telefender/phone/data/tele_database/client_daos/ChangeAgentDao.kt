@@ -5,6 +5,7 @@ import androidx.room.Transaction
 import com.telefender.phone.data.tele_database.ClientDBConstants.RESPONSE_OK
 import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
+import com.telefender.phone.data.tele_database.entities.CallDetail
 import com.telefender.phone.data.tele_database.entities.ChangeLog
 import com.telefender.phone.data.tele_database.entities.ExecuteQueue
 import com.telefender.phone.data.tele_database.entities.UploadQueue
@@ -17,7 +18,6 @@ abstract class ChangeAgentDao: ChangeLogDao, ExecuteAgentDao, ExecuteQueueDao, U
 
     /**
      * TODO: HANDLE TRANSACTIONS FOR RETRY.
-     * TODO: Do we still need to clean here??
      *
      * Function to handle a change (as a ChangeLog) from Server.
      * Adds change to the ChangeLog and ExecuteQueue. Contrary to changeFromClient(), we don't
@@ -40,15 +40,33 @@ abstract class ChangeAgentDao: ChangeLogDao, ExecuteAgentDao, ExecuteQueueDao, U
         return RESPONSE_OK
     }
 
+
+    /**
+     * TODO: Modify or create new UploadLog to upload CallDetails. If not, then Transaction may
+     *  be unnecessary.
+     *
+     * Handles new calls from client. Should only be called for syncing call logs. Returns whether
+     * or not the CallDetail was inserted or not (may not be inserted if already synced).
+     */
+    @Transaction
+    open suspend fun callFromClient(callDetail: CallDetail) : Boolean {
+        val inserted: Boolean
+        mutexLocks[MutexType.ANALYZED]!!.withLock {
+            mutexLocks[MutexType.CALL_DETAIL]!!.withLock {
+                inserted = logInsert(callDetail)
+            }
+        }
+
+        return inserted
+    }
+
     /**
      * TODO: HANDLE TRANSACTIONS FOR RETRY.
-     * TODO: Do we still need to clean here??
-     * TODO: Require instanceNumber in changeLog
      * TODO: Debating whether or not we should handle default database changes here to. But on
      *  second thought, since this a DAO, we shouldn't mix between our database and the default
      *  database. Perhaps we should make an enveloping function in the repository or something
      *  to call our changeFromClient() and handle the default database changes.
-     * TODO: Manage non-contact changes / call log changes.
+     * TODO: Manage non-contact changes
      *
      * Function to handle a change (as a ChangeLog) from Client.
      * Inserts changes into actual tables (e.g., Instance, Contact, etc...) and adds change
@@ -84,7 +102,7 @@ abstract class ChangeAgentDao: ChangeLogDao, ExecuteAgentDao, ExecuteQueueDao, U
 
 
             mutexLocks[MutexType.CHANGE]!!.withLock {
-                insertChangeLog(this)
+                insertChangeLog(changeLog)
             }
 
             mutexLocks[MutexType.UPLOAD]!!.withLock {

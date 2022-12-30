@@ -18,8 +18,8 @@ interface InstanceDao {
     @Query("SELECT * FROM instance WHERE number = :number")
     suspend fun getInstanceRow(number : String) : Instance
     
-    @Query("SELECT EXISTS (SELECT number FROM instance LIMIT 1)")
-    suspend fun hasInstance() : Boolean
+    @Query("SELECT EXISTS (SELECT number FROM instance WHERE number = :instanceNumber)")
+    suspend fun hasInstance(instanceNumber: String) : Boolean
     
     @Delete
     suspend fun deleteInstanceNumbers(vararg instances: Instance)

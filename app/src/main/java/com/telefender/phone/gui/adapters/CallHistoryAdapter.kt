@@ -137,7 +137,7 @@ class CallHistoryAdapter (
                 val date = Date(current.callEpochDate)
                 holder.date.text = simpleDate.format(date)
 
-                holder.direction.text = getDirectionString(current.callDirection, current.number)
+                holder.direction.text = getDirectionString(current.callDirection, current.rawNumber)
 
                 holder.duration.text = current.callDuration.toString() + " seconds"
 
@@ -210,8 +210,8 @@ class CallHistoryAdapter (
         }
     }
 
-    private fun getDirectionString(direction: Int?, number: String): String {
-        val trueDirection = MiscHelpers.getTrueDirection(direction, number)
+    private fun getDirectionString(direction: Int?, rawNumber: String): String {
+        val trueDirection = MiscHelpers.getTrueDirection(direction, rawNumber)
 
         val directionString = when (trueDirection) {
             CallLog.Calls.INCOMING_TYPE  -> "Incoming Call"

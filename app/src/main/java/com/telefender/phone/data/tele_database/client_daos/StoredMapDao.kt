@@ -38,7 +38,7 @@ interface StoredMapDao {
     suspend fun getLastSyncTime(number : String) : Long
 
     @Query("SELECT databaseInitialized FROM stored_map WHERE userNumber = :number")
-    suspend fun databaseInitialized(number: String) : Boolean
+    suspend fun databaseInitialized(number: String) : Boolean?
 
     @Query("SELECT EXISTS (SELECT * FROM stored_map LIMIT 1)")
     suspend fun storedMapInitialized() : Boolean
@@ -74,7 +74,13 @@ interface StoredMapDao {
             END
         WHERE userNumber = :number"""
     )
-    suspend fun updateStoredMap(number: String, sessionId: String?, clientKey: String?, fireBaseToken : String?, lastSyncTime : Long?)
+    suspend fun updateStoredMap(
+        number: String,
+        sessionId: String? = null,
+        clientKey: String? = null,
+        fireBaseToken : String? = null,
+        lastSyncTime : Long? = null
+    )
 
     @Delete
     suspend fun deleteStoredMap(vararg storedMap: StoredMap)

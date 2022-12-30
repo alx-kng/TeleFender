@@ -15,6 +15,7 @@ import com.google.android.material.button.MaterialButton
 import com.telefender.phone.R
 import com.telefender.phone.data.tele_database.entities.GroupedCallDetail
 import com.telefender.phone.helpers.MiscHelpers
+import timber.log.Timber
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.LocalDateTime
@@ -76,11 +77,11 @@ class RecentsAdapter(
 
         val viewHolder = RecentsViewHolder(adapterLayout,
             { pos ->
-                viewClickListener(getItem(pos).number)
+                viewClickListener(getItem(pos).rawNumber)
             },
             { pos ->
                 val log = getItem(pos)
-                infoClickListener(log.number, log.callEpochDate)
+                infoClickListener(log.rawNumber, log.callEpochDate)
             }
         )
 
@@ -92,7 +93,7 @@ class RecentsAdapter(
      */
     override fun onBindViewHolder(holder: RecentsViewHolder, position: Int) {
         val current = getItem(position)
-        holder.number.text = getFormattedNumber(current.number, current.amount)
+        holder.number.text = getFormattedNumber(current.rawNumber, current.amount)
         holder.number.setTextColor(ContextCompat.getColor(context, R.color.icon_white))
 
         if (holder.number.currentTextColor != R.color.icon_white) {
@@ -106,7 +107,7 @@ class RecentsAdapter(
 
         holder.date.text = getDate(current.callEpochDate)
 
-        val icon = getDirectionIcon(current.callDirection, current.number)
+        val icon = getDirectionIcon(current.callDirection, current.rawNumber)
         holder.direction.setImageResource(icon)
     }
 
@@ -158,8 +159,8 @@ class RecentsAdapter(
         }
     }
 
-    private fun getDirectionIcon(direction: Int?, number: String): Int {
-        val trueDirection = MiscHelpers.getTrueDirection(direction, number)
+    private fun getDirectionIcon(direction: Int?, rawNumber: String): Int {
+        val trueDirection = MiscHelpers.getTrueDirection(direction, rawNumber)
 
         val icon = when (trueDirection) {
             CallLog.Calls.INCOMING_TYPE -> R.drawable.ic_baseline_call_received_24

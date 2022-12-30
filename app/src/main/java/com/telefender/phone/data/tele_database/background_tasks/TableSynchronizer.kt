@@ -27,6 +27,8 @@ object TableSynchronizer {
     private const val checkBackPeriod = 5 * 60000
 
     /**
+     * TODO: Maybe move teh default retrieval to DefaultCallDetails
+     *
      * Syncs our CallDetail database with Android's CallDetail database. Used for both periodic and
      * immediate syncs. Periodic sync is for when user switches to different phone app for a certain
      * amount of time, and immediate sync for after every call (since it's important for our
@@ -51,8 +53,8 @@ object TableSynchronizer {
             CallLog.Calls.TYPE,
             CallLog.Calls.DATE,
             CallLog.Calls.DURATION,
-            CallLog.Calls.GEOCODED_LOCATION
-            )
+            CallLog.Calls.GEOCODED_LOCATION,
+        )
 
         val selection = "DATE > ?"
 
@@ -66,17 +68,30 @@ object TableSynchronizer {
 
         if (curs != null) {
             while (curs.moveToNext()) {
-                val number = MiscHelpers.cleanNumber(curs.getString(0))!!
+                val rawNumber = curs.getString(0)
+                // If normalizedNumber is null, use bareNumber() cleaning of rawNumber.
+                val normalizedNumber = MiscHelpers.normalizedNumber(rawNumber)
+                    ?: MiscHelpers.bareNumber(rawNumber)
                 val typeInt = curs.getInt(1)
+                // Epoch date is in milliseconds and is the creation time.
                 val date = curs.getString(2).toLong()
                 val duration = curs.getString(3).toLong()
                 val location = curs.getString(4)
-                val dir = MiscHelpers.getTrueDirection(typeInt, number)
+                val dir = MiscHelpers.getTrueDirection(typeInt, rawNumber)
 
-                val callDetail = CallDetail(number, dir.toString(), date, duration, location, dir)
+                val callDetail = CallDetail(
+                    rawNumber = rawNumber,
+                    normalizedNumber = normalizedNumber,
+                    callType = dir.toString(),
+                    callEpochDate = date,
+                    callDuration = duration,
+                    callLocation = location,
+                    callDirection = dir,
+                    instanceNumber = instanceNumber
+                )
 
                 try {
-                    val inserted = repository.insertDetailSync(instanceNumber, callDetail)
+                    val inserted = repository.callFromClient(callDetail)
                     if (inserted) {
                         Timber.i("${MiscHelpers.DEBUG_LOG_TAG} syncCallLogs(): SYNCED: $callDetail")
                     } else {
@@ -93,11 +108,9 @@ object TableSynchronizer {
     }
 
     /**********************************************************************************************
-     * TODO: Consider not inserting contacts already synced maybe?
-     * TODO: Double check that we're not writing / inserting into tables too redundantly.
-     * TODO: Put in mutexSync and sync double check. Refer to first note.
      * TODO: RETRIEVE DEFAULT CONTACT BY DEFAULT CID USING SAME METHOD AS syncCallLogs(). Also,
      *  summarize in document.
+     * TODO: Need to include default blocked update.
      *
      * Syncs our Contact / ContactNumber database with Android's default Contact / PhoneNumbers database
      *
@@ -158,7 +171,6 @@ object TableSynchronizer {
         } else {
             Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: Inside table synchronizer")
             while (!curs.isAfterLast) {
-
                 /**
                  * Need to turn default CID into UUID version of CID since default CID is not the
                  * same as the CIDs we store in our Contacts / ContactNumber tables
@@ -166,15 +178,17 @@ object TableSynchronizer {
                 val defaultCID = curs.getString(0)
                 val teleCID = UUID.nameUUIDFromBytes((defaultCID + instanceNumber).toByteArray()).toString()
                 val rawNumber = curs.getString(1)
-                val cleanNumber = MiscHelpers.cleanNumber(rawNumber)
-                val versionNumber = curs.getString(2).toInt()
+                val normalizedNumber = curs.getString(2)
+                    ?: MiscHelpers.normalizedNumber(rawNumber)
+                    ?: MiscHelpers.bareNumber(rawNumber)
+                val versionNumber = curs.getString(3).toInt()
 
                 // Corresponding contact numbers (by CID) in our database
                 val matchCID: List<ContactNumber> = database.contactNumberDao().getContactNumbers_CID(teleCID)
 
                 // Corresponding contact numbers (by PK) in our database
-                val matchPK: ContactNumber? = database.contactNumberDao().getContactNumbersRow(teleCID, cleanNumber)
-0
+                val matchPK: ContactNumber? = database.contactNumberDao().getContactNumbersRow(teleCID, normalizedNumber)
+
                 /**
                  * If no ContactNumber have the same CID, that means the corresponding contact
                  * doesn't even exist and thus needs to be inserted into the Contacts table.
@@ -222,7 +236,7 @@ object TableSynchronizer {
                                     type = ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_INSERT,
                                     instanceNumber = instanceNumber,
                                     CID = teleCID,
-                                    cleanNumber = cleanNumber,
+                                    normalizedNumber = normalizedNumber,
                                     defaultCID = defaultCID,
                                     rawNumber = rawNumber,
                                     degree = 0,
@@ -236,7 +250,7 @@ object TableSynchronizer {
 
                 val contactNumber = ContactNumber(
                     CID = teleCID,
-                    cleanNumber = cleanNumber,
+                    normalizedNumber = normalizedNumber,
                     defaultCID = defaultCID,
                     rawNumber = rawNumber,
                     instanceNumber = instanceNumber,
@@ -261,10 +275,8 @@ object TableSynchronizer {
     }
 
     /**
-     * TODO: Should we keep deleted numbers? That is, should we keep numbers for algorithm anyways?
-     *  - I think no... (which we are already doing).
-     *
-     * TODO: Verify that contact number update works.
+     * TODO: Double check logic.
+     * TODO: Handle case where multiple contact numbers with same PK.
      */
     @RequiresApi(Build.VERSION_CODES.O)
     suspend fun checkForUpdatesAndDeletes(
@@ -274,7 +286,7 @@ object TableSynchronizer {
         contentResolver: ContentResolver
     )  {
         val instanceNumber = MiscHelpers.getInstanceNumber(context)
-        val teleCN: List<ContactNumber> = database.contactNumberDao().getAllContactNumbers()
+        val teleCN: List<ContactNumber> = database.contactNumberDao().getAllContactNumbers_Ins(instanceNumber)
         val mutexSync = mutexLocks[MutexType.SYNC]!!
 
         for (contactNumber: ContactNumber in teleCN) {
@@ -315,8 +327,9 @@ object TableSynchronizer {
                 // Corresponding contact number (by PK) in android default database
                 var matchPK: ContactNumber? = null
 
-                for (matchNumbers: ContactNumber in matchCID) {
-                    if (matchNumbers.equals(contactNumber)) {
+                for (matchNumbers in matchCID) {
+                    // Uses custom .equals() implementation to check if their PKs are equal.
+                    if (matchNumbers == contactNumber) {
                         matchPK = matchNumbers
                         break
                     }
@@ -337,7 +350,7 @@ object TableSynchronizer {
                                     type = ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_DELETE,
                                     instanceNumber = instanceNumber,
                                     CID = teleCID,
-                                    cleanNumber = contactNumber.cleanNumber,
+                                    normalizedNumber = contactNumber.normalizedNumber,
                                     degree = 0
                                 ),
                                 fromSync = true
@@ -348,14 +361,12 @@ object TableSynchronizer {
 
                     /*
                     TODO: Maybe we should make another default query in DefaultContacts to check
-                     that the version number is really different. However, it may not be necessary
-                     given that we aren't really using versionNumber.
+                     that the version number is really different.
 
-                    Different version numbers mean that we have to update our row with theirs
-                    Actually, versionNumber and this branch are currently unused, since when you
-                    "update" a contact number in the default contacts, it's processed as a delete
-                    of the old number and an insertion of the new number. However, we will keep
-                    this branch here anyways just in case.
+                    Different version numbers mean that we have to update our row with theirs.
+                    In fact, versionNumber isn't always used, as sometimes changing a contact
+                    number just results in deleting the old number and inserting the new number.
+                    However, minor changes to the number format may cause an update.
                      */
                     if (matchPK.versionNumber != contactNumber.versionNumber) {
                         val changeID = UUID.randomUUID().toString()
@@ -368,8 +379,9 @@ object TableSynchronizer {
                                 type = ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_UPDATE,
                                 instanceNumber = instanceNumber,
                                 CID = teleCID,
-                                cleanNumber = matchPK.cleanNumber, // new number
-                                oldNumber = contactNumber.cleanNumber
+                                rawNumber = matchPK.rawNumber, // new number
+                                oldNumber = contactNumber.normalizedNumber,
+                                counterValue = matchPK.versionNumber
                             ),
                             fromSync = true
                         )
