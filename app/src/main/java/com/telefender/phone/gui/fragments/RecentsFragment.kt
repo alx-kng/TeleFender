@@ -7,12 +7,19 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
+import com.telefender.phone.App
 import com.telefender.phone.R
 import com.telefender.phone.databinding.FragmentRecentsBinding
 import com.telefender.phone.gui.MainActivity
 import com.telefender.phone.gui.adapters.RecentsAdapter
 import com.telefender.phone.gui.model.RecentsViewModel
 import com.telefender.phone.gui.model.RecentsViewModelFactory
+import com.telefender.phone.helpers.DatabaseLogFunctions
+import com.telefender.phone.helpers.MiscHelpers
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import timber.log.Timber
 
 /*
 TODO: Handle case where permissions aren't given (or default dialer isn't granted).
@@ -68,6 +75,17 @@ class RecentsFragment : Fragment() {
         recentsViewModel.callLogs.observe(viewLifecycleOwner) {
             adapter.submitList(recentsViewModel.groupedCallLogs)
         }
+    }
+
+    /**
+     * TODO: Currently just here for checking in on status of AnalyzedNumber. Remove / find better
+     *  way to check status later.
+     */
+    override fun onStart() {
+        super.onStart()
+
+        val database = (requireContext().applicationContext as App).database
+        DatabaseLogFunctions.logAnalyzedNumbers(database)
     }
 
     override fun onDestroyView() {

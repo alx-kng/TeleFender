@@ -94,6 +94,16 @@ object DatabaseLogFunctions {
         }
     }
 
+    fun logAnalyzedNumbers(database : ClientDatabase? = null, repository: ClientRepository? = null) {
+        CoroutineScope(Dispatchers.Default).launch {
+            val analyzedNumbers = (database?.analyzedNumberDao()?.getAllAnalyzed()) ?: listOf()
+            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: ANALYZED NUMBER SIZE: %s", analyzedNumbers.size.toString())
+
+            for (analyzedNumber in analyzedNumbers) {
+                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: $analyzedNumber")
+            }
+        }
+    }
     /**
      * Temp log for all.
      */

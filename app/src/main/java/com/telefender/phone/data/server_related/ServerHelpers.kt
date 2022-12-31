@@ -163,6 +163,9 @@ object ServerHelpers {
     }
 
     /**
+     * TODO: Make sure to put in max retry amount.
+     * TODO: Also repeating uploads (partial error). Could be server issue.
+     *
      * Sends post request containing the string requestString to the server at url.
      * Returns whether or not post was successful
      */

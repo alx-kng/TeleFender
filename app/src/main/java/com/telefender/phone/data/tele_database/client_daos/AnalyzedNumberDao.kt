@@ -13,6 +13,9 @@ interface AnalyzedNumberDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAnalyzed(vararg analyzedNumber: AnalyzedNumber)
 
+    @Query("SELECT * FROM analyzed_number")
+    suspend fun getAllAnalyzed() : List<AnalyzedNumber>
+
     /**
      * Gets AnalyzedNumber row given number and also initializes row if it doesn't already exist.
      */
@@ -37,7 +40,7 @@ interface AnalyzedNumberDao {
                     numIncoming = 0,
                     numOutgoing = 0,
                     maxDuration = 0,
-                    avgDuration = 0,
+                    avgDuration = 0.0,
                     smsVerified = false,
                     markedSafe = false,
                     isBlocked = false,
@@ -194,7 +197,7 @@ interface AnalyzedNumberDao {
         numIncoming: Int?,
         numOutgoing: Int?,
         maxDuration: Long?,
-        avgDuration: Long?,
+        avgDuration: Double?,
         smsVerified: Boolean?,
         markedSafe: Boolean?,
         isBlocked: Boolean?,

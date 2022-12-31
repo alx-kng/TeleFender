@@ -7,7 +7,12 @@ import androidx.room.PrimaryKey
 import com.squareup.moshi.JsonClass
 
 
-// TODO: Why is rowID the PK?
+/**
+ * TODO: Why is rowID the PK?
+ * TODO: If we notice that ChangeLog structure might need to change often, then we can consider
+ *  keeping essential fields like (changeID, changeTime, type, instanceNumber) and move all other
+ *  fields into a single json string property (e.g., like AnalyzedNumber and Analyzed).
+ */
 @JsonClass(generateAdapter = true)
 @Entity(tableName = "change_log",
     indices = [Index(value = ["changeID"], unique = true)],

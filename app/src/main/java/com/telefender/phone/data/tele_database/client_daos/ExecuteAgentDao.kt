@@ -11,6 +11,9 @@ import com.telefender.phone.helpers.MiscHelpers
 import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 import java.lang.Long.max
+import java.math.RoundingMode
+import java.text.DecimalFormat
+import kotlin.math.roundToInt
 
 @Dao
 interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetailDao,
@@ -39,6 +42,8 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
     }
 
     /**
+     * TODO: Maybe put extra data in a JSON to prevent unnecessary database migrations.
+     *
      * Takes ChangeLog arguments and executes the corresponding database function in a single
      * transaction based on the type of change (e.g., instance insert), then deletes the task from
      * the ExecuteQueue. We have also already confirmed that deadlock is not possible with our
@@ -484,7 +489,9 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
         return degreeString?.minOrNull()?.digitToIntOrNull()
     }
 
-    suspend fun getNewAvg(oldAvg: Long, numValidCalls: Int, newCallDuration: Long): Long {
-        return (oldAvg * numValidCalls + newCallDuration) / (numValidCalls + 1)
+    suspend fun getNewAvg(oldAvg: Double, numValidCalls: Int, newCallDuration: Long): Double {
+        val newAvg = (oldAvg * numValidCalls + newCallDuration) / (numValidCalls + 1.0)
+        return (newAvg * 100.0).roundToInt() / 100.0
     }
+
 }
