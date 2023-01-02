@@ -22,7 +22,7 @@ interface UploadQueueDao {
     suspend fun getFirstQTU() : UploadQueue
     
     @Query("SELECT * FROM upload_queue WHERE changeID = :changeID")
-    suspend fun getQTURow(changeID: String) : UploadQueue
+    suspend fun getQTURow(changeID: String) : UploadQueue?
 
     @Query("SELECT * FROM upload_queue")
     suspend fun getAllQTU() : List<UploadQueue>

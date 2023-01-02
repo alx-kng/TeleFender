@@ -22,14 +22,14 @@ class InitialRequestGen(
     url: String,
     listener: Response.Listener<String>,
     errorListener: Response.ErrorListener,
-    requestJson: String,
+    requestJson: String?,
 ) : RequestGen(method, url, listener, errorListener, requestJson) {
 
     companion object {
         fun create(
             method: Int,
             url: String,
-            requestJson: String,
+            requestJson: String?,
             context: Context,
             repository: ClientRepository,
             scope: CoroutineScope
@@ -75,8 +75,8 @@ private fun initialPostResponseHandler(
                 val instanceNumber = repository.getInstanceNumber()!!
                 repository.updateStoredMap(instanceNumber, sessionID = sessionResponse.sessionID)
 
-                val key = repository.getSessionID(instanceNumber)
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: key = $key")
+                val sessionID = repository.getSessionID(instanceNumber)
+                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: sessionID = $sessionID")
 
                 UserSetup.verifyPostRequest(context, repository, scope)
             }

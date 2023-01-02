@@ -42,7 +42,6 @@ dependencies {
 
     // Moshi components
     implementation("com.squareup.moshi:moshi:$rootProject.moshiVersion")
-    implementation 'com.google.firebase:firebase-messaging-ktx:23.0.0'
     kapt("com.squareup.moshi:moshi-kotlin-codegen:$rootProject.moshiVersion")
     
     // Volley components
@@ -111,4 +110,5 @@ dependencies {
     implementation platform("com.google.firebase:firebase-bom:$rootProject.firebaseVersion")
     implementation 'com.google.firebase:firebase-analytics-ktx'
     implementation 'com.google.firebase:firebase-messaging:23.0.0'
+    implementation 'com.google.firebase:firebase-messaging-ktx:23.0.0'
 }

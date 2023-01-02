@@ -7,6 +7,7 @@ import androidx.room.PrimaryKey
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
+import com.telefender.phone.data.server_related.DefaultResponse
 
 
 // TODO: Probably store current block mode in StoredMap
@@ -172,17 +173,24 @@ data class Analyzed(
 }
 
 
+/**
+ * Converts JSON string to Analyzed object.
+ * Note: Need to put try-catch around any sort of Moshi string-to-object function.
+ */
 fun String.toAnalyzed() : Analyzed? {
-    val moshi: Moshi = Moshi.Builder().build()
-    val adapter: JsonAdapter<Analyzed> = moshi.adapter(Analyzed::class.java)
+    return try {
+        val moshi : Moshi = Moshi.Builder().build()
+        val adapter : JsonAdapter<Analyzed> = moshi.adapter(Analyzed::class.java)
 
-    return adapter.serializeNulls().fromJson(this)
+        adapter.serializeNulls().fromJson(this)
+    } catch (e: Exception) {
+        null
+    }
 }
 
 /**
  * Returns whether a string is a valid Analyzed JSON string.
  */
 fun String.isValid() : Boolean {
-    val analyzed = this.toAnalyzed()
-    return analyzed != null
+    return this.toAnalyzed() != null
 }

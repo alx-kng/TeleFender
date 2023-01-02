@@ -12,14 +12,14 @@ abstract class RequestGen(
     url: String,
     listener: Response.Listener<String>,
     errorListener: Response.ErrorListener,
-    private val requestJson: String,
+    private val requestJson: String?,
 ) : StringRequest(method, url, listener, errorListener) {
 
     @SuppressLint("HardwareIds")
     @Throws(AuthFailureError::class)
     override fun getBody(): ByteArray? {
         return try {
-            requestJson.toByteArray(charset("utf-8"))
+            requestJson?.toByteArray(charset("utf-8"))
         } catch (uee: UnsupportedEncodingException) {
             VolleyLog.wtf(
                 "Unsupported Encoding while trying to get the bytes of %s using %s",

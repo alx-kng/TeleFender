@@ -83,18 +83,23 @@ interface AnalyzedNumberDao {
             AnalyzedNumber(
                 normalizedNumber = normalizedNumber,
                 analyzedValues = analyzed?.toJson() ?: "{}"
-            )
+            ),
+            confirmValid = analyzed != null
         )
     }
 
-    suspend fun updateAnalyzedNum(analyzedNumber: AnalyzedNumber) {
+    /**
+     * Updates AnalyzedNumber. If you are certain that the analyzedValues property of the passed
+     * in AnalyzedNumber is a valid Analyzed JSON, then set [confirmValid] to true (for speed).
+     */
+    suspend fun updateAnalyzedNum(analyzedNumber: AnalyzedNumber, confirmValid: Boolean = false) {
         with(analyzedNumber) {
             // If no AnalyzedNumber row for number, then create row and initialize values
             initAnalyzedNum(normalizedNumber)
 
             updateAnalyzedNumQuery(
                 normalizedNumber = normalizedNumber,
-                analyzedValues = if (analyzedValues.isValid()) analyzedValues else null
+                analyzedValues = if (confirmValid || analyzedValues.isValid()) analyzedValues else null
             )
         }
     }

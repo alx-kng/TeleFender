@@ -16,19 +16,20 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
+
 class DownloadRequestGen(
     method: Int,
     url: String,
     listener: Response.Listener<String>,
     errorListener: Response.ErrorListener,
-    requestJson: String,
+    requestJson: String?,
 ) : RequestGen(method, url, listener, errorListener, requestJson) {
 
     companion object {
         fun create(
             method: Int,
             url: String,
-            requestJson: String,
+            requestJson: String?,
             context: Context,
             repository: ClientRepository,
             scope: CoroutineScope

@@ -7,6 +7,9 @@ import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import timber.log.Timber
 
+
+// TODO: Clean up these classes!!!
+
 @JsonClass(generateAdapter = true)
 open class DefaultResponse (
     val status : String,
@@ -70,43 +73,63 @@ class UploadResponse(
     }
 }
 
-
+/**
+ * Need to put try-catch around any sort of Moshi string-to-object function.
+ */
 object ResponseHelpers {
 
     fun jsonToDefaultResponse(jsonIn : String) : DefaultResponse? {
-        val moshi : Moshi = Moshi.Builder().build()
-        val adapter : JsonAdapter<DefaultResponse> = moshi.adapter(DefaultResponse::class.java)
-        Timber.i("default response called")
+        return try {
+            val moshi : Moshi = Moshi.Builder().build()
+            val adapter : JsonAdapter<DefaultResponse> = moshi.adapter(DefaultResponse::class.java)
 
-       return adapter.serializeNulls().fromJson(jsonIn)
+            adapter.serializeNulls().fromJson(jsonIn)
+        } catch (e: Exception) {
+            null
+        }
     }
 
     fun jsonToKeyResponse(jsonIn : String) : KeyResponse? {
-        val moshi : Moshi = Moshi.Builder().build()
-        val adapter : JsonAdapter<KeyResponse> = moshi.adapter(KeyResponse::class.java)
+        return try {
+            val moshi : Moshi = Moshi.Builder().build()
+            val adapter : JsonAdapter<KeyResponse> = moshi.adapter(KeyResponse::class.java)
 
-        return adapter.serializeNulls().fromJson(jsonIn)
+            adapter.serializeNulls().fromJson(jsonIn)
+        } catch (e: Exception) {
+            null
+        }
     }
 
     fun jsonToChangeResponse(jsonIn : String) : ChangeResponse? {
+        return try {
+            val moshi : Moshi = Moshi.Builder().build()
+            val adapter : JsonAdapter<ChangeResponse> = moshi.adapter(ChangeResponse::class.java)
 
-        val moshi : Moshi = Moshi.Builder().build()
-        val adapter : JsonAdapter<ChangeResponse> = moshi.adapter(ChangeResponse::class.java)
-        Timber.i("change response called")
-        return adapter.serializeNulls().fromJson(jsonIn)
+            adapter.serializeNulls().fromJson(jsonIn)
+        } catch (e: Exception) {
+            null
+        }
     }
 
     fun jsonToSessionResponse(jsonIn : String) : SessionResponse? {
-        val moshi : Moshi = Moshi.Builder().build()
-        val adapter : JsonAdapter<SessionResponse> = moshi.adapter(SessionResponse::class.java)
+        return try {
+            val moshi : Moshi = Moshi.Builder().build()
+            val adapter : JsonAdapter<SessionResponse> = moshi.adapter(SessionResponse::class.java)
 
-        return adapter.serializeNulls().fromJson(jsonIn)
+            adapter.serializeNulls().fromJson(jsonIn)
+        } catch (e: Exception) {
+            null
+        }
     }
 
     fun jsonToUploadResponse(jsonIn : String) : UploadResponse? {
-        val moshi : Moshi = Moshi.Builder().build()
-        val adapter : JsonAdapter<UploadResponse> = moshi.adapter(UploadResponse::class.java)
+        return try {
+            val moshi : Moshi = Moshi.Builder().build()
+            val adapter : JsonAdapter<UploadResponse> = moshi.adapter(UploadResponse::class.java)
 
-        return adapter.serializeNulls().fromJson(jsonIn)
+            adapter.serializeNulls().fromJson(jsonIn)
+        } catch (e: Exception) {
+            null
+        }
     }
 }

@@ -20,14 +20,14 @@ class VerifyRequestGen(
     url: String,
     listener: Response.Listener<String>,
     errorListener: Response.ErrorListener,
-    requestJson: String,
+    requestJson: String?,
 ) : RequestGen(method, url, listener, errorListener, requestJson) {
 
     companion object {
         fun create(
             method: Int,
             url: String,
-            requestJson: String,
+            requestJson: String?,
             repository: ClientRepository,
             scope: CoroutineScope
         ) : VerifyRequestGen {
@@ -70,6 +70,9 @@ private fun verifyPostResponseHandler(
             scope.launch(Dispatchers.IO) {
                 val instanceNumber = repository.getInstanceNumber()!!
                 repository.updateStoredMap(instanceNumber, clientKey = keyResponse.key)
+
+                val key = repository.getClientKey(instanceNumber)
+                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: key = $key")
 
                 WorkerStates.setState(WorkerType.SETUP, WorkInfo.State.SUCCEEDED)
             }

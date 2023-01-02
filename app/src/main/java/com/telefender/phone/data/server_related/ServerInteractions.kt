@@ -9,7 +9,10 @@ import com.telefender.phone.data.server_related.RequestHelpers.downloadRequestTo
 import com.telefender.phone.data.server_related.RequestHelpers.uploadRequestToJson
 import com.telefender.phone.data.server_related.ResponseHelpers.jsonToDefaultResponse
 import com.telefender.phone.data.server_related.ResponseHelpers.jsonToUploadResponse
+import com.telefender.phone.data.server_related.request_generators.DownloadRequestGen
 import com.telefender.phone.data.server_related.request_generators.InitialRequestGen
+import com.telefender.phone.data.server_related.request_generators.TokenRequestGen
+import com.telefender.phone.data.server_related.request_generators.UploadRequestGen
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkerType
@@ -25,6 +28,7 @@ object ServerInteractions {
 
     @SuppressLint("MissingPermission")
     suspend fun downloadPostRequest(context: Context, repository: ClientRepository, scope: CoroutineScope) {
+        val url = "https://dev.scribblychat.com/callbook/downloadChanges"
         val instanceNumber = MiscHelpers.getInstanceNumber(context)
 
         val key = repository.getClientKey(instanceNumber)
@@ -35,14 +39,12 @@ object ServerInteractions {
             val downloadRequest = DownloadRequest(instanceNumber, key, lastServerChangeID)
             downloadRequestJson = downloadRequestToJson(downloadRequest)
         } else {
-            Timber.e("${MiscHelpers.DEBUG_LOG_TAG} VOLLEY key was null")
+            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: CLIENT KEY IS NULL")
             return
         }
 
-        val url = "https://dev.scribblychat.com/callbook/downloadChanges"
-
         try {
-            val stringRequest = InitialRequestGen.create(
+            val stringRequest = DownloadRequestGen.create(
                 method = Request.Method.POST,
                 url = url,
                 requestJson = downloadRequestJson,
@@ -61,152 +63,65 @@ object ServerInteractions {
     /**
      * TODO: Make sure to put in max retry amount.
      * TODO: Also repeating uploads (partial error). Could be server issue.
+     * TODO: Can returning list with dao give null?
      *
      * Sends post request containing the string requestString to the server at url.
      * Returns whether or not post was successful
      */
     @SuppressLint("MissingPermission", "HardwareIds")
     suspend fun uploadPostRequest(context: Context, repository: ClientRepository, scope: CoroutineScope) {
+        val url = "https://dev.scribblychat.com/callbook/uploadChanges"
         val instanceNumber = MiscHelpers.getInstanceNumber(context)
 
-        var uploadLogs: List<UploadQueue>?
-        var uploadRequestJson: String? = null
-        val url = "https://dev.scribblychat.com/callbook/uploadChanges"
+        val key = repository.getClientKey(instanceNumber)
+        val uploadRequestJson: String
 
-        withContext(Dispatchers.IO) {
-            val key = repository.getClientKey(instanceNumber)
-            if (key != null) {
-                val temp = mutableListOf<ChangeLog>()
+        if (key != null) {
+            withContext(Dispatchers.IO) {
 
-                /**
-                 * Gets first 200 upload logs in order of rowID
-                 */
-                uploadLogs = repository.getChunkQTUByRowID()
-                if (uploadLogs != null) {
-                    /**
-                     * Retrieves corresponding change logs for each upload log
-                     */
-                    for (uploadLog in uploadLogs!!) {
-                        val changeLog = repository.getChangeLogRow(uploadLog.changeID)
-                        temp.add(changeLog)
-                    }
-                    val changeLogs = temp.toList()
+                // Gets first 200 upload logs in order of rowID.
+                val uploadLogs = repository.getChunkQTUByRowID()
 
-                    val uploadRequest = UploadRequest(instanceNumber, key, changeLogs)
-                    uploadRequestJson = uploadRequestToJson(uploadRequest)
-                    Timber.i("${MiscHelpers.DEBUG_LOG_TAG} UPLOAD REQUEST JSON %s ", uploadRequestJson)
-                } else {
-                    Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: RETRIEVED UPlOAD LOGS ARE NULL")
-                }
-            } else {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: CLIENT KEY IS NULL")
-            }
-
-            try {
-                val stringRequest: StringRequest = object : StringRequest(
-                    Method.POST, url,
-                    Response.Listener { response ->
-                        Timber.i("VOLLEY %s", response!!)
-                        val uploadResponse: DefaultResponse? =
-                            try {
-                                jsonToUploadResponse(response)
-                            } catch (e: Exception) {
-                                try {
-                                    jsonToDefaultResponse(response)
-                                } catch (e: Exception) {
-                                    null
-                                }
-                            }
-                        /**
-                         * If all upload logs are uploaded to the server successfully, we will delete
-                         * the corresponding upload logs from the UploadQueue table
-                         */
-                        scope.launch {
-                            withContext(Dispatchers.IO) {
-                                /**
-                                 * Guarantees that response has the right status before trying to
-                                 * iterate through upload logs. Also upload logs shouldn't be null.
-                                 */
-                                if (uploadResponse != null && uploadResponse is UploadResponse) {
-                                    /**
-                                     * coroutineScope{} ensures that delete finishes before checking
-                                     * if there are more Upload logs.
-                                     */
-                                    coroutineScope {
-                                        when (uploadResponse.status) {
-                                            "ok" -> {
-                                                repository.deleteUploadInclusive(uploadResponse.lastUploadRow)
-                                            }
-                                            else -> {
-                                                Timber.i(
-                                                    "${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: PARTIALLY UPLOADED WITH ERROR: %s",
-                                                    uploadResponse.error
-                                                )
-                                                repository.deleteUploadExclusive(uploadResponse.lastUploadRow)
-                                            }
-
-                                        }
-                                    }
-
-                                    if (repository.hasQTUs()) {
-                                        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: MORE TO UPLOAD")
-                                        uploadPostRequest(context, repository, scope)
-                                    } else {
-                                        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: All UPLOAD COMPLETE")
-                                        WorkerStates.setState(WorkerType.UPLOAD_POST, WorkInfo.State.SUCCEEDED)
-                                    }
-                                } else {
-                                    WorkerStates.setState(WorkerType.UPLOAD_POST, WorkInfo.State.FAILED)
-
-                                    if (uploadResponse != null) {
-                                        Timber.i(
-                                            "${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN UPLOAD: %s",
-                                            uploadResponse.error
-                                        )
-                                    } else {
-                                        Timber.i(
-                                            "${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN UPLOAD: UPLOAD RESPONSE IS NULL"
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }, Response.ErrorListener { error ->
-                        if (error.toString() != "null") {
-                            Timber.e("VOLLEY %s", error.toString())
-                            WorkerStates.setState(WorkerType.UPLOAD_POST, WorkInfo.State.FAILED)
-                        }
-                    }) {
-                    @Throws(AuthFailureError::class)
-                    override fun getBody(): ByteArray? {
-                        try {
-                            return uploadRequestJson?.toByteArray(charset("utf-8"))
-                        } catch (uee: UnsupportedEncodingException) {
-                            VolleyLog.wtf(
-                                "Unsupported Encoding while trying to get the bytes of %s using %s",
-                                uploadRequestJson,
-                                "utf-8"
-                            )
-                            return null
-                        }
-                    }
-
-                    override fun getBodyContentType(): String {
-                        return "application/json; charset=utf-8"
-                    }
+                // Retrieves corresponding change logs for each upload log
+                val changeLogs = mutableListOf<ChangeLog>()
+                for (uploadLog in uploadLogs) {
+                    val changeLog = repository.getChangeLogRow(uploadLog.changeID)
+                    changeLogs.add(changeLog)
                 }
 
-                // Adds entire string request to request queue
-                RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
-            } catch (e: JSONException) {
-                e.printStackTrace()
+                val uploadRequest = UploadRequest(instanceNumber, key, changeLogs)
+                uploadRequestJson = uploadRequestToJson(uploadRequest)
             }
+        } else {
+            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: CLIENT KEY IS NULL")
+            return
+        }
+
+        Timber.i("${MiscHelpers.DEBUG_LOG_TAG} UPLOAD REQUEST JSON: $uploadRequestJson")
+
+        try {
+            val stringRequest = UploadRequestGen.create(
+                method = Request.Method.POST,
+                url = url,
+                requestJson = uploadRequestJson,
+                context = context,
+                repository = repository,
+                scope = scope
+            )
+
+            // Adds entire string request to request queue
+            RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
+        } catch (e: JSONException) {
+            e.printStackTrace()
         }
     }
 
     /**
-     * Could be used with the suggested token checkup every month, or used whenever token updates in general as it is incredibly important
-     * server has access to reliable tokens for every device
+     * TODO: Don't know url right now.
+     * TODO: Make sure user is always setup before this (I think we already have, but double check).
+     *
+     * Could be used with the suggested token checkup every month, or used whenever token updates
+     * in general as it is incredibly important server has access to reliable tokens for every device.
      */
     @SuppressLint("MissingPermission", "HardwareIds")
     suspend fun tokenPostRequest(
@@ -215,72 +130,34 @@ object ServerInteractions {
         scope: CoroutineScope,
         token: String
     ) {
-        val instanceNumber = MiscHelpers.getInstanceNumber(context)!!
-        val url = "" // TODO unknown
+        val url = ""
+        val instanceNumber = MiscHelpers.getInstanceNumber(context)
 
-        withContext(Dispatchers.IO) {
-            val key : String?
-            coroutineScope {
-               key = repository.getClientKey(instanceNumber)
-            }
+        val key = repository.getClientKey(instanceNumber)
+        val tokenRequestJson : String
 
-            val tokenRequest = TokenRequest(instanceNumber, key!!, token) // TODO make sure we are always set up by this point
-            var tokenRequestJson: String = RequestHelpers.tokenRequestToJson(tokenRequest)
+        if (key != null) {
+            val tokenRequest = TokenRequest(instanceNumber, key, token)
+            tokenRequestJson = RequestHelpers.tokenRequestToJson(tokenRequest)
+        } else {
+            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: CLIENT KEY IS NULL")
+            return
+        }
 
-            try {
-                val stringRequest: StringRequest =
-                    object : StringRequest(
-                        Method.POST, url,
-                        Response.Listener { response ->
-                            Timber.i("TOKEN RESPONSE: %s", response!!)
-                            val defaultResponse: DefaultResponse? = jsonToDefaultResponse(response)
+        try {
+            val stringRequest = TokenRequestGen.create(
+                method = Request.Method.POST,
+                url = url,
+                requestJson = tokenRequestJson,
+                context = context,
+                repository = repository,
+                scope = scope
+            )
 
-                            if (defaultResponse != null && defaultResponse.status == "ok") {
-                                WorkerStates.setState(WorkerType.UPLOAD_TOKEN, WorkInfo.State.SUCCEEDED)
-
-                            } else {
-                                WorkerStates.setState(WorkerType.UPLOAD_TOKEN, WorkInfo.State.FAILED)
-
-                                if (defaultResponse != null) {
-                                    Timber.i(
-                                        "${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN TOKEN UPLOAD: %s",
-                                        defaultResponse.error
-                                    )
-                                } else {
-                                    Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN TOKEN UPLOAD: SESSION RESPONSE IS NULL")
-                                }
-                            }
-                        }, Response.ErrorListener { error ->
-                            if (error.toString() != "null") {
-                                Timber.e("VOLLEY %s", error.toString())
-                                WorkerStates.setState(WorkerType.UPLOAD_TOKEN, WorkInfo.State.FAILED)
-                            }
-                        }) {
-                        @SuppressLint("HardwareIds")
-                        @Throws(AuthFailureError::class)
-                        override fun getBody(): ByteArray? {
-                            try {
-                                return tokenRequestJson.toByteArray(charset("utf-8"))
-                            } catch (uee: UnsupportedEncodingException) {
-                                VolleyLog.wtf(
-                                    "Unsupported Encoding while trying to get the bytes of %s using %s",
-                                    tokenRequestJson,
-                                    "utf-8"
-                                )
-                                return null
-                            }
-                        }
-                        override fun getBodyContentType(): String {
-                            return "application/json; charset=utf-8"
-                        }
-                    }
-
-
-                // Adds entire string request to request queue
-                RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
-            } catch (e: JSONException) {
-                e.printStackTrace()
-            }
+            // Adds entire string request to request queue
+            RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
+        } catch (e: JSONException) {
+            e.printStackTrace()
         }
     }
 }
