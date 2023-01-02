@@ -10,7 +10,7 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.work.*
 import com.telefender.phone.App
-import com.telefender.phone.data.server_related.ServerHelpers
+import com.telefender.phone.data.server_related.ServerInteractions
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkerType
@@ -92,7 +92,7 @@ class CoroutineDownloadWorker(
 
         val repository: ClientRepository? = (applicationContext as App).repository
         if (repository != null) {
-            ServerHelpers.downloadPostRequest(context, repository, (applicationContext as App).applicationScope)
+            ServerInteractions.downloadPostRequest(context, repository, (applicationContext as App).applicationScope)
         } else {
             return Result.retry()
         }

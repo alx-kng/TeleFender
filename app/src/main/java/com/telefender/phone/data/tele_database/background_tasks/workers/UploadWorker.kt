@@ -10,7 +10,7 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.work.*
 import com.telefender.phone.App
-import com.telefender.phone.data.server_related.ServerHelpers
+import com.telefender.phone.data.server_related.ServerInteractions
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkerType
@@ -93,7 +93,7 @@ class CoroutineUploadWorker(
         val scope = CoroutineScope(Dispatchers.IO)
 
         if (repository != null && repository.hasQTUs()) {
-            ServerHelpers.uploadPostRequest(context, repository, scope)
+            ServerInteractions.uploadPostRequest(context, repository, scope)
         } else {
             if (repository?.hasQTUs() == false) {
                 return Result.success()

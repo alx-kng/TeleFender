@@ -15,7 +15,10 @@ import com.squareup.moshi.JsonClass
  */
 @JsonClass(generateAdapter = true)
 @Entity(tableName = "change_log",
-    indices = [Index(value = ["changeID"], unique = true)],
+    indices = [
+        Index(value = ["changeID"], unique = true),
+        Index(value = ["serverChangeID"])
+    ]
 )
 data class ChangeLog(
     val changeID: String,
@@ -48,8 +51,10 @@ data class ChangeLog(
             entity = ChangeLog::class,
             parentColumns = arrayOf("changeID"),
             childColumns = arrayOf("changeID"),
-            onDelete = ForeignKey.CASCADE),
-    ])
+            onDelete = ForeignKey.CASCADE
+        )],
+    indices = [Index(value = ["createTime"], unique = true)]
+)
 data class UploadQueue(
     @PrimaryKey val changeID: String,
     val createTime: Long,
@@ -62,12 +67,14 @@ data class UploadQueue(
 }
 
 @Entity(tableName = "execute_queue",
-   foreignKeys = [ForeignKey(
+    foreignKeys = [ForeignKey(
             entity = ChangeLog::class,
             parentColumns = arrayOf("changeID"),
             childColumns = arrayOf("changeID"),
             onDelete = ForeignKey.CASCADE
-       )])
+       )],
+    indices = [Index(value = ["createTime"], unique = true)]
+)
 data class ExecuteQueue(
     @PrimaryKey val changeID: String,
     val createTime : Long,

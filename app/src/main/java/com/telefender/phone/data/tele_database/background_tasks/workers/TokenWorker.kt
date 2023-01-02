@@ -6,7 +6,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.work.*
 import com.telefender.phone.App
-import com.telefender.phone.data.server_related.ServerHelpers
+import com.telefender.phone.data.server_related.ServerInteractions
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkerType
@@ -77,7 +77,7 @@ class CoroutineTokenWorker(
 
         val key = repository.getClientKey(instanceNumber)
         val token = repository.getFireBaseToken(instanceNumber)
-        ServerHelpers.tokenPostRequest(context, repository, scope, token!!)
+        ServerInteractions.tokenPostRequest(context, repository, scope, token!!)
 
         when (stateVarString) {
             "oneTimeTokenState" ->  WorkerStates.setState(WorkerType.ONE_TIME_TOKEN, WorkInfo.State.SUCCEEDED)

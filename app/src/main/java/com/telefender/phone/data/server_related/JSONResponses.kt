@@ -1,4 +1,4 @@
-    package com.telefender.phone.data.server_related
+package com.telefender.phone.data.server_related
 
 import com.telefender.phone.data.tele_database.entities.ChangeLog
 import com.squareup.moshi.Json
@@ -7,7 +7,7 @@ import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import timber.log.Timber
 
-    @JsonClass(generateAdapter = true)
+@JsonClass(generateAdapter = true)
 open class DefaultResponse (
     val status : String,
     val error : String?

@@ -11,8 +11,6 @@ import com.telefender.phone.helpers.MiscHelpers
 import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 import java.lang.Long.max
-import java.math.RoundingMode
-import java.text.DecimalFormat
 import kotlin.math.roundToInt
 
 @Dao
@@ -144,24 +142,26 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
 
         if (inserted) {
             with(callDetail) {
-                val oldAnalyzed = getAnalyzed(normalizedNumber)
+                val analyzedNumber = getAnalyzedNum(normalizedNumber)
+                val oldAnalyzed = analyzedNumber.getAnalyzed()
+
                 val isIncoming = callDirection == CallLog.Calls.INCOMING_TYPE
                 val isOutgoing = callDirection == CallLog.Calls.OUTGOING_TYPE
-                val numValidCalls = oldAnalyzed.numIncoming!! + oldAnalyzed.numOutgoing!!
 
                 val newAvg = if (isIncoming || isOutgoing) {
-                    getNewAvg(oldAnalyzed.avgDuration!!, numValidCalls, callDuration!!)
+                    val numValidCalls = oldAnalyzed.numIncoming + oldAnalyzed.numOutgoing
+                    getNewAvg(oldAnalyzed.avgDuration, numValidCalls, callDuration!!)
                 } else {
-                    oldAnalyzed.avgDuration!!
+                    oldAnalyzed.avgDuration
                 }
 
-                updateAnalyzed(
-                    AnalyzedNumber(
-                        normalizedNumber = normalizedNumber,
-                        lastCallTime = callDetail.callEpochDate,
+                updateAnalyzedNum(
+                    normalizedNumber = normalizedNumber,
+                    analyzed = oldAnalyzed.copy(
+                        lastCallTime = callEpochDate,
                         numIncoming = oldAnalyzed.numIncoming + if (isIncoming) 1 else 0,
                         numOutgoing = oldAnalyzed.numOutgoing + if (isOutgoing) 1 else 0,
-                        maxDuration = max(oldAnalyzed.maxDuration!!, callDuration!!),
+                        maxDuration = max(oldAnalyzed.maxDuration, callDuration!!),
                         avgDuration = newAvg
                     )
                 )
@@ -216,14 +216,17 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                 val contactNumberChildren : List<ContactNumber> = getContactNumbers_CID(CID)
                 for (contactNumber in contactNumberChildren) {
                     val normalizedNumber = contactNumber.normalizedNumber
-                    val numBlockedDelta = if (blocked) 1 else -1
-                    val oldAnalyzed = getAnalyzed(normalizedNumber)
 
-                    updateAnalyzed(
-                        AnalyzedNumber(
-                            normalizedNumber = normalizedNumber,
+                    val analyzedNumber = getAnalyzedNum(normalizedNumber)
+                    val oldAnalyzed = analyzedNumber.getAnalyzed()
+
+                    val numBlockedDelta = if (blocked) 1 else -1
+
+                    updateAnalyzedNum(
+                        normalizedNumber = normalizedNumber,
+                        analyzed = oldAnalyzed.copy(
                             isBlocked = blocked,
-                            numMarkedBlocked = oldAnalyzed.numMarkedBlocked?.plus(numBlockedDelta)
+                            numMarkedBlocked = oldAnalyzed.numMarkedBlocked + numBlockedDelta
                         )
                     )
                 }
@@ -300,26 +303,28 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
             ADDITIONALLY, for both direct / tree contacts, reset notifyGate, and recalculate
             minDegree and degreeString
              */
-            val oldAnalyzed = getAnalyzed(normalizedNumber)
+            val analyzedNumber = getAnalyzedNum(normalizedNumber)
+            val oldAnalyzed = analyzedNumber.getAnalyzed()
             with(oldAnalyzed) {
                 val newDegreeString = changeDegreeString(degreeString, degree, false)
+
                 if (instanceNumber == getUserNumber()) {
-                    updateAnalyzed(
-                        AnalyzedNumber(
-                            normalizedNumber = normalizedNumber,
+                    updateAnalyzedNum(
+                        normalizedNumber = normalizedNumber,
+                        analyzed = this.copy(
                             notifyGate = 2,
                             isBlocked = false,
-                            numSharedContacts = numSharedContacts?.plus(1),
+                            numSharedContacts = numSharedContacts + 1,
                             minDegree = 0,
                             degreeString = newDegreeString
                         )
                     )
                 } else {
-                    updateAnalyzed(
-                        AnalyzedNumber(
-                            normalizedNumber = normalizedNumber,
+                    updateAnalyzedNum(
+                        normalizedNumber = normalizedNumber,
+                        analyzed = this.copy(
                             notifyGate = 2,
-                            numTreeContacts = numTreeContacts?.plus(1),
+                            numTreeContacts = numTreeContacts + 1,
                             minDegree = getMinDegree(newDegreeString),
                             degreeString = newDegreeString
                         )
@@ -377,26 +382,28 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
             If not direct contact, then just decrement numTreeContacts. Additionally, no matter if
             the contact number is a direct contact or not, recalculate minDegree and degreeString.
              */
-            val oldAnalyzed = getAnalyzed(normalizedNumber)
+            val analyzedNumber = getAnalyzedNum(normalizedNumber)
+            val oldAnalyzed = analyzedNumber.getAnalyzed()
             with(oldAnalyzed) {
-                val newDegreeString = changeDegreeString(degreeString, degree, true)
+                val newDegreeString = changeDegreeString(degreeString, degree!!, true)
+
                 if (instanceNumber == getUserNumber()) {
                     val numBlockedDelta = if (contactBlocked(CID) == true) 1 else 0
 
-                    updateAnalyzed(
-                        AnalyzedNumber(
-                            normalizedNumber = normalizedNumber,
-                            numMarkedBlocked = numMarkedBlocked?.minus(numBlockedDelta),
-                            numSharedContacts = numSharedContacts?.minus(1),
+                    updateAnalyzedNum(
+                        normalizedNumber = normalizedNumber,
+                        analyzed = this.copy(
+                            numMarkedBlocked = numMarkedBlocked - numBlockedDelta,
+                            numSharedContacts = numSharedContacts - 1,
                             minDegree = getMinDegree(newDegreeString),
                             degreeString = newDegreeString
                         )
                     )
                 } else {
-                    updateAnalyzed(
-                        AnalyzedNumber(
-                            normalizedNumber = normalizedNumber,
-                            numTreeContacts = numTreeContacts?.minus(1),
+                    updateAnalyzedNum(
+                        normalizedNumber = normalizedNumber,
+                        analyzed = this.copy(
+                            numTreeContacts = numTreeContacts - 1,
                             minDegree = getMinDegree(newDegreeString),
                             degreeString = newDegreeString
                         )
@@ -473,11 +480,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
         deleteQTE_ChangeID(changeLog.changeID)
     }
 
-    suspend fun changeDegreeString(degreeString: String?, degree: Int?, remove: Boolean) : String? {
-        if (degreeString == null || degree == null) {
-            return degreeString
-        }
-
+    suspend fun changeDegreeString(degreeString: String, degree: Int, remove: Boolean) : String {
         return if (remove) {
             degreeString.replaceFirst(degree.toString(), "")
         } else {

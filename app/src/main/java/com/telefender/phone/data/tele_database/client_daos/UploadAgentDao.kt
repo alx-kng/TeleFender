@@ -10,7 +10,7 @@ import com.telefender.phone.data.tele_database.entities.ChangeLog
 import com.telefender.phone.helpers.MiscHelpers
 
 // TODO: Can we still use UploadAgent? It seems like it could be a good structure.
-@Deprecated("UploadAgentDao shouldn't be used. Use ServerHelpers")
+@Deprecated("UploadAgentDao shouldn't be used. Use ServerInteractions")
 @Dao
 interface UploadAgentDao: InstanceDao, ContactDao, ContactNumberDao,
     ChangeLogDao, ExecuteQueueDao, UploadQueueDao {

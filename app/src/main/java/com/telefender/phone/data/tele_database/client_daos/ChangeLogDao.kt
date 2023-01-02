@@ -16,7 +16,7 @@ interface ChangeLogDao {
     suspend fun dummyQuery(): String?
 
     @Query("SELECT serverChangeID FROM change_log WHERE serverChangeID NOT null ORDER BY serverChangeID DESC LIMIT 1")
-    suspend fun getLastChangeID(): Int?
+    suspend fun lastServerChangeID(): Int?
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertChangeLog(vararg changeLog: ChangeLog)

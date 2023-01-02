@@ -167,7 +167,7 @@ class ClientRepository(
 
     @WorkerThread
     suspend fun getAnalyzed(number: String) : AnalyzedNumber {
-        return analyzedNumberDao.getAnalyzed(number)
+        return analyzedNumberDao.getAnalyzedNum(number)
     }
 
     /***********************************************************************************************
@@ -202,8 +202,8 @@ class ClientRepository(
      **********************************************************************************************/
     
     @WorkerThread
-    suspend fun getLastChangeID() : Int? {
-        return changeLogDao.getLastChangeID()
+    suspend fun lastServerChangeID() : Int? {
+        return changeLogDao.lastServerChangeID()
     }
 
     @WorkerThread

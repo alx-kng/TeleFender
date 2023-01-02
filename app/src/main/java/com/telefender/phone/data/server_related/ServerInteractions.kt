@@ -2,17 +2,14 @@ package com.telefender.phone.data.server_related
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.Context.TELEPHONY_SERVICE
-import android.telephony.TelephonyManager
 import androidx.work.WorkInfo
 import com.android.volley.*
 import com.android.volley.toolbox.StringRequest
-import com.android.volley.toolbox.Volley
 import com.telefender.phone.data.server_related.RequestHelpers.downloadRequestToJson
 import com.telefender.phone.data.server_related.RequestHelpers.uploadRequestToJson
-import com.telefender.phone.data.server_related.ResponseHelpers.jsonToChangeResponse
 import com.telefender.phone.data.server_related.ResponseHelpers.jsonToDefaultResponse
 import com.telefender.phone.data.server_related.ResponseHelpers.jsonToUploadResponse
+import com.telefender.phone.data.server_related.request_generators.InitialRequestGen
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkerType
@@ -24,141 +21,40 @@ import org.json.JSONException
 import timber.log.Timber
 import java.io.UnsupportedEncodingException
 
-object ServerHelpers {
+object ServerInteractions {
 
-    
     @SuppressLint("MissingPermission")
     suspend fun downloadPostRequest(context: Context, repository: ClientRepository, scope: CoroutineScope) {
         val instanceNumber = MiscHelpers.getInstanceNumber(context)
 
-        var downloadRequestJson: String? = null
+        val key = repository.getClientKey(instanceNumber)
+        val lastServerChangeID = repository.lastServerChangeID()
+        val downloadRequestJson: String
+
+        if (key != null) {
+            val downloadRequest = DownloadRequest(instanceNumber, key, lastServerChangeID)
+            downloadRequestJson = downloadRequestToJson(downloadRequest)
+        } else {
+            Timber.e("${MiscHelpers.DEBUG_LOG_TAG} VOLLEY key was null")
+            return
+        }
+
         val url = "https://dev.scribblychat.com/callbook/downloadChanges"
 
-        /**
-         * Used to create download request json body, as we need the instanceNumber, key, and last
-         * server changeID to communicate with server correctly
-         */
-        withContext(Dispatchers.IO) {
-            val key = repository.getClientKey(instanceNumber!!)
-            val lastChangeID = repository.getLastChangeID()
+        try {
+            val stringRequest = InitialRequestGen.create(
+                method = Request.Method.POST,
+                url = url,
+                requestJson = downloadRequestJson,
+                context = context,
+                repository = repository,
+                scope = scope
+            )
 
-            if (key != null) {
-                val downloadRequest = DownloadRequest(instanceNumber, key, lastChangeID)
-                downloadRequestJson = downloadRequestToJson(downloadRequest)
-            } else {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG} VOLLEY key was null")
-            }
-
-            try {
-                val stringRequest: StringRequest =
-
-                    object : StringRequest(
-                        Method.POST, url,
-                        /**
-                         * A lambda that is called when the response is received from the server after
-                         * we send the POST request
-                         */
-                        Response.Listener { response ->
-                            Timber.i("VOLLEY %s", response!!)
-
-                            /**
-                             * Retrieves ChangeResponse object containing (status, error, List<ChangeLogs>)
-                             * and inserts each change log into our database using changeFromServer()
-                             * defined in ChangeAgentDao.
-                             */
-                            val changeResponse: DefaultResponse? =
-                                try {
-                                    jsonToChangeResponse(response)
-                                } catch (e: Exception) {
-                                    try {
-                                        jsonToDefaultResponse(response)
-                                    } catch (e: Exception) {
-                                        null
-                                    }
-                                }
-
-                            /**
-                             * Guarantees that response has the right status before trying to
-                             * iterate through change logs stored in it.
-                             */
-                            if (changeResponse != null && changeResponse.status == "ok" && (changeResponse is ChangeResponse)) {
-
-                                runBlocking {
-                                    scope.launch {
-                                        withContext(Dispatchers.IO) {
-                                            for (changeLog in changeResponse.changeLogs) {
-                                                /*
-                                                Makes sure that serverChangeID is not null since it is needed
-                                                future download requests
-                                                 */
-                                                if (changeLog.serverChangeID != null) {
-
-                                                    // Inserts each change log into right tables
-                                                    repository.changeFromServer(changeLog)
-
-                                                } else {
-                                                    Timber.i(
-                                                        "${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN DOWNLOAD: serverChangeID is null"
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-
-                                if (changeResponse.changeLogs.isNotEmpty()) {
-                                    scope.launch {
-                                        downloadPostRequest(context, repository, scope)
-                                    }
-                                    Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: MORE TO DOWNLOAD")
-                                } else {
-                                    WorkerStates.setState(WorkerType.DOWNLOAD_POST, WorkInfo.State.SUCCEEDED)
-                                    Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: All DOWNLOADS COMPLETE")
-                                }
-                            } else {
-                                WorkerStates.setState(WorkerType.DOWNLOAD_POST, WorkInfo.State.FAILED)
-                                if (changeResponse != null) {
-                                    Timber.i(
-                                        "${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN DOWNLOAD: %s",
-                                        changeResponse.error
-                                    )
-                                } else {
-                                    Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN DOWNLOAD: CHANGE RESPONSE IS NULL")
-                                }
-                            }
-                        }, Response.ErrorListener { error ->
-                            if (error.toString() != "null") {
-                                Timber.e("VOLLEY %s", error.toString())
-                                WorkerStates.setState(WorkerType.DOWNLOAD_POST, WorkInfo.State.FAILED)
-                            }
-                        }) {
-
-                        @SuppressLint("HardwareIds")
-                        @Throws(AuthFailureError::class)
-                        override fun getBody(): ByteArray? {
-                            try {
-                                return downloadRequestJson?.toByteArray(charset("utf-8"))
-                            } catch (uee: UnsupportedEncodingException) {
-                                VolleyLog.wtf(
-                                    "Unsupported Encoding while trying to get the bytes of %s using %s",
-                                    downloadRequestJson,
-                                    "utf-8"
-                                )
-                                return null
-                            }
-                        }
-                        override fun getBodyContentType(): String {
-                            return "application/json; charset=utf-8"
-                        }
-                    }
-
-                /**
-                 * Adds entire string request to request queue
-                 */
-                RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
-            } catch (e: JSONException) {
-                e.printStackTrace()
-            }
+            // Adds entire string request to request queue
+            RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
+        } catch (e: JSONException) {
+            e.printStackTrace()
         }
     }
 
@@ -191,7 +87,7 @@ object ServerHelpers {
                      * Retrieves corresponding change logs for each upload log
                      */
                     for (uploadLog in uploadLogs!!) {
-                        var changeLog = repository.getChangeLogRow(uploadLog.changeID)
+                        val changeLog = repository.getChangeLogRow(uploadLog.changeID)
                         temp.add(changeLog)
                     }
                     val changeLogs = temp.toList()
@@ -300,6 +196,7 @@ object ServerHelpers {
                     }
                 }
 
+                // Adds entire string request to request queue
                 RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
             } catch (e: JSONException) {
                 e.printStackTrace()
@@ -378,36 +275,12 @@ object ServerHelpers {
                         }
                     }
 
-                /**
-                 * Adds entire string request to request queue
-                 */
-                RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
 
+                // Adds entire string request to request queue
+                RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
             } catch (e: JSONException) {
                 e.printStackTrace()
             }
         }
-    }
-}
-
-class RequestQueueSingleton constructor(context: Context) {
-    companion object {
-        @Volatile
-        private var INSTANCE: RequestQueueSingleton? = null
-        fun getInstance(context: Context) =
-            INSTANCE ?: synchronized(this) {
-                INSTANCE ?: RequestQueueSingleton(context).also {
-                    INSTANCE = it
-                }
-            }
-    }
-
-    val requestQueue: RequestQueue by lazy {
-        // applicationContext is key, it keeps you from leaking the
-        // Activity or BroadcastReceiver if someone passes one in.
-        Volley.newRequestQueue(context.applicationContext)
-    }
-    fun <T> addToRequestQueue(req: Request<T>) {
-        requestQueue.add(req)
     }
 }

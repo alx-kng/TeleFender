@@ -39,7 +39,7 @@ object DatabaseLogFunctions {
 
             for (changeLog in changeLogs) {
                 Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: %s", changeLog.toString())
-                //Log.i("${MiscHelpers.DEBUG_LOG_TAG}: CHANGE LOG JSON", ServerHelpers.changeLogToJson(changeLog))
+                //Log.i("${MiscHelpers.DEBUG_LOG_TAG}: CHANGE LOG JSON", ServerInteractions.changeLogToJson(changeLog))
             }
         }
     }
@@ -96,7 +96,7 @@ object DatabaseLogFunctions {
 
     fun logAnalyzedNumbers(database : ClientDatabase? = null, repository: ClientRepository? = null) {
         CoroutineScope(Dispatchers.Default).launch {
-            val analyzedNumbers = (database?.analyzedNumberDao()?.getAllAnalyzed()) ?: listOf()
+            val analyzedNumbers = (database?.analyzedNumberDao()?.getAllAnalyzedNum()) ?: listOf()
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: ANALYZED NUMBER SIZE: %s", analyzedNumbers.size.toString())
 
             for (analyzedNumber in analyzedNumbers) {

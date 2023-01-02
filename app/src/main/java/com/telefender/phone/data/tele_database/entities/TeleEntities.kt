@@ -7,9 +7,6 @@ import androidx.room.PrimaryKey
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
-import com.telefender.phone.data.server_related.DefaultRequest
-import com.telefender.phone.data.server_related.DefaultResponse
-import timber.log.Timber
 
 
 // TODO: Probably store current block mode in StoredMap
@@ -115,68 +112,54 @@ data class ContactNumber(
 }
 
 /**
- * Currently not using [algoAllowed]. Instead, we will calculate on the spot.
+ * Contains all analyzed data.
  */
 @JsonClass(generateAdapter = true)
 @Entity(tableName = "analyzed_number")
 data class AnalyzedNumber(
     @PrimaryKey val normalizedNumber: String, // should use cleaned number
-    val algoAllowed: Boolean? = null, // currently not using this value.
-    val notifyGate: Int? = null,
-    val lastCallTime: Long? = null,
-    val numIncoming: Int? = null,
-    val numOutgoing: Int? = null,
-    val maxDuration: Long? = null,
-    val avgDuration: Double? = null,
-    val smsVerified: Boolean? = null,
-    val markedSafe: Boolean? = null,
-    val isBlocked: Boolean? = null,
-    val numMarkedBlocked: Int? = null,
-    val numSharedContacts: Int? = null,
-    val isOrganization: Boolean? = null,
-    val minDegree: Int? = null,
-    val numTreeContacts: Int? = null,
-    val degreeString: String? = null,
-    val analyzedValues: String? = null,
+    val analyzedValues: String = "{}"
 ) {
 
-    override fun toString() : String {
-        return "ANALYZED NUMBER: number: $normalizedNumber algoAllowed: $algoAllowed notifyGate: $notifyGate" +
-            " lastCallTime: $lastCallTime numIncoming: $numIncoming numOutgoing: $numOutgoing" +
-            " maxDuration: $maxDuration avgDuration: $avgDuration smsVerified: $smsVerified" +
-            " markedSafe: $markedSafe isBlocked: $isBlocked numMarkedBlocked: $numMarkedBlocked" +
-            " numSharedContacts: $numSharedContacts isOrganization: $isOrganization" +
-            " minDegree: $minDegree numTreeContacts: $numTreeContacts degreeString: $degreeString"
+    fun getAnalyzed() : Analyzed {
+        return analyzedValues.toAnalyzed()!!
     }
 
-    fun toString2() : String {
-        val analyzedObj = AnalyzedHelpers.jsonToAnalyzed(analyzedValues)
+    override fun toString() : String {
+        val analyzedObj = analyzedValues.toAnalyzed()
         return "ANALYZED NUMBER: number: $normalizedNumber analyzedValues: $analyzedObj"
     }
 }
 
 /**
- * Used for analyzed fields not used in selection criteria for AnalyzedNumber
+ * Used for analyzed fields not used in selection criteria for AnalyzedNumber. Stored as JSON.
+ * Currently not using [algoAllowed]. Instead, we will calculate on the spot.
  */
 @JsonClass(generateAdapter = true)
 data class Analyzed(
     val algoAllowed: Boolean? = null, // currently not using this value.
-    val notifyGate: Int? = null,
+    val notifyGate: Int,
     val lastCallTime: Long? = null,
-    val numIncoming: Int? = null,
-    val numOutgoing: Int? = null,
-    val maxDuration: Long? = null,
-    val avgDuration: Double? = null,
-    val smsVerified: Boolean? = null,
-    val markedSafe: Boolean? = null,
-    val isBlocked: Boolean? = null,
-    val numMarkedBlocked: Int? = null,
-    val numSharedContacts: Int? = null,
-    val isOrganization: Boolean? = null,
+    val numIncoming: Int,
+    val numOutgoing: Int,
+    val maxDuration: Long,
+    val avgDuration: Double,
+    val smsVerified: Boolean,
+    val markedSafe: Boolean,
+    val isBlocked: Boolean,
+    val numMarkedBlocked: Int,
+    val numSharedContacts: Int,
+    val isOrganization: Boolean,
     val minDegree: Int? = null,
-    val numTreeContacts: Int? = null,
-    val degreeString: String? = null
+    val numTreeContacts: Int,
+    val degreeString: String
 ) {
+
+    fun toJson() : String {
+        val moshi : Moshi = Moshi.Builder().build()
+        val adapter : JsonAdapter<Analyzed> = moshi.adapter(Analyzed::class.java)
+        return adapter.serializeNulls().toJson(this)
+    }
 
     override fun toString() : String {
         return "algoAllowed: $algoAllowed notifyGate: $notifyGate" +
@@ -188,22 +171,18 @@ data class Analyzed(
     }
 }
 
-object AnalyzedHelpers {
 
-    fun analyzedToJson(analyzed: Analyzed) : String {
-        val moshi : Moshi = Moshi.Builder().build()
-        val adapter : JsonAdapter<Analyzed> = moshi.adapter(Analyzed::class.java)
+fun String.toAnalyzed() : Analyzed? {
+    val moshi: Moshi = Moshi.Builder().build()
+    val adapter: JsonAdapter<Analyzed> = moshi.adapter(Analyzed::class.java)
 
-        return adapter.serializeNulls().toJson(analyzed)
-    }
+    return adapter.serializeNulls().fromJson(this)
+}
 
-    // If jsonIN is null or invalid JSON, then return null property Analyzed instance.
-    fun jsonToAnalyzed(jsonIn : String?) : Analyzed {
-        if (jsonIn == null) return Analyzed()
-
-        val moshi: Moshi = Moshi.Builder().build()
-        val adapter: JsonAdapter<Analyzed> = moshi.adapter(Analyzed::class.java)
-
-        return adapter.serializeNulls().fromJson(jsonIn) ?: Analyzed()
-    }
+/**
+ * Returns whether a string is a valid Analyzed JSON string.
+ */
+fun String.isValid() : Boolean {
+    val analyzed = this.toAnalyzed()
+    return analyzed != null
 }

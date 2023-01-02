@@ -10,7 +10,7 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.work.*
 import com.telefender.phone.App
-import com.telefender.phone.data.server_related.ServerHelpers
+import com.telefender.phone.data.server_related.ServerInteractions
 import com.telefender.phone.data.tele_database.ClientDatabase
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.TableSynchronizer
@@ -150,7 +150,7 @@ class CoroutineOmegaWorker(
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA DOWNLOAD STARTED")
             for (i in 1..retryAmount) {
                 WorkerStates.setState(WorkerType.DOWNLOAD_POST, WorkInfo.State.RUNNING)
-                ServerHelpers.downloadPostRequest(context, repository, scope)
+                ServerInteractions.downloadPostRequest(context, repository, scope)
 
                 val success = WorkerStates.workerWaiter(WorkerType.DOWNLOAD_POST, "DOWNLOAD", stopOnFail = true, certainFinish = true)
                 if (success) break
@@ -174,7 +174,7 @@ class CoroutineOmegaWorker(
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD STARTED")
             WorkerStates.setState(WorkerType.UPLOAD_POST, WorkInfo.State.RUNNING)
             if (repository.hasQTUs()) {
-                ServerHelpers.uploadPostRequest(context, repository, scope)
+                ServerInteractions.uploadPostRequest(context, repository, scope)
             } else {
                 WorkerStates.setState(WorkerType.UPLOAD_POST, WorkInfo.State.SUCCEEDED)
             }
