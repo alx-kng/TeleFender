@@ -4,14 +4,16 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.JsonClass
+import com.squareup.moshi.Moshi
 
 
 /**
  * TODO: Why is rowID the PK?
- * TODO: If we notice that ChangeLog structure might need to change often, then we can consider
- *  keeping essential fields like (changeID, changeTime, type, instanceNumber) and move all other
- *  fields into a single json string property (e.g., like AnalyzedNumber and Analyzed).
+ *
+ * Everything outside of [changeJson] is an essential field. Essential fields (aside from being
+ * used frequently) might also be used as selection criteria for ChangeLog.
  */
 @JsonClass(generateAdapter = true)
 @Entity(tableName = "change_log",
@@ -21,27 +23,65 @@ import com.squareup.moshi.JsonClass
     ]
 )
 data class ChangeLog(
+    @PrimaryKey(autoGenerate = true)
+    val rowID: Int = 0,
     val changeID: String,
     val changeTime: Long,
     val type: String,
     val instanceNumber: String,
+    val serverChangeID: Int? = null,
+    val errorCounter : Int = 0,
+    val changeJson: String = "{}"
+) {
+
+    fun getChange() : Change? {
+        return changeJson.toChange()
+    }
+
+    override fun toString(): String {
+        val changeObj = changeJson.toChange()
+        return "CHANGELOG: rowID: $rowID changeID: $changeID changeTime: $changeTime TYPE: $type " +
+            "instanceNumber: $instanceNumber CHANGE: $changeObj"
+    }
+}
+
+/**
+ * Used for change fields not used in selection criteria for ChangeLog.
+ */
+@JsonClass(generateAdapter = true)
+data class Change(
     val CID : String? = null,
     val normalizedNumber : String? = null,
     val defaultCID: String? = null,
     val rawNumber: String? = null,
-    val oldNumber : String? = null,
     val blocked : Boolean? = null,
     val degree : Int? = null,
     val counterValue : Int? = null,
-    val errorCounter : Int = 0,
-    val serverChangeID : Int? = null,
-    @PrimaryKey(autoGenerate = true)
-    val rowID : Int = 0
 ) {
+
+    fun toJson() : String {
+        val moshi : Moshi = Moshi.Builder().build()
+        val adapter : JsonAdapter<Change> = moshi.adapter(Change::class.java)
+        return adapter.serializeNulls().toJson(this)
+    }
+
     override fun toString(): String {
-        return "CHANGELOG: rowID: $rowID changeID: $changeID TYPE: $type " +
-            "instanceNumber: $instanceNumber changeTime: $changeTime CID: $CID " +
-            "normalizedNumber: $normalizedNumber"
+        return "CID: $CID normalizedNumber: $normalizedNumber blocked: $blocked"
+    }
+}
+
+/**
+ * Converts JSON string to Change object.
+ * Note: Need to put try-catch around any sort of Moshi string-to-object function.
+ */
+fun String.toChange() : Change? {
+    return try {
+        val moshi : Moshi = Moshi.Builder().build()
+        val adapter : JsonAdapter<Change> = moshi.adapter(Change::class.java)
+
+        adapter.serializeNulls().fromJson(this)
+    } catch (e: Exception) {
+        null
     }
 }
 

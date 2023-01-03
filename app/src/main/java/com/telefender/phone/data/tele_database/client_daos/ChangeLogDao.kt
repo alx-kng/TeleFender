@@ -9,6 +9,9 @@ import com.telefender.phone.data.tele_database.entities.ChangeLog
 @Dao
 interface ChangeLogDao {
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertChangeLog(vararg changeLog: ChangeLog)
+
     /**
      * To initialize repository in DialerActivity (MainActivity)
      */
@@ -17,18 +20,15 @@ interface ChangeLogDao {
 
     @Query("SELECT serverChangeID FROM change_log WHERE serverChangeID NOT null ORDER BY serverChangeID DESC LIMIT 1")
     suspend fun lastServerChangeID(): Int?
-
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertChangeLog(vararg changeLog: ChangeLog)
     
     @Query("DELETE FROM change_log WHERE changeID = :changeID")
-    suspend fun deleteChangeLog_ChangeID(changeID: String)
+    suspend fun deleteChangeLogByID(changeID: String)
 
     @Query("DELETE FROM change_log WHERE instanceNumber = :instanceNumber")
-    suspend fun deleteChangeLog_Instance(instanceNumber: String)
+    suspend fun deleteChangeLogByINS(instanceNumber: String)
 
     @Query("DELETE FROM change_log WHERE changeTime = :changeTime")
-    suspend fun deleteChangeLog_Date(changeTime: String)
+    suspend fun deleteChangeLogByTime(changeTime: String)
 
     @Query("SELECT changeTime FROM change_log ORDER BY changeTime DESC LIMIT 1")
     suspend fun getLatestChangeLogTime() : Int
@@ -46,10 +46,10 @@ interface ChangeLogDao {
     suspend fun getChgLogErrorCounter(changeID: String) : Int
 
     @Query("UPDATE change_log SET errorCounter = errorCounter + :counterDelta WHERE changeID = :changeID")
-    suspend fun updateChgLogErrorCounter_Delta(changeID: String, counterDelta: Int)
+    suspend fun updateChgLogErrorCounterDelta(changeID: String, counterDelta: Int)
 
     @Query("UPDATE change_log SET errorCounter = :errorCounter WHERE changeID = :changeID")
-    suspend fun updateChgLogErrorCounter_Absolute(changeID: String, errorCounter : Int)
+    suspend fun updateChgLogErrorCounterAbsolute(changeID: String, errorCounter : Int)
 
     @Query("SELECT changeID FROM change_log WHERE errorCounter > 0")
     suspend fun getChgLogErrorLogs() : List<String>

@@ -16,9 +16,8 @@ interface ContactNumberDao {
     /**
      * We clean oldNumber so that we can update with PK (CID and normalizedNumber).
      */
-    suspend fun updateContactNumbers(CID: String, oldNumber: String, rawNumber: String, versionNumber: Int?) {
-        val oldNormalizedNumber = MiscHelpers.normalizedNumber(oldNumber) ?: oldNumber
-        updateContactNumbersHelper(CID, oldNormalizedNumber, rawNumber, versionNumber)
+    suspend fun updateContactNumbers(CID: String, normalizedNumber: String, rawNumber: String, versionNumber: Int?) {
+        updateContactNumbersHelper(CID, normalizedNumber, rawNumber, versionNumber)
     }
 
     @Query(

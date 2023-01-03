@@ -17,6 +17,10 @@ import timber.log.Timber
 /**
  * TODO: Rare bug where call is sent even after you press hangup (particularly, when you hangup
  *  immediately after sending call), and the call connects, but the InCallActivity doesn't show.
+ *
+ * TODO: VERY IMPORTANT BUG!!! - If you initiate a call from default phone app (when the current
+ *  default dialer is our tele phone app), then the InCallActivity closes for some reason, and
+ *  you can no longer access the call.
  */
 class InCallActivity : AppCompatActivity() {
 

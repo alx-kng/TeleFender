@@ -8,6 +8,7 @@ import androidx.room.Transaction
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.entities.ChangeLog
 import com.telefender.phone.helpers.MiscHelpers
+import kotlin.text.Typography.degree
 
 // TODO: Can we still use UploadAgent? It seems like it could be a good structure.
 @Deprecated("UploadAgentDao shouldn't be used. Use ServerInteractions")
@@ -56,11 +57,6 @@ interface UploadAgentDao: InstanceDao, ContactDao, ContactNumberDao,
                 instanceNumber = instanceNumber,
                 changeTime = changeTime,
                 type = type,
-                CID = CID,
-                oldNumber = oldNumber,
-                normalizedNumber = normalizedNumber,
-                degree = degree,
-                counterValue = counterValue,
                 errorCounter = errorCounter,
                 serverChangeID = serverChangeID,
             )

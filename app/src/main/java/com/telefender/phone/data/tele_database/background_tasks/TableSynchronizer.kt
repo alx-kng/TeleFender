@@ -14,6 +14,7 @@ import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.entities.CallDetail
+import com.telefender.phone.data.tele_database.entities.Change
 import com.telefender.phone.data.tele_database.entities.ChangeLog
 import com.telefender.phone.data.tele_database.entities.ContactNumber
 import com.telefender.phone.helpers.MiscHelpers
@@ -203,13 +204,17 @@ object TableSynchronizer {
                             val changeID = UUID.randomUUID().toString()
                             val changeTime = Instant.now().toEpochMilli()
 
+                            val change = Change(
+                                CID = teleCID
+                            )
+
                             database.changeAgentDao().changeFromClient(
                                 ChangeLog(
                                     changeID = changeID,
                                     changeTime = changeTime,
                                     type = ClientDBConstants.CHANGELOG_TYPE_CONTACT_INSERT,
                                     instanceNumber = instanceNumber,
-                                    CID = teleCID
+                                    changeJson = change.toJson()
                                 ),
                                 fromSync = true
                             )
@@ -229,18 +234,22 @@ object TableSynchronizer {
                             val changeID = UUID.randomUUID().toString()
                             val changeTime = Instant.now().toEpochMilli()
 
+                            val change = Change(
+                                CID = teleCID,
+                                normalizedNumber = normalizedNumber,
+                                defaultCID = defaultCID,
+                                rawNumber = rawNumber,
+                                degree = 0,
+                                counterValue = versionNumber
+                            )
+
                             database.changeAgentDao().changeFromClient(
                                 ChangeLog(
                                     changeID = changeID,
                                     changeTime = changeTime,
                                     type = ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_INSERT,
                                     instanceNumber = instanceNumber,
-                                    CID = teleCID,
-                                    normalizedNumber = normalizedNumber,
-                                    defaultCID = defaultCID,
-                                    rawNumber = rawNumber,
-                                    degree = 0,
-                                    counterValue = versionNumber
+                                    changeJson = change.toJson()
                                 ),
                                 fromSync = true
                             )
@@ -310,13 +319,17 @@ object TableSynchronizer {
                         val changeID = UUID.randomUUID().toString()
                         val changeTime = Instant.now().toEpochMilli()
 
+                        val change = Change(
+                            CID = teleCID
+                        )
+
                         database.changeAgentDao().changeFromClient(
                             ChangeLog(
                                 changeID = changeID,
                                 changeTime = changeTime,
                                 type = ClientDBConstants.CHANGELOG_TYPE_CONTACT_DELETE,
                                 instanceNumber = instanceNumber,
-                                CID = teleCID
+                                changeJson = change.toJson()
                             ),
                             fromSync = true
                         )
@@ -343,34 +356,45 @@ object TableSynchronizer {
                             val changeID = UUID.randomUUID().toString()
                             val changeTime = Instant.now().toEpochMilli()
 
+                            val change = Change(
+                                CID = teleCID,
+                                normalizedNumber = contactNumber.normalizedNumber,
+                                degree = 0
+                            )
+
                             database.changeAgentDao().changeFromClient(
                                 ChangeLog(
                                     changeID = changeID,
                                     changeTime = changeTime,
                                     type = ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_DELETE,
                                     instanceNumber = instanceNumber,
-                                    CID = teleCID,
-                                    normalizedNumber = contactNumber.normalizedNumber,
-                                    degree = 0
+                                    changeJson = change.toJson()
                                 ),
                                 fromSync = true
                             )
                         }
                     }
                 } else {
-
-                    /*
-                    TODO: Maybe we should make another default query in DefaultContacts to check
-                     that the version number is really different.
-
-                    Different version numbers mean that we have to update our row with theirs.
-                    In fact, versionNumber isn't always used, as sometimes changing a contact
-                    number just results in deleting the old number and inserting the new number.
-                    However, minor changes to the number format may cause an update.
+                    /**
+                     * TODO: Maybe we should make another default query in DefaultContacts to check
+                     *  that the version number is really different.
+                     *
+                     * If the code reaches here, then we know that matchPK and contactNumber must
+                     * both have the same PK (meaning same normalized number). So, if the
+                     * default contact number has a different version number, then we know that
+                     * the default rawNumber has been changed (almost definitely a small formatting
+                     * change, since normalizedNumber is preserved).
                      */
                     if (matchPK.versionNumber != contactNumber.versionNumber) {
                         val changeID = UUID.randomUUID().toString()
                         val changeTime = Instant.now().toEpochMilli()
+
+                        val change = Change(
+                            CID = teleCID,
+                            normalizedNumber = contactNumber.normalizedNumber,
+                            rawNumber = matchPK.rawNumber,
+                            counterValue = matchPK.versionNumber
+                        )
 
                         database.changeAgentDao().changeFromClient(
                             ChangeLog(
@@ -378,10 +402,7 @@ object TableSynchronizer {
                                 changeTime = changeTime,
                                 type = ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_UPDATE,
                                 instanceNumber = instanceNumber,
-                                CID = teleCID,
-                                rawNumber = matchPK.rawNumber, // new number
-                                oldNumber = contactNumber.normalizedNumber,
-                                counterValue = matchPK.versionNumber
+                                changeJson = change.toJson()
                             ),
                             fromSync = true
                         )

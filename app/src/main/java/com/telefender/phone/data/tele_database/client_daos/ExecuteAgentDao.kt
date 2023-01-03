@@ -12,6 +12,7 @@ import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 import java.lang.Long.max
 import kotlin.math.roundToInt
+import kotlin.text.Typography.degree
 
 @Dao
 interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetailDao,
@@ -83,42 +84,69 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
         val mutexContactNumber = mutexLocks[MutexType.CONTACT_NUMBER]!!
         val mutexAnalyzed = mutexLocks[MutexType.ANALYZED]!!
 
+        val change = changeLog.getChange()
+
         with(changeLog) {
             when (type) {
                 ClientDBConstants.CHANGELOG_TYPE_CONTACT_INSERT -> mutexContact.withLock {
-                    cInsert(CID, instanceNumber)
+                    cInsert(
+                        instanceNumber = instanceNumber,
+                        CID = change?.CID
+                    )
                 }
                 ClientDBConstants.CHANGELOG_TYPE_CONTACT_UPDATE -> mutexAnalyzed.withLock {
                     mutexContact.withLock {
                         mutexContactNumber.withLock {
-                            cUpdate(CID, instanceNumber, blocked)
+                            cUpdate(
+                                instanceNumber = instanceNumber,
+                                CID = change?.CID,
+                                blocked = change?.blocked
+                            )
                         }
                     }
                 }
                 ClientDBConstants.CHANGELOG_TYPE_CONTACT_DELETE -> mutexAnalyzed.withLock {
                     mutexContact.withLock {
                         mutexContactNumber.withLock {
-                            cDelete(CID)
+                            cDelete(CID = change?.CID)
                         }
                     }
                 }
                 ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_INSERT -> mutexAnalyzed.withLock {
                     mutexContactNumber.withLock {
-                        cnInsert(CID, normalizedNumber, defaultCID, rawNumber, instanceNumber, counterValue, degree)
+                        cnInsert(
+                            instanceNumber = instanceNumber,
+                            CID = change?.CID,
+                            normalizedNumber = change?.normalizedNumber,
+                            defaultCID = change?.defaultCID,
+                            rawNumber = change?.rawNumber,
+                            versionNumber = change?.counterValue,
+                            degree = change?.degree
+                        )
                     }
                 }
                 ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_UPDATE -> mutexAnalyzed.withLock {
                     mutexContactNumber.withLock {
-                        cnUpdate(CID, oldNumber, rawNumber, counterValue)
+                        cnUpdate(
+                            CID = change?.CID,
+                            normalizedNumber = change?.normalizedNumber,
+                            rawNumber = change?.rawNumber,
+                            versionNumber = change?.counterValue
+                        )
                     }
                 }
                 ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_DELETE -> mutexAnalyzed.withLock {
                     mutexContactNumber.withLock {
-                        cnDelete(CID, normalizedNumber, instanceNumber, degree)
+                        cnDelete(
+                            instanceNumber = instanceNumber,
+                            CID = change?.CID,
+                            normalizedNumber = change?.normalizedNumber,
+                            degree = change?.degree
+                        )
                     }
                 }
                 ClientDBConstants.CHANGELOG_TYPE_INSTANCE_INSERT -> mutexInstance.withLock {
-                    insInsert(instanceNumber)
+                    insInsert(instanceNumber = instanceNumber)
                 }
             }
 
@@ -337,21 +365,18 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
 
     /**
      * TODO: Make sure nothing is fishy with versionNumber, specifically, with the default value.
-     * TODO: Fix cnUpdate to include normalizedNumber.
      * TODO: Need to include default blocked update.
-     * TODO: Maybe get rid of oldNumber term (misleading). Should probably just be normalized
-     *  number. OR update normalizedNumber as well.
      *
      * Updates ContactNumber given CID, oldNumber, and new rawNumber. Note that versionNumber is
      * actually still used. So far, it seems like ContactNumber updates don't affect its
      * AnalyzedNumber, as updating the rawNumber shouldn't really change the algorithm.
      */
     @Transaction
-    suspend fun cnUpdate(CID: String?, oldNumber: String?, rawNumber: String?, versionNumber: Int?) {
-        if (null in listOf(CID, oldNumber, rawNumber, versionNumber)) {
+    suspend fun cnUpdate(CID: String?, normalizedNumber: String?, rawNumber: String?, versionNumber: Int?) {
+        if (null in listOf(CID, normalizedNumber, rawNumber, versionNumber)) {
             throw NullPointerException("CID || oldNumber || rawNumber || versionNumber was null for cnUpdate")
         } else {
-            updateContactNumbers(CID!!, oldNumber!!, rawNumber!!, versionNumber)
+            updateContactNumbers(CID!!, normalizedNumber!!, rawNumber!!, versionNumber)
         }
     }
 

@@ -122,6 +122,11 @@ data class AnalyzedNumber(
     val analyzedValues: String = "{}"
 ) {
 
+    /**
+     * Retrieves Analyzed object version of analyzedValues, but SHOULD ONLY BE USED for
+     * AnalyzedNumbers retrieved from the database, and NOT for freshly created AnalyzedNumbers
+     * (We're assuming analyzedValues is a valid Json string due to the initialization process).
+     */
     fun getAnalyzed() : Analyzed {
         return analyzedValues.toAnalyzed()!!
     }
@@ -191,6 +196,6 @@ fun String.toAnalyzed() : Analyzed? {
 /**
  * Returns whether a string is a valid Analyzed JSON string.
  */
-fun String.isValid() : Boolean {
+fun String.isValidAnalyzed() : Boolean {
     return this.toAnalyzed() != null
 }

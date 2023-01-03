@@ -12,6 +12,7 @@ import com.telefender.phone.data.tele_database.ClientDBConstants.CHANGELOG_TYPE_
 import com.telefender.phone.data.tele_database.ClientDBConstants.CHANGELOG_TYPE_INSTANCE_INSERT
 import com.telefender.phone.data.tele_database.ClientDatabase
 import com.telefender.phone.data.tele_database.ClientRepository
+import com.telefender.phone.data.tele_database.entities.Change
 import com.telefender.phone.data.tele_database.entities.ChangeLog
 import com.telefender.phone.helpers.MiscHelpers
 import com.telefender.phone.permissions.PermissionRequester
@@ -134,6 +135,9 @@ object TableInitializers {
         val CID = UUID.nameUUIDFromBytes((cursor.getString(0) + instanceNumber).toByteArray()).toString()
         val changeTime = Instant.now().toEpochMilli()
 
+        val change = Change(
+            CID = CID
+        )
 
         // To insert into Contacts table
         database.changeAgentDao().changeFromClient(
@@ -142,7 +146,7 @@ object TableInitializers {
                 changeTime = changeTime,
                 type = CHANGELOG_TYPE_CONTACT_INSERT,
                 instanceNumber = instanceNumber,
-                CID = CID,
+                changeJson = change.toJson(),
             ),
             fromSync = false
         )
@@ -172,6 +176,15 @@ object TableInitializers {
             ?: MiscHelpers.bareNumber(rawNumber)
         val versionNumber = cursor.getString(3).toInt()
 
+        val change = Change(
+            CID = teleCID,
+            normalizedNumber = normalizedNumber,
+            defaultCID = defaultCID,
+            rawNumber = rawNumber,
+            degree = 0, // 0 means direct contact number
+            counterValue = versionNumber // Use counterValue column to pass in versionNumber change
+        )
+
         // To insert into ContactNumber table
         database.changeAgentDao().changeFromClient(
             ChangeLog(
@@ -179,12 +192,7 @@ object TableInitializers {
                 changeTime = changeTime,
                 type = CHANGELOG_TYPE_CONTACT_NUMBER_INSERT,
                 instanceNumber = instanceNumber,
-                CID = teleCID,
-                normalizedNumber = normalizedNumber,
-                defaultCID = defaultCID,
-                rawNumber = rawNumber,
-                degree = 0, // 0 means direct contact number
-                counterValue = versionNumber // Use counterValue column to pass in versionNumber change
+                changeJson = change.toJson()
             ),
             fromSync = false
         )

@@ -6,7 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.telefender.phone.data.tele_database.entities.Analyzed
 import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
-import com.telefender.phone.data.tele_database.entities.isValid
+import com.telefender.phone.data.tele_database.entities.isValidAnalyzed
 
 
 @Dao
@@ -99,7 +99,7 @@ interface AnalyzedNumberDao {
 
             updateAnalyzedNumQuery(
                 normalizedNumber = normalizedNumber,
-                analyzedValues = if (confirmValid || analyzedValues.isValid()) analyzedValues else null
+                analyzedValues = if (confirmValid || analyzedValues.isValidAnalyzed()) analyzedValues else null
             )
         }
     }
