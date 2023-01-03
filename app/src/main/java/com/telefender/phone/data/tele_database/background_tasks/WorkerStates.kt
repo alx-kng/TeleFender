@@ -107,7 +107,7 @@ object WorkerStates {
      *
      * Worker wait function that only return when the corresponding worker is finished. Acts as a
      * roadblock of sorts so that the code following the waiter isn't run until corresponding
-     * worker finishes.
+     * worker finishes. Returns whether or not the worker succeeded.
      *
      * Requires that worker is running, otherwise the waiter returns (in order to
      * prevent infinite loop). Also, it's not really meant to be used for periodic workers,

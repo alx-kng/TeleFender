@@ -276,7 +276,7 @@ class CoroutineSyncWorker(
     var NOTIFICATION_ID : Int? = -1
     val CHANNEL_ID = "alxkng5737"
     var stateVarString: String? = null
-    val context: Context? = context
+    val context: Context = context
 
     @RequiresApi(Build.VERSION_CODES.O)
     override suspend fun doWork() : Result {
@@ -295,15 +295,10 @@ class CoroutineSyncWorker(
         val database = (applicationContext as App).database
 
         Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: SYNC STARTED")
-        if (!repository.hasQTEs() && context != null) {
-            val contentResolver = context.contentResolver
 
-            TableSynchronizer.syncContacts(context, database, contentResolver)
-            TableSynchronizer.syncCallLogs(context, repository, contentResolver)
-        } else {
-            repository.executeAll()
-            return Result.retry()
-        }
+        TableSynchronizer.syncContacts(context, database, context.contentResolver)
+        TableSynchronizer.syncCallLogs(context, repository, context.contentResolver)
+
         Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: SYNC ENDED")
 
         when (stateVarString) {

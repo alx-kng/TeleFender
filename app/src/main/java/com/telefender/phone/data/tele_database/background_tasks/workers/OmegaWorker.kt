@@ -13,6 +13,7 @@ import com.telefender.phone.App
 import com.telefender.phone.data.server_related.ServerInteractions
 import com.telefender.phone.data.tele_database.ClientDatabase
 import com.telefender.phone.data.tele_database.ClientRepository
+import com.telefender.phone.data.tele_database.background_tasks.TableInitializers
 import com.telefender.phone.data.tele_database.background_tasks.TableSynchronizer
 import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkerType
@@ -135,14 +136,8 @@ class CoroutineOmegaWorker(
              * Sync with contacts and call logs
              */
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA SYNC STARTED")
-            if (!repository.hasQTEs()) {
-                TableSynchronizer.syncContacts(context, database, context.contentResolver)
-                TableSynchronizer.syncCallLogs(context, repository, context.contentResolver)
-            } else {
-                repository.executeAll()
-                delay(1000)
-                return Result.retry()
-            }
+            TableSynchronizer.syncContacts(context, database, context.contentResolver)
+            TableSynchronizer.syncCallLogs(context, repository, context.contentResolver)
 
             /**
              * Downloads changes from server
@@ -155,6 +150,7 @@ class CoroutineOmegaWorker(
                 val success = WorkerStates.workerWaiter(WorkerType.DOWNLOAD_POST, "DOWNLOAD", stopOnFail = true, certainFinish = true)
                 if (success) break
                 Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA DOWNLOAD RETRYING")
+                delay(2000)
             }
 
             /**

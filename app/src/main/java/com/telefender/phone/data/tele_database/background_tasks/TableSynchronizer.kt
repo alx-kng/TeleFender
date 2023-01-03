@@ -8,16 +8,14 @@ import android.os.Build
 import android.provider.CallLog
 import androidx.annotation.RequiresApi
 import com.telefender.phone.data.default_database.DefaultContacts
-import com.telefender.phone.data.tele_database.ClientDBConstants
-import com.telefender.phone.data.tele_database.ClientDatabase
-import com.telefender.phone.data.tele_database.ClientRepository
-import com.telefender.phone.data.tele_database.MutexType
+import com.telefender.phone.data.tele_database.*
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.entities.CallDetail
 import com.telefender.phone.data.tele_database.entities.Change
 import com.telefender.phone.data.tele_database.entities.ChangeLog
 import com.telefender.phone.data.tele_database.entities.ContactNumber
 import com.telefender.phone.helpers.MiscHelpers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 import java.time.Instant
@@ -25,20 +23,32 @@ import java.util.*
 
 object TableSynchronizer {
 
+    private const val retryAmount = 5
     private const val checkBackPeriod = 5 * 60000
 
     /**
-     * TODO: Maybe move teh default retrieval to DefaultCallDetails
+     * TODO: Maybe move the default retrieval to DefaultCallDetails
      *
-     * Syncs our CallDetail database with Android's CallDetail database. Used for both periodic and
+     * Syncs our CallDetail database with Android's CallDetail database. Returns whether or not
+     * the sync successfully finished without errors. Used for both periodic and
      * immediate syncs. Periodic sync is for when user switches to different phone app for a certain
      * amount of time, and immediate sync for after every call (since it's important for our
      * algorithm to update logs immediately).
      *
      * Also, we've confirmed that checkBackPeriod is necessary.
     */
+    suspend fun syncCallLogs(context: Context, repository: ClientRepository, contentResolver: ContentResolver) {
+        for (i in 1..retryAmount) {
+            val success = syncCallLogsHelper(context, repository, contentResolver)
+            if (success) break
+
+            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: syncCallImmediate() RETRYING...")
+            delay(2000)
+        }
+    }
+
     @RequiresApi(Build.VERSION_CODES.O)
-    suspend fun syncCallLogs(context: Context, repository: ClientRepository, contentResolver: ContentResolver) : Boolean {
+    suspend fun syncCallLogsHelper(context: Context, repository: ClientRepository, contentResolver: ContentResolver) : Boolean {
 
         val instanceNumber = MiscHelpers.getInstanceNumber(context)
         val lastSyncTime = repository.getLastSyncTime(instanceNumber)
@@ -135,12 +145,23 @@ object TableSynchronizer {
      * without numbers to our Tele database. However, this should not be an issue to the algorithm,
      * as only contacts with contact numbers affect the algorithm.
     ***********************************************************************************************/
+    suspend fun syncContacts(context: Context, database: ClientDatabase, contentResolver: ContentResolver) {
+        for (i in 1..retryAmount) {
+            try {
+                syncContactsHelper(context, database, contentResolver)
+                break
+            } catch (e: Exception) {
+                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: syncContacts() RETRYING...")
+                delay(2000)
+            }
+        }
+    }
+
     @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("MissingPermission")
-    suspend fun syncContacts(context: Context, database: ClientDatabase, contentResolver: ContentResolver) {
+    suspend fun syncContactsHelper(context: Context, database: ClientDatabase, contentResolver: ContentResolver) {
         val defaultContactHashMap = checkForInserts(context, database, contentResolver)
         checkForUpdatesAndDeletes(context, database, defaultContactHashMap, contentResolver)
-
     }
 
     /**
@@ -216,7 +237,8 @@ object TableSynchronizer {
                                     instanceNumber = instanceNumber,
                                     changeJson = change.toJson()
                                 ),
-                                fromSync = true
+                                fromSync = true,
+                                bubbleError = true
                             )
                         }
                     }
@@ -251,7 +273,8 @@ object TableSynchronizer {
                                     instanceNumber = instanceNumber,
                                     changeJson = change.toJson()
                                 ),
-                                fromSync = true
+                                fromSync = true,
+                                bubbleError = true
                             )
                         }
                     }
@@ -331,7 +354,8 @@ object TableSynchronizer {
                                 instanceNumber = instanceNumber,
                                 changeJson = change.toJson()
                             ),
-                            fromSync = true
+                            fromSync = true,
+                            bubbleError = true
                         )
                     }
                 }
@@ -370,7 +394,8 @@ object TableSynchronizer {
                                     instanceNumber = instanceNumber,
                                     changeJson = change.toJson()
                                 ),
-                                fromSync = true
+                                fromSync = true,
+                                bubbleError = true
                             )
                         }
                     }
@@ -404,7 +429,8 @@ object TableSynchronizer {
                                 instanceNumber = instanceNumber,
                                 changeJson = change.toJson()
                             ),
-                            fromSync = true
+                            fromSync = true,
+                            bubbleError = true
                         )
                     }
                 }

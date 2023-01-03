@@ -10,22 +10,43 @@ import com.telefender.phone.data.tele_database.entities.ChangeLog
 import com.telefender.phone.data.tele_database.entities.ExecuteQueue
 import com.telefender.phone.data.tele_database.entities.UploadQueue
 import com.telefender.phone.helpers.MiscHelpers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.withLock
+import timber.log.Timber
 
+
+/**
+ * Contains most high level functions related to changes to our Tele database. Note that if you
+ * want to expose a function marked as a Transaction, you must indicate the function as "open"?
+ */
 @Dao
 abstract class ChangeAgentDao: ChangeLogDao, ExecuteAgentDao, ExecuteQueueDao, UploadQueueDao {
 
+    private val retryAmount = 5
 
     /**
-     * TODO: HANDLE TRANSACTIONS FOR RETRY.
-     *
      * Function to handle a change (as a ChangeLog) from Server.
      * Adds change to the ChangeLog and ExecuteQueue. Contrary to changeFromClient(), we don't
      * need a mutexSync lock around any of these actions because changes from the server only
-     * affect tree data, which doesn't interfere with the sync process.
+     * affect tree data, which doesn't interfere with the sync process. Also, although we
+     * technically don't need to retry here (as the DownloadPostRequest keeps retrying with the
+     * last inserted ChangeLog), we still retry here to decrease load on server (by not
+     * re-requesting unnecessarily).
      */
+    suspend fun changeFromServer(changeLog: ChangeLog) {
+        for (i in 1..retryAmount) {
+            try {
+                changeFromServerHelper(changeLog)
+                break
+            } catch (e: Exception) {
+                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: changeFromServer() RETRYING...")
+                delay(2000)
+            }
+        }
+    }
+
     @Transaction
-    open suspend fun changeFromServer(changeLog: ChangeLog) : Int{
+    open suspend fun changeFromServerHelper(changeLog: ChangeLog) : Int{
         with(changeLog) {
             mutexLocks[MutexType.CHANGE]!!.withLock {
                 insertChangeLog(this)
@@ -40,13 +61,15 @@ abstract class ChangeAgentDao: ChangeLogDao, ExecuteAgentDao, ExecuteQueueDao, U
         return RESPONSE_OK
     }
 
-
     /**
      * TODO: Modify or create new UploadLog to upload CallDetails. If not, then Transaction may
      *  be unnecessary.
      *
      * Handles new calls from client. Should only be called for syncing call logs. Returns whether
      * or not the CallDetail was inserted or not (may not be inserted if already synced).
+     *
+     * NOTE: if you would like to retry the transaction, you must do so yourself in the caller
+     * function.
      */
     @Transaction
     open suspend fun callFromClient(callDetail: CallDetail) : Boolean {
@@ -61,7 +84,6 @@ abstract class ChangeAgentDao: ChangeLogDao, ExecuteAgentDao, ExecuteQueueDao, U
     }
 
     /**
-     * TODO: HANDLE TRANSACTIONS FOR RETRY.
      * TODO: Debating whether or not we should handle default database changes here to. But on
      *  second thought, since this a DAO, we shouldn't mix between our database and the default
      *  database. Perhaps we should make an enveloping function in the repository or something
@@ -80,9 +102,31 @@ abstract class ChangeAgentDao: ChangeLogDao, ExecuteAgentDao, ExecuteQueueDao, U
      * Since tree contact changes don't affect sync, we have no need to wrap with mutexSync (which
      * also practically restricts to one client side change at a time), which also makes the rare
      * case of a tree instance delete not super blocking to the database.
+     *
+     * NOTE: If changeFromClient() fails [retryAmount], then it also throws an error if
+     * [bubbleError] is true so that the enclosing function can do a larger retry (for the
+     * larger process) if it wants to.
      */
+    suspend fun changeFromClient(changeLog: ChangeLog, fromSync: Boolean, bubbleError: Boolean = false) {
+        for (i in 1..retryAmount) {
+            try {
+                changeFromClientHelper(changeLog, fromSync)
+                break
+            } catch (e: Exception) {
+                /*
+                We need to throw an Exception here so that the enclosing syncContacts() can retry
+                if the lower level changeFromClient() fails too many times.
+                 */
+                if (i == retryAmount && bubbleError) throw Exception("changeFromClient() FAILED")
+
+                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: changeFromClient() RETRYING...")
+                delay(2000)
+            }
+        }
+    }
+
     @Transaction
-    open suspend fun changeFromClient(changeLog: ChangeLog, fromSync: Boolean) {
+    open suspend fun changeFromClientHelper(changeLog: ChangeLog, fromSync: Boolean) {
         with(changeLog) {
             /*
             fromSync indicates whether or not the change was initiated from a sync. As mentioned

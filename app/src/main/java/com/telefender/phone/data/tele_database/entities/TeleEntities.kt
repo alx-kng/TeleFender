@@ -55,9 +55,6 @@ data class Contact(
     }
 }
 
-/**
- * TODO: Consider using E164 representation (normalized) for rawNumber.
- */
 @Entity(tableName = "contact_number",
     primaryKeys = ["CID", "normalizedNumber"],
     foreignKeys = [
@@ -82,7 +79,7 @@ data class Contact(
 )
 data class ContactNumber(
     val CID: String,
-    val normalizedNumber: String,
+    val normalizedNumber: String, // E164 representation
     val defaultCID: String,
     val rawNumber: String,
     val instanceNumber: String,

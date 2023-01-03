@@ -25,12 +25,7 @@ object TeleCallDetails {
         }
 
         scope.launch {
-            for (i in 1..retryAmount) {
-                val success = TableSynchronizer.syncCallLogs(context, repository, context.contentResolver)
-                if (success) break
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: syncCallImmediate() RETRYING...")
-                delay(2000)
-            }
+            TableSynchronizer.syncCallLogs(context, repository, context.contentResolver)
         }
     }
 

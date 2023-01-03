@@ -22,6 +22,8 @@ import java.util.*
 
 object TableInitializers {
 
+    private const val retryAmount = 5
+
     /**
      * TODO: Changed code to basically just use TableSynchronizer. Even though pretty much all the
      *  initializers EXCEPT initInstance() are replaceable by the synchronizer, we'll just keep
@@ -88,6 +90,8 @@ object TableInitializers {
         curs?.close()
     }
 
+
+
     /**
      * Called once to initialize the ContactNumber table for the first time during database initialization.
      *
@@ -132,11 +136,11 @@ object TableInitializers {
 
         val changeID = UUID.randomUUID().toString()
         val instanceNumber = MiscHelpers.getInstanceNumber(context)
-        val CID = UUID.nameUUIDFromBytes((cursor.getString(0) + instanceNumber).toByteArray()).toString()
+        val teleCID = UUID.nameUUIDFromBytes((cursor.getString(0) + instanceNumber).toByteArray()).toString()
         val changeTime = Instant.now().toEpochMilli()
 
         val change = Change(
-            CID = CID
+            CID = teleCID
         )
 
         // To insert into Contacts table
@@ -168,6 +172,7 @@ object TableInitializers {
         val changeID = UUID.randomUUID().toString()
         val changeTime = Instant.now().toEpochMilli()
         val instanceNumber = MiscHelpers.getInstanceNumber(context)
+
         val defaultCID = cursor.getString(0)
         val teleCID = UUID.nameUUIDFromBytes((defaultCID + instanceNumber).toByteArray()).toString()
         val rawNumber = cursor.getString(1)

@@ -310,6 +310,9 @@ class ClientRepository(
     /**
      * Used to add CallDetail to database and update AnalyzedNumber. Returns whether the CallDetail
      * was inserted or not (may not be inserted if log already exists and is synced).
+     *
+     * NOTE: if you would like to retry the transaction, you must do so yourself in the caller
+     * function.
      */
     @WorkerThread
     suspend fun callFromClient(callDetail: CallDetail) : Boolean {
@@ -324,8 +327,8 @@ class ClientRepository(
      * See documentation for changeAgentDao.changeFromClient(). Locks handled at ExecuteAgent level.
      */
     @WorkerThread
-    suspend fun changeFromClient(changeLog: ChangeLog, fromSync: Boolean) {
-        changeAgentDao.changeFromClient(changeLog, fromSync)
+    suspend fun changeFromClient(changeLog: ChangeLog, fromSync: Boolean, bubbleError: Boolean = false) {
+        changeAgentDao.changeFromClient(changeLog, fromSync, bubbleError)
     }
 
     @WorkerThread

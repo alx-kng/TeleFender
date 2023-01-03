@@ -36,13 +36,15 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
             updateQTEErrorCounter_Delta(firstID, 1)
         }
 
-        val changeLog = getChangeLogRow(firstID)
-        executeChange(changeLog, true)
+        try {
+            val changeLog = getChangeLogRow(firstID)
+            executeChange(changeLog, true)
+        } catch (e: Exception) {
+            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: executeFirst() FAILED...")
+        }
     }
 
     /**
-     * TODO: Maybe put extra data in a JSON to prevent unnecessary database migrations.
-     *
      * Takes ChangeLog arguments and executes the corresponding database function in a single
      * transaction based on the type of change (e.g., instance insert), then deletes the task from
      * the ExecuteQueue. We have also already confirmed that deadlock is not possible with our
@@ -59,7 +61,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
     /**
      * We separated out instance deletes so they won't fall under one huge Transaction. Additionally,
      * we will handle mutex locking more fine grained in insDelete because one instance
-     * delete might take a while (still probably less than a few seconds), and we
+     * delete might take a while (still probably less than 10 seconds), and we
      * wouldn't want the data to be inaccessible during that time.
      */
     suspend fun executeChangeINSD(changeLog: ChangeLog) {
@@ -73,8 +75,6 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
     }
 
     /**
-     * TODO: HANDLE TRANSACTIONS FOR RETRY.
-     *
      * Other part of executeChange(). Handles all non-instance-delete actions.
      */
     @Transaction
@@ -445,6 +445,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
      * DAO function as it automatically modifies AnalyzedNumbers and provides a more
      * detailed NullPointerException.
      */
+    @Transaction
     suspend fun insInsert(instanceNumber: String?) {
         if (instanceNumber == null) {
             throw NullPointerException("instanceNumber was null for insInsert")
@@ -455,9 +456,9 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
     }
 
     /**
-     * Deletes Instance given instanceNumber. Higher level function than the corresponding
-     * DAO function as it automatically modifies AnalyzedNumbers and provides a more
-     * detailed NullPointerException.
+     * Deletes Instance given instanceNumber. No need to retry as transaction because if the
+     * instance delete fails midway, then the execute log won't be deleted, meaning the instance
+     * delete will continue where it left off in the next execution cycle.
      */
     suspend fun insDelete(changeLog: ChangeLog, instanceNumber: String?) {
         if (instanceNumber == null) {
