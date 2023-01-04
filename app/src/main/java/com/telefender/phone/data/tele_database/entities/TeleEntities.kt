@@ -26,6 +26,15 @@ data class StoredMap(
     }
 }
 
+@JsonClass(generateAdapter = true)
+@Entity(tableName = "parameters")
+data class Parameters(
+    @PrimaryKey val userNumber: String,
+    val initialNotifyGate: Int,
+    val verifiedSpamNotifyGate: Int,
+    val superSpamNotifyGate: Int,
+)
+
 @Entity(tableName = "instance")
 data class Instance(
     @PrimaryKey val number: String) {

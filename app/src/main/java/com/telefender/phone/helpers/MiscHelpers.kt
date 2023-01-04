@@ -19,7 +19,7 @@ object MiscHelpers {
     fun getInstanceNumber(context: Context) : String {
         val tMgr = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
         val number = tMgr.line1Number
-        return normalizedNumber(number) ?: number ?: INVALID_NUMBER
+        return normalizedNumber(number) ?: bareNumber(number)
     }
 
     /**

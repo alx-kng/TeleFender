@@ -40,6 +40,7 @@ class App : Application() {
             uploadQueueDao = database.uploadQueueDao(),
             changeLogDao = database.changeLogDao(),
             storedMapDao = database.storedMapDao(),
+            parametersDao = database.parametersDao(),
 
             callDetailDao = database.callDetailDao(),
             instanceDao = database.instanceDao(),

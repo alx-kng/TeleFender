@@ -10,7 +10,7 @@ import com.telefender.phone.data.tele_database.entities.isValidAnalyzed
 
 
 @Dao
-interface AnalyzedNumberDao {
+interface AnalyzedNumberDao : ParametersDao, StoredMapDao {
 
     /**
      * Unvalidated insert for AnalyzedNumber. Don't use outside of Dao.
@@ -26,6 +26,9 @@ interface AnalyzedNumberDao {
      *
      * Gets AnalyzedNumber row given number and also initializes row if it doesn't already exist.
      * You can assume that the analyzedValues property is valid.
+     *
+     * NOTE: Requires use of lock since it may initialize the AnalyzedNumber for the number if the
+     * row didn't previously exist.
      */
     suspend fun getAnalyzedNum(normalizedNumber: String) : AnalyzedNumber {
         // If no AnalyzedNumber row for number, then create row and initialize values
@@ -40,9 +43,12 @@ interface AnalyzedNumberDao {
      */
     suspend fun initAnalyzedNum(number: String) : Boolean {
         if (getAnalyzedNumQuery(number) == null) {
+            // We assume that StoredMap is initialized by now due to being core.
+            val parameters = getParameters()
+
             val baseAnalyzed =
                 Analyzed(
-                    notifyGate = 2,
+                    notifyGate = parameters.initialNotifyGate,
                     lastCallTime = null,
                     numIncoming = 0,
                     numOutgoing = 0,

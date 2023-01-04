@@ -13,6 +13,7 @@ import com.google.android.gms.tasks.OnCompleteListener
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.ktx.messaging
 import com.telefender.phone.App
+import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.background_tasks.TableInitializers
 import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkerType
@@ -28,6 +29,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 
 @Database(entities = [
@@ -35,6 +37,7 @@ import timber.log.Timber
     ExecuteQueue::class,
     UploadQueue::class,
     StoredMap::class,
+    Parameters::class,
     CallDetail::class,
     Instance::class,
     Contact::class,
@@ -51,6 +54,7 @@ abstract class ClientDatabase : RoomDatabase() {
     abstract fun executeQueueDao() : ExecuteQueueDao
     abstract fun uploadQueueDao() : UploadQueueDao
     abstract fun storedMapDao() : StoredMapDao
+    abstract fun parametersDao() : ParametersDao
 
     abstract fun callDetailDao() : CallDetailDao
     abstract fun instanceDao() : InstanceDao
@@ -120,8 +124,10 @@ abstract class ClientDatabase : RoomDatabase() {
 
         // Makes sure that retrieved instanceNumber isn't invalid (due to errors or something).
         if (instanceNumber != MiscHelpers.INVALID_NUMBER) {
-            // Initializes stored map table with user number.
-            this.storedMapDao().insertStoredMap(StoredMap(instanceNumber))
+            // Initializes stored map table with user number. Lock for extra safety.
+            mutexLocks[MutexType.STORED_MAP]!!.withLock {
+                this.storedMapDao().initStoredMap(instanceNumber)
+            }
 
             // Inserts the single user instance with changeAgentDao
             TableInitializers.initInstance(context, this, instanceNumber)

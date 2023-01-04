@@ -1,13 +1,29 @@
 package com.telefender.phone.data.tele_database.client_daos
 
 import androidx.room.*
+import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
+import com.telefender.phone.data.tele_database.entities.Parameters
 import com.telefender.phone.data.tele_database.entities.StoredMap
 
 @Dao
 interface StoredMapDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertStoredMap(vararg storedMap : StoredMap)
+    suspend fun insertStoredMapQuery(vararg storedMap : StoredMap)
+
+    suspend fun initStoredMap(userNumber: String) : Boolean{
+        return if (getStoredMapQuery(userNumber) == null) {
+            // Initialize StoredMap with just userNumber values.
+            insertStoredMapQuery(StoredMap(userNumber = userNumber))
+
+            true
+        } else {
+            false
+        }
+    }
+
+    @Query("SELECT * FROM stored_map WHERE userNumber = :userNumber")
+    suspend fun getStoredMapQuery(userNumber: String) : StoredMap?
 
     @Query("SELECT clientKey FROM stored_map WHERE userNumber = :number")
     suspend fun getCredKey(number: String): String?

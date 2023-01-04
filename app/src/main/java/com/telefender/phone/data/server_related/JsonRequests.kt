@@ -10,12 +10,15 @@ import com.squareup.moshi.Moshi
 @JsonClass(generateAdapter = true)
 open class DefaultRequest(
     val instanceNumber : String
-    ) {
+) {
     override fun toString() : String {
         return "REQUEST - instanceNumber: " + this.instanceNumber
     }
 }
-// The second request to verify the user containing instanceNumber, sessionID, OTP
+
+/**
+ * The second request to verify the user containing instanceNumber, sessionID, OTP
+ */
 @JsonClass(generateAdapter = true)
 class VerifyRequest(
     instanceNumber : String,
@@ -28,7 +31,9 @@ class VerifyRequest(
     }
 }
 
-// A standard request parent class containing only instanceNumber and Key, inherited by Upload/Download requests
+/**
+ * A standard request parent class containing only instanceNumber and Key, inherited by Upload/Download requests
+ */
 @JsonClass(generateAdapter = true)
 open class KeyRequest(
     instanceNumber : String,
@@ -39,7 +44,10 @@ open class KeyRequest(
         return super.toString() + " key: " + this.key
     }
 }
-// Inherits from KeyRequest, request class for upload
+
+/**
+ * Inherits from KeyRequest, request class for uploading ChangeLogs.
+ */
 @JsonClass(generateAdapter = true)
 class UploadRequest(
     instanceNumber : String,
@@ -56,7 +64,9 @@ class UploadRequest(
     }
 }
 
-// Inherits from KeyRequest, request class for download
+/**
+ * Inherits from KeyRequest, request class for download
+ */
 @JsonClass(generateAdapter = true)
 class DownloadRequest(
     instanceNumber : String,

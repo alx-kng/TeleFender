@@ -15,7 +15,7 @@ import kotlin.math.roundToInt
 
 @Dao
 interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetailDao,
-    AnalyzedNumberDao, ChangeLogDao, ExecuteQueueDao, UploadQueueDao, StoredMapDao {
+    AnalyzedNumberDao, ChangeLogDao, ExecuteQueueDao, UploadQueueDao, StoredMapDao, ParametersDao {
     
     suspend fun executeAll(){
         while (hasQTEs()) {
@@ -216,8 +216,6 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
 
 
     /**
-     * TODO: lift out constants into Settings table.
-     *
      * For updates to non-contact numbers (e.g., mark safe, default, blocked or SMS verify).
      */
     @Transaction
@@ -225,14 +223,13 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
         if (null in listOf(instanceNumber, normalizedNumber, safeAction)) {
             throw NullPointerException("instanceNumber || normalizedNumber || safeAction was null for nonContactUpdate")
         } else {
-            val verifiedSpamNotifyGate = 7
-            val superSpamNotifyGate = 14
-
             // Only update AnalyzedNumbers if change is from user's number (local client change).
-            if (instanceNumber == getUserNumber()) {
+            if (instanceNumber!! == getUserNumber()) {
                 val analyzedNumber = getAnalyzedNum(normalizedNumber!!)
                 val oldAnalyzed = analyzedNumber.getAnalyzed()
                 with(oldAnalyzed) {
+
+                    val parameters = getParameters()
 
                     val newNotifyGate: Int
                     val newIsBlocked: Boolean
@@ -240,12 +237,12 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
 
                     when (safeAction!!) {
                         SafeAction.SAFE -> {
-                            newNotifyGate = 2
+                            newNotifyGate = parameters.initialNotifyGate
                             newMarkedSafe = true
                             newIsBlocked = false
                         }
                         SafeAction.DEFAULT -> {
-                            newNotifyGate = 2
+                            newNotifyGate = parameters.initialNotifyGate
                             newMarkedSafe = false
                             newIsBlocked = false
                         }
@@ -254,7 +251,11 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                             If already blocked, increase notify gate by significant amount.
                             If not already blocked, increase notify gate to verified spam amount.
                              */
-                            newNotifyGate = if (isBlocked) superSpamNotifyGate else verifiedSpamNotifyGate
+                            newNotifyGate = if (isBlocked) {
+                                parameters.superSpamNotifyGate
+                            } else {
+                                parameters.verifiedSpamNotifyGate
+                            }
                             newMarkedSafe = false
                             newIsBlocked = true
                         }
@@ -270,8 +271,8 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                         SafeAction.SMS_VERIFY -> {
                             updateAnalyzedNum(
                                 normalizedNumber = normalizedNumber,
-                                analyzed = this.copy(
-                                    notifyGate = 2,
+                                analyzed = oldAnalyzed.copy(
+                                    notifyGate = parameters.initialNotifyGate,
                                     smsVerified = true
                                 )
                             )
@@ -429,12 +430,13 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
             val oldAnalyzed = analyzedNumber.getAnalyzed()
             with(oldAnalyzed) {
                 val newDegreeString = changeDegreeString(degreeString, degree, false)
+                val parameters = getParameters()
 
                 if (instanceNumber == getUserNumber()) {
                     updateAnalyzedNum(
                         normalizedNumber = normalizedNumber,
                         analyzed = this.copy(
-                            notifyGate = 2,
+                            notifyGate = parameters.initialNotifyGate,
                             isBlocked = false,
                             numSharedContacts = numSharedContacts + 1,
                             minDegree = 0,
@@ -445,7 +447,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                     updateAnalyzedNum(
                         normalizedNumber = normalizedNumber,
                         analyzed = this.copy(
-                            notifyGate = 2,
+                            notifyGate = parameters.initialNotifyGate,
                             numTreeContacts = numTreeContacts + 1,
                             minDegree = getMinDegree(newDegreeString),
                             degreeString = newDegreeString

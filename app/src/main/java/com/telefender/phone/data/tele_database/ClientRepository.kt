@@ -1,6 +1,7 @@
 package com.telefender.phone.data.tele_database
 
 import androidx.annotation.WorkerThread
+import com.telefender.phone.data.tele_database.TeleLocks.mutexAnalyzed
 import com.telefender.phone.data.tele_database.TeleLocks.mutexCallDetails
 import com.telefender.phone.data.tele_database.TeleLocks.mutexStoredMap
 import com.telefender.phone.data.tele_database.TeleLocks.mutexUpload
@@ -10,8 +11,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 enum class MutexType {
-    EXECUTE, UPLOAD, CHANGE, STORED_MAP, INSTANCE, CONTACT, CONTACT_NUMBER, CALL_DETAIL, ANALYZED,
-    SYNC
+    EXECUTE, UPLOAD, CHANGE, STORED_MAP, PARAMETERS, INSTANCE, CONTACT, CONTACT_NUMBER,
+    CALL_DETAIL, ANALYZED, SYNC
 }
 
 /**
@@ -24,6 +25,7 @@ object TeleLocks {
     val mutexUpload = Mutex()
     val mutexChange = Mutex()
     val mutexStoredMap = Mutex()
+    val mutexParameters = Mutex()
 
     val mutexCallDetails = Mutex()
     val mutexInstance = Mutex()
@@ -38,6 +40,7 @@ object TeleLocks {
         MutexType.UPLOAD to mutexUpload,
         MutexType.CHANGE to mutexChange,
         MutexType.STORED_MAP to mutexStoredMap,
+        MutexType.PARAMETERS to mutexParameters,
         MutexType.CALL_DETAIL to mutexCallDetails,
         MutexType.INSTANCE to mutexInstance,
         MutexType.CONTACT to mutexContact,
@@ -62,6 +65,7 @@ class ClientRepository(
     private val uploadQueueDao : UploadQueueDao,
     private val changeLogDao : ChangeLogDao,
     private val storedMapDao : StoredMapDao,
+    private val parametersDao : ParametersDao,
 
     private val callDetailDao : CallDetailDao,
     private val instanceDao : InstanceDao,
@@ -165,9 +169,15 @@ class ClientRepository(
      * AnalyzedNumber Queries
      **********************************************************************************************/
 
+    /**
+     * Gets AnalyzedNumber given a number. Requires use of lock since it may initialize the
+     * AnalyzedNumber for the number if the row didn't previously exist.
+     */
     @WorkerThread
     suspend fun getAnalyzed(number: String) : AnalyzedNumber {
-        return analyzedNumberDao.getAnalyzedNum(number)
+        return mutexAnalyzed.withLock {
+            analyzedNumberDao.getAnalyzedNum(number)
+        }
     }
 
     /***********************************************************************************************
