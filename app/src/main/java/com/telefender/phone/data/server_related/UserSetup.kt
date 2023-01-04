@@ -26,6 +26,8 @@ object UserSetup {
 
         val requestJson : String = defaultRequestToJson(DefaultRequest(instanceNumber))
 
+        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: initialRequestJson = $requestJson")
+
         try {
             val stringRequest = InitialRequestGen.create(
                 method = Request.Method.POST,
@@ -56,7 +58,7 @@ object UserSetup {
         val verifyRequest = VerifyRequest(instanceNumber, sessionID!!, otp)
         val verifyRequestJson : String = RequestHelpers.verifyRequestToJson(verifyRequest)
 
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VerifyRequestJson = $verifyRequestJson")
+        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: verifyRequestJson = $verifyRequestJson")
 
         try {
             val stringRequest = VerifyRequestGen.create(

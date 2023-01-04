@@ -10,10 +10,7 @@ import androidx.annotation.RequiresApi
 import com.telefender.phone.data.default_database.DefaultContacts
 import com.telefender.phone.data.tele_database.*
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
-import com.telefender.phone.data.tele_database.entities.CallDetail
-import com.telefender.phone.data.tele_database.entities.Change
-import com.telefender.phone.data.tele_database.entities.ChangeLog
-import com.telefender.phone.data.tele_database.entities.ContactNumber
+import com.telefender.phone.data.tele_database.entities.*
 import com.telefender.phone.helpers.MiscHelpers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.withLock
@@ -225,15 +222,15 @@ object TableSynchronizer {
                             val changeID = UUID.randomUUID().toString()
                             val changeTime = Instant.now().toEpochMilli()
 
-                            val change = Change(
+                            val change = Change.create(
                                 CID = teleCID
                             )
 
                             database.changeAgentDao().changeFromClient(
-                                ChangeLog(
+                                ChangeLog.create(
                                     changeID = changeID,
                                     changeTime = changeTime,
-                                    type = ClientDBConstants.CHANGELOG_TYPE_CONTACT_INSERT,
+                                    type = ChangeType.CONTACT_INSERT,
                                     instanceNumber = instanceNumber,
                                     changeJson = change.toJson()
                                 ),
@@ -256,7 +253,7 @@ object TableSynchronizer {
                             val changeID = UUID.randomUUID().toString()
                             val changeTime = Instant.now().toEpochMilli()
 
-                            val change = Change(
+                            val change = Change.create(
                                 CID = teleCID,
                                 normalizedNumber = normalizedNumber,
                                 defaultCID = defaultCID,
@@ -266,10 +263,10 @@ object TableSynchronizer {
                             )
 
                             database.changeAgentDao().changeFromClient(
-                                ChangeLog(
+                                ChangeLog.create(
                                     changeID = changeID,
                                     changeTime = changeTime,
-                                    type = ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_INSERT,
+                                    type = ChangeType.CONTACT_NUMBER_INSERT,
                                     instanceNumber = instanceNumber,
                                     changeJson = change.toJson()
                                 ),
@@ -342,15 +339,15 @@ object TableSynchronizer {
                         val changeID = UUID.randomUUID().toString()
                         val changeTime = Instant.now().toEpochMilli()
 
-                        val change = Change(
+                        val change = Change.create(
                             CID = teleCID
                         )
 
                         database.changeAgentDao().changeFromClient(
-                            ChangeLog(
+                            ChangeLog.create(
                                 changeID = changeID,
                                 changeTime = changeTime,
-                                type = ClientDBConstants.CHANGELOG_TYPE_CONTACT_DELETE,
+                                type = ChangeType.CONTACT_DELETE,
                                 instanceNumber = instanceNumber,
                                 changeJson = change.toJson()
                             ),
@@ -380,17 +377,17 @@ object TableSynchronizer {
                             val changeID = UUID.randomUUID().toString()
                             val changeTime = Instant.now().toEpochMilli()
 
-                            val change = Change(
+                            val change = Change.create(
                                 CID = teleCID,
                                 normalizedNumber = contactNumber.normalizedNumber,
                                 degree = 0
                             )
 
                             database.changeAgentDao().changeFromClient(
-                                ChangeLog(
+                                ChangeLog.create(
                                     changeID = changeID,
                                     changeTime = changeTime,
-                                    type = ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_DELETE,
+                                    type = ChangeType.CONTACT_NUMBER_DELETE,
                                     instanceNumber = instanceNumber,
                                     changeJson = change.toJson()
                                 ),
@@ -414,7 +411,7 @@ object TableSynchronizer {
                         val changeID = UUID.randomUUID().toString()
                         val changeTime = Instant.now().toEpochMilli()
 
-                        val change = Change(
+                        val change = Change.create(
                             CID = teleCID,
                             normalizedNumber = contactNumber.normalizedNumber,
                             rawNumber = matchPK.rawNumber,
@@ -422,10 +419,10 @@ object TableSynchronizer {
                         )
 
                         database.changeAgentDao().changeFromClient(
-                            ChangeLog(
+                            ChangeLog.create(
                                 changeID = changeID,
                                 changeTime = changeTime,
-                                type = ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_UPDATE,
+                                type = ChangeType.CONTACT_NUMBER_UPDATE,
                                 instanceNumber = instanceNumber,
                                 changeJson = change.toJson()
                             ),

@@ -110,7 +110,7 @@ private fun uploadResponseHandler(
 
 private val uploadErrorHandler = Response.ErrorListener { error ->
     if (error.toString() != "null") {
-        Timber.e("VOLLEY %s", error.toString())
+        Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY $error")
         WorkerStates.setState(WorkerType.UPLOAD_POST, WorkInfo.State.FAILED)
     }
 }

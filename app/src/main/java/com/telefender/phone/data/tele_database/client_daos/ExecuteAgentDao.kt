@@ -3,7 +3,6 @@ package com.telefender.phone.data.tele_database.client_daos
 import android.provider.CallLog
 import androidx.room.Dao
 import androidx.room.Transaction
-import com.telefender.phone.data.tele_database.ClientDBConstants
 import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.entities.*
@@ -12,7 +11,7 @@ import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 import java.lang.Long.max
 import kotlin.math.roundToInt
-import kotlin.text.Typography.degree
+
 
 @Dao
 interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetailDao,
@@ -45,13 +44,20 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
     }
 
     /**
+     * TODO: For changes from server, we can choose to delete the associated ChangeLogs if the
+     *  storage / speed becomes too slow. A reason why we might keep the ChangeLogs from server
+     *  is that we can completely recalculate the AnalyzedNumbers (if a huge algorithm change or
+     *  something) without having to re-query all the tree stuff from the server. Worst comes to
+     *  worst, we can also just recalculate AnalyzedNumbers based off data in tables (e.g.,
+     *  iterating through Contact table and updating AnalyzedNumbers).
+     *
      * Takes ChangeLog arguments and executes the corresponding database function in a single
      * transaction based on the type of change (e.g., instance insert), then deletes the task from
      * the ExecuteQueue. We have also already confirmed that deadlock is not possible with our
      * mutex lock usage.
      */
     suspend fun executeChange(changeLog: ChangeLog, fromServer: Boolean = false) {
-        if (changeLog.type == ClientDBConstants.CHANGELOG_TYPE_INSTANCE_DELETE) {
+        if (changeLog.getChangeType() == ChangeType.INSTANCE_DELETE) {
             executeChangeINSD(changeLog)
         } else {
             executeChangeNORM(changeLog, fromServer)
@@ -66,10 +72,10 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
      */
     suspend fun executeChangeINSD(changeLog: ChangeLog) {
         with(changeLog) {
-            if (changeLog.type ==  ClientDBConstants.CHANGELOG_TYPE_INSTANCE_DELETE) {
+            if (this.getChangeType() ==  ChangeType.INSTANCE_DELETE) {
                 insDelete(this, instanceNumber)
             } else {
-                Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: Not instance delete type!!!")
+                Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: executeAgentINSD() - wrong type $type")
             }
         }
     }
@@ -87,14 +93,21 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
         val change = changeLog.getChange()
 
         with(changeLog) {
-            when (type) {
-                ClientDBConstants.CHANGELOG_TYPE_CONTACT_INSERT -> mutexContact.withLock {
+            when (this.getChangeType()) {
+                ChangeType.NON_CONTACT_UPDATE -> mutexAnalyzed.withLock {
+                    nonContactUpdate(
+                        instanceNumber = instanceNumber,
+                        normalizedNumber = change?.normalizedNumber,
+                        safeAction = change?.getSafeAction()
+                    )
+                }
+                ChangeType.CONTACT_INSERT -> mutexContact.withLock {
                     cInsert(
                         instanceNumber = instanceNumber,
                         CID = change?.CID
                     )
                 }
-                ClientDBConstants.CHANGELOG_TYPE_CONTACT_UPDATE -> mutexAnalyzed.withLock {
+                ChangeType.CONTACT_UPDATE -> mutexAnalyzed.withLock {
                     mutexContact.withLock {
                         mutexContactNumber.withLock {
                             cUpdate(
@@ -105,14 +118,14 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                         }
                     }
                 }
-                ClientDBConstants.CHANGELOG_TYPE_CONTACT_DELETE -> mutexAnalyzed.withLock {
+                ChangeType.CONTACT_DELETE -> mutexAnalyzed.withLock {
                     mutexContact.withLock {
                         mutexContactNumber.withLock {
                             cDelete(CID = change?.CID)
                         }
                     }
                 }
-                ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_INSERT -> mutexAnalyzed.withLock {
+                ChangeType.CONTACT_NUMBER_INSERT -> mutexAnalyzed.withLock {
                     mutexContactNumber.withLock {
                         cnInsert(
                             instanceNumber = instanceNumber,
@@ -125,7 +138,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                         )
                     }
                 }
-                ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_UPDATE -> mutexAnalyzed.withLock {
+                ChangeType.CONTACT_NUMBER_UPDATE -> mutexAnalyzed.withLock {
                     mutexContactNumber.withLock {
                         cnUpdate(
                             CID = change?.CID,
@@ -135,7 +148,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                         )
                     }
                 }
-                ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_DELETE -> mutexAnalyzed.withLock {
+                ChangeType.CONTACT_NUMBER_DELETE -> mutexAnalyzed.withLock {
                     mutexContactNumber.withLock {
                         cnDelete(
                             instanceNumber = instanceNumber,
@@ -145,15 +158,17 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                         )
                     }
                 }
-                ClientDBConstants.CHANGELOG_TYPE_INSTANCE_INSERT -> mutexInstance.withLock {
+                ChangeType.INSTANCE_INSERT -> mutexInstance.withLock {
                     insInsert(instanceNumber = instanceNumber)
+                }
+                else -> {
+                    Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: executeAgentNORM() - wrong type $type")
                 }
             }
 
             // If from server, delete associated QTE.
             if (fromServer) {
-                val mutexExecute = mutexLocks[MutexType.EXECUTE]!!
-                mutexExecute.withLock {
+                mutexLocks[MutexType.EXECUTE]!!.withLock {
                     deleteQTE_ChangeID(changeID)
                 }
             }
@@ -161,8 +176,8 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
     }
 
     /**
-     * Inserts call log into CallDetail table and updates AnalyzedNumber. Only updates
-     * AnalyzedNumber if log is inserted.
+     * Inserts call  into CallDetail table and updates AnalyzedNumber. Only updates
+     * AnalyzedNumber if  is inserted.
      */
     @Transaction
     suspend fun logInsert(callDetail: CallDetail) : Boolean {
@@ -197,6 +212,85 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
         }
 
         return inserted
+    }
+
+
+    /**
+     * TODO: lift out constants into Settings table.
+     *
+     * For updates to non-contact numbers (e.g., mark safe, default, blocked or SMS verify).
+     */
+    @Transaction
+    suspend fun nonContactUpdate(instanceNumber: String?, normalizedNumber: String?, safeAction: SafeAction?) {
+        if (null in listOf(instanceNumber, normalizedNumber, safeAction)) {
+            throw NullPointerException("instanceNumber || normalizedNumber || safeAction was null for nonContactUpdate")
+        } else {
+            val verifiedSpamNotifyGate = 7
+            val superSpamNotifyGate = 14
+
+            // Only update AnalyzedNumbers if change is from user's number (local client change).
+            if (instanceNumber == getUserNumber()) {
+                val analyzedNumber = getAnalyzedNum(normalizedNumber!!)
+                val oldAnalyzed = analyzedNumber.getAnalyzed()
+                with(oldAnalyzed) {
+
+                    val newNotifyGate: Int
+                    val newIsBlocked: Boolean
+                    val newMarkedSafe: Boolean
+
+                    when (safeAction!!) {
+                        SafeAction.SAFE -> {
+                            newNotifyGate = 2
+                            newMarkedSafe = true
+                            newIsBlocked = false
+                        }
+                        SafeAction.DEFAULT -> {
+                            newNotifyGate = 2
+                            newMarkedSafe = false
+                            newIsBlocked = false
+                        }
+                        SafeAction.BLOCKED -> {
+                            /*
+                            If already blocked, increase notify gate by significant amount.
+                            If not already blocked, increase notify gate to verified spam amount.
+                             */
+                            newNotifyGate = if (isBlocked) superSpamNotifyGate else verifiedSpamNotifyGate
+                            newMarkedSafe = false
+                            newIsBlocked = true
+                        }
+                        /**
+                         * TODO: Change notifyGate protocol if necessary later.
+                         *
+                         * Basically, sms verification only really affects numbers in the default
+                         * status (markedSafe = false and isBlocked = false) because if the number
+                         * is already markedSafe, then sms has not much effect, and the number is
+                         * blocked, then we don't want sms to override the user's action. However,
+                         * we would like to reset notifyGate to give credit to number.
+                         */
+                        SafeAction.SMS_VERIFY -> {
+                            updateAnalyzedNum(
+                                normalizedNumber = normalizedNumber,
+                                analyzed = this.copy(
+                                    notifyGate = 2,
+                                    smsVerified = true
+                                )
+                            )
+
+                            return
+                        }
+                    }
+
+                    updateAnalyzedNum(
+                        normalizedNumber = normalizedNumber,
+                        analyzed = this.copy(
+                            notifyGate = newNotifyGate,
+                            markedSafe = newMarkedSafe,
+                            isBlocked = newIsBlocked
+                        )
+                    )
+                }
+            }
+        }
     }
 
     /**
@@ -359,7 +453,6 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                     )
                 }
             }
-
         }
     }
 

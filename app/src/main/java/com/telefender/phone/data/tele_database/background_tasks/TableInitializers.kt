@@ -7,13 +7,11 @@ import android.database.Cursor
 import android.os.Build
 import androidx.annotation.RequiresApi
 import com.telefender.phone.data.default_database.DefaultContacts
-import com.telefender.phone.data.tele_database.ClientDBConstants.CHANGELOG_TYPE_CONTACT_INSERT
-import com.telefender.phone.data.tele_database.ClientDBConstants.CHANGELOG_TYPE_CONTACT_NUMBER_INSERT
-import com.telefender.phone.data.tele_database.ClientDBConstants.CHANGELOG_TYPE_INSTANCE_INSERT
 import com.telefender.phone.data.tele_database.ClientDatabase
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.entities.Change
 import com.telefender.phone.data.tele_database.entities.ChangeLog
+import com.telefender.phone.data.tele_database.entities.ChangeType
 import com.telefender.phone.helpers.MiscHelpers
 import com.telefender.phone.permissions.PermissionRequester
 import timber.log.Timber
@@ -52,10 +50,10 @@ object TableInitializers {
         val changeTime = Instant.now().toEpochMilli() // get epoch time
 
         database.changeAgentDao().changeFromClient(
-            ChangeLog(
+            ChangeLog.create(
                 changeID = changeID,
                 changeTime = changeTime,
-                type = CHANGELOG_TYPE_INSTANCE_INSERT,
+                type = ChangeType.INSTANCE_INSERT,
                 instanceNumber = instanceNumber
             ),
             fromSync = false
@@ -71,7 +69,6 @@ object TableInitializers {
      */
     @RequiresApi(Build.VERSION_CODES.O)
     suspend fun initContact(context: Context, database: ClientDatabase, contentResolver: ContentResolver) {
-
         if (!PermissionRequester.hasContactPermissions(context)) {
             Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: No contact permissions in initContact()")
             return
@@ -101,7 +98,6 @@ object TableInitializers {
      */
     @RequiresApi(Build.VERSION_CODES.O)
     suspend fun initContactNumber(context: Context, database: ClientDatabase, contentResolver: ContentResolver) {
-
         if (!PermissionRequester.hasContactPermissions(context)) {
             Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: No contact permissions in initContactNumber()")
             return
@@ -139,16 +135,16 @@ object TableInitializers {
         val teleCID = UUID.nameUUIDFromBytes((cursor.getString(0) + instanceNumber).toByteArray()).toString()
         val changeTime = Instant.now().toEpochMilli()
 
-        val change = Change(
+        val change = Change.create(
             CID = teleCID
         )
 
         // To insert into Contacts table
         database.changeAgentDao().changeFromClient(
-            ChangeLog(
+            ChangeLog.create(
                 changeID = changeID,
                 changeTime = changeTime,
-                type = CHANGELOG_TYPE_CONTACT_INSERT,
+                type = ChangeType.CONTACT_INSERT,
                 instanceNumber = instanceNumber,
                 changeJson = change.toJson(),
             ),
@@ -181,7 +177,7 @@ object TableInitializers {
             ?: MiscHelpers.bareNumber(rawNumber)
         val versionNumber = cursor.getString(3).toInt()
 
-        val change = Change(
+        val change = Change.create(
             CID = teleCID,
             normalizedNumber = normalizedNumber,
             defaultCID = defaultCID,
@@ -192,10 +188,10 @@ object TableInitializers {
 
         // To insert into ContactNumber table
         database.changeAgentDao().changeFromClient(
-            ChangeLog(
+            ChangeLog.create(
                 changeID = changeID,
                 changeTime = changeTime,
-                type = CHANGELOG_TYPE_CONTACT_NUMBER_INSERT,
+                type = ChangeType.CONTACT_NUMBER_INSERT,
                 instanceNumber = instanceNumber,
                 changeJson = change.toJson()
             ),

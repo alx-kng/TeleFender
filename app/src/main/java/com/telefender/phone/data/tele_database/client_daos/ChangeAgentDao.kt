@@ -2,13 +2,9 @@ package com.telefender.phone.data.tele_database.client_daos
 
 import androidx.room.Dao
 import androidx.room.Transaction
-import com.telefender.phone.data.tele_database.ClientDBConstants.RESPONSE_OK
 import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
-import com.telefender.phone.data.tele_database.entities.CallDetail
-import com.telefender.phone.data.tele_database.entities.ChangeLog
-import com.telefender.phone.data.tele_database.entities.ExecuteQueue
-import com.telefender.phone.data.tele_database.entities.UploadQueue
+import com.telefender.phone.data.tele_database.entities.*
 import com.telefender.phone.helpers.MiscHelpers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.withLock
@@ -46,7 +42,7 @@ abstract class ChangeAgentDao: ChangeLogDao, ExecuteAgentDao, ExecuteQueueDao, U
     }
 
     @Transaction
-    open suspend fun changeFromServerHelper(changeLog: ChangeLog) : Int{
+    open suspend fun changeFromServerHelper(changeLog: ChangeLog) {
         with(changeLog) {
             mutexLocks[MutexType.CHANGE]!!.withLock {
                 insertChangeLog(this)
@@ -57,8 +53,6 @@ abstract class ChangeAgentDao: ChangeLogDao, ExecuteAgentDao, ExecuteQueueDao, U
                 insertQTE(execLog)
             }
         }
-
-        return RESPONSE_OK
     }
 
     /**
@@ -88,7 +82,6 @@ abstract class ChangeAgentDao: ChangeLogDao, ExecuteAgentDao, ExecuteQueueDao, U
      *  second thought, since this a DAO, we shouldn't mix between our database and the default
      *  database. Perhaps we should make an enveloping function in the repository or something
      *  to call our changeFromClient() and handle the default database changes.
-     * TODO: Manage non-contact changes
      *
      * Function to handle a change (as a ChangeLog) from Client.
      * Inserts changes into actual tables (e.g., Instance, Contact, etc...) and adds change
@@ -144,16 +137,17 @@ abstract class ChangeAgentDao: ChangeLogDao, ExecuteAgentDao, ExecuteQueueDao, U
                 }
             }
 
-
             mutexLocks[MutexType.CHANGE]!!.withLock {
                 insertChangeLog(changeLog)
             }
 
-            mutexLocks[MutexType.UPLOAD]!!.withLock {
-                val upLog = UploadQueue(changeID, changeTime, getRowID(changeID))
-                insertQTU(upLog)
+            // No need to upload non-contact updates since they don't affect other users.
+            if (this.getChangeType() != ChangeType.NON_CONTACT_UPDATE) {
+                mutexLocks[MutexType.UPLOAD]!!.withLock {
+                    val upLog = UploadQueue(changeID, changeTime, getRowID(changeID))
+                    insertQTU(upLog)
+                }
             }
-
         }
     }
 }

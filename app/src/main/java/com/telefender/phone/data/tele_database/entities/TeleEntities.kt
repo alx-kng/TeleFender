@@ -48,7 +48,8 @@ data class Instance(
 data class Contact(
     @PrimaryKey val CID: String,
     val instanceNumber : String,
-    val blocked: Boolean = false) {
+    val blocked: Boolean = false
+) {
 
     override fun toString() : String {
         return "CONTACT -  CID: $CID instanceNumber: $instanceNumber blocked: $blocked"
@@ -150,7 +151,7 @@ data class Analyzed(
     val smsVerified: Boolean,
     val markedSafe: Boolean,
     val isBlocked: Boolean,
-    val numMarkedBlocked: Int,
+    val numMarkedBlocked: Int, // for contacts only
     val numSharedContacts: Int,
     val isOrganization: Boolean,
     val minDegree: Int? = null,

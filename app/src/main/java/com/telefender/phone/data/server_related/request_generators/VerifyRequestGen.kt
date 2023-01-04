@@ -90,7 +90,7 @@ private fun verifyPostResponseHandler(
 
 private val verifyPostErrorHandler = Response.ErrorListener { error ->
     if (error.toString() != "null") {
-        Timber.e("VOLLEY %s", error.toString())
+        Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY $error")
         WorkerStates.setState(WorkerType.SETUP, WorkInfo.State.FAILED)
     }
 }

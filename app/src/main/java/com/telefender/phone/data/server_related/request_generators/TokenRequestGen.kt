@@ -74,7 +74,7 @@ private fun tokenResponseHandler(
 
 private val tokenErrorHandler = Response.ErrorListener { error ->
     if (error.toString() != "null") {
-        Timber.e("VOLLEY %s", error.toString())
+        Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY $error")
         WorkerStates.setState(WorkerType.UPLOAD_TOKEN, WorkInfo.State.FAILED)
     }
 }

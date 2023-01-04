@@ -75,7 +75,7 @@ class CoroutineSetupWorker(
         val instanceNumber = MiscHelpers.getInstanceNumber(context)
 
         // Stops worker if user is already setup.
-        if (repository.hasCredKey(instanceNumber!!)) {
+        if (repository.hasCredKey(instanceNumber)) {
             return Result.success()
         }
 
