@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.telefender.phone.data.tele_database.entities.Analyzed
 import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
+import com.telefender.phone.data.tele_database.entities.UploadQueue
 import com.telefender.phone.data.tele_database.entities.isValidAnalyzed
 
 
@@ -22,10 +23,10 @@ interface AnalyzedNumberDao : ParametersDao, StoredMapDao {
     suspend fun getAllAnalyzedNum() : List<AnalyzedNumber>
 
     /**
-     * TODO: Maybe we need to put a valid check for analyzedValues here?
+     * TODO: Maybe we need to put a valid check for analyzedJson here?
      *
      * Gets AnalyzedNumber row given number and also initializes row if it doesn't already exist.
-     * You can assume that the analyzedValues property is valid.
+     * You can assume that the analyzedJson property is valid.
      *
      * NOTE: Requires use of lock since it may initialize the AnalyzedNumber for the number if the
      * row didn't previously exist.
@@ -68,7 +69,7 @@ interface AnalyzedNumberDao : ParametersDao, StoredMapDao {
             insertAnalyzedNumQuery(
                 AnalyzedNumber(
                     normalizedNumber = number,
-                    analyzedValues = baseAnalyzed.toJson()
+                    analyzedJson = baseAnalyzed.toJson()
                 )
             )
 
@@ -88,14 +89,14 @@ interface AnalyzedNumberDao : ParametersDao, StoredMapDao {
         updateAnalyzedNum(
             AnalyzedNumber(
                 normalizedNumber = normalizedNumber,
-                analyzedValues = analyzed?.toJson() ?: "{}"
+                analyzedJson = analyzed?.toJson() ?: "{}"
             ),
             confirmValid = analyzed != null
         )
     }
 
     /**
-     * Updates AnalyzedNumber. If you are certain that the analyzedValues property of the passed
+     * Updates AnalyzedNumber. If you are certain that the analyzedJson property of the passed
      * in AnalyzedNumber is a valid Analyzed JSON, then set [confirmValid] to true (for speed).
      */
     suspend fun updateAnalyzedNum(analyzedNumber: AnalyzedNumber, confirmValid: Boolean = false) {
@@ -105,23 +106,23 @@ interface AnalyzedNumberDao : ParametersDao, StoredMapDao {
 
             updateAnalyzedNumQuery(
                 normalizedNumber = normalizedNumber,
-                analyzedValues = if (confirmValid || analyzedValues.isValidAnalyzed()) analyzedValues else null
+                analyzedJson = if (confirmValid || analyzedJson.isValidAnalyzed()) analyzedJson else null
             )
         }
     }
 
     @Query(
         """UPDATE analyzed_number SET 
-        analyzedValues =
+        analyzedJson =
         CASE
-            WHEN :analyzedValues IS NOT NULL
-                THEN :analyzedValues
-            ELSE analyzedValues
+            WHEN :analyzedJson IS NOT NULL
+                THEN :analyzedJson
+            ELSE analyzedJson
         END
         WHERE normalizedNumber = :normalizedNumber"""
     )
     suspend fun updateAnalyzedNumQuery(
         normalizedNumber: String,
-        analyzedValues: String?
+        analyzedJson: String?
     )
 }

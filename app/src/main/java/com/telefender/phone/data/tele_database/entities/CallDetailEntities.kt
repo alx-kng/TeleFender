@@ -2,6 +2,7 @@ package com.telefender.phone.data.tele_database.entities
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.squareup.moshi.JsonClass
 import com.telefender.phone.helpers.MiscHelpers
 
 /***************************************************************************************************
@@ -51,6 +52,7 @@ object CallHistoryFooter : CallDetailItem
  * uses. For example, [callType] is set to null in skeleton log insert (for unallowed calls) and
  * basically indicates whether or not the CallDetail is synced or not.
  */
+@JsonClass(generateAdapter = true)
 @Entity(tableName = "call_detail")
 data class CallDetail(
     val rawNumber: String,

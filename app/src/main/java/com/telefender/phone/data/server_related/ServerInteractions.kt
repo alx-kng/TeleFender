@@ -61,7 +61,8 @@ object ServerInteractions {
     }
 
     /**
-     * TODO: Make sure to put in max retry amount.
+     * TODO: Make sure to put in max retry amount. Also, prevent partial error uploads from
+     *  repeating forever, as they aren't crucial.
      * TODO: Also repeating uploads (partial error). Could be server issue.
      * TODO: Can returning list with dao give null?
      *

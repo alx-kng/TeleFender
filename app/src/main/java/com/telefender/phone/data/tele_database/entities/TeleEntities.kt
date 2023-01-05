@@ -7,7 +7,6 @@ import androidx.room.PrimaryKey
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
-import com.telefender.phone.data.server_related.DefaultResponse
 
 
 // TODO: Probably store current block mode in StoredMap
@@ -120,31 +119,73 @@ data class ContactNumber(
 }
 
 /**
+ * TODO: Maybe add tele-marketing mode that's an in-between to safe / spam mode for notify list
+ *  numbers. That way, users can choose whether or not to be bothered by tele-marketing calls
+ *  (that aren't spam) again. Just a thought.
+ *
  * Contains all analyzed data.
  */
 @JsonClass(generateAdapter = true)
 @Entity(tableName = "analyzed_number")
 data class AnalyzedNumber(
     @PrimaryKey val normalizedNumber: String, // should use cleaned number
-    val analyzedValues: String = "{}"
+    val analyzedJson: String = "{}"
 ) {
 
     /**
-     * Retrieves Analyzed object version of analyzedValues, but SHOULD ONLY BE USED for
+     * Retrieves Analyzed object version of analyzedJson, but SHOULD ONLY BE USED for
      * AnalyzedNumbers retrieved from the database, and NOT for freshly created AnalyzedNumbers
-     * (We're assuming analyzedValues is a valid Json string due to the initialization process).
+     * (We're assuming analyzedJson is a valid Json string due to the initialization process).
      */
     fun getAnalyzed() : Analyzed {
-        return analyzedValues.toAnalyzed()!!
+        return analyzedJson.toAnalyzed()!!
     }
 
     override fun toString() : String {
-        val analyzedObj = analyzedValues.toAnalyzed()
-        return "ANALYZED NUMBER: number: $normalizedNumber analyzedValues: $analyzedObj"
+        val analyzedObj = analyzedJson.toAnalyzed()
+        return "ANALYZED NUMBER: number: $normalizedNumber ANALYZED: $analyzedObj"
     }
 }
 
 /**
+ * TODO: GENERAL ISSUE TO SOLVE - Stop spam numbers from overcrowding notifyList
+ *
+ * TODO: A good idea might be to increase the notify gate for numbers that are less safe. For
+ *  example, if a person calls multiple times but doesn't leave a voicemail, then we have more
+ *  reason to suspect that they might be spam. As a result, increasing the notify gate to
+ *  something like 3 or 4 might be beneficial in not overcrowding the NotifyList.
+ *
+ * TODO: Add to AnalyzedNumbers...
+ *  GENERAL TYPE:
+ *      last call duration
+ *      last call type
+ *      # total calls
+ *      OUTGOING SUBTYPE:
+ *          last outgoing time
+ *          last outgoing call duration
+ *          max outgoing call duration
+ *          avg outgoing call duration
+ *      INCOMING SUBTYPE:
+ *          last incoming time
+ *          last incoming call duration
+ *          max incoming call duration
+ *          avg incoming call duration
+ *      VOICEMAIL SUBTYPE:
+ *          # voicemail
+ *          last voicemail time
+ *          last voicemail duration
+ *          max voicemail duration
+ *          avg voicemail duration
+ *      MISSED SUBTYPE:
+ *          # missed calls
+ *          last missed time
+ *      REJECTED SUBTYPE
+ *          # rejected calls
+ *          last rejected time
+ *      BLOCKED SUBTYPE
+ *          # blocked calls
+ *          last blocked time
+ *
  * Used for analyzed fields not used in selection criteria for AnalyzedNumber. Stored as JSON.
  * Currently not using [algoAllowed]. Instead, we will calculate on the spot.
  */

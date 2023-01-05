@@ -26,7 +26,7 @@ TODO: Handle case where permissions aren't given (or default dialer isn't grante
 
 TODO: Sometimes Voicemail is sorted incorrectly in recents list. Particularly when you
  call back the +1 number. In general, sometimes Voicemail number is sorted below the
- associated missed / rejected / blocked call.
+ associated missed / rejected / blocked call... But maybe we can't change this.
  */
 class RecentsFragment : Fragment() {
 
