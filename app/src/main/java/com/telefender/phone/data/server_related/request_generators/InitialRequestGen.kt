@@ -3,10 +3,7 @@ package com.telefender.phone.data.server_related.request_generators
 import android.content.Context
 import androidx.work.WorkInfo
 import com.android.volley.Response
-import com.telefender.phone.data.server_related.DefaultResponse
-import com.telefender.phone.data.server_related.ResponseHelpers
-import com.telefender.phone.data.server_related.SessionResponse
-import com.telefender.phone.data.server_related.UserSetup
+import com.telefender.phone.data.server_related.*
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkerType
@@ -56,16 +53,13 @@ private fun initialPostResponseHandler(
         Timber.i("VOLLEY: FIRST RESPONSE %s", response)
 
         /**
-         * TODO: Can we just check for null instead of exception? If not, then
-         *  replace with old code from previous commit.
-         *
          * Basically, if a normal session response is returned, then we will be
          * able to convert JSON into SessionResponse. Otherwise, the response is
          * probably an error JSON, in which we can convert to DefaultResponse.
          */
         val sessionResponse : DefaultResponse? =
-            ResponseHelpers.jsonToSessionResponse(response) ?:
-            ResponseHelpers.jsonToDefaultResponse(response)
+            response.toServerResponse(ServerResponseType.SESSION) ?:
+            response.toServerResponse(ServerResponseType.DEFAULT)
 
         if (sessionResponse != null && sessionResponse.status == "ok" && sessionResponse is SessionResponse) {
             /**

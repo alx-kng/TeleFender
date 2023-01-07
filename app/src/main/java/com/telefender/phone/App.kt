@@ -36,8 +36,10 @@ class App : Application() {
             changeAgentDao = database.changeAgentDao(),
             uploadAgentDao = database.uploadAgentDao(),
 
+            uploadChangeQueueDao = database.uploadChangeQueueDao(),
+            uploadAnalyzedQueueDao = database.uploadAnalyzedQueueDao(),
+
             executeQueueDao = database.executeQueueDao(),
-            uploadQueueDao = database.uploadQueueDao(),
             changeLogDao = database.changeLogDao(),
             storedMapDao = database.storedMapDao(),
             parametersDao = database.parametersDao(),

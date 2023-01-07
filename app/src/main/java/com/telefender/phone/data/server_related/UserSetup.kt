@@ -3,7 +3,6 @@ package com.telefender.phone.data.server_related
 import android.annotation.SuppressLint
 import android.content.Context
 import com.android.volley.Request
-import com.telefender.phone.data.server_related.RequestHelpers.defaultRequestToJson
 import com.telefender.phone.data.server_related.request_generators.InitialRequestGen
 import com.telefender.phone.data.server_related.request_generators.VerifyRequestGen
 import com.telefender.phone.data.tele_database.ClientRepository
@@ -24,7 +23,7 @@ object UserSetup {
         val url = "https://dev.scribblychat.com/callbook/requestInstallation"
         val instanceNumber = MiscHelpers.getInstanceNumber(context)
 
-        val requestJson : String = defaultRequestToJson(DefaultRequest(instanceNumber))
+        val requestJson : String = DefaultRequest(instanceNumber).toJson()
 
         Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: initialRequestJson = $requestJson")
 
@@ -55,8 +54,7 @@ object UserSetup {
 
         val otp = 111111
         val sessionID = repository.getSessionID(instanceNumber)
-        val verifyRequest = VerifyRequest(instanceNumber, sessionID!!, otp)
-        val verifyRequestJson : String = RequestHelpers.verifyRequestToJson(verifyRequest)
+        val verifyRequestJson = VerifyRequest(instanceNumber, sessionID!!, otp).toJson()
 
         Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: verifyRequestJson = $verifyRequestJson")
 

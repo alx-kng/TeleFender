@@ -92,10 +92,10 @@ class CoroutineUploadWorker(
         val repository: ClientRepository? = (applicationContext as App).repository
         val scope = CoroutineScope(Dispatchers.IO)
 
-        if (repository != null && repository.hasQTUs()) {
-            ServerInteractions.uploadPostRequest(context, repository, scope)
+        if (repository != null && repository.hasChangeQTU()) {
+            ServerInteractions.uploadChangeRequest(context, repository, scope)
         } else {
-            if (repository?.hasQTUs() == false) {
+            if (repository?.hasChangeQTU() == false) {
                 return Result.success()
             } else {
                 return Result.retry()
@@ -105,14 +105,14 @@ class CoroutineUploadWorker(
             "oneTimeUploadState" ->  WorkerStates.setState(WorkerType.ONE_TIME_UPLOAD, WorkInfo.State.SUCCEEDED)
             "periodicUploadState" -> WorkerStates.setState(WorkerType.PERIODIC_UPLOAD, WorkInfo.State.RUNNING)
             else -> {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: UPLOAD WORKER THREAD: Worker state variable name is wrong")
+                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: UPLOAD_CHANGE WORKER THREAD: Worker state variable name is wrong")
             }
         }
         return Result.success()
     }
 
     override suspend fun getForegroundInfo() : ForegroundInfo {
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: UPLOAD WORKER FOREGROUND")
+        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: UPLOAD_CHANGE WORKER FOREGROUND")
 
         val pendingIntent: PendingIntent =
             Intent(applicationContext, MainActivity::class.java).let { notificationIntent ->

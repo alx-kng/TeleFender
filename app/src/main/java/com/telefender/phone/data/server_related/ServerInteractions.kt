@@ -2,27 +2,18 @@ package com.telefender.phone.data.server_related
 
 import android.annotation.SuppressLint
 import android.content.Context
-import androidx.work.WorkInfo
 import com.android.volley.*
-import com.android.volley.toolbox.StringRequest
-import com.telefender.phone.data.server_related.RequestHelpers.downloadRequestToJson
-import com.telefender.phone.data.server_related.RequestHelpers.uploadRequestToJson
-import com.telefender.phone.data.server_related.ResponseHelpers.jsonToDefaultResponse
-import com.telefender.phone.data.server_related.ResponseHelpers.jsonToUploadResponse
 import com.telefender.phone.data.server_related.request_generators.DownloadRequestGen
-import com.telefender.phone.data.server_related.request_generators.InitialRequestGen
 import com.telefender.phone.data.server_related.request_generators.TokenRequestGen
-import com.telefender.phone.data.server_related.request_generators.UploadRequestGen
+import com.telefender.phone.data.server_related.request_generators.UploadAnalyzedRequestGen
+import com.telefender.phone.data.server_related.request_generators.UploadChangeRequestGen
 import com.telefender.phone.data.tele_database.ClientRepository
-import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
-import com.telefender.phone.data.tele_database.background_tasks.WorkerType
+import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
 import com.telefender.phone.data.tele_database.entities.ChangeLog
-import com.telefender.phone.data.tele_database.entities.UploadQueue
 import com.telefender.phone.helpers.MiscHelpers
 import kotlinx.coroutines.*
 import org.json.JSONException
 import timber.log.Timber
-import java.io.UnsupportedEncodingException
 
 object ServerInteractions {
 
@@ -36,8 +27,7 @@ object ServerInteractions {
         val downloadRequestJson: String
 
         if (key != null) {
-            val downloadRequest = DownloadRequest(instanceNumber, key, lastServerChangeID)
-            downloadRequestJson = downloadRequestToJson(downloadRequest)
+            downloadRequestJson = DownloadRequest(instanceNumber, key, lastServerChangeID).toJson()
         } else {
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: CLIENT KEY IS NULL")
             return
@@ -63,45 +53,46 @@ object ServerInteractions {
     /**
      * TODO: Make sure to put in max retry amount. Also, prevent partial error uploads from
      *  repeating forever, as they aren't crucial.
-     * TODO: Also repeating uploads (partial error). Could be server issue.
      * TODO: Can returning list with dao give null?
+     * TODO: GET RID OF PLURAL CHANGES
      *
-     * Sends post request containing the string requestString to the server at url.
-     * Returns whether or not post was successful
+     * Sends a post request containing the ChangeLogs to the server.
      */
     @SuppressLint("MissingPermission", "HardwareIds")
-    suspend fun uploadPostRequest(context: Context, repository: ClientRepository, scope: CoroutineScope) {
+    suspend fun uploadChangeRequest(context: Context, repository: ClientRepository, scope: CoroutineScope) {
         val url = "https://dev.scribblychat.com/callbook/uploadChanges"
         val instanceNumber = MiscHelpers.getInstanceNumber(context)
 
         val key = repository.getClientKey(instanceNumber)
         val uploadRequestJson: String
 
-        if (key != null) {
-            withContext(Dispatchers.IO) {
-
-                // Gets first 200 upload logs in order of rowID.
-                val uploadLogs = repository.getChunkQTUByRowID()
-
-                // Retrieves corresponding change logs for each upload log
-                val changeLogs = mutableListOf<ChangeLog>()
-                for (uploadLog in uploadLogs) {
-                    val changeLog = repository.getChangeLogRow(uploadLog.changeID)
-                    changeLogs.add(changeLog)
-                }
-
-                val uploadRequest = UploadRequest(instanceNumber, key, changeLogs)
-                uploadRequestJson = uploadRequestToJson(uploadRequest)
-            }
-        } else {
+        if (key == null) {
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: CLIENT KEY IS NULL")
             return
         }
 
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG} UPLOAD REQUEST JSON: $uploadRequestJson")
-
         try {
-            val stringRequest = UploadRequestGen.create(
+            withContext(Dispatchers.IO) {
+
+                // Gets first 200 upload logs in order of linkedRowID.
+                val uploadLogs = repository.getChunkChangeQTU(200)
+
+                // Retrieves corresponding change logs for each upload log
+                val changeLogs = mutableListOf<ChangeLog>()
+                for (uploadLog in uploadLogs) {
+                    // If no associated changeLog, will fail out into try-catch
+                    val changeLog = repository.getChangeLog(uploadLog.linkedRowID)
+                        ?: throw Exception("linkedRowID = ${uploadLog.linkedRowID} has no associated ChangeLog!")
+
+                    changeLogs.add(changeLog)
+                }
+
+                uploadRequestJson = UploadChangeRequest(instanceNumber, key, changeLogs).toJson()
+            }
+
+            Timber.i("${MiscHelpers.DEBUG_LOG_TAG} UPLOAD_CHANGE REQUEST JSON: $uploadRequestJson")
+
+            val stringRequest = UploadChangeRequestGen.create(
                 method = Request.Method.POST,
                 url = url,
                 requestJson = uploadRequestJson,
@@ -112,7 +103,64 @@ object ServerInteractions {
 
             // Adds entire string request to request queue
             RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
-        } catch (e: JSONException) {
+        } catch (e: Exception) {
+            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ${e.message}")
+            e.printStackTrace()
+        }
+    }
+
+    /**
+     * TODO: Find better control follow for adding to UploadAnalyzedQueue.
+     *
+     * Sends a post request containing the AnalyzedNumbers to the server.
+     */
+    @SuppressLint("MissingPermission", "HardwareIds")
+    suspend fun uploadAnalyzedRequest(context: Context, repository: ClientRepository, scope: CoroutineScope) {
+        val url = "https://dev.scribblychat.com/callbook/uploadAnalyzedNumbers"
+        val instanceNumber = MiscHelpers.getInstanceNumber(context)
+
+        val key = repository.getClientKey(instanceNumber)
+        val uploadRequestJson: String
+
+        if (key == null) {
+            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: CLIENT KEY IS NULL")
+            return
+        }
+
+        try {
+            withContext(Dispatchers.IO) {
+
+                // Gets first 200 upload logs in order of linkedRowID.
+                val uploadLogs = repository.getChunkAnalyzedQTU(200)
+
+                // Retrieves corresponding AnalyzedNumber for each upload log
+                val analyzedNumbers = mutableListOf<AnalyzedNumber>()
+                for (uploadLog in uploadLogs) {
+                    // If no associated changeLog, will fail out into try-catch
+                    val analyzedNumber = repository.getAnalyzedNum(uploadLog.linkedRowID)
+                        ?: throw Exception("linkedRowID = ${uploadLog.linkedRowID} has no associated AnalyzedNumber!")
+
+                    analyzedNumbers.add(analyzedNumber)
+                }
+
+                uploadRequestJson = UploadAnalyzedRequest(instanceNumber, key, analyzedNumbers).toJson()
+            }
+
+            Timber.i("${MiscHelpers.DEBUG_LOG_TAG} UPLOAD_ANALYZED REQUEST JSON: $uploadRequestJson")
+
+            val stringRequest = UploadAnalyzedRequestGen.create(
+                method = Request.Method.POST,
+                url = url,
+                requestJson = uploadRequestJson,
+                context = context,
+                repository = repository,
+                scope = scope
+            )
+
+            // Adds entire string request to request queue
+            RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
+        } catch (e: Exception) {
+            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ${e.message}")
             e.printStackTrace()
         }
     }
@@ -138,8 +186,7 @@ object ServerInteractions {
         val tokenRequestJson : String
 
         if (key != null) {
-            val tokenRequest = TokenRequest(instanceNumber, key, token)
-            tokenRequestJson = RequestHelpers.tokenRequestToJson(tokenRequest)
+            tokenRequestJson = TokenRequest(instanceNumber, key, token).toJson()
         } else {
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: CLIENT KEY IS NULL")
             return

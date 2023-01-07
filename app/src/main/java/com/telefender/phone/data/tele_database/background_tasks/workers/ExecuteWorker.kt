@@ -92,9 +92,9 @@ class CoroutineExecuteWorker(
 
         repository?.executeAll()
 
-        if (repository?.hasQTEs() != false) {
+        return if (repository?.hasQTE() != false) {
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: EXECUTE RETRY")
-            return Result.retry()
+            Result.retry()
         } else {
             when (stateVarString) {
                 "oneTimeExecState" -> WorkerStates.setState(WorkerType.ONE_TIME_EXEC, WorkInfo.State.SUCCEEDED)
@@ -104,7 +104,7 @@ class CoroutineExecuteWorker(
                 }
             }
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: EXECUTE ENDED")
-            return Result.success()
+            Result.success()
         }
     }
 

@@ -36,7 +36,8 @@ data class Parameters(
 
 @Entity(tableName = "instance")
 data class Instance(
-    @PrimaryKey val number: String) {
+    @PrimaryKey val number: String
+) {
 
     override fun toString() : String {
         return "INSTANCE - number: " + this.number
@@ -126,9 +127,18 @@ data class ContactNumber(
  * Contains all analyzed data.
  */
 @JsonClass(generateAdapter = true)
-@Entity(tableName = "analyzed_number")
+@Entity(tableName = "analyzed_number",
+    indices = [
+        Index(value = ["normalizedNumber", "instanceNumber"]),
+        Index(value = ["normalizedNumber"])
+    ]
+)
 data class AnalyzedNumber(
-    @PrimaryKey val normalizedNumber: String, // should use cleaned number
+    @PrimaryKey(autoGenerate = true)
+    val rowID: Int = 0,
+    val normalizedNumber: String, // should use cleaned number
+    val instanceNumber: String,
+    val numTotalCalls: Int,
     val analyzedJson: String = "{}"
 ) {
 
@@ -155,37 +165,6 @@ data class AnalyzedNumber(
  *  reason to suspect that they might be spam. As a result, increasing the notify gate to
  *  something like 3 or 4 might be beneficial in not overcrowding the NotifyList.
  *
- * TODO: Add to AnalyzedNumbers...
- *  GENERAL TYPE:
- *      last call duration
- *      last call type
- *      # total calls
- *      OUTGOING SUBTYPE:
- *          last outgoing time
- *          last outgoing call duration
- *          max outgoing call duration
- *          avg outgoing call duration
- *      INCOMING SUBTYPE:
- *          last incoming time
- *          last incoming call duration
- *          max incoming call duration
- *          avg incoming call duration
- *      VOICEMAIL SUBTYPE:
- *          # voicemail
- *          last voicemail time
- *          last voicemail duration
- *          max voicemail duration
- *          avg voicemail duration
- *      MISSED SUBTYPE:
- *          # missed calls
- *          last missed time
- *      REJECTED SUBTYPE
- *          # rejected calls
- *          last rejected time
- *      BLOCKED SUBTYPE
- *          # blocked calls
- *          last blocked time
- *
  * Used for analyzed fields not used in selection criteria for AnalyzedNumber. Stored as JSON.
  * Currently not using [algoAllowed]. Instead, we will calculate on the spot.
  */
@@ -193,25 +172,65 @@ data class AnalyzedNumber(
 data class Analyzed(
     val algoAllowed: Boolean? = null, // currently not using this value.
     val notifyGate: Int,
-    val lastCallTime: Long? = null,
-    val numIncoming: Int,
-    val numOutgoing: Int,
-    val maxDuration: Long,
-    val avgDuration: Double,
+    val notifyCounter: Int,
+
+    // Important actions
     val smsVerified: Boolean,
     val markedSafe: Boolean,
     val isBlocked: Boolean,
+
+    // General type
+    val lastCallTime: Long? = null,
+    val lastCallDirection: Int? = null,
+    val lastCallDuration: Long? = null,
+    val maxDuration: Long, // Only considers non-voicemail calls
+    val avgDuration: Double, // Only considers non-voicemail calls
+
+    // Incoming subtype
+    val numIncoming: Int,
+    val lastIncomingTime: Long? = null,
+    val lastIncomingDuration: Long? = null,
+    val maxIncomingDuration: Long,
+    val avgIncomingDuration: Double,
+
+    // Outgoing subtype
+    val numOutgoing: Int,
+    val lastOutgoingTime: Long? = null,
+    val lastOutgoingDuration: Long? = null,
+    val maxOutgoingDuration: Long,
+    val avgOutgoingDuration: Double,
+
+    // Voicemail subtype
+    val numVoicemail: Int,
+    val lastVoicemailTime: Long? = null,
+    val lastVoicemailDuration: Long? = null,
+    val maxVoicemailDuration: Long,
+    val avgVoicemailDuration: Double,
+
+    // Missed subtype
+    val numMissed: Int,
+    val lastMissedTime: Long? = null,
+
+    // Rejected subtype
+    val numRejected: Int,
+    val lastRejectedTime: Long? = null,
+
+    // Blocked subtype
+    val numBlocked: Int,
+    val lastBlockedTime: Long? = null,
+
+    // Contact / Tree info
     val numMarkedBlocked: Int, // for contacts only
     val numSharedContacts: Int,
-    val isOrganization: Boolean,
-    val minDegree: Int? = null,
     val numTreeContacts: Int,
-    val degreeString: String
+    val degreeString: String,
+    val minDegree: Int? = null,
+    val isOrganization: Boolean
 ) {
 
     fun toJson() : String {
-        val moshi : Moshi = Moshi.Builder().build()
-        val adapter : JsonAdapter<Analyzed> = moshi.adapter(Analyzed::class.java)
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(Analyzed::class.java)
         return adapter.serializeNulls().toJson(this)
     }
 
@@ -232,8 +251,8 @@ data class Analyzed(
  */
 fun String.toAnalyzed() : Analyzed? {
     return try {
-        val moshi : Moshi = Moshi.Builder().build()
-        val adapter : JsonAdapter<Analyzed> = moshi.adapter(Analyzed::class.java)
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(Analyzed::class.java)
 
         adapter.serializeNulls().fromJson(this)
     } catch (e: Exception) {

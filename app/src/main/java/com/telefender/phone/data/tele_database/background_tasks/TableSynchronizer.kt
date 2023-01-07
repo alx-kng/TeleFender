@@ -368,6 +368,7 @@ object TableSynchronizer {
                         break
                     }
                 }
+
                 // matchPK being null means that the corresponding contact number has been deleted
                 if (matchPK == null) {
                     mutexSync.withLock {

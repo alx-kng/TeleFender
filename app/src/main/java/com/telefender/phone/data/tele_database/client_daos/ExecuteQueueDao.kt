@@ -10,41 +10,35 @@ import com.telefender.phone.data.tele_database.entities.ExecuteQueue
 interface ExecuteQueueDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertQTE(vararg queuetoexecute: ExecuteQueue)
+    suspend fun insertQTE(vararg qte: ExecuteQueue)
 
-    @Query("UPDATE execute_queue SET errorCounter = errorCounter + :counterDelta WHERE changeID = :changeID")
-    suspend fun updateQTEErrorCounter_Delta(changeID: String, counterDelta: Int)
-
-    @Query("UPDATE execute_queue SET errorCounter = :errorCounter WHERE changeID = :changeID")
-    suspend fun updateQTEErrorCounter_Absolute(changeID: String, errorCounter : Int)
-
-    @Query("SELECT * FROM execute_queue ORDER BY createTime ASC LIMIT 1")
-    suspend fun getFirstQTE() : ExecuteQueue
-
-    @Query("SELECT * FROM execute_queue WHERE changeID = :changeID")
-    suspend fun getQTERow(changeID: String) : ExecuteQueue
-    
-    @Query("SELECT * FROM execute_queue ORDER BY createTime ASC")
-    suspend fun getAllQTEs() : List<ExecuteQueue>
-
-    @Query("SELECT errorCounter FROM execute_queue WHERE changeID = :changeID ")
-    suspend fun getQTEErrorCounter(changeID: String) : Int
-
-    @Query("SELECT changeID FROM execute_queue WHERE errorCounter > 0")
-    suspend fun getQTEErrorLogs() : List<String>
+    @Query("UPDATE execute_queue SET errorCounter = errorCounter + :counterDelta WHERE rowID = :rowID")
+    suspend fun incrementQTEErrors(rowID: Int, counterDelta: Int)
 
     @Query("SELECT EXISTS (SELECT * FROM execute_queue LIMIT 1)")
-    suspend fun hasQTEs() : Boolean
+    suspend fun hasQTE() : Boolean
+
+    @Query("SELECT COUNT(rowID) FROM execute_queue")
+    suspend fun getNumQTE() : Int?
+
+    @Query("SELECT * FROM execute_queue ORDER BY rowID ASC LIMIT 1")
+    suspend fun getFirstQTE() : ExecuteQueue?
+
+    @Query("SELECT * FROM execute_queue WHERE rowID = :rowID")
+    suspend fun getQTE(rowID: Int) : ExecuteQueue
     
-    @Query("SELECT COUNT(changeID) FROM execute_queue")
-    suspend fun getQueueToExecuteSize() : Int?
+    @Query("SELECT * FROM execute_queue ORDER BY rowID ASC")
+    suspend fun getAllQTE() : List<ExecuteQueue>
 
-    @Query("DELETE FROM execute_queue WHERE changeID = :changeID")
-    suspend fun deleteQTE_ChangeID(changeID: String)
+    @Query("SELECT errorCounter FROM execute_queue WHERE rowID = :rowID ")
+    suspend fun getQTEErrorCounter(rowID: Int) : Int?
 
-    @Query("DELETE FROM execute_queue WHERE createTime = :createTime")
-    suspend fun deleteQTE_Date(createTime: Long)
+    @Query("SELECT rowID FROM execute_queue WHERE errorCounter > 0")
+    suspend fun getQTEErrorLogs() : List<Int>
+
+    @Query("DELETE FROM execute_queue WHERE rowID = :rowID")
+    suspend fun deleteQTE(rowID: Int)
 
     @Query("DELETE FROM execute_queue")
-    suspend fun deleteAllQTEs()
+    suspend fun deleteAllQTE()
 }

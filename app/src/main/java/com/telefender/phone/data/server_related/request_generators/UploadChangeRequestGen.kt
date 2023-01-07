@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.work.WorkInfo
 import com.android.volley.Response
 import com.telefender.phone.data.server_related.*
-import com.telefender.phone.data.server_related.ServerInteractions.uploadPostRequest
+import com.telefender.phone.data.server_related.ServerInteractions.uploadChangeRequest
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkerType
@@ -13,7 +13,7 @@ import kotlinx.coroutines.*
 import timber.log.Timber
 
 
-class UploadRequestGen(
+class UploadChangeRequestGen(
     method: Int,
     url: String,
     listener: Response.Listener<String>,
@@ -29,13 +29,13 @@ class UploadRequestGen(
             context: Context,
             repository: ClientRepository,
             scope: CoroutineScope
-        ) : UploadRequestGen {
+        ) : UploadChangeRequestGen {
 
-            return UploadRequestGen(
+            return UploadChangeRequestGen(
                 method,
                 url,
-                uploadResponseHandler(context, repository, scope),
-                uploadErrorHandler,
+                uploadChangesResponseHandler(context, repository, scope),
+                uploadChangesErrorHandler,
                 requestJson
             )
         }
@@ -43,11 +43,10 @@ class UploadRequestGen(
 }
 
 /**
- * Retrieves ChangeResponse object containing (status, error, List<ChangeLogs>)
- * and inserts each change log into our database using changeFromServer()
- * defined in ChangeAgentDao.
+ * Basically checks response from server for lastUploadRow and deletes the successfully uploaded
+ * rows from the QTU. If there are more QTUs, then another upload request is launched.
  */
-private fun uploadResponseHandler(
+private fun uploadChangesResponseHandler(
     context: Context,
     repository: ClientRepository,
     scope: CoroutineScope
@@ -57,8 +56,8 @@ private fun uploadResponseHandler(
         Timber.i("VOLLEY %s", response!!)
 
         val uploadResponse: DefaultResponse? =
-            ResponseHelpers.jsonToUploadResponse(response) ?:
-            ResponseHelpers.jsonToDefaultResponse(response)
+            response.toServerResponse(ServerResponseType.UPLOAD) ?:
+            response.toServerResponse(ServerResponseType.DEFAULT)
 
         /**
          * Guarantees that response has the right status before trying to iterate through upload
@@ -68,17 +67,17 @@ private fun uploadResponseHandler(
 
             /**
              * If all upload logs are uploaded to the server successfully, we will delete
-             * the corresponding upload logs from the UploadQueue table
+             * the corresponding upload logs from the UploadChangeQueue table
              */
             scope.launch(Dispatchers.IO) {
                 when (uploadResponse.status) {
                     "ok" -> {
-                        repository.deleteUploadInclusive(uploadResponse.lastUploadRow)
+                        repository.deleteChangeQTUInclusive(uploadResponse.lastUploadedRowID)
                     }
                     else -> {
-                        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: PARTIALLY UPLOADED WITH ERROR: ${uploadResponse.error}")
+                        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: PARTIALLY UPLOADED CHANGES WITH ERROR: ${uploadResponse.error}")
 
-                        repository.deleteUploadExclusive(uploadResponse.lastUploadRow)
+                        repository.deleteChangeQTUExclusive(uploadResponse.lastUploadedRowID)
                     }
 
                 }
@@ -86,31 +85,31 @@ private fun uploadResponseHandler(
                 /**
                  * Keep launching upload requests to server until no uploadLogs left.
                  */
-                if (repository.hasQTUs()) {
-                    Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: MORE TO UPLOAD")
+                if (repository.hasChangeQTU()) {
+                    Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: MORE TO CHANGES TO UPLOAD")
 
-                    uploadPostRequest(context, repository, scope)
+                    uploadChangeRequest(context, repository, scope)
                 } else {
-                    Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: All UPLOADS COMPLETE")
+                    Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: All CHANGE UPLOADS COMPLETE")
 
-                    WorkerStates.setState(WorkerType.UPLOAD_POST, WorkInfo.State.SUCCEEDED)
+                    WorkerStates.setState(WorkerType.UPLOAD_CHANGES, WorkInfo.State.SUCCEEDED)
                 }
             }
         } else {
-            WorkerStates.setState(WorkerType.UPLOAD_POST, WorkInfo.State.FAILED)
+            WorkerStates.setState(WorkerType.UPLOAD_CHANGES, WorkInfo.State.FAILED)
 
             if (uploadResponse != null) {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN UPLOAD: ${uploadResponse.error}")
+                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN UPLOAD_CHANGE: ${uploadResponse.error}")
             } else {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN UPLOAD: UPLOAD RESPONSE IS NULL")
+                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN UPLOAD_CHANGE: RESPONSE IS NULL")
             }
         }
     }
 }
 
-private val uploadErrorHandler = Response.ErrorListener { error ->
+private val uploadChangesErrorHandler = Response.ErrorListener { error ->
     if (error.toString() != "null") {
         Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY $error")
-        WorkerStates.setState(WorkerType.UPLOAD_POST, WorkInfo.State.FAILED)
+        WorkerStates.setState(WorkerType.UPLOAD_CHANGES, WorkInfo.State.FAILED)
     }
 }

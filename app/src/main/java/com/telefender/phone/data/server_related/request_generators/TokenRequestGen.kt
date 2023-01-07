@@ -4,7 +4,8 @@ import android.content.Context
 import androidx.work.WorkInfo
 import com.android.volley.Response
 import com.telefender.phone.data.server_related.DefaultResponse
-import com.telefender.phone.data.server_related.ResponseHelpers.jsonToDefaultResponse
+import com.telefender.phone.data.server_related.ServerResponseType
+import com.telefender.phone.data.server_related.toServerResponse
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkerType
@@ -42,11 +43,6 @@ class TokenRequestGen(
     }
 }
 
-/**
- * Retrieves ChangeResponse object containing (status, error, List<ChangeLogs>)
- * and inserts each change log into our database using changeFromServer()
- * defined in ChangeAgentDao.
- */
 private fun tokenResponseHandler(
     context: Context,
     repository: ClientRepository,
@@ -56,7 +52,7 @@ private fun tokenResponseHandler(
     return Response.Listener<String> { response ->
         Timber.i("TOKEN RESPONSE: %s", response!!)
 
-        val defaultResponse: DefaultResponse? = jsonToDefaultResponse(response)
+        val defaultResponse: DefaultResponse? = response.toServerResponse(ServerResponseType.DEFAULT)
 
         if (defaultResponse != null && defaultResponse.status == "ok") {
             WorkerStates.setState(WorkerType.UPLOAD_TOKEN, WorkInfo.State.SUCCEEDED)
@@ -64,9 +60,9 @@ private fun tokenResponseHandler(
             WorkerStates.setState(WorkerType.UPLOAD_TOKEN, WorkInfo.State.FAILED)
 
             if (defaultResponse != null) {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN TOKEN UPLOAD: ${defaultResponse.error}")
+                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN TOKEN UPLOAD_CHANGE: ${defaultResponse.error}")
             } else {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN TOKEN UPLOAD: DEFAULT RESPONSE IS NULL")
+                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN TOKEN UPLOAD_CHANGE: DEFAULT RESPONSE IS NULL")
             }
         }
     }

@@ -40,7 +40,7 @@ object TeleCallDetails {
      * NOTE: You should call insertCallDetail() AS CLOSE TO THE END OF CALL AS POSSIBLE so that
      * calculated call duration is more accurate.
      */
-    fun insertCallDetail(repository: ClientRepository?, call: Call, unallowed: Boolean, direction: Int?) {
+    fun insertCallDetail(repository: ClientRepository?, call: Call, unallowed: Boolean, direction: Int) {
         if (repository == null) { return }
 
         CoroutineScope(Dispatchers.Default).launch {

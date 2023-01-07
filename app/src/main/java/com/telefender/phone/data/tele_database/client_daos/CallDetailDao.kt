@@ -100,13 +100,13 @@ interface CallDetailDao: StoredMapDao {
         WHERE callEpochDate = :callEpochDate
         """)
     suspend fun syncDetail(
-        rawNumber: String?,
-        normalizedNumber: String?,
+        rawNumber: String,
+        normalizedNumber: String,
         callType: String?,
         callEpochDate: Long,
         callLocation: String?,
-        callDuration: Long?,
-        callDirection: Int?,
+        callDuration: Long,
+        callDirection: Int,
     )
 
     @Query("""

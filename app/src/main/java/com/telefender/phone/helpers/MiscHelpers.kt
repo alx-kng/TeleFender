@@ -62,7 +62,7 @@ object MiscHelpers {
      * Gets direction as normal. However, voicemail direction is also accurately returned.
      * NOTE: Requires non-normalized raw number.
      */
-    fun getTrueDirection(direction: Int?, rawNumber: String) : Int? {
+    fun getTrueDirection(direction: Int, rawNumber: String) : Int {
         return if (isVoiceMail(direction, rawNumber)) CallLog.Calls.VOICEMAIL_TYPE else direction
     }
 
@@ -80,7 +80,7 @@ object MiscHelpers {
     }
 
     // TODO: Problem with direction string maybe? Unknown code 0?
-    fun getDirectionString(directionCode: Int?) : String {
+    fun getDirectionString(directionCode: Int) : String {
         return when (directionCode) {
             CallLog.Calls.INCOMING_TYPE -> "INCOMING"
             CallLog.Calls.OUTGOING_TYPE -> "OUTGOING"

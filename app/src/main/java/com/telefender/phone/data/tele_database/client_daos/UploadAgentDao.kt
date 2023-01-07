@@ -4,21 +4,18 @@ import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.room.Dao
-import androidx.room.Transaction
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.entities.ChangeLog
-import com.telefender.phone.helpers.MiscHelpers
-import kotlin.text.Typography.degree
 
 // TODO: Can we still use UploadAgent? It seems like it could be a good structure.
 @Deprecated("UploadAgentDao shouldn't be used. Use ServerInteractions")
 @Dao
 interface UploadAgentDao: InstanceDao, ContactDao, ContactNumberDao,
-    ChangeLogDao, ExecuteQueueDao, UploadQueueDao {
+    ChangeLogDao, ExecuteQueueDao, UploadChangeQueueDao {
 
     @RequiresApi(Build.VERSION_CODES.N)
     suspend fun uploadAll(context : Context, repository: ClientRepository) {
-        while (hasQTUs()) {
+        while (hasChangeQTU()) {
             uploadFirst(context, repository)
         }
     }
@@ -29,17 +26,9 @@ interface UploadAgentDao: InstanceDao, ContactDao, ContactNumberDao,
     @RequiresApi(Build.VERSION_CODES.N)
     suspend fun uploadFirst(context: Context, repository: ClientRepository) {
 
-        val firstJob = getFirstQTU()
-        val firstID = firstJob.changeID
-        updateQTUErrorCounter_Delta(firstID, 1)
+        val firstJob = getFirstChangeQTU()
+        //updateQTUErrorCounter_Delta(firstID, 1)
 
-        val changeLog = getChangeLogRow(firstID)
-
-        uploadToServer(
-            changeLog,
-            context, 
-            repository
-        )
     }
     /**
      * Takes ChangeLog arguments and uploads to server, deletes QTU if result code is success
@@ -67,12 +56,6 @@ interface UploadAgentDao: InstanceDao, ContactDao, ContactNumberDao,
 
             // TODO get result code from post to server so we can delete corresponding QTU
         }
-    }
-
-    @Transaction
-    open suspend fun deleteQTU(changeID : String) {
-        deleteQTU_ChangeID(changeID)
-
     }
 }
 

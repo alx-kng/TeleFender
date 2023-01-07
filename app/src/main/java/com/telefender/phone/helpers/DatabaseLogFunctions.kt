@@ -1,13 +1,11 @@
 package com.telefender.phone.helpers
 
-import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import com.telefender.phone.data.tele_database.ClientDatabase
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
 import com.telefender.phone.data.tele_database.entities.CallDetail
-import com.telefender.phone.helpers.DatabaseLogFunctions.logCallLogs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -62,7 +60,7 @@ object DatabaseLogFunctions {
 
     fun logExecuteLogs(database : ClientDatabase?, repository: ClientRepository?) {
         CoroutineScope(Dispatchers.Default).launch {
-            val executeLogs = (database?.executeQueueDao()?.getAllQTEs() ?: repository?.getAllQTE()) ?: listOf()
+            val executeLogs = (database?.executeQueueDao()?.getAllQTE() ?: repository?.getAllQTE()) ?: listOf()
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: EXECUTE LOG SIZE: %s", executeLogs.size.toString())
 
             for (executeLog in executeLogs) {
@@ -71,10 +69,21 @@ object DatabaseLogFunctions {
         }
     }
 
-    fun logUploadLogs(database : ClientDatabase?, repository: ClientRepository?) {
+    fun logUploadChangeLogs(database : ClientDatabase?, repository: ClientRepository?) {
         CoroutineScope(Dispatchers.Default).launch {
-            val uploadLogs = (database?.uploadQueueDao()?.getAllQTU() ?: repository?.getAllQTU()) ?: listOf()
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: UPLOAD LOG SIZE: %s", uploadLogs.size.toString())
+            val uploadLogs = (database?.uploadChangeQueueDao()?.getAllChangeQTU() ?: repository?.getAllChangeQTU()) ?: listOf()
+            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: UPLOAD_CHANGE LOG SIZE: %s", uploadLogs.size.toString())
+
+            for (uploadLog in uploadLogs) {
+                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: %s", uploadLog.toString())
+            }
+        }
+    }
+
+    fun logUploadAnalyzedLogs(database : ClientDatabase?, repository: ClientRepository?) {
+        CoroutineScope(Dispatchers.Default).launch {
+            val uploadLogs = (database?.uploadAnalyzedQueueDao()?.getAllAnalyzedQTU() ?: repository?.getAllAnalyzedQTU()) ?: listOf()
+            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: UPLOAD_ANALYZED LOG SIZE: %s", uploadLogs.size.toString())
 
             for (uploadLog in uploadLogs) {
                 Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: %s", uploadLog.toString())
@@ -137,9 +146,12 @@ object DatabaseLogFunctions {
             delay(300)
         }
         if (5 in logWhich) {
-            logUploadLogs(database, repository)
+            logUploadChangeLogs(database, repository)
         }
         if (6 in logWhich) {
+            logUploadAnalyzedLogs(database, repository)
+        }
+        if (-1 in logWhich) {
             logAnalyzedNumbers(database, repository)
         }
     }
@@ -155,8 +167,8 @@ object DatabaseLogFunctions {
     )
 
     private fun callDetailChunkToJson(callDetailChunk : CallDetailChunk) : String {
-        val moshi : Moshi = Moshi.Builder().build()
-        val adapter : JsonAdapter<CallDetailChunk> = moshi.adapter(CallDetailChunk::class.java)
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(CallDetailChunk::class.java)
 
         return adapter.serializeNulls().toJson(callDetailChunk)
     }
@@ -191,8 +203,8 @@ object DatabaseLogFunctions {
     )
 
     private fun analyzedChunkToJson(analyzedChunk : AnalyzedChunk) : String {
-        val moshi : Moshi = Moshi.Builder().build()
-        val adapter : JsonAdapter<AnalyzedChunk> = moshi.adapter(AnalyzedChunk::class.java)
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(AnalyzedChunk::class.java)
 
         return adapter.serializeNulls().toJson(analyzedChunk)
     }

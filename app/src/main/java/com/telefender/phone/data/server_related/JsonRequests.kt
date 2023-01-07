@@ -1,9 +1,12 @@
 package com.telefender.phone.data.server_related
 
+import com.squareup.moshi.Json
 import com.telefender.phone.data.tele_database.entities.ChangeLog
-import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
+import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
+import com.telefender.phone.data.tele_database.entities.CallDetail
+
 
 // parse request - instanceNumber, key, changes: [{rowid, chgid, changeTime, type, cid, name, number}, ...]
 //The first request containing only instance field
@@ -11,8 +14,16 @@ import com.squareup.moshi.Moshi
 open class DefaultRequest(
     val instanceNumber : String
 ) {
+
+    open fun toJson() : String {
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(DefaultRequest::class.java)
+
+        return adapter.serializeNulls().toJson(this)
+    }
+
     override fun toString() : String {
-        return "REQUEST - instanceNumber: " + this.instanceNumber
+        return "REQUEST - instanceNumber: $instanceNumber"
     }
 }
 
@@ -26,8 +37,15 @@ class VerifyRequest(
     val OTP : Int
 ) : DefaultRequest(instanceNumber) {
 
+    override fun toJson() : String {
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(VerifyRequest::class.java)
+
+        return adapter.serializeNulls().toJson(this)
+    }
+
     override fun toString() : String {
-        return super.toString() + " sessionID: " + this.sessionID + " OTP: " + this.OTP
+        return "sessionID: $sessionID OTP: $OTP"
     }
 }
 
@@ -40,8 +58,15 @@ open class KeyRequest(
     val key : String,
 ) : DefaultRequest(instanceNumber) {
 
+    override fun toJson() : String {
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(KeyRequest::class.java)
+
+        return adapter.serializeNulls().toJson(this)
+    }
+
     override fun toString() : String {
-        return super.toString() + " key: " + this.key
+        return "${super.toString()} key: $key"
     }
 }
 
@@ -49,18 +74,69 @@ open class KeyRequest(
  * Inherits from KeyRequest, request class for uploading ChangeLogs.
  */
 @JsonClass(generateAdapter = true)
-class UploadRequest(
+class UploadChangeRequest(
     instanceNumber : String,
     key : String,
     val changes : List<ChangeLog>
 ) : KeyRequest(instanceNumber, key) {
 
+    override fun toJson() : String {
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(UploadChangeRequest::class.java)
+
+        return adapter.serializeNulls().toJson(this)
+    }
+
     override fun toString() : String {
-        var changeLogString = ""
-        for (changeLog in changes) {
-            changeLogString += changeLog.toString()
-        }
-        return super.toString() + " key: " + this.key + " changeLogs: " + changeLogString
+        return "${super.toString()} numChanges = ${changes.size}" +
+            "firstChangeSent: ${changes.firstOrNull()?.changeID}"
+    }
+}
+
+/**
+ * Inherits from KeyRequest, request class for uploading AnalyzedNumbers.
+ */
+@JsonClass(generateAdapter = true)
+class UploadAnalyzedRequest(
+    instanceNumber : String,
+    key : String,
+    @Json(name = "changes")
+    val analyzedNumbers : List<AnalyzedNumber>
+) : KeyRequest(instanceNumber, key) {
+
+    override fun toJson() : String {
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(UploadAnalyzedRequest::class.java)
+
+        return adapter.serializeNulls().toJson(this)
+    }
+
+    override fun toString() : String {
+        return "${super.toString()} numAnalyzedNumbers = ${analyzedNumbers.size}" +
+            "firstAnalyzedSent: ${analyzedNumbers.firstOrNull()?.normalizedNumber}"
+    }
+}
+
+/**
+ * Inherits from KeyRequest, request class for uploading CallDetails.
+ */
+@JsonClass(generateAdapter = true)
+class UploadLogsRequest(
+    instanceNumber : String,
+    key : String,
+    val logs : List<CallDetail>
+) : KeyRequest(instanceNumber, key) {
+
+    override fun toJson() : String {
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(UploadLogsRequest::class.java)
+
+        return adapter.serializeNulls().toJson(this)
+    }
+
+    override fun toString() : String {
+        return "${super.toString()} numLogs = ${logs.size}" +
+            "firstLogSent: ${logs.firstOrNull()?.normalizedNumber}"
     }
 }
 
@@ -74,6 +150,13 @@ class DownloadRequest(
     val lastChangeID : Int?
 ) : KeyRequest(instanceNumber, key) {
 
+    override fun toJson() : String {
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(DownloadRequest::class.java)
+
+        return adapter.serializeNulls().toJson(this)
+    }
+
     override fun toString() : String {
         return super.toString() + " key: " + this.key + " lastChangeID: " + this.lastChangeID.toString()
     }
@@ -86,52 +169,14 @@ class TokenRequest(
     val token : String
 ) : KeyRequest(instanceNumber, key) {
 
+    override fun toJson() : String {
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(TokenRequest::class.java)
+
+        return adapter.serializeNulls().toJson(this)
+    }
+
     override fun toString() : String {
         return super.toString() + " key: " + this.key + " token: " + this.token
-    }
-}
-
-object RequestHelpers {
-
-    fun defaultRequestToJson(defaultRequest : DefaultRequest) : String {
-        val moshi : Moshi = Moshi.Builder().build()
-        val adapter : JsonAdapter<DefaultRequest> = moshi.adapter(DefaultRequest::class.java)
-
-        return adapter.serializeNulls().toJson(defaultRequest)
-    }
-
-    fun verifyRequestToJson(verifyRequest : VerifyRequest) : String {
-        val moshi : Moshi = Moshi.Builder().build()
-        val adapter : JsonAdapter<VerifyRequest> = moshi.adapter(VerifyRequest::class.java)
-
-        return adapter.serializeNulls().toJson(verifyRequest)
-    }
-
-    fun keyRequestToJson(keyRequest : KeyRequest) : String {
-        val moshi : Moshi = Moshi.Builder().build()
-        val adapter : JsonAdapter<KeyRequest> = moshi.adapter(KeyRequest::class.java)
-
-        return adapter.serializeNulls().toJson(keyRequest)
-    }
-    
-    fun uploadRequestToJson(uploadRequest : UploadRequest) : String {
-        val moshi : Moshi = Moshi.Builder().build()
-        val adapter : JsonAdapter<UploadRequest> = moshi.adapter(UploadRequest::class.java)
-
-        return adapter.serializeNulls().toJson(uploadRequest)
-    }
-
-    fun downloadRequestToJson(downloadRequest : DownloadRequest) : String {
-        val moshi : Moshi = Moshi.Builder().build()
-        val adapter : JsonAdapter<DownloadRequest> = moshi.adapter(DownloadRequest::class.java)
-
-        return adapter.serializeNulls().toJson(downloadRequest)
-    }
-
-    fun tokenRequestToJson(tokenRequest : TokenRequest) : String {
-        val moshi : Moshi = Moshi.Builder().build()
-        val adapter : JsonAdapter<TokenRequest> = moshi.adapter(TokenRequest::class.java)
-
-        return adapter.serializeNulls().toJson(tokenRequest)
     }
 }

@@ -17,7 +17,6 @@ import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.background_tasks.TableInitializers
 import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkerType
-import com.telefender.phone.data.tele_database.background_tasks.workers.ExecuteScheduler
 import com.telefender.phone.data.tele_database.background_tasks.workers.OmegaPeriodicScheduler
 import com.telefender.phone.data.tele_database.background_tasks.workers.SetupScheduler
 import com.telefender.phone.data.tele_database.client_daos.*
@@ -35,7 +34,8 @@ import timber.log.Timber
 @Database(entities = [
     ChangeLog::class,
     ExecuteQueue::class,
-    UploadQueue::class,
+    UploadChangeQueue::class,
+    UploadAnalyzedQueue::class,
     StoredMap::class,
     Parameters::class,
     CallDetail::class,
@@ -50,9 +50,11 @@ abstract class ClientDatabase : RoomDatabase() {
     abstract fun uploadAgentDao() : UploadAgentDao
     abstract fun executeAgentDao() : ExecuteAgentDao
 
+    abstract fun uploadChangeQueueDao() : UploadChangeQueueDao
+    abstract fun uploadAnalyzedQueueDao() : UploadAnalyzedQueueDao
+
     abstract fun changeLogDao() : ChangeLogDao
     abstract fun executeQueueDao() : ExecuteQueueDao
-    abstract fun uploadQueueDao() : UploadQueueDao
     abstract fun storedMapDao() : StoredMapDao
     abstract fun parametersDao() : ParametersDao
 
@@ -170,7 +172,7 @@ abstract class ClientDatabase : RoomDatabase() {
         // Goes through contact numbers and inserts numbers into db
         TableInitializers.initContactNumber(context, this, contentResolver)
 
-        DatabaseLogFunctions.logSelect(null, repository, listOf(0, 1, 2, 3, 4, 5))
+        DatabaseLogFunctions.logSelect(null, repository, listOf(0, 1, 2, 3, 4, 5, 6))
     }
 
     protected fun initFirebase() {
@@ -327,7 +329,7 @@ abstract class ClientDatabase : RoomDatabase() {
                     // Initialize Omega Periodic Worker (sync, download, execute, upload)
                     OmegaPeriodicScheduler.initiatePeriodicOmegaWorker(context)
 
-                    DatabaseLogFunctions.logSelect(instanceTemp, null, listOf(0, 1, 2, 3, 4, 5))
+                    DatabaseLogFunctions.logSelect(instanceTemp, null, listOf(0, 1, 2, 3, 4, 5, 6))
                 }
             }
 

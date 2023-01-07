@@ -159,7 +159,7 @@ class RecentsAdapter(
         }
     }
 
-    private fun getDirectionIcon(direction: Int?, rawNumber: String): Int {
+    private fun getDirectionIcon(direction: Int, rawNumber: String): Int {
         val trueDirection = MiscHelpers.getTrueDirection(direction, rawNumber)
 
         val icon = when (trueDirection) {

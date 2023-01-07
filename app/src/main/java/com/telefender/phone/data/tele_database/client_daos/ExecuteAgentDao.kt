@@ -7,19 +7,40 @@ import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.entities.*
 import com.telefender.phone.helpers.MiscHelpers
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.lang.Long.max
 import kotlin.math.roundToInt
 
 
+/**
+ * TODO: Make sure that ExecuteQueue actions won't compete with the regular Sync actions even if
+ *  they are in the same thread pool (Dispatchers.IO).
+ */
 @Dao
 interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetailDao,
-    AnalyzedNumberDao, ChangeLogDao, ExecuteQueueDao, UploadQueueDao, StoredMapDao, ParametersDao {
-    
+    AnalyzedNumberDao, ChangeLogDao, ExecuteQueueDao, UploadChangeQueueDao, StoredMapDao, ParametersDao {
+
     suspend fun executeAll(){
-        while (hasQTEs()) {
-            executeFirst()
+        withContext(Dispatchers.IO) {
+            val retryAmount = 5
+
+            for (i in 1..retryAmount) {
+                try {
+                    while (hasQTE()) {
+                        executeFirst(retryAmount)
+                    }
+
+                    break
+                } catch (e: Exception) {
+                    Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: " +
+                        "executeAll() RETRYING... ${e.message}")
+                    delay(2000)
+                }
+            }
         }
     }
 
@@ -27,19 +48,32 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
      * Finds first task to execute and passes it's corresponding ChangeLog to
      * helper function executeFirstTransaction.
      */
-    suspend fun executeFirst() {
-        val firstJob = getFirstQTE()
-        val firstID = firstJob.changeID
+    suspend fun executeFirst(retryAmount: Int) {
+        for (i in 1..retryAmount) {
+            try {
+                val qte = getFirstQTE()!!
+                val qteRowID = qte.rowID
 
-        mutexLocks[MutexType.EXECUTE]!!.withLock {
-            updateQTEErrorCounter_Delta(firstID, 1)
-        }
+                // If executeChange() doesn't go through, then the QTE error counter increases.
+                mutexLocks[MutexType.EXECUTE]!!.withLock {
+                    incrementQTEErrors(qteRowID, 1)
+                }
 
-        try {
-            val changeLog = getChangeLogRow(firstID)
-            executeChange(changeLog, true)
-        } catch (e: Exception) {
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: executeFirst() FAILED...")
+                val changeLog = getChangeLog(qte.linkedRowID)!!
+                executeChange(changeLog, true, qteRowID)
+
+                break
+            } catch (e: Exception) {
+                /*
+                We need to throw an Exception here so that the enclosing executeAll() can retry
+                if the lower level executeFirst() fails too many times.
+                 */
+                if (i == retryAmount) throw Exception("executeFirst() FAILED")
+
+                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: " +
+                    "executeFirst() RETRYING... ${e.message}")
+                delay(1000)
+            }
         }
     }
 
@@ -56,11 +90,11 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
      * the ExecuteQueue. We have also already confirmed that deadlock is not possible with our
      * mutex lock usage.
      */
-    suspend fun executeChange(changeLog: ChangeLog, fromServer: Boolean = false) {
+    suspend fun executeChange(changeLog: ChangeLog, fromServer: Boolean = false, qteRowID: Int? = null) {
         if (changeLog.getChangeType() == ChangeType.INSTANCE_DELETE) {
-            executeChangeINSD(changeLog)
+            executeChangeINSD(changeLog, qteRowID!!)
         } else {
-            executeChangeNORM(changeLog, fromServer)
+            executeChangeNORM(changeLog, fromServer, qteRowID)
         }
     }
 
@@ -70,10 +104,10 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
      * delete might take a while (still probably less than 10 seconds), and we
      * wouldn't want the data to be inaccessible during that time.
      */
-    suspend fun executeChangeINSD(changeLog: ChangeLog) {
+    suspend fun executeChangeINSD(changeLog: ChangeLog, qteRowID: Int) {
         with(changeLog) {
             if (this.getChangeType() ==  ChangeType.INSTANCE_DELETE) {
-                insDelete(this, instanceNumber)
+                insDelete(this, instanceNumber, qteRowID)
             } else {
                 Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: executeAgentINSD() - wrong type $type")
             }
@@ -84,7 +118,11 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
      * Other part of executeChange(). Handles all non-instance-delete actions.
      */
     @Transaction
-    suspend fun executeChangeNORM(changeLog: ChangeLog, fromServer: Boolean) {
+    suspend fun executeChangeNORM(changeLog: ChangeLog, fromServer: Boolean, qteRowID: Int? = null) {
+        if (fromServer && qteRowID == null) {
+            throw Exception("qteRowID was null for server change!")
+        }
+
         val mutexInstance = mutexLocks[MutexType.INSTANCE]!!
         val mutexContact = mutexLocks[MutexType.CONTACT]!!
         val mutexContactNumber = mutexLocks[MutexType.CONTACT_NUMBER]!!
@@ -169,15 +207,17 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
             // If from server, delete associated QTE.
             if (fromServer) {
                 mutexLocks[MutexType.EXECUTE]!!.withLock {
-                    deleteQTE_ChangeID(changeID)
+                    deleteQTE(qteRowID!!)
                 }
             }
         }
     }
 
     /**
-     * Inserts call  into CallDetail table and updates AnalyzedNumber. Only updates
-     * AnalyzedNumber if  is inserted.
+     * Inserts call into CallDetail table and updates AnalyzedNumber. Only updates
+     * AnalyzedNumber if it is inserted.
+     *
+     * NOTE: Should ONLY be used for user's own call logs.
      */
     @Transaction
     suspend fun logInsert(callDetail: CallDetail) : Boolean {
@@ -185,29 +225,82 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
 
         if (inserted) {
             with(callDetail) {
-                val analyzedNumber = getAnalyzedNum(normalizedNumber)
+                val analyzedNumber = getAnalyzedNum(normalizedNumber)!!
                 val oldAnalyzed = analyzedNumber.getAnalyzed()
 
                 val isIncoming = callDirection == CallLog.Calls.INCOMING_TYPE
                 val isOutgoing = callDirection == CallLog.Calls.OUTGOING_TYPE
+                val isVoicemail = callDirection == CallLog.Calls.VOICEMAIL_TYPE
+                val isMissed = callDirection == CallLog.Calls.MISSED_TYPE
+                val isRejected = callDirection == CallLog.Calls.REJECTED_TYPE
+                val isBlocked = callDirection == CallLog.Calls.BLOCKED_TYPE
 
-                val newAvg = if (isIncoming || isOutgoing) {
-                    val numValidCalls = oldAnalyzed.numIncoming + oldAnalyzed.numOutgoing
-                    getNewAvg(oldAnalyzed.avgDuration, numValidCalls, callDuration!!)
-                } else {
-                    oldAnalyzed.avgDuration
-                }
+                with(oldAnalyzed) {
 
-                updateAnalyzedNum(
-                    normalizedNumber = normalizedNumber,
-                    analyzed = oldAnalyzed.copy(
-                        lastCallTime = callEpochDate,
-                        numIncoming = oldAnalyzed.numIncoming + if (isIncoming) 1 else 0,
-                        numOutgoing = oldAnalyzed.numOutgoing + if (isOutgoing) 1 else 0,
-                        maxDuration = max(oldAnalyzed.maxDuration, callDuration!!),
-                        avgDuration = newAvg
+                    updateAnalyzedNum(
+                        normalizedNumber = normalizedNumber,
+                        numTotalCalls = analyzedNumber.numTotalCalls + 1,
+                        analyzed = oldAnalyzed.copy(
+                            notifyCounter = notifyCounter + 1,
+
+                            // General type
+                            lastCallTime = callEpochDate,
+                            lastCallDirection = callDirection,
+                            lastCallDuration = callDuration,
+                            maxDuration = max(maxDuration, if(!isVoicemail) callDuration else 0),
+                            avgDuration = if (isIncoming || isOutgoing) {
+                                getNewAvg(avgDuration, numIncoming + numOutgoing, callDuration)
+                            } else {
+                                avgDuration
+                            },
+
+                            // Incoming subtype
+                            numIncoming = numIncoming + if (isIncoming) 1 else 0,
+                            lastIncomingTime = if (isIncoming) callEpochDate else lastIncomingTime,
+                            lastIncomingDuration = if (isIncoming) callDuration else lastIncomingDuration,
+                            maxIncomingDuration = max(maxIncomingDuration, if(isIncoming) callDuration else 0),
+                            avgIncomingDuration = if (isIncoming) {
+                                getNewAvg(avgDuration, numIncoming, callDuration)
+                            } else {
+                                avgIncomingDuration
+                            },
+
+                            // Outgoing subtype
+                            numOutgoing = numOutgoing + if (isOutgoing) 1 else 0,
+                            lastOutgoingTime = if (isOutgoing) callEpochDate else lastOutgoingTime,
+                            lastOutgoingDuration = if (isOutgoing) callDuration else lastOutgoingDuration,
+                            maxOutgoingDuration = max(maxOutgoingDuration, if(isOutgoing) callDuration else 0),
+                            avgOutgoingDuration = if (isOutgoing) {
+                                getNewAvg(avgDuration, numOutgoing, callDuration)
+                            } else {
+                                avgOutgoingDuration
+                            },
+
+                            // Voicemail subtype
+                            numVoicemail = numVoicemail + if (isVoicemail) 1 else 0,
+                            lastVoicemailTime = if (isVoicemail) callEpochDate else lastVoicemailTime,
+                            lastVoicemailDuration = if (isVoicemail) callDuration else lastVoicemailDuration,
+                            maxVoicemailDuration = max(maxVoicemailDuration, if(isVoicemail) callDuration else 0),
+                            avgVoicemailDuration = if (isVoicemail) {
+                                getNewAvg(avgDuration, numVoicemail, callDuration)
+                            } else {
+                                avgVoicemailDuration
+                            },
+
+                            // Missed subtype
+                            numMissed = numMissed + if (isMissed) 1 else 0,
+                            lastMissedTime = if (isMissed) callEpochDate else lastMissedTime,
+
+                            // Rejected subtype
+                            numRejected = numRejected + if (isRejected) 1 else 0,
+                            lastRejectedTime = if (isRejected) callEpochDate else lastRejectedTime,
+
+                            // Blocked subtype
+                            numBlocked = numBlocked + if (isBlocked) 1 else 0,
+                            lastBlockedTime = if (isBlocked) callEpochDate else lastBlockedTime,
+                        )
                     )
-                )
+                }
             }
         }
 
@@ -216,6 +309,10 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
 
 
     /**
+     * TODO: The case for double blocking (where notifyGate goes to superSpamAmount) can only
+     *  happen in 2 cases. You can directly double block on the NotifyList OR if you call
+     *  from the NotifyList and block again from the after-call screen.
+     *
      * For updates to non-contact numbers (e.g., mark safe, default, blocked or SMS verify).
      */
     @Transaction
@@ -225,7 +322,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
         } else {
             // Only update AnalyzedNumbers if change is from user's number (local client change).
             if (instanceNumber!! == getUserNumber()) {
-                val analyzedNumber = getAnalyzedNum(normalizedNumber!!)
+                val analyzedNumber = getAnalyzedNum(normalizedNumber!!)!!
                 val oldAnalyzed = analyzedNumber.getAnalyzed()
                 with(oldAnalyzed) {
 
@@ -335,12 +432,12 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
             Only update AnalyzedNumbers for child ContactNumbers if the Contact's instance number
             is the same as user number (contact is direct contact).
              */
-            if (instanceNumber == getUserNumber()) {
+            if (instanceNumber!! == getUserNumber()) {
                 val contactNumberChildren : List<ContactNumber> = getContactNumbers_CID(CID)
                 for (contactNumber in contactNumberChildren) {
                     val normalizedNumber = contactNumber.normalizedNumber
 
-                    val analyzedNumber = getAnalyzedNum(normalizedNumber)
+                    val analyzedNumber = getAnalyzedNum(normalizedNumber)!!
                     val oldAnalyzed = analyzedNumber.getAnalyzed()
 
                     val numBlockedDelta = if (blocked) 1 else -1
@@ -426,7 +523,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
             ADDITIONALLY, for both direct / tree contacts, reset notifyGate, and recalculate
             minDegree and degreeString
              */
-            val analyzedNumber = getAnalyzedNum(normalizedNumber)
+            val analyzedNumber = getAnalyzedNum(normalizedNumber)!!
             val oldAnalyzed = analyzedNumber.getAnalyzed()
             with(oldAnalyzed) {
                 val newDegreeString = changeDegreeString(degreeString, degree, false)
@@ -439,8 +536,8 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                             notifyGate = parameters.initialNotifyGate,
                             isBlocked = false,
                             numSharedContacts = numSharedContacts + 1,
-                            minDegree = 0,
-                            degreeString = newDegreeString
+                            degreeString = newDegreeString,
+                            minDegree = 0
                         )
                     )
                 } else {
@@ -449,8 +546,8 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                         analyzed = this.copy(
                             notifyGate = parameters.initialNotifyGate,
                             numTreeContacts = numTreeContacts + 1,
-                            minDegree = getMinDegree(newDegreeString),
-                            degreeString = newDegreeString
+                            degreeString = newDegreeString,
+                            minDegree = getMinDegree(newDegreeString)
                         )
                     )
                 }
@@ -502,7 +599,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
             If not direct contact, then just decrement numTreeContacts. Additionally, no matter if
             the contact number is a direct contact or not, recalculate minDegree and degreeString.
              */
-            val analyzedNumber = getAnalyzedNum(normalizedNumber)
+            val analyzedNumber = getAnalyzedNum(normalizedNumber)!!
             val oldAnalyzed = analyzedNumber.getAnalyzed()
             with(oldAnalyzed) {
                 val newDegreeString = changeDegreeString(degreeString, degree!!, true)
@@ -515,8 +612,8 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                         analyzed = this.copy(
                             numMarkedBlocked = numMarkedBlocked - numBlockedDelta,
                             numSharedContacts = numSharedContacts - 1,
+                            degreeString = newDegreeString,
                             minDegree = getMinDegree(newDegreeString),
-                            degreeString = newDegreeString
                         )
                     )
                 } else {
@@ -524,8 +621,8 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                         normalizedNumber = normalizedNumber,
                         analyzed = this.copy(
                             numTreeContacts = numTreeContacts - 1,
+                            degreeString = newDegreeString,
                             minDegree = getMinDegree(newDegreeString),
-                            degreeString = newDegreeString
                         )
                     )
                 }
@@ -555,7 +652,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
      * instance delete fails midway, then the execute log won't be deleted, meaning the instance
      * delete will continue where it left off in the next execution cycle.
      */
-    suspend fun insDelete(changeLog: ChangeLog, instanceNumber: String?) {
+    suspend fun insDelete(changeLog: ChangeLog, instanceNumber: String?, qteRowID: Int) {
         if (instanceNumber == null) {
             throw NullPointerException("instanceNumber was null for insDelete")
         } else {
@@ -583,7 +680,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
 
             mutexInstance.withLock {
                 mutexExecute.withLock {
-                    finalDelete(changeLog, Instance(instanceNumber))
+                    finalDelete(changeLog, Instance(instanceNumber), qteRowID)
                 }
             }
         }
@@ -594,11 +691,11 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
      * to succeed or both to fail.
      */
     @Transaction
-    suspend fun finalDelete(changeLog: ChangeLog, instance: Instance) {
+    suspend fun finalDelete(changeLog: ChangeLog, instance: Instance, qteRowID: Int) {
         deleteInstanceNumbers(instance)
 
         // Instance delete must be from server, so delete associated QTE.
-        deleteQTE_ChangeID(changeLog.changeID)
+        deleteQTE(qteRowID)
     }
 
     suspend fun changeDegreeString(degreeString: String, degree: Int, remove: Boolean) : String {

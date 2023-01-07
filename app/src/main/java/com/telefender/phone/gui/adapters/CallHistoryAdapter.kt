@@ -210,7 +210,7 @@ class CallHistoryAdapter (
         }
     }
 
-    private fun getDirectionString(direction: Int?, rawNumber: String): String {
+    private fun getDirectionString(direction: Int, rawNumber: String): String {
         val trueDirection = MiscHelpers.getTrueDirection(direction, rawNumber)
 
         val directionString = when (trueDirection) {

@@ -2,9 +2,7 @@ package com.telefender.phone.data.server_related.request_generators
 
 import androidx.work.WorkInfo
 import com.android.volley.Response
-import com.telefender.phone.data.server_related.DefaultResponse
-import com.telefender.phone.data.server_related.KeyResponse
-import com.telefender.phone.data.server_related.ResponseHelpers
+import com.telefender.phone.data.server_related.*
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkerType
@@ -52,16 +50,13 @@ private fun verifyPostResponseHandler(
         Timber.i("VOLLEY %s", response!!)
 
         /**
-         * TODO: Can we just check for null instead of exception? If not, then
-         *  replace with old code from previous commit.
-         *
          * Basically, if a normal session response is returned, then we will be
          * able to convert JSON into KeyResponse. Otherwise, the response is
          * probably an error JSON, in which we can convert to DefaultResponse.
          */
         val keyResponse: DefaultResponse? =
-            ResponseHelpers.jsonToKeyResponse(response) ?:
-            ResponseHelpers.jsonToDefaultResponse(response)
+            response.toServerResponse(ServerResponseType.KEY) ?:
+            response.toServerResponse(ServerResponseType.DEFAULT)
 
         if (keyResponse != null && keyResponse.status == "ok" && keyResponse is KeyResponse) {
             /**

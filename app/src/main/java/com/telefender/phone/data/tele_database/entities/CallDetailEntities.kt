@@ -1,6 +1,7 @@
 package com.telefender.phone.data.tele_database.entities
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.squareup.moshi.JsonClass
 import com.telefender.phone.helpers.MiscHelpers
@@ -14,7 +15,7 @@ data class GroupedCallDetail(
     val rawNumber: String,
     var callEpochDate: Long,
     var callLocation: String?,
-    val callDirection: Int?,
+    val callDirection: Int,
     val unallowed: Boolean,
     var amount: Int,
     var firstEpochID: Long) {
@@ -40,8 +41,6 @@ object CallHistoryFooter : CallDetailItem
  * Actual database entities.
  **************************************************************************************************/
 
-//
-
 /**
  * TODO: actually make UI show from our CallLogs <--- Maybe to show blocked status and stuff
  *
@@ -53,15 +52,19 @@ object CallHistoryFooter : CallDetailItem
  * basically indicates whether or not the CallDetail is synced or not.
  */
 @JsonClass(generateAdapter = true)
-@Entity(tableName = "call_detail")
+@Entity(tableName = "call_detail",
+    indices = [Index(value = ["callEpochDate"])]
+)
 data class CallDetail(
+    @PrimaryKey(autoGenerate = true)
+    val rowID: Int = 0,
     val rawNumber: String,
     val normalizedNumber: String,
     val callType: String?,
-    @PrimaryKey val callEpochDate: Long,
-    val callDuration: Long?,
+    val callEpochDate: Long,
+    val callDuration: Long,
     val callLocation: String?,
-    val callDirection: Int?,
+    val callDirection: Int,
     val instanceNumber: String,
     val unallowed: Boolean = false
 ) : CallDetailItem {

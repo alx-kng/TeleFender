@@ -23,7 +23,9 @@ enum class WorkerType {
     PERIODIC_OMEGA,
     SETUP,
     DOWNLOAD_POST,
-    UPLOAD_POST,
+    UPLOAD_CHANGES,
+    UPLOAD_ANALYZED,
+    UPLOAD_LOGS,
     ONE_TIME_TOKEN,
     PERIODIC_TOKEN,
     UPLOAD_TOKEN
@@ -61,7 +63,9 @@ object WorkerStates {
 
     private var setupState : WorkInfo.State? = null
     private var downloadPostState : WorkInfo.State? = null
-    private var uploadPostState : WorkInfo.State? = null
+    private var uploadChangesState : WorkInfo.State? = null
+    private var uploadAnalyzedState : WorkInfo.State? = null
+    private var uploadLogsState : WorkInfo.State? = null
 
     private var oneTimeTokenState : WorkInfo.State? = null
     private var periodicTokenState : WorkInfo.State? = null
@@ -94,7 +98,9 @@ object WorkerStates {
 
     private var numSetupWaiters = 0
     private var numDownloadPostWaiters = 0
-    private var numUploadPostWaiters = 0
+    private var numUploadChangesWaiters = 0
+    private var numUploadAnalyzedWaiters = 0
+    private var numUploadLogsWaiters = 0
 
     private var numOneTimeTokenWaiters = 0
     private var numPeriodicTokenWaiters = 0
@@ -176,7 +182,9 @@ object WorkerStates {
             WorkerType.PERIODIC_OMEGA -> periodicOmegaState = workState
             WorkerType.SETUP -> setupState = workState
             WorkerType.DOWNLOAD_POST -> downloadPostState = workState
-            WorkerType.UPLOAD_POST -> uploadPostState = workState
+            WorkerType.UPLOAD_CHANGES -> uploadChangesState = workState
+            WorkerType.UPLOAD_ANALYZED -> uploadAnalyzedState = workState
+            WorkerType.UPLOAD_LOGS -> uploadLogsState = workState
             WorkerType.ONE_TIME_TOKEN -> oneTimeTokenState = workState
             WorkerType.PERIODIC_TOKEN -> periodicTokenState = workState
             WorkerType.UPLOAD_TOKEN -> uploadTokenState = workState
@@ -216,7 +224,9 @@ object WorkerStates {
             WorkerType.PERIODIC_OMEGA -> periodicOmegaState
             WorkerType.SETUP -> setupState
             WorkerType.DOWNLOAD_POST -> downloadPostState
-            WorkerType.UPLOAD_POST -> uploadPostState
+            WorkerType.UPLOAD_CHANGES -> uploadChangesState
+            WorkerType.UPLOAD_ANALYZED -> uploadAnalyzedState
+            WorkerType.UPLOAD_LOGS -> uploadLogsState
             WorkerType.ONE_TIME_TOKEN -> oneTimeTokenState
             WorkerType.PERIODIC_TOKEN -> periodicTokenState
             WorkerType.UPLOAD_TOKEN -> uploadTokenState
@@ -238,7 +248,9 @@ object WorkerStates {
             WorkerType.PERIODIC_OMEGA -> numPeriodicOmegaWaiters += changeAmount
             WorkerType.SETUP -> numSetupWaiters += changeAmount
             WorkerType.DOWNLOAD_POST -> numDownloadPostWaiters += changeAmount
-            WorkerType.UPLOAD_POST -> numUploadPostWaiters += changeAmount
+            WorkerType.UPLOAD_CHANGES -> numUploadChangesWaiters += changeAmount
+            WorkerType.UPLOAD_ANALYZED -> numUploadAnalyzedWaiters += changeAmount
+            WorkerType.UPLOAD_LOGS -> numUploadLogsWaiters += changeAmount
             WorkerType.ONE_TIME_TOKEN -> numOneTimeTokenWaiters += changeAmount
             WorkerType.PERIODIC_TOKEN -> numPeriodicTokenWaiters += changeAmount
             WorkerType.UPLOAD_TOKEN -> numUploadTokenWaiters += changeAmount
@@ -260,7 +272,9 @@ object WorkerStates {
             WorkerType.PERIODIC_OMEGA -> numPeriodicOmegaWaiters
             WorkerType.SETUP -> numSetupWaiters
             WorkerType.DOWNLOAD_POST -> numDownloadPostWaiters
-            WorkerType.UPLOAD_POST -> numUploadPostWaiters
+            WorkerType.UPLOAD_CHANGES -> numUploadChangesWaiters
+            WorkerType.UPLOAD_ANALYZED -> numUploadAnalyzedWaiters
+            WorkerType.UPLOAD_LOGS -> numUploadLogsWaiters
             WorkerType.ONE_TIME_TOKEN -> numOneTimeTokenWaiters
             WorkerType.PERIODIC_TOKEN -> numPeriodicTokenWaiters
             WorkerType.UPLOAD_TOKEN -> numUploadTokenWaiters

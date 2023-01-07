@@ -11,6 +11,10 @@ interface StoredMapDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertStoredMapQuery(vararg storedMap : StoredMap)
 
+    /**
+     * Initializes StoredMap with user's number. You need to be certain that there is ONLY ONE
+     * StoredMap (which contains the user's number), so use this wisely.
+     */
     suspend fun initStoredMap(userNumber: String) : Boolean{
         return if (getStoredMapQuery(userNumber) == null) {
             // Initialize StoredMap with just userNumber values.

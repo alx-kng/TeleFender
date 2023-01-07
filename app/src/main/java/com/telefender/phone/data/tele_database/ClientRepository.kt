@@ -1,54 +1,11 @@
 package com.telefender.phone.data.tele_database
 
 import androidx.annotation.WorkerThread
-import com.telefender.phone.data.tele_database.TeleLocks.mutexAnalyzed
-import com.telefender.phone.data.tele_database.TeleLocks.mutexCallDetails
-import com.telefender.phone.data.tele_database.TeleLocks.mutexStoredMap
-import com.telefender.phone.data.tele_database.TeleLocks.mutexUpload
+import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.client_daos.*
 import com.telefender.phone.data.tele_database.entities.*
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-enum class MutexType {
-    EXECUTE, UPLOAD, CHANGE, STORED_MAP, PARAMETERS, INSTANCE, CONTACT, CONTACT_NUMBER,
-    CALL_DETAIL, ANALYZED, SYNC
-}
-
-/**
- * Mutex locks to prevent conflicting access to same table, which makes our database thread safe
- * (even if Room is already supposedly thread safe). Note that we only locks on writing queries,
- * that is, insert / update / delete queries.
- */
-object TeleLocks {
-    val mutexExecute = Mutex()
-    val mutexUpload = Mutex()
-    val mutexChange = Mutex()
-    val mutexStoredMap = Mutex()
-    val mutexParameters = Mutex()
-
-    val mutexCallDetails = Mutex()
-    val mutexInstance = Mutex()
-    val mutexContact = Mutex()
-    val mutexContactNumber = Mutex()
-    val mutexAnalyzed = Mutex()
-
-    val mutexSync = Mutex()
-
-    val mutexLocks = mapOf(
-        MutexType.EXECUTE to mutexExecute,
-        MutexType.UPLOAD to mutexUpload,
-        MutexType.CHANGE to mutexChange,
-        MutexType.STORED_MAP to mutexStoredMap,
-        MutexType.PARAMETERS to mutexParameters,
-        MutexType.CALL_DETAIL to mutexCallDetails,
-        MutexType.INSTANCE to mutexInstance,
-        MutexType.CONTACT to mutexContact,
-        MutexType.CONTACT_NUMBER to mutexContactNumber,
-        MutexType.ANALYZED to mutexAnalyzed,
-        MutexType.SYNC to mutexSync
-    )
-}
 
 class ClientRepository(
 
@@ -61,8 +18,10 @@ class ClientRepository(
     private val changeAgentDao : ChangeAgentDao,
     private val uploadAgentDao: UploadAgentDao,
 
+    private val uploadChangeQueueDao : UploadChangeQueueDao,
+    private val uploadAnalyzedQueueDao: UploadAnalyzedQueueDao,
+
     private val executeQueueDao : ExecuteQueueDao,
-    private val uploadQueueDao : UploadQueueDao,
     private val changeLogDao : ChangeLogDao,
     private val storedMapDao : StoredMapDao,
     private val parametersDao : ParametersDao,
@@ -127,8 +86,14 @@ class ClientRepository(
         token : String? = null,
         lastSyncTime: Long? = null
     ) {
-        mutexStoredMap.withLock {
-            storedMapDao.updateStoredMap(number, sessionID, clientKey, token, lastSyncTime)
+        mutexLocks[MutexType.STORED_MAP]!!.withLock {
+            storedMapDao.updateStoredMap(
+                number = number,
+                sessionId = sessionID,
+                clientKey = clientKey,
+                fireBaseToken = token,
+                lastSyncTime = lastSyncTime
+            )
         }
     }
 
@@ -160,7 +125,7 @@ class ClientRepository(
 
     @WorkerThread
     suspend fun insertDetailSkeleton(callDetail: CallDetail) {
-        mutexCallDetails.withLock {
+        mutexLocks[MutexType.CALL_DETAIL]!!.withLock {
             callDetailDao.insertDetailSkeleton(callDetail)
         }
     }
@@ -172,11 +137,24 @@ class ClientRepository(
     /**
      * Gets AnalyzedNumber given a number. Requires use of lock since it may initialize the
      * AnalyzedNumber for the number if the row didn't previously exist.
+     *
+     * NOTE: if not specified, instanceNumber is assumed to be user's number.
      */
     @WorkerThread
-    suspend fun getAnalyzed(number: String) : AnalyzedNumber {
-        return mutexAnalyzed.withLock {
-            analyzedNumberDao.getAnalyzedNum(number)
+    suspend fun getAnalyzedNum(number: String, instanceNumber: String? = null) : AnalyzedNumber? {
+        return mutexLocks[MutexType.ANALYZED]!!.withLock {
+            analyzedNumberDao.getAnalyzedNum(number, instanceNumber)
+        }
+    }
+
+    /**
+     * Gets AnalyzedNumber given the rowID. Requires use of lock since it may initialize the
+     * AnalyzedNumber for the number if the row didn't previously exist.
+     */
+    @WorkerThread
+    suspend fun getAnalyzedNum(rowID: Int) : AnalyzedNumber? {
+        return mutexLocks[MutexType.ANALYZED]!!.withLock {
+            analyzedNumberDao.getAnalyzedNum(rowID)
         }
     }
 
@@ -222,54 +200,89 @@ class ClientRepository(
     }
 
     @WorkerThread
-    suspend fun getChangeLogRow(changeID : String) : ChangeLog {
-        return changeLogDao.getChangeLogRow(changeID)
+    suspend fun getChangeLog(changeID : String) : ChangeLog? {
+        return changeLogDao.getChangeLog(changeID)
+    }
+
+    @WorkerThread
+    suspend fun getChangeLog(rowID: Int) : ChangeLog? {
+        return changeLogDao.getChangeLog(rowID)
     }
 
 
     /***********************************************************************************************
-     * UploadQueue Queries
+     * UploadChangeQueue Queries
      **********************************************************************************************/
 
     @WorkerThread
-    suspend fun getAllQTUByRowID() : List<UploadQueue> {
-        return uploadQueueDao.getAllQTU_rowID()
+    suspend fun getAllChangeQTUOrdered() : List<UploadChangeQueue> {
+        return uploadChangeQueueDao.getAllChangeQTUOrdered()
     }
 
     @WorkerThread
-    suspend fun getChunkQTUByRowID() : List<UploadQueue> {
-        return uploadQueueDao.getChunkQTU_rowID()
+    suspend fun getChunkChangeQTU(amount: Int) : List<UploadChangeQueue> {
+        return uploadChangeQueueDao.getChunkChangeQTU(amount)
     }
 
     @WorkerThread
-    suspend fun getAllQTU() : List<UploadQueue> {
-        return uploadQueueDao.getAllQTU()
+    suspend fun getAllChangeQTU() : List<UploadChangeQueue> {
+        return uploadChangeQueueDao.getAllChangeQTU()
     }
 
     @WorkerThread
-    suspend fun hasQTUs() : Boolean {
-        return uploadQueueDao.hasQTUs()
-    }
-
-    /**
-     * Returns all QueueToUploads with error counter > 0
-     */
-    @WorkerThread
-    suspend fun getQTUErrorLogs() : List<String> {
-        return uploadQueueDao.getQTUErrorLogs()
+    suspend fun hasChangeQTU() : Boolean {
+        return uploadChangeQueueDao.hasChangeQTU()
     }
 
     @WorkerThread
-    suspend fun deleteUploadInclusive(rowID : Int) {
-        mutexUpload.withLock {
-            uploadQueueDao.deleteUploadInclusive(rowID)
+    suspend fun deleteChangeQTUInclusive(linkedRowID : Int) {
+        mutexLocks[MutexType.UPLOAD_ANALYZED]!!.withLock {
+            uploadChangeQueueDao.deleteChangeQTUInclusive(linkedRowID)
         }
     }
 
     @WorkerThread
-    suspend fun deleteUploadExclusive(rowID : Int) {
-        mutexUpload.withLock {
-            uploadQueueDao.deleteUploadInclusive(rowID)
+    suspend fun deleteChangeQTUExclusive(linkedRowID : Int) {
+        mutexLocks[MutexType.UPLOAD_ANALYZED]!!.withLock {
+            uploadChangeQueueDao.deleteChangeQTUExclusive(linkedRowID)
+        }
+    }
+
+    /***********************************************************************************************
+     * UploadAnalyzedQueue Queries
+     **********************************************************************************************/
+
+    @WorkerThread
+    suspend fun getAllAnalyzedQTUOrdered() : List<UploadAnalyzedQueue> {
+        return uploadAnalyzedQueueDao.getAllAnalyzedQTUOrdered()
+    }
+
+    @WorkerThread
+    suspend fun getChunkAnalyzedQTU(amount: Int) : List<UploadAnalyzedQueue> {
+        return uploadAnalyzedQueueDao.getChunkAnalyzedQTU(amount)
+    }
+
+    @WorkerThread
+    suspend fun getAllAnalyzedQTU() : List<UploadAnalyzedQueue> {
+        return uploadAnalyzedQueueDao.getAllAnalyzedQTU()
+    }
+
+    @WorkerThread
+    suspend fun hasAnalyzedQTU() : Boolean {
+        return uploadAnalyzedQueueDao.hasAnalyzedQTU()
+    }
+
+    @WorkerThread
+    suspend fun deleteAnalyzedQTUInclusive(linkedRowID : Int) {
+        mutexLocks[MutexType.UPLOAD_ANALYZED]!!.withLock {
+            uploadAnalyzedQueueDao.deleteAnalyzedQTUInclusive(linkedRowID)
+        }
+    }
+
+    @WorkerThread
+    suspend fun deleteAnalyzedQTUExclusive(linkedRowID : Int) {
+        mutexLocks[MutexType.UPLOAD_ANALYZED]!!.withLock {
+            uploadAnalyzedQueueDao.deleteAnalyzedQTUExclusive(linkedRowID)
         }
     }
 
@@ -279,19 +292,19 @@ class ClientRepository(
 
     @WorkerThread
     suspend fun getAllQTE() : List<ExecuteQueue> {
-        return executeQueueDao.getAllQTEs()
+        return executeQueueDao.getAllQTE()
     }
 
     @WorkerThread
-    suspend fun hasQTEs() : Boolean {
-        return executeAgentDao.hasQTEs()
+    suspend fun hasQTE() : Boolean {
+        return executeAgentDao.hasQTE()
     }
 
     /**
      * Returns all QueueToExecutes with error counter > 0
      */
     @WorkerThread
-    suspend fun getQTEErrorLogs() : List<String> {
+    suspend fun getQTEErrorLogs() : List<Int> {
         return executeQueueDao.getQTEErrorLogs()
     }
 
@@ -339,12 +352,5 @@ class ClientRepository(
     @WorkerThread
     suspend fun changeFromClient(changeLog: ChangeLog, fromSync: Boolean, bubbleError: Boolean = false) {
         changeAgentDao.changeFromClient(changeLog, fromSync, bubbleError)
-    }
-
-    @WorkerThread
-    suspend fun deleteQTU(changeID: String) {
-        mutexUpload.withLock {
-            uploadAgentDao.deleteQTU(changeID)
-        }
     }
 }

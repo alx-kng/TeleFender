@@ -13,7 +13,6 @@ import com.telefender.phone.App
 import com.telefender.phone.data.server_related.ServerInteractions
 import com.telefender.phone.data.tele_database.ClientDatabase
 import com.telefender.phone.data.tele_database.ClientRepository
-import com.telefender.phone.data.tele_database.background_tasks.TableInitializers
 import com.telefender.phone.data.tele_database.background_tasks.TableSynchronizer
 import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkerType
@@ -158,31 +157,51 @@ class CoroutineOmegaWorker(
              */
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA EXECUTE STARTED")
             repository.executeAll()
-            if (repository.hasQTEs()) {
-                delay(1000)
-                return Result.retry()
-            }
 
             /**
              * Uploads changes to server
              * If a big error occurs, like a 404, the upload should not continue
              */
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD STARTED")
-            WorkerStates.setState(WorkerType.UPLOAD_POST, WorkInfo.State.RUNNING)
-            if (repository.hasQTUs()) {
-                ServerInteractions.uploadPostRequest(context, repository, scope)
+            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_CHANGE STARTED")
+            WorkerStates.setState(WorkerType.UPLOAD_CHANGES, WorkInfo.State.RUNNING)
+            if (repository.hasChangeQTU()) {
+                ServerInteractions.uploadChangeRequest(context, repository, scope)
             } else {
-                WorkerStates.setState(WorkerType.UPLOAD_POST, WorkInfo.State.SUCCEEDED)
+                WorkerStates.setState(WorkerType.UPLOAD_CHANGES, WorkInfo.State.SUCCEEDED)
             }
 
             // Makes sure upload doesn't have a big error before retrying.
-            if (!WorkerStates.workerWaiter(WorkerType.UPLOAD_POST, "UPLOAD", stopOnFail = true, certainFinish = true)) {
-                Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA PERIODIC ENDED EARLY. PROBLEM WITH UPLOAD.")
+            if (!WorkerStates.workerWaiter(WorkerType.UPLOAD_CHANGES, "UPLOAD_CHANGE", stopOnFail = true, certainFinish = true)) {
+                Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA PERIODIC ENDED EARLY. PROBLEM WITH UPLOAD_CHANGE.")
                 return Result.failure()
             }
 
             // Makes sure everything is uploaded.
-            if (repository.hasQTUs()) {
+            if (repository.hasChangeQTU()) {
+                delay(1000)
+                return Result.retry()
+            }
+
+
+            /**
+             * TODO: Clean this up!!!!
+             */
+            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_ANALYZED STARTED")
+            WorkerStates.setState(WorkerType.UPLOAD_ANALYZED, WorkInfo.State.RUNNING)
+            if (repository.hasAnalyzedQTU()) {
+                ServerInteractions.uploadAnalyzedRequest(context, repository, scope)
+            } else {
+                WorkerStates.setState(WorkerType.UPLOAD_ANALYZED, WorkInfo.State.SUCCEEDED)
+            }
+
+            // Makes sure upload doesn't have a big error before retrying.
+            if (!WorkerStates.workerWaiter(WorkerType.UPLOAD_ANALYZED, "UPLOAD_ANALYZED", stopOnFail = true, certainFinish = true)) {
+                Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA PERIODIC ENDED EARLY. PROBLEM WITH UPLOAD_ANALYZED.")
+                return Result.failure()
+            }
+
+            // Makes sure everything is uploaded.
+            if (repository.hasAnalyzedQTU()) {
                 delay(1000)
                 return Result.retry()
             }

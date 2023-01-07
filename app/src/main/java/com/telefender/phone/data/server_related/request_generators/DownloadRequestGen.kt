@@ -3,9 +3,7 @@ package com.telefender.phone.data.server_related.request_generators
 import android.content.Context
 import androidx.work.WorkInfo
 import com.android.volley.Response
-import com.telefender.phone.data.server_related.ChangeResponse
-import com.telefender.phone.data.server_related.DefaultResponse
-import com.telefender.phone.data.server_related.ResponseHelpers
+import com.telefender.phone.data.server_related.*
 import com.telefender.phone.data.server_related.ServerInteractions.downloadPostRequest
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
@@ -61,8 +59,8 @@ private fun downloadResponseHandler(
         Timber.i("VOLLEY %s", response!!)
 
         val changeResponse: DefaultResponse? =
-            ResponseHelpers.jsonToChangeResponse(response) ?:
-            ResponseHelpers.jsonToDefaultResponse(response)
+            response.toServerResponse(ServerResponseType.CHANGE) ?:
+            response.toServerResponse(ServerResponseType.DEFAULT)
 
         /**
          * Guarantees that response has the right status before trying to iterate through change
@@ -78,7 +76,7 @@ private fun downloadResponseHandler(
              * should launch another coroutine to do database work or launch another post request.
              */
             scope.launch(Dispatchers.IO) {
-                for (changeLog in changeResponse.changeLogs) {
+                for (changeLog in changeResponse.changes) {
 
                     // serverChangeID can't be null since it's needed for future download requests
                     if (changeLog.serverChangeID != null) {
@@ -93,7 +91,7 @@ private fun downloadResponseHandler(
                 /**
                  * Keep launching download requests to server until no changeLogs left.
                  */
-                if (changeResponse.changeLogs.isNotEmpty()) {
+                if (changeResponse.changes.isNotEmpty()) {
                     Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: MORE TO DOWNLOAD")
 
                     downloadPostRequest(context, repository, scope)
