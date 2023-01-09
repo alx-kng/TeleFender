@@ -15,8 +15,8 @@ import com.google.firebase.messaging.ktx.messaging
 import com.telefender.phone.App
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.background_tasks.TableInitializers
-import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
-import com.telefender.phone.data.tele_database.background_tasks.WorkerType
+import com.telefender.phone.data.tele_database.background_tasks.WorkStates
+import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.data.tele_database.background_tasks.workers.OmegaPeriodicScheduler
 import com.telefender.phone.data.tele_database.background_tasks.workers.SetupScheduler
 import com.telefender.phone.data.tele_database.client_daos.*
@@ -122,21 +122,24 @@ abstract class ClientDatabase : RoomDatabase() {
 
         Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: initCoreDatabase()")
 
-        val instanceNumber = MiscHelpers.getInstanceNumber(context)
+        val instanceNumber = MiscHelpers.getUserNumberUncertain(context)
 
         // Makes sure that retrieved instanceNumber isn't invalid (due to errors or something).
-        if (instanceNumber != MiscHelpers.INVALID_NUMBER) {
+        if (instanceNumber != MiscHelpers.UNKNOWN_NUMBER) {
             // Initializes stored map table with user number. Lock for extra safety.
             mutexLocks[MutexType.STORED_MAP]!!.withLock {
                 this.storedMapDao().initStoredMap(instanceNumber)
             }
+
+            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: " +
+                "Initial StoredMap - ${this.storedMapDao().getStoredMap()?.userNumber}")
 
             // Inserts the single user instance with changeAgentDao
             TableInitializers.initInstance(context, this, instanceNumber)
 
             // Set databaseInitialized status in StoredMap table if Instance successfully inserted.
             if (this.instanceDao().hasInstance(instanceNumber)) {
-                this.storedMapDao().updateDatabaseInitialized(instanceNumber, true)
+                this.storedMapDao().updateStoredMap(databaseInitialized = true)
             }
         }
 
@@ -144,8 +147,14 @@ abstract class ClientDatabase : RoomDatabase() {
     }
 
     protected suspend fun userSetup(context: Context) {
+        // Don't continue if initialization wasn't successful.
+        val instanceNumber = MiscHelpers.getUserNumberUncertain(context)
+        if (!isInitialized(instanceNumber)) {
+            return
+        }
+
         SetupScheduler.initiateSetupWorker(context)
-        WorkerStates.workerWaiter(WorkerType.SETUP)
+        WorkStates.workWaiter(WorkType.SETUP)
     }
 
     /**
@@ -206,7 +215,7 @@ abstract class ClientDatabase : RoomDatabase() {
      * initialized and no exec worker running.
      */
     private suspend fun waitForInitialization(scope: CoroutineScope, context: Context) {
-        val instanceNumber = MiscHelpers.getInstanceNumber(context)
+        val instanceNumber = MiscHelpers.getUserNumberUncertain(context)
 
         while (!isInitialized(instanceNumber)) {
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: getDatabase() - DATABASE INITIALIZED = FALSE")
@@ -231,13 +240,9 @@ abstract class ClientDatabase : RoomDatabase() {
      * if stored map isn't initialized.
      */
     private suspend fun isInitialized(userNumber: String) : Boolean {
-        if (!this.storedMapDao().storedMapInitialized()) {
-            return false
-        }
-
-        return userNumber != MiscHelpers.INVALID_NUMBER
+        return userNumber != MiscHelpers.UNKNOWN_NUMBER
             && this.instanceDao().hasInstance(userNumber)
-            && this.storedMapDao().databaseInitialized(userNumber) == true
+            && this.storedMapDao().databaseInitialized()
     }
 
     /**
@@ -253,21 +258,19 @@ abstract class ClientDatabase : RoomDatabase() {
      * because the setup status is changed in the database before the worker state is changed.
      */
     private suspend fun waitForSetup(context: Context) {
-        val instanceNumber = MiscHelpers.getInstanceNumber(context)
-
-        while (!isSetup(instanceNumber)) {
+        while (!isSetup()) {
             delay(500)
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: getDatabase() - USER SETUP = FALSE")
 
-            if (WorkerStates.getState(WorkerType.SETUP) == null){
+            if (WorkStates.getState(WorkType.SETUP) == null){
                 SetupScheduler.initiateSetupWorker(context)
             }
         }
         Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: getDatabase() - USER SETUP = TRUE")
     }
 
-    private suspend fun isSetup(userNumber: String) : Boolean {
-        return this.storedMapDao().hasCredKey(userNumber)
+    private suspend fun isSetup() : Boolean {
+        return this.storedMapDao().getStoredMap()?.clientKey != null
     }
 
     companion object {
@@ -284,9 +287,11 @@ abstract class ClientDatabase : RoomDatabase() {
          *  since getDatabase() isn't always called.
          *
          * TODO: Probably need more permission checks in workers just in case permission changes
-         *  mid way.
+         *  mid way. -> Do permission checks at crucial places like default queries and instance
+         *  number retrieval (uncertain).
          *
-         * TODO: REDO IMPORTANT TRANSACTIONS THAT FAIL!!!!
+         * TODO: REDO IMPORTANT TRANSACTIONS THAT FAIL!!!! -> Think we've mostly covered everything,
+         *  but double check.
          *
          * Either creates new database instance if there is no initialized one available or returns
          * the initialized instance that already exists. Called everytime the app is freshly
@@ -324,7 +329,7 @@ abstract class ClientDatabase : RoomDatabase() {
                     instanceTemp.waitForSetup(context)
 
                     OmegaPeriodicScheduler.initiateOneTimeOmegaWorker(context)
-                    WorkerStates.workerWaiter(WorkerType.ONE_TIME_OMEGA)
+                    WorkStates.workWaiter(WorkType.ONE_TIME_OMEGA)
 
                     // Initialize Omega Periodic Worker (sync, download, execute, upload)
                     OmegaPeriodicScheduler.initiatePeriodicOmegaWorker(context)

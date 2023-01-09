@@ -19,9 +19,9 @@ object UserSetup {
      * TODO finalize url...
      */
     @SuppressLint("MissingPermission", "HardwareIds")
-    fun initialPostRequest(context : Context, repository: ClientRepository, scope: CoroutineScope) {
+    suspend fun initialPostRequest(context : Context, repository: ClientRepository, scope: CoroutineScope) {
         val url = "https://dev.scribblychat.com/callbook/requestInstallation"
-        val instanceNumber = MiscHelpers.getInstanceNumber(context)
+        val instanceNumber = MiscHelpers.getUserNumberStored(context)
 
         val requestJson : String = DefaultRequest(instanceNumber).toJson()
 
@@ -50,10 +50,10 @@ object UserSetup {
     @SuppressLint("MissingPermission", "HardwareIds")
     suspend fun verifyPostRequest(context : Context, repository: ClientRepository, scope: CoroutineScope) {
         val url = "https://dev.scribblychat.com/callbook/verifyInstallation"
-        val instanceNumber = MiscHelpers.getInstanceNumber(context)
+        val instanceNumber = MiscHelpers.getUserNumberStored(context)
 
         val otp = 111111
-        val sessionID = repository.getSessionID(instanceNumber)
+        val sessionID = repository.getSessionID()
         val verifyRequestJson = VerifyRequest(instanceNumber, sessionID!!, otp).toJson()
 
         Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: verifyRequestJson = $verifyRequestJson")

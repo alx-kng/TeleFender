@@ -6,9 +6,12 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
+import com.telefender.phone.data.server_related.GenericDataType
 
 
 /**
+ * TODO: Get rid of serverChangeID
+ *
  * Everything outside of [changeJson] is an essential field. Essential fields (aside from being
  * used frequently) might also be used as selection criteria for ChangeLog. RowID is PK for
  * various reasons, one important one being the natural ordering of ChangeLogs which can be
@@ -23,7 +26,7 @@ import com.squareup.moshi.Moshi
 )
 data class ChangeLog(
     @PrimaryKey(autoGenerate = true)
-    val rowID: Int = 0,
+    val rowID: Long = 0,
     val changeID: String,
     val changeTime: Long,
     val type: String,
@@ -60,7 +63,7 @@ data class ChangeLog(
          * we can accept type as ChangeType here and convert to string for actual ChangeLog).
          */
         fun create(
-            rowID: Int = 0,
+            rowID: Long = 0,
             changeID: String,
             changeTime: Long,
             type: ChangeType,
@@ -217,7 +220,7 @@ fun String.toChange() : Change? {
         )],
 )
 data class UploadChangeQueue(
-    @PrimaryKey val linkedRowID: Int,
+    @PrimaryKey val linkedRowID: Long,
     val errorCounter: Int = 0
 ) {
     override fun toString() : String {
@@ -235,7 +238,7 @@ data class UploadChangeQueue(
         )],
 )
 data class UploadAnalyzedQueue(
-    @PrimaryKey val linkedRowID: Int,
+    @PrimaryKey val linkedRowID: Long,
     val errorCounter: Int = 0
 ) {
     override fun toString() : String {
@@ -254,39 +257,35 @@ data class UploadAnalyzedQueue(
 @Entity(tableName = "execute_queue")
 data class ExecuteQueue(
     @PrimaryKey(autoGenerate = true)
-    val rowID: Int = 0,
-    val executeType: String,
-    val linkedRowID: Int,
+    val rowID: Long = 0,
+    val genericDataType: String,
+    val linkedRowID: Long,
     val errorCounter : Int = 0
 ) {
     override fun toString() : String {
-        return "EXECUTE LOG: rowID: $rowID executeType: $executeType linkedRowID: $linkedRowID errorCounter: $errorCounter"
+        return "EXECUTE LOG: rowID: $rowID executeType: $genericDataType linkedRowID: $linkedRowID errorCounter: $errorCounter"
     }
 
     companion object {
 
         /**
          * Creates ExecuteQueue log. Also allows you to modify arguments to fit form to database
-         * (e.g., we can accept executeType as ExecuteType here and convert to string for
+         * (e.g., we can accept genericDataType as GenericDataType here and convert to string for
          * actual ExecuteQueue).
          */
         fun create(
-            rowID: Int = 0,
-            executeType: ExecuteType,
-            linkedRowID: Int,
+            rowID: Long = 0,
+            genericDataType: GenericDataType,
+            linkedRowID: Long,
             errorCounter: Int = 0
         ) : ExecuteQueue {
 
             return ExecuteQueue(
                 rowID = rowID,
-                executeType = executeType.serverString,
+                genericDataType = genericDataType.serverString,
                 linkedRowID = linkedRowID,
                 errorCounter = errorCounter
             )
         }
     }
-}
-
-enum class ExecuteType(val serverString: String) {
-    CHANGE("EXCH"), ANALYZED("EXAN"), CALL_DETAIL("EXCD")
 }

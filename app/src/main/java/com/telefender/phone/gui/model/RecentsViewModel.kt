@@ -22,7 +22,8 @@ import java.time.ZoneId
  * TODO: Consider also querying from Tele database so that we can differentiate UI for unallowed
  *  and declined calls.
  *
- * TODO: LOOK INTO PAGING FOR RECENTS AND CONTACTS <-- prob not necessary
+ * TODO: LOOK INTO PAGING FOR RECENTS AND CONTACTS <-- prob not necessary but we can also consider
+ *  using our own chunk loader.
  *
  * TODO: Probably / Maybe refactor RecentsViewModel to use repository to actually query the data,
  *  as the "good" app architecture suggests the repository should be a single source of truth.

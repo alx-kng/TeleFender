@@ -10,8 +10,8 @@ import androidx.core.app.NotificationCompat
 import androidx.work.*
 import com.telefender.phone.App
 import com.telefender.phone.data.tele_database.ClientRepository
-import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
-import com.telefender.phone.data.tele_database.background_tasks.WorkerType
+import com.telefender.phone.data.tele_database.background_tasks.WorkStates
+import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.gui.MainActivity
 import com.telefender.phone.helpers.MiscHelpers
 import timber.log.Timber
@@ -20,12 +20,12 @@ import java.util.concurrent.TimeUnit
 
 object ExecuteScheduler {
 
-    val execOneTag = "oneTimeExecuteWorker"
-    val execPeriodTag = "periodicExecuteWorker"
+    const val execOneTag = "oneTimeExecuteWorker"
+    const val execPeriodTag = "periodicExecuteWorker"
     
     fun initiateOneTimeExecuteWorker(context: Context) : UUID {
 
-        WorkerStates.setState(WorkerType.ONE_TIME_EXEC, WorkInfo.State.RUNNING)
+        WorkStates.setState(WorkType.ONE_TIME_EXEC, WorkInfo.State.RUNNING)
 
         val executeRequest = OneTimeWorkRequestBuilder<CoroutineExecuteWorker>()
             .setInputData(workDataOf("variableName" to "oneTimeExecState", "notificationID" to "1111"))
@@ -46,7 +46,7 @@ object ExecuteScheduler {
 
     fun initiatePeriodicExecuteWorker(context : Context) : UUID {
 
-        WorkerStates.setState(WorkerType.PERIODIC_EXEC, WorkInfo.State.RUNNING)
+        WorkStates.setState(WorkType.PERIODIC_EXEC, WorkInfo.State.RUNNING)
 
         val executeRequest = PeriodicWorkRequestBuilder<CoroutineExecuteWorker>(1, TimeUnit.HOURS)
             .setInputData(workDataOf("variableName" to "periodicExecState", "notificationID" to "2222"))
@@ -74,6 +74,7 @@ class CoroutineExecuteWorker(
     val CHANNEL_ID = "alxkng5737"
     var stateVarString: String? = null
 
+    // TODO: Look into setting different WorkStates depending on result of execution.
     override suspend fun doWork(): Result {
         stateVarString = inputData.getString("variableName")
         NOTIFICATION_ID = inputData.getString("notificationID")?.toInt()
@@ -88,24 +89,23 @@ class CoroutineExecuteWorker(
             }
         }
 
-        val repository: ClientRepository? = (applicationContext as App).repository
+        val repository: ClientRepository = (applicationContext as App).repository
 
-        repository?.executeAll()
+        /**
+         * Executes logs in ExecuteQueue
+         */
+        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: EXECUTE WORKER STARTED")
+        repository.executeAll()
 
-        return if (repository?.hasQTE() != false) {
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: EXECUTE RETRY")
-            Result.retry()
-        } else {
-            when (stateVarString) {
-                "oneTimeExecState" -> WorkerStates.setState(WorkerType.ONE_TIME_EXEC, WorkInfo.State.SUCCEEDED)
-                "periodicExecState" -> WorkerStates.setState(WorkerType.PERIODIC_EXEC, WorkInfo.State.SUCCEEDED)
-                else -> {
-                    Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: EXECUTE WORKER THREAD: Worker state variable name is wrong")
-                }
+        when (stateVarString) {
+            "oneTimeExecState" -> WorkStates.setState(WorkType.ONE_TIME_EXEC, WorkInfo.State.SUCCEEDED)
+            "periodicExecState" -> WorkStates.setState(WorkType.PERIODIC_EXEC, WorkInfo.State.SUCCEEDED)
+            else -> {
+                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: EXECUTE WORKER THREAD: Worker state variable name is wrong")
             }
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: EXECUTE ENDED")
-            Result.success()
         }
+        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: EXECUTE ENDED")
+        return Result.success()
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {

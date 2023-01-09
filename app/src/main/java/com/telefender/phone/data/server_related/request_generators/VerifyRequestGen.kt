@@ -4,8 +4,8 @@ import androidx.work.WorkInfo
 import com.android.volley.Response
 import com.telefender.phone.data.server_related.*
 import com.telefender.phone.data.tele_database.ClientRepository
-import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
-import com.telefender.phone.data.tele_database.background_tasks.WorkerType
+import com.telefender.phone.data.tele_database.background_tasks.WorkStates
+import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.helpers.MiscHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,11 +31,11 @@ class VerifyRequestGen(
         ) : VerifyRequestGen {
 
             return VerifyRequestGen(
-                method,
-                url,
-                verifyPostResponseHandler(repository, scope),
-                verifyPostErrorHandler,
-                requestJson
+                method = method,
+                url = url,
+                listener = verifyPostResponseHandler(repository, scope),
+                errorListener = verifyPostErrorHandler,
+                requestJson = requestJson
             )
         }
     }
@@ -63,16 +63,15 @@ private fun verifyPostResponseHandler(
              * Update StoredMap row with clientKey
              */
             scope.launch(Dispatchers.IO) {
-                val instanceNumber = repository.getInstanceNumber()!!
-                repository.updateStoredMap(instanceNumber, clientKey = keyResponse.key)
+                repository.updateStoredMap(clientKey = keyResponse.key)
 
-                val key = repository.getClientKey(instanceNumber)
+                val key = repository.getClientKey()
                 Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: key = $key")
 
-                WorkerStates.setState(WorkerType.SETUP, WorkInfo.State.SUCCEEDED)
+                WorkStates.setState(WorkType.SETUP, WorkInfo.State.SUCCEEDED)
             }
         } else {
-            WorkerStates.setState(WorkerType.SETUP, WorkInfo.State.FAILED)
+            WorkStates.setState(WorkType.SETUP, WorkInfo.State.FAILED)
 
             if (keyResponse != null) {
                 Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN VERIFY INSTALLATION: $keyResponse.error",)
@@ -86,7 +85,7 @@ private fun verifyPostResponseHandler(
 private val verifyPostErrorHandler = Response.ErrorListener { error ->
     if (error.toString() != "null") {
         Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY $error")
-        WorkerStates.setState(WorkerType.SETUP, WorkInfo.State.FAILED)
+        WorkStates.setState(WorkType.SETUP, WorkInfo.State.FAILED)
     }
 }
 

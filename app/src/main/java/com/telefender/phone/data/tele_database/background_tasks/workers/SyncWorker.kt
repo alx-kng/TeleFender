@@ -16,8 +16,8 @@ import androidx.work.*
 import com.telefender.phone.App
 import com.telefender.phone.data.tele_database.TeleCallDetails
 import com.telefender.phone.data.tele_database.background_tasks.TableSynchronizer
-import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
-import com.telefender.phone.data.tele_database.background_tasks.WorkerType
+import com.telefender.phone.data.tele_database.background_tasks.WorkStates
+import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.gui.MainActivity
 import com.telefender.phone.helpers.MiscHelpers
 import com.telefender.phone.permissions.PermissionRequester
@@ -46,7 +46,7 @@ object SyncScheduler{
             return null
         }
 
-        WorkerStates.setState(WorkerType.CATCH_SYNC, WorkInfo.State.RUNNING)
+        WorkStates.setState(WorkType.CATCH_SYNC, WorkInfo.State.RUNNING)
 
         val syncRequest = OneTimeWorkRequestBuilder<CoroutineCatchSyncWorker>()
             .setInputData(workDataOf("notificationID" to "5556"))
@@ -71,7 +71,7 @@ object SyncScheduler{
             return null
         }
 
-        WorkerStates.setState(WorkerType.ONE_TIME_SYNC, WorkInfo.State.RUNNING)
+        WorkStates.setState(WorkType.ONE_TIME_SYNC, WorkInfo.State.RUNNING)
 
         val syncRequest = OneTimeWorkRequestBuilder<CoroutineSyncWorker>()
             .setInputData(workDataOf("variableName" to "oneTimeSyncState", "notificationID" to "5555"))
@@ -91,7 +91,7 @@ object SyncScheduler{
 
     fun initiatePeriodicSyncWorker(context : Context) : UUID? {
 
-        WorkerStates.setState(WorkerType.PERIODIC_SYNC, WorkInfo.State.RUNNING)
+        WorkStates.setState(WorkType.PERIODIC_SYNC, WorkInfo.State.RUNNING)
 
         val syncRequest = PeriodicWorkRequestBuilder<CoroutineSyncWorker>(1, TimeUnit.HOURS)
             .setInputData(workDataOf("variableName" to "periodicSyncState", "notificationID" to "6666"))
@@ -139,7 +139,7 @@ class CoroutineCatchSyncWorker(
         }
 
         val syncObserver = SyncWorkerObserver(context, scope, callLogObserverSync)
-        WorkerStates.addPropertyChangeListener(syncObserver)
+        WorkStates.addPropertyChangeListener(syncObserver)
 
         Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: SYNC CATCHER OBSERVER STARTED")
 
@@ -164,10 +164,10 @@ class CoroutineCatchSyncWorker(
 
         Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: SYNC CATCHER OBSERVER ENDED")
 
-        WorkerStates.removePropertyChangeListener(syncObserver)
+        WorkStates.removePropertyChangeListener(syncObserver)
         applicationContext.contentResolver.unregisterContentObserver(callLogObserverSync)
 
-        WorkerStates.setState(WorkerType.CATCH_SYNC, null)
+        WorkStates.setState(WorkType.CATCH_SYNC, null)
         return Result.success()
     }
 
@@ -241,7 +241,7 @@ class CoroutineCatchSyncWorker(
     }
 
     /**
-     * Observes catchSyncState in WorkerStates. On first change (can change if more complicated use
+     * Observes catchSyncState in WorkStates. On first change (can change if more complicated use
      * is needed later) it unregisters CallLogObserverSync object from observing default call logs
      * and unregisters itself as an observer of catchSyncState. Needed because CallLogObserverSync
      * doesn't properly unregister if CatchSyncWorker is restarted / replaced midway.
@@ -253,15 +253,15 @@ class CoroutineCatchSyncWorker(
         ): PropertyChangeListener {
 
         override fun propertyChange(p0: PropertyChangeEvent?) {
-            if (p0?.newValue == WorkerType.CATCH_SYNC) {
+            if (p0?.newValue == WorkType.CATCH_SYNC) {
                 scope.launch {
                     Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: CANCELLING SYNC CATCHER OBSERVER - Probably due to restart / end in worker.")
 
                     val contentResolver = context.applicationContext.contentResolver
                     contentResolver.unregisterContentObserver(logObserver)
 
-                    // If we unregister logObserver, remove this sync observer from WorkerStates.
-                    WorkerStates.removePropertyChangeListener(this@SyncWorkerObserver)
+                    // If we unregister logObserver, remove this sync observer from WorkStates.
+                    WorkStates.removePropertyChangeListener(this@SyncWorkerObserver)
                 }
             }
         }
@@ -302,8 +302,8 @@ class CoroutineSyncWorker(
         Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: SYNC ENDED")
 
         when (stateVarString) {
-            "oneTimeSyncState" ->  WorkerStates.setState(WorkerType.ONE_TIME_SYNC, WorkInfo.State.SUCCEEDED)
-            "periodicSyncState" -> WorkerStates.setState(WorkerType.PERIODIC_SYNC, WorkInfo.State.SUCCEEDED)
+            "oneTimeSyncState" ->  WorkStates.setState(WorkType.ONE_TIME_SYNC, WorkInfo.State.SUCCEEDED)
+            "periodicSyncState" -> WorkStates.setState(WorkType.PERIODIC_SYNC, WorkInfo.State.SUCCEEDED)
             else -> {
                 Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: SYNC WORKER THREAD: Worker state variable name is wrong")
             }

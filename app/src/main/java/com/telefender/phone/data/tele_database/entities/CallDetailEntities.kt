@@ -6,6 +6,9 @@ import androidx.room.PrimaryKey
 import com.squareup.moshi.JsonClass
 import com.telefender.phone.helpers.MiscHelpers
 
+
+// TODO: Move this stuff to other files and maybe move CallDetail to TeleEntities.
+
 /***************************************************************************************************
  * For RecentsFragment
  **************************************************************************************************/
@@ -43,6 +46,7 @@ object CallHistoryFooter : CallDetailItem
 
 /**
  * TODO: actually make UI show from our CallLogs <--- Maybe to show blocked status and stuff
+ * TODO: Make sure indices are right.
  *
  * [callDuration] is in seconds since Call object's connectTimeMillis.
  * [callEpochDate] is in milliseconds and corresponds to Call object's creationTimeMillis.
@@ -53,11 +57,14 @@ object CallHistoryFooter : CallDetailItem
  */
 @JsonClass(generateAdapter = true)
 @Entity(tableName = "call_detail",
-    indices = [Index(value = ["callEpochDate"])]
+    indices = [
+        Index(value = ["callEpochDate", "instanceNumber"]),
+        Index(value = ["instanceNumber"])
+    ]
 )
 data class CallDetail(
     @PrimaryKey(autoGenerate = true)
-    val rowID: Int = 0,
+    val rowID: Long = 0,
     val rawNumber: String,
     val normalizedNumber: String,
     val callType: String?,

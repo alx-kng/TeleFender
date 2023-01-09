@@ -2,12 +2,15 @@ package com.telefender.phone.data.server_related
 
 import android.annotation.SuppressLint
 import android.content.Context
+import androidx.work.WorkInfo
 import com.android.volley.*
 import com.telefender.phone.data.server_related.request_generators.DownloadRequestGen
 import com.telefender.phone.data.server_related.request_generators.TokenRequestGen
 import com.telefender.phone.data.server_related.request_generators.UploadAnalyzedRequestGen
 import com.telefender.phone.data.server_related.request_generators.UploadChangeRequestGen
 import com.telefender.phone.data.tele_database.ClientRepository
+import com.telefender.phone.data.tele_database.background_tasks.WorkStates
+import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
 import com.telefender.phone.data.tele_database.entities.ChangeLog
 import com.telefender.phone.helpers.MiscHelpers
@@ -15,23 +18,26 @@ import kotlinx.coroutines.*
 import org.json.JSONException
 import timber.log.Timber
 
+
+// TODO: Put in upload call logs request (probably won't be used often, but just in case).
 object ServerInteractions {
 
+    private const val retryAmount = 5
+
     @SuppressLint("MissingPermission")
-    suspend fun downloadPostRequest(context: Context, repository: ClientRepository, scope: CoroutineScope) {
+    suspend fun downloadDataRequest(context: Context, repository: ClientRepository, scope: CoroutineScope) {
         val url = "https://dev.scribblychat.com/callbook/downloadChanges"
-        val instanceNumber = MiscHelpers.getInstanceNumber(context)
+        val instanceNumber = MiscHelpers.getUserNumberStored(context)
 
-        val key = repository.getClientKey(instanceNumber)
-        val lastServerChangeID = repository.lastServerChangeID()
-        val downloadRequestJson: String
+        val key = repository.getClientKey()
+        val lastServerRowID = repository.getLastServerRowID()
 
-        if (key != null) {
-            downloadRequestJson = DownloadRequest(instanceNumber, key, lastServerChangeID).toJson()
-        } else {
+        if (key == null) {
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: CLIENT KEY IS NULL")
             return
         }
+
+        val downloadRequestJson = DownloadRequest(instanceNumber, key, lastServerRowID).toJson()
 
         try {
             val stringRequest = DownloadRequestGen.create(
@@ -51,19 +57,28 @@ object ServerInteractions {
     }
 
     /**
-     * TODO: Make sure to put in max retry amount. Also, prevent partial error uploads from
-     *  repeating forever, as they aren't crucial.
+     * TODO: Double check that retry strategy is correct
      * TODO: Can returning list with dao give null?
-     * TODO: GET RID OF PLURAL CHANGES
      *
      * Sends a post request containing the ChangeLogs to the server.
      */
     @SuppressLint("MissingPermission", "HardwareIds")
-    suspend fun uploadChangeRequest(context: Context, repository: ClientRepository, scope: CoroutineScope) {
-        val url = "https://dev.scribblychat.com/callbook/uploadChanges"
-        val instanceNumber = MiscHelpers.getInstanceNumber(context)
+    suspend fun uploadChangeRequest(
+        context: Context,
+        repository: ClientRepository,
+        scope: CoroutineScope,
+        errorCount: Int
+    ) {
+        if (errorCount == retryAmount) {
+            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: UPLOAD_CHANGE RETRY MAX")
+            WorkStates.setState(WorkType.UPLOAD_CHANGE_POST, WorkInfo.State.FAILED)
+            return
+        }
 
-        val key = repository.getClientKey(instanceNumber)
+        val url = "https://dev.scribblychat.com/callbook/uploadChanges"
+        val instanceNumber = MiscHelpers.getUserNumberStored(context)
+
+        val key = repository.getClientKey()
         val uploadRequestJson: String
 
         if (key == null) {
@@ -98,7 +113,8 @@ object ServerInteractions {
                 requestJson = uploadRequestJson,
                 context = context,
                 repository = repository,
-                scope = scope
+                scope = scope,
+                errorCount = errorCount
             )
 
             // Adds entire string request to request queue
@@ -115,11 +131,22 @@ object ServerInteractions {
      * Sends a post request containing the AnalyzedNumbers to the server.
      */
     @SuppressLint("MissingPermission", "HardwareIds")
-    suspend fun uploadAnalyzedRequest(context: Context, repository: ClientRepository, scope: CoroutineScope) {
-        val url = "https://dev.scribblychat.com/callbook/uploadAnalyzedNumbers"
-        val instanceNumber = MiscHelpers.getInstanceNumber(context)
+    suspend fun uploadAnalyzedRequest(
+        context: Context,
+        repository: ClientRepository,
+        scope: CoroutineScope,
+        errorCount: Int
+    ) {
+        if (errorCount == retryAmount) {
+            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: UPLOAD_ANALYZED RETRY MAX")
+            WorkStates.setState(WorkType.UPLOAD_ANALYZED_POST, WorkInfo.State.FAILED)
+            return
+        }
 
-        val key = repository.getClientKey(instanceNumber)
+        val url = "https://dev.scribblychat.com/callbook/uploadAnalyzedNumbers"
+        val instanceNumber = MiscHelpers.getUserNumberStored(context)
+
+        val key = repository.getClientKey()
         val uploadRequestJson: String
 
         if (key == null) {
@@ -131,7 +158,7 @@ object ServerInteractions {
             withContext(Dispatchers.IO) {
 
                 // Gets first 200 upload logs in order of linkedRowID.
-                val uploadLogs = repository.getChunkAnalyzedQTU(200)
+                val uploadLogs = repository.getChunkAnalyzedQTU(70)
 
                 // Retrieves corresponding AnalyzedNumber for each upload log
                 val analyzedNumbers = mutableListOf<AnalyzedNumber>()
@@ -146,7 +173,7 @@ object ServerInteractions {
                 uploadRequestJson = UploadAnalyzedRequest(instanceNumber, key, analyzedNumbers).toJson()
             }
 
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG} UPLOAD_ANALYZED REQUEST JSON: $uploadRequestJson")
+            Timber.i("${MiscHelpers.DEBUG_LOG_TAG} UPLOAD_ANALYZED_POST REQUEST JSON: $uploadRequestJson")
 
             val stringRequest = UploadAnalyzedRequestGen.create(
                 method = Request.Method.POST,
@@ -154,7 +181,8 @@ object ServerInteractions {
                 requestJson = uploadRequestJson,
                 context = context,
                 repository = repository,
-                scope = scope
+                scope = scope,
+                errorCount = errorCount
             )
 
             // Adds entire string request to request queue
@@ -180,9 +208,9 @@ object ServerInteractions {
         token: String
     ) {
         val url = ""
-        val instanceNumber = MiscHelpers.getInstanceNumber(context)
+        val instanceNumber = MiscHelpers.getUserNumberStored(context)
 
-        val key = repository.getClientKey(instanceNumber)
+        val key = repository.getClientKey()
         val tokenRequestJson : String
 
         if (key != null) {

@@ -10,10 +10,10 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.work.*
 import com.telefender.phone.App
-import com.telefender.phone.data.server_related.ServerInteractions
 import com.telefender.phone.data.tele_database.ClientRepository
-import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
-import com.telefender.phone.data.tele_database.background_tasks.WorkerType
+import com.telefender.phone.data.tele_database.background_tasks.ServerWorkHelpers
+import com.telefender.phone.data.tele_database.background_tasks.WorkStates
+import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.gui.MainActivity
 import com.telefender.phone.helpers.MiscHelpers
 import kotlinx.coroutines.CoroutineScope
@@ -27,7 +27,7 @@ object UploadScheduler {
     val uploadPeriodTag = "periodicUploadWorker"
     
     fun initiateOneTimeUploadWorker(context : Context) : UUID {
-        WorkerStates.setState(WorkerType.ONE_TIME_UPLOAD, WorkInfo.State.RUNNING)
+        WorkStates.setState(WorkType.ONE_TIME_UPLOAD, WorkInfo.State.RUNNING)
 
         val uploadRequest = OneTimeWorkRequestBuilder<CoroutineUploadWorker>()
             .setInputData(workDataOf("variableName" to "oneTimeUploadState", "notificationID" to "3333"))
@@ -47,7 +47,7 @@ object UploadScheduler {
     }
 
     fun initiatePeriodicUploadWorker(context : Context) : UUID {
-        WorkerStates.setState(WorkerType.PERIODIC_UPLOAD, WorkInfo.State.RUNNING)
+        WorkStates.setState(WorkType.PERIODIC_UPLOAD, WorkInfo.State.RUNNING)
 
         val uploadRequest = PeriodicWorkRequestBuilder<CoroutineUploadWorker>(1, TimeUnit.HOURS)
             .setInputData(workDataOf("variableName" to "periodicUploadState", "notificationID" to "4444"))
@@ -66,15 +66,20 @@ object UploadScheduler {
     }
 }
 
+/**
+ * TODO: Maybe we should just make UploadWorker for uploading AnalyzedNumbers and CallDetails
+ *  (for data analysis or something) so that it's separate from all the other stuff in OmegaWorker.
+ */
 class CoroutineUploadWorker(
-    context: Context,
+    val context: Context,
     params: WorkerParameters
 ) : CoroutineWorker(context, params) {
 
     var NOTIFICATION_ID : Int? = -1
     val CHANNEL_ID = "alxkng5737"
     var stateVarString: String? = null
-    val context = context
+
+    val scope = CoroutineScope(Dispatchers.IO)
 
     @RequiresApi(Build.VERSION_CODES.O)
     override suspend fun doWork() : Result {
@@ -89,21 +94,35 @@ class CoroutineUploadWorker(
             }
         }
 
-        val repository: ClientRepository? = (applicationContext as App).repository
-        val scope = CoroutineScope(Dispatchers.IO)
+        val repository: ClientRepository = (applicationContext as App).repository
 
-        if (repository != null && repository.hasChangeQTU()) {
-            ServerInteractions.uploadChangeRequest(context, repository, scope)
-        } else {
-            if (repository?.hasChangeQTU() == false) {
-                return Result.success()
-            } else {
-                return Result.retry()
-            }
+        /**
+         * Uploads changes to server. Returns next Result action if uploadChange()
+         * doesn't return null (failure or retry).
+         */
+        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_CHANGE STARTED")
+        val uploadChangeResult = ServerWorkHelpers.uploadChange(context, repository, scope, "UPLOAD WORKER")
+        if (uploadChangeResult != null) {
+            return uploadChangeResult
         }
+
+        /**
+         * TODO: Confirm that we want to upload AnalyzedNumbers here. Or maybe, have some type
+         *  or condition that allows us to choose whether or not we want to upload
+         *  AnalyzedNumbers or not.
+         *
+         * Uploads analyzedNumbers to server. Returns next Result action if uploadAnalyzed()
+         * doesn't return null (failure or retry).
+         */
+        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_ANALYZED_POST STARTED")
+        val uploadAnalyzedResult = ServerWorkHelpers.uploadAnalyzed(context, repository, scope, "UPLOAD WORKER")
+        if (uploadAnalyzedResult != null) {
+            return uploadAnalyzedResult
+        }
+
         when (stateVarString) {
-            "oneTimeUploadState" ->  WorkerStates.setState(WorkerType.ONE_TIME_UPLOAD, WorkInfo.State.SUCCEEDED)
-            "periodicUploadState" -> WorkerStates.setState(WorkerType.PERIODIC_UPLOAD, WorkInfo.State.RUNNING)
+            "oneTimeUploadState" ->  WorkStates.setState(WorkType.ONE_TIME_UPLOAD, WorkInfo.State.SUCCEEDED)
+            "periodicUploadState" -> WorkStates.setState(WorkType.PERIODIC_UPLOAD, WorkInfo.State.RUNNING)
             else -> {
                 Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: UPLOAD_CHANGE WORKER THREAD: Worker state variable name is wrong")
             }

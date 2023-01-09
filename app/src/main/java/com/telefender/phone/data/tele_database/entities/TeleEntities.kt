@@ -14,14 +14,17 @@ import com.squareup.moshi.Moshi
 data class StoredMap(
     @PrimaryKey val userNumber: String,
     val sessionID: String? = null,
-    val clientKey: String? = null,
+    val clientKey: String? = null, // UUID key to push and pull changes to / from server
     val fireBaseToken: String? = null,
     val databaseInitialized: Boolean = false,
-    val lastSyncTime: Long = 0
+    val lastLogSyncTime: Long = 0,
+    val lastServerRowID: Long? = null,
 ) {
 
     override fun toString() : String {
-        return "STORED MAP - number" + this.userNumber + " sessionID: " + this.sessionID + " clientKey: " + this.clientKey + " fireBaseToken: " + this.fireBaseToken
+        return "STORED MAP - number: $userNumber sessionID: $sessionID clientKey: $clientKey" +
+            " fireBaseToken: $fireBaseToken databaseInitialized: $databaseInitialized" +
+            " lastLogSyncTime: $lastLogSyncTime lastServerRowID: $lastServerRowID"
     }
 }
 
@@ -135,7 +138,7 @@ data class ContactNumber(
 )
 data class AnalyzedNumber(
     @PrimaryKey(autoGenerate = true)
-    val rowID: Int = 0,
+    val rowID: Long = 0,
     val normalizedNumber: String, // should use cleaned number
     val instanceNumber: String,
     val numTotalCalls: Int,
@@ -153,7 +156,8 @@ data class AnalyzedNumber(
 
     override fun toString() : String {
         val analyzedObj = analyzedJson.toAnalyzed()
-        return "ANALYZED NUMBER: number: $normalizedNumber ANALYZED: $analyzedObj"
+        return "ANALYZED NUMBER: rowID: $rowID " +
+            "number: $normalizedNumber instanceNumber: $instanceNumber ANALYZED: $analyzedObj"
     }
 }
 

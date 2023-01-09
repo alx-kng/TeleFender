@@ -71,6 +71,28 @@ open class KeyRequest(
 }
 
 /**
+ * Inherits from KeyRequest, request class for download
+ */
+@JsonClass(generateAdapter = true)
+class DownloadRequest(
+    instanceNumber : String,
+    key : String,
+    val lastServerRowID : Long?
+) : KeyRequest(instanceNumber, key) {
+
+    override fun toJson() : String {
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(DownloadRequest::class.java)
+
+        return adapter.serializeNulls().toJson(this)
+    }
+
+    override fun toString() : String {
+        return "${super.toString()} lastServerRowID: $lastServerRowID"
+    }
+}
+
+/**
  * Inherits from KeyRequest, request class for uploading ChangeLogs.
  */
 @JsonClass(generateAdapter = true)
@@ -137,28 +159,6 @@ class UploadLogsRequest(
     override fun toString() : String {
         return "${super.toString()} numLogs = ${logs.size}" +
             "firstLogSent: ${logs.firstOrNull()?.normalizedNumber}"
-    }
-}
-
-/**
- * Inherits from KeyRequest, request class for download
- */
-@JsonClass(generateAdapter = true)
-class DownloadRequest(
-    instanceNumber : String,
-    key : String,
-    val lastChangeID : Int?
-) : KeyRequest(instanceNumber, key) {
-
-    override fun toJson() : String {
-        val moshi = Moshi.Builder().build()
-        val adapter = moshi.adapter(DownloadRequest::class.java)
-
-        return adapter.serializeNulls().toJson(this)
-    }
-
-    override fun toString() : String {
-        return super.toString() + " key: " + this.key + " lastChangeID: " + this.lastChangeID.toString()
     }
 }
 

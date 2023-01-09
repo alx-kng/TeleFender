@@ -47,14 +47,14 @@ object TableSynchronizer {
     @RequiresApi(Build.VERSION_CODES.O)
     suspend fun syncCallLogsHelper(context: Context, repository: ClientRepository, contentResolver: ContentResolver) : Boolean {
 
-        val instanceNumber = MiscHelpers.getInstanceNumber(context)
-        val lastSyncTime = repository.getLastSyncTime(instanceNumber)
+        val instanceNumber = MiscHelpers.getUserNumberStored(context)
+        val lastLogSyncTime = repository.getLastLogSyncTime()!!
 
         /*
         For retrieving voicemail logs, which have a small chance of being placed slightly before
         the corresponding missed / rejected / blocked call (epochDate wise).
          */
-        val checkFromTime = if (lastSyncTime == 0L) lastSyncTime else lastSyncTime - checkBackPeriod
+        val checkFromTime = if (lastLogSyncTime == 0L) lastLogSyncTime else lastLogSyncTime - checkBackPeriod
 
         val projection = arrayOf(
             CallLog.Calls.NUMBER,
@@ -163,6 +163,7 @@ object TableSynchronizer {
 
     /**
      * TODO: New sync safety logic already put in, but double check.
+     * TODO: Maybe return / throw error if cursor is null.
      *
      * Deals with any potential insertions into the Android default database and updates ours, as
      * well as returning a HashMap of all ContactNumber for use in checking for updates and deletes
@@ -175,7 +176,7 @@ object TableSynchronizer {
         contentResolver : ContentResolver
     ) : HashMap<String, MutableList<ContactNumber>> {
 
-        val instanceNumber = MiscHelpers.getInstanceNumber(context)
+        val instanceNumber = MiscHelpers.getUserNumberStored(context)
         val mutexSync = mutexLocks[MutexType.SYNC]!!
         val curs: Cursor? = DefaultContacts.getContactNumberCursor(contentResolver)
 
@@ -314,7 +315,7 @@ object TableSynchronizer {
         defaultContactHashMap: HashMap<String, MutableList<ContactNumber>>,
         contentResolver: ContentResolver
     )  {
-        val instanceNumber = MiscHelpers.getInstanceNumber(context)
+        val instanceNumber = MiscHelpers.getUserNumberStored(context)
         val teleCN: List<ContactNumber> = database.contactNumberDao().getAllContactNumbers_Ins(instanceNumber)
         val mutexSync = mutexLocks[MutexType.SYNC]!!
 

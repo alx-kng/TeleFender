@@ -5,8 +5,8 @@ import androidx.work.WorkInfo
 import com.android.volley.Response
 import com.telefender.phone.data.server_related.*
 import com.telefender.phone.data.tele_database.ClientRepository
-import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
-import com.telefender.phone.data.tele_database.background_tasks.WorkerType
+import com.telefender.phone.data.tele_database.background_tasks.WorkStates
+import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.helpers.MiscHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,11 +33,11 @@ class InitialRequestGen(
         ) : InitialRequestGen {
 
             return InitialRequestGen(
-                method,
-                url,
-                initialPostResponseHandler(context, repository, scope),
-                initialPostErrorHandler,
-                requestJson
+                method = method,
+                url = url,
+                listener = initialPostResponseHandler(context, repository, scope),
+                errorListener = initialPostErrorHandler,
+                requestJson = requestJson
             )
         }
     }
@@ -66,16 +66,15 @@ private fun initialPostResponseHandler(
              * Create StoredMap row containing instance number and sessionID
              */
             scope.launch(Dispatchers.IO) {
-                val instanceNumber = repository.getInstanceNumber()!!
-                repository.updateStoredMap(instanceNumber, sessionID = sessionResponse.sessionID)
+                repository.updateStoredMap(sessionID = sessionResponse.sessionID)
 
-                val sessionID = repository.getSessionID(instanceNumber)
+                val sessionID = repository.getSessionID()
                 Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: sessionID = $sessionID")
 
                 UserSetup.verifyPostRequest(context, repository, scope)
             }
         } else {
-            WorkerStates.setState(WorkerType.SETUP, WorkInfo.State.FAILED)
+            WorkStates.setState(WorkType.SETUP, WorkInfo.State.FAILED)
 
             if (sessionResponse != null) {
                 Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN REQUEST INSTALLATION: %s", sessionResponse.error)
@@ -89,6 +88,6 @@ private fun initialPostResponseHandler(
 private val initialPostErrorHandler = Response.ErrorListener { error ->
     if (error.toString() != "null") {
         Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY $error")
-        WorkerStates.setState(WorkerType.SETUP, WorkInfo.State.FAILED)
+        WorkStates.setState(WorkType.SETUP, WorkInfo.State.FAILED)
     }
 }

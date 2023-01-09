@@ -1,23 +1,26 @@
 package com.telefender.phone.data.tele_database.client_daos
 
 import androidx.room.*
-import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
-import com.telefender.phone.data.tele_database.entities.Parameters
 import com.telefender.phone.data.tele_database.entities.StoredMap
+import com.telefender.phone.helpers.MiscHelpers
 
 @Dao
 interface StoredMapDao {
 
+    /**
+     * DANGEROUS! Should not be used outside of Dao. Inserts StoredMap directly into database.
+     */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertStoredMapQuery(vararg storedMap : StoredMap)
 
     /**
-     * Initializes StoredMap with user's number. You need to be certain that there is ONLY ONE
-     * StoredMap (which contains the user's number), so use this wisely.
+     * Initializes StoredMap with user's number. After first initialization, this function is
+     * basically locked to make sure there is ONLY ONE StoredMap (which contains the user's number).
+     * Make sure that you are passing in the right number!!!
      */
     suspend fun initStoredMap(userNumber: String) : Boolean{
-        return if (getStoredMapQuery(userNumber) == null) {
-            // Initialize StoredMap with just userNumber values.
+        return if (getStoredMap() == null && userNumber != MiscHelpers.UNKNOWN_NUMBER) {
+            // Initialize StoredMap with just userNumber.
             insertStoredMapQuery(StoredMap(userNumber = userNumber))
 
             true
@@ -26,54 +29,50 @@ interface StoredMapDao {
         }
     }
 
-    @Query("SELECT * FROM stored_map WHERE userNumber = :userNumber")
-    suspend fun getStoredMapQuery(userNumber: String) : StoredMap?
-
-    @Query("SELECT clientKey FROM stored_map WHERE userNumber = :number")
-    suspend fun getCredKey(number: String): String?
-
-    suspend fun hasCredKey(instanceNumber: String) : Boolean {
-        return getCredKey(instanceNumber) != null
-    }
+    /**
+     * Retrieves user's StoredMap if it exists.
+     */
+    @Query("SELECT * FROM stored_map LIMIT 1")
+    suspend fun getStoredMap() : StoredMap?
 
     suspend fun getUserNumber() : String? {
-        val storedMap = getStoredMapAsList().firstOrNull()
-        return storedMap?.userNumber
+        return getStoredMap()?.userNumber
     }
 
-    /**
-     * Specifically used for retrieving user's number. Since we're retrieving without PK, we need
-     * to return a list of StoredMap.
-     */
-    @Query("SELECT * FROM stored_map")
-    suspend fun getStoredMapAsList(): List<StoredMap>
-    
-    @Query("SELECT sessionID FROM stored_map WHERE userNumber = :number")
-    suspend fun getSessionID(number: String?): String?
+    suspend fun databaseInitialized() : Boolean {
+        return getStoredMap()?.databaseInitialized == true
+    }
 
-    @Query("SELECT fireBaseToken FROM stored_map WHERE userNumber = :number")
-    suspend fun getFireBaseToken(number : String) : String?
+    suspend fun updateStoredMap(
+        sessionID: String? = null,
+        clientKey: String? = null,
+        fireBaseToken: String? = null,
+        databaseInitialized: Boolean? = null,
+        lastLogSyncTime: Long? = null,
+        lastServerRowID: Long? = null
+    ) {
+        // Retrieves user number if possible and returns if not.
+        val userNumber = getUserNumber() ?: return
 
-    @Query("SELECT lastSyncTime FROM stored_map WHERE userNumber = :number")
-    suspend fun getLastSyncTime(number : String) : Long
-
-    @Query("SELECT databaseInitialized FROM stored_map WHERE userNumber = :number")
-    suspend fun databaseInitialized(number: String) : Boolean?
-
-    @Query("SELECT EXISTS (SELECT * FROM stored_map LIMIT 1)")
-    suspend fun storedMapInitialized() : Boolean
-
-    @Query("UPDATE stored_map SET databaseInitialized = :initialized WHERE userNumber = :number")
-    suspend fun updateDatabaseInitialized(number: String, initialized: Boolean)
+        updateStoredMapQuery(
+            userNumber = userNumber,
+            sessionID = sessionID,
+            clientKey = clientKey,
+            fireBaseToken = fireBaseToken,
+            databaseInitialized = databaseInitialized,
+            lastLogSyncTime = lastLogSyncTime,
+            lastServerRowID = lastServerRowID
+        )
+    }
 
     @Query(
         """UPDATE stored_map SET 
         sessionID =
-        CASE
-            WHEN :sessionId IS NOT NULL
-                THEN :sessionId
-            ELSE sessionID
-        END,
+            CASE
+                WHEN :sessionID IS NOT NULL
+                    THEN :sessionID
+                ELSE sessionID
+            END,
         clientKey =
             CASE
                 WHEN :clientKey IS NOT NULL
@@ -86,25 +85,36 @@ interface StoredMapDao {
                     THEN :fireBaseToken
                 ELSE fireBaseToken
             END,
-        lastSyncTime = 
+        databaseInitialized =
             CASE
-                WHEN :lastSyncTime IS NOT NULL
-                    THEN :lastSyncTime
-                ELSE lastSyncTime
+                WHEN :databaseInitialized IS NOT NULL
+                    THEN :databaseInitialized
+                ELSE databaseInitialized
+            END,            
+        lastLogSyncTime = 
+            CASE
+                WHEN :lastLogSyncTime IS NOT NULL
+                    THEN :lastLogSyncTime
+                ELSE lastLogSyncTime
+            END,
+        lastServerRowID = 
+            CASE
+                WHEN :lastServerRowID IS NOT NULL
+                    THEN :lastServerRowID
+                ELSE lastServerRowID
             END
-        WHERE userNumber = :number"""
+        WHERE userNumber = :userNumber"""
     )
-    suspend fun updateStoredMap(
-        number: String,
-        sessionId: String? = null,
-        clientKey: String? = null,
-        fireBaseToken : String? = null,
-        lastSyncTime : Long? = null
+    suspend fun updateStoredMapQuery(
+        userNumber: String,
+        sessionID: String?,
+        clientKey: String?,
+        fireBaseToken: String?,
+        databaseInitialized: Boolean?,
+        lastLogSyncTime: Long?,
+        lastServerRowID: Long?
     )
-
-    @Delete
-    suspend fun deleteStoredMap(vararg storedMap: StoredMap)
 
     @Query("DELETE FROM stored_map")
-    suspend fun deleteAllStoredMaps()
+    suspend fun deleteStoredMap()
 }

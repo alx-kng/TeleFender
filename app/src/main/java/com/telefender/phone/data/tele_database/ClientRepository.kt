@@ -1,6 +1,7 @@
 package com.telefender.phone.data.tele_database
 
 import androidx.annotation.WorkerThread
+import com.telefender.phone.data.server_related.GenericData
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.client_daos.*
 import com.telefender.phone.data.tele_database.entities.*
@@ -46,53 +47,57 @@ class ClientRepository(
      **********************************************************************************************/
 
     @WorkerThread
-    suspend fun hasCredKey(instanceNumber : String) : Boolean {
-        return storedMapDao.hasCredKey(instanceNumber)
-    }
-
-    @WorkerThread
-    suspend fun getSessionID(number: String) : String? {
-        return storedMapDao.getSessionID(number)
-    }
-
-    @WorkerThread
-    suspend fun getInstanceNumber() : String? {
+    suspend fun getUserNumber() : String? {
         return storedMapDao.getUserNumber()
     }
 
-    /**
-     * getClientKey() for retrieve UUID key to push and pull changes to / from server
-     */
     @WorkerThread
-    suspend fun getClientKey(userNumber: String): String? {
-        return storedMapDao.getCredKey(userNumber)
+    suspend fun getSessionID() : String? {
+        return storedMapDao.getStoredMap()?.sessionID
     }
 
     @WorkerThread
-    suspend fun getFireBaseToken(number : String) : String? {
-        return storedMapDao.getFireBaseToken(number)
+    suspend fun hasClientKey() : Boolean {
+        return getClientKey() != null
     }
 
     @WorkerThread
-    suspend fun getLastSyncTime(number : String) : Long {
-        return storedMapDao.getLastSyncTime(number)
+    suspend fun getClientKey(): String? {
+        return storedMapDao.getStoredMap()?.clientKey
+    }
+
+    @WorkerThread
+    suspend fun getFireBaseToken() : String? {
+        return storedMapDao.getStoredMap()?.fireBaseToken
+    }
+
+    @WorkerThread
+    suspend fun getLastLogSyncTime() : Long? {
+        return storedMapDao.getStoredMap()?.lastLogSyncTime
+    }
+
+    @WorkerThread
+    suspend fun getLastServerRowID() : Long? {
+        return storedMapDao.getStoredMap()?.lastServerRowID
     }
 
     @WorkerThread
     suspend fun updateStoredMap(
-        number : String,
         sessionID: String? = null,
-        clientKey : String? = null,
-        token : String? = null,
-        lastSyncTime: Long? = null
+        clientKey: String? = null,
+        fireBaseToken: String? = null,
+        databaseInitialized: Boolean? = null,
+        lastLogSyncTime: Long? = null,
+        lastServerRowID: Long? = null
     ) {
         mutexLocks[MutexType.STORED_MAP]!!.withLock {
             storedMapDao.updateStoredMap(
-                number = number,
-                sessionId = sessionID,
+                sessionID = sessionID,
                 clientKey = clientKey,
-                fireBaseToken = token,
-                lastSyncTime = lastSyncTime
+                fireBaseToken = fireBaseToken,
+                databaseInitialized = databaseInitialized,
+                lastLogSyncTime = lastLogSyncTime,
+                lastServerRowID = lastServerRowID
             )
         }
     }
@@ -109,24 +114,24 @@ class ClientRepository(
      * getCallLogs() as an extra function just in case
      */
     @WorkerThread
-    suspend fun getCallDetails(): List<CallDetail> {
-        return callDetailDao.getCallDetails()
+    suspend fun getCallDetails(instanceNumber: String? = null): List<CallDetail> {
+        return callDetailDao.getCallDetails(instanceNumber)
     }
 
     @WorkerThread
-    suspend fun getCallDetailsPartial(amount: Int): List<CallDetail> {
-        return callDetailDao.getCallDetailsPartial(amount)
+    suspend fun getCallDetailsPartial(instanceNumber: String? = null, amount: Int): List<CallDetail> {
+        return callDetailDao.getCallDetailsPartial(instanceNumber, amount)
     }
 
     @WorkerThread
-    suspend fun getMostRecentCallDetailDate(): Long? {
-        return callDetailDao.getMostRecentCallDetailDate()
+    suspend fun getNewestCallDate(instanceNumber: String? = null): Long? {
+        return callDetailDao.getNewestCallDate(instanceNumber)
     }
 
     @WorkerThread
-    suspend fun insertDetailSkeleton(callDetail: CallDetail) {
+    suspend fun insertCallDetailSkeleton(callDetail: CallDetail) {
         mutexLocks[MutexType.CALL_DETAIL]!!.withLock {
-            callDetailDao.insertDetailSkeleton(callDetail)
+            callDetailDao.insertCallDetailSkeleton(callDetail)
         }
     }
 
@@ -152,7 +157,7 @@ class ClientRepository(
      * AnalyzedNumber for the number if the row didn't previously exist.
      */
     @WorkerThread
-    suspend fun getAnalyzedNum(rowID: Int) : AnalyzedNumber? {
+    suspend fun getAnalyzedNum(rowID: Long) : AnalyzedNumber? {
         return mutexLocks[MutexType.ANALYZED]!!.withLock {
             analyzedNumberDao.getAnalyzedNum(rowID)
         }
@@ -205,7 +210,7 @@ class ClientRepository(
     }
 
     @WorkerThread
-    suspend fun getChangeLog(rowID: Int) : ChangeLog? {
+    suspend fun getChangeLog(rowID: Long) : ChangeLog? {
         return changeLogDao.getChangeLog(rowID)
     }
 
@@ -235,14 +240,14 @@ class ClientRepository(
     }
 
     @WorkerThread
-    suspend fun deleteChangeQTUInclusive(linkedRowID : Int) {
+    suspend fun deleteChangeQTUInclusive(linkedRowID: Long) {
         mutexLocks[MutexType.UPLOAD_ANALYZED]!!.withLock {
             uploadChangeQueueDao.deleteChangeQTUInclusive(linkedRowID)
         }
     }
 
     @WorkerThread
-    suspend fun deleteChangeQTUExclusive(linkedRowID : Int) {
+    suspend fun deleteChangeQTUExclusive(linkedRowID: Long) {
         mutexLocks[MutexType.UPLOAD_ANALYZED]!!.withLock {
             uploadChangeQueueDao.deleteChangeQTUExclusive(linkedRowID)
         }
@@ -273,14 +278,14 @@ class ClientRepository(
     }
 
     @WorkerThread
-    suspend fun deleteAnalyzedQTUInclusive(linkedRowID : Int) {
+    suspend fun deleteAnalyzedQTUInclusive(linkedRowID: Long) {
         mutexLocks[MutexType.UPLOAD_ANALYZED]!!.withLock {
             uploadAnalyzedQueueDao.deleteAnalyzedQTUInclusive(linkedRowID)
         }
     }
 
     @WorkerThread
-    suspend fun deleteAnalyzedQTUExclusive(linkedRowID : Int) {
+    suspend fun deleteAnalyzedQTUExclusive(linkedRowID: Long) {
         mutexLocks[MutexType.UPLOAD_ANALYZED]!!.withLock {
             uploadAnalyzedQueueDao.deleteAnalyzedQTUExclusive(linkedRowID)
         }
@@ -326,9 +331,10 @@ class ClientRepository(
      * See documentation for changeAgentDao.changeFromServer(). Locks handled at ExecuteAgent level.
      */
     @WorkerThread
-    suspend fun changeFromServer(changeLog: ChangeLog) {
-        changeAgentDao.changeFromServer(changeLog)
+    suspend fun changeFromServer(genericData: GenericData) {
+        changeAgentDao.changeFromServer(genericData)
     }
+
 
     /**
      * Used to add CallDetail to database and update AnalyzedNumber. Returns whether the CallDetail

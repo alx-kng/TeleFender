@@ -12,8 +12,8 @@ import androidx.work.*
 import com.telefender.phone.App
 import com.telefender.phone.data.server_related.UserSetup
 import com.telefender.phone.data.tele_database.ClientRepository
-import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
-import com.telefender.phone.data.tele_database.background_tasks.WorkerType
+import com.telefender.phone.data.tele_database.background_tasks.WorkStates
+import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.gui.MainActivity
 import com.telefender.phone.helpers.MiscHelpers
 import com.telefender.phone.permissions.PermissionRequester
@@ -32,7 +32,7 @@ object SetupScheduler {
             return null
         }
 
-        WorkerStates.setState(WorkerType.SETUP, WorkInfo.State.RUNNING)
+        WorkStates.setState(WorkType.SETUP, WorkInfo.State.RUNNING)
 
         val uploadRequest = OneTimeWorkRequestBuilder<CoroutineSetupWorker>()
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
@@ -63,7 +63,7 @@ class CoroutineSetupWorker(
 
     @RequiresApi(Build.VERSION_CODES.O)
     override suspend fun doWork() : Result {
-        WorkerStates.setState(WorkerType.SETUP, WorkInfo.State.RUNNING)
+        WorkStates.setState(WorkType.SETUP, WorkInfo.State.RUNNING)
 
         try {
             setForeground(getForegroundInfo())
@@ -72,16 +72,15 @@ class CoroutineSetupWorker(
         }
 
         val repository : ClientRepository = (applicationContext as App).repository
-        val instanceNumber = MiscHelpers.getInstanceNumber(context)
 
         // Stops worker if user is already setup.
-        if (repository.hasCredKey(instanceNumber)) {
+        if (repository.hasClientKey()) {
             return Result.success()
         }
 
         UserSetup.initialPostRequest(context, repository, scope)
 
-        if(!WorkerStates.workerWaiter(WorkerType.SETUP, "SETUP WORKER", stopOnFail = true)) {
+        if(!WorkStates.workWaiter(WorkType.SETUP, "SETUP WORKER", stopOnFail = true)) {
             Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: SETUP WORKER RETRYING...")
             return Result.retry()
         }

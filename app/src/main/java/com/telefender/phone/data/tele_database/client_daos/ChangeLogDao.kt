@@ -10,8 +10,11 @@ import java.sql.RowId
 @Dao
 interface ChangeLogDao {
 
+    /**
+     * Inserts ChangeLog and returns inserted rowID.
+     */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertChangeLog(vararg changeLog: ChangeLog)
+    suspend fun insertChangeLog(changeLog: ChangeLog) : Long
 
     /**
      * To initialize repository in DialerActivity (MainActivity)
@@ -22,9 +25,6 @@ interface ChangeLogDao {
     @Query("SELECT serverChangeID FROM change_log WHERE serverChangeID NOT null ORDER BY serverChangeID DESC LIMIT 1")
     suspend fun lastServerChangeID(): Int?
 
-    @Query("SELECT rowID FROM change_log WHERE changeID = :changeID")
-    suspend fun getChangeRowID(changeID : String) : Int?
-
     @Query("SELECT changeTime FROM change_log ORDER BY changeTime DESC LIMIT 1")
     suspend fun getLatestChangeLogTime() : Int?
 
@@ -32,7 +32,7 @@ interface ChangeLogDao {
     suspend fun getChangeLog(changeID: String) : ChangeLog?
 
     @Query("SELECT * FROM change_log WHERE rowID = :rowID")
-    suspend fun getChangeLog(rowID: Int) : ChangeLog?
+    suspend fun getChangeLog(rowID: Long) : ChangeLog?
     
     @Query("SELECT * FROM change_log ORDER BY changeTime ASC")
     suspend fun getAllChangeLogs() : List<ChangeLog>

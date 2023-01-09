@@ -13,7 +13,7 @@ interface UploadChangeQueueDao {
     suspend fun insertChangeQTU(vararg uploadQueue: UploadChangeQueue)
     
     @Query("SELECT * FROM upload_change_queue WHERE linkedRowID = :linkedRowID")
-    suspend fun getChangeQTU(linkedRowID: Int) : UploadChangeQueue?
+    suspend fun getChangeQTU(linkedRowID: Long) : UploadChangeQueue?
 
     @Query("SELECT * FROM upload_change_queue WHERE linkedRowID = (SELECT min(linkedRowID) from upload_change_queue) LIMIT 1")
     suspend fun getFirstChangeQTU() : UploadChangeQueue
@@ -28,7 +28,7 @@ interface UploadChangeQueueDao {
     suspend fun getAllChangeQTUOrdered() : List<UploadChangeQueue>
 
     @Query("SELECT errorCounter FROM upload_change_queue WHERE linkedRowID = :linkedRowID ")
-    suspend fun getChangeQTUErrorCounter(linkedRowID: Int) : Int
+    suspend fun getChangeQTUErrorCounter(linkedRowID: Long) : Int
 
     @Query("SELECT linkedRowID FROM upload_change_queue WHERE errorCounter > 0")
     suspend fun getChangeQTUErrorLogs() : List<Int>
@@ -37,14 +37,14 @@ interface UploadChangeQueueDao {
     suspend fun hasChangeQTU() : Boolean
 
     @Query("DELETE FROM upload_change_queue WHERE linkedRowID = :linkedRowID")
-    suspend fun deleteChangeQTU(linkedRowID: Int)
+    suspend fun deleteChangeQTU(linkedRowID: Long)
 
     @Query("DELETE FROM upload_change_queue")
     suspend fun deleteAllChangeQTU()
     
     @Query("DELETE FROM upload_change_queue WHERE linkedRowID <= :linkedRowID")
-    suspend fun deleteChangeQTUInclusive(linkedRowID: Int)
+    suspend fun deleteChangeQTUInclusive(linkedRowID: Long)
 
     @Query("DELETE FROM upload_change_queue WHERE linkedRowID < :linkedRowID")
-    suspend fun deleteChangeQTUExclusive(linkedRowID: Int)
+    suspend fun deleteChangeQTUExclusive(linkedRowID: Long)
 }

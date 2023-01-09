@@ -2,6 +2,8 @@ package com.telefender.phone.data.tele_database.client_daos
 
 import androidx.room.Dao
 import androidx.room.Transaction
+import com.telefender.phone.data.server_related.GenericData
+import com.telefender.phone.data.server_related.GenericDataType
 import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.entities.*
@@ -16,23 +18,23 @@ import timber.log.Timber
  * want to expose a function marked as a Transaction, you must indicate the function as "open"?
  */
 @Dao
-abstract class ChangeAgentDao: ChangeLogDao, ExecuteAgentDao, ExecuteQueueDao, UploadChangeQueueDao {
+abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQueueDao,
+    UploadAnalyzedQueueDao, ChangeLogDao, AnalyzedNumberDao, CallDetailDao {
 
     private val retryAmount = 5
 
     /**
-     * Function to handle a change (as a ChangeLog) from Server.
-     * Adds change to the ChangeLog and ExecuteQueue. Contrary to changeFromClient(), we don't
-     * need a mutexSync lock around any of these actions because changes from the server only
-     * affect tree data, which doesn't interfere with the sync process. Also, although we
-     * technically don't need to retry here (as the DownloadPostRequest keeps retrying with the
-     * last inserted ChangeLog), we still retry here to decrease load on server (by not
+     * Function to handle a data downloaded from server. Adds data to the ExecuteQueue. We don't
+     * need mutexSync here because downloaded CallDetails / AnalyzedNumbers are separate from
+     * user's CallDetails and AnalyzedNumbers and won't affect their sync.
+     * Also, although we technically don't need to retry here (as the DownloadPostRequest keeps
+     * retrying with the lastServerRowID), we still retry here to decrease load on server (by not
      * re-requesting unnecessarily).
      */
-    suspend fun changeFromServer(changeLog: ChangeLog) {
+    suspend fun changeFromServer(genericData: GenericData) {
         for (i in 1..retryAmount) {
             try {
-                changeFromServerHelper(changeLog)
+                changeFromServerHelper(genericData)
                 break
             } catch (e: Exception) {
                 Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: " +
@@ -42,32 +44,38 @@ abstract class ChangeAgentDao: ChangeLogDao, ExecuteAgentDao, ExecuteQueueDao, U
         }
     }
 
-
-    /**
-     * TODO: IMPORTANT UNFINISHED IN HANDLING DIFFERENT DOWNLOAD TYPES.
-     */
     @Transaction
-    open suspend fun changeFromServerHelper(changeLog: ChangeLog) {
-        with(changeLog) {
-            // Need to insert ChangeLog before inserting QTU so that rowID gets set.
-            mutexLocks[MutexType.CHANGE]!!.withLock {
-                insertChangeLog(this)
-            }
+    open suspend fun changeFromServerHelper(genericData: GenericData) {
+        val dataType = genericData.getGenericDataType()
+            ?: throw Exception("genericDataType = ${genericData.type} is invalid!")
 
-            /*
-            getRowID() should not return null, but if it does the !! will throw an Error,
-            which will cause the overarching changeFromServer() to retry.
-             */
-            val linkedRowID = getChangeRowID(changeID)
-                ?: throw Exception("changeID = $changeID doesn't exist!")
+        // rowID of data in respective table. Used in ExecuteQueue for referencing a row.
+        val linkedRowID: Long
 
-            mutexLocks[MutexType.EXECUTE]!!.withLock {
-                val execLog = ExecuteQueue.create(
-                    executeType = ExecuteType.CHANGE,
-                    linkedRowID = linkedRowID
-                )
-                insertQTE(execLog)
+        when(dataType) {
+            GenericDataType.CHANGE_DATA -> mutexLocks[MutexType.CHANGE]!!.withLock {
+                with(genericData.changeLog!!) {
+                    linkedRowID = insertChangeLog(this)
+                }
             }
+            GenericDataType.ANALYZED_DATA -> mutexLocks[MutexType.ANALYZED]!!.withLock {
+                with(genericData.analyzedNumber!!) {
+                    linkedRowID = insertAnalyzedNum(this)
+                }
+            }
+            GenericDataType.LOG_DATA -> mutexLocks[MutexType.CALL_DETAIL]!!.withLock {
+                with(genericData.callDetail!!) {
+                    linkedRowID = insertCallDetailIgnore(this)
+                }
+            }
+        }
+
+        mutexLocks[MutexType.EXECUTE]!!.withLock {
+            val execLog = ExecuteQueue.create(
+                genericDataType = dataType,
+                linkedRowID = linkedRowID
+            )
+            insertQTE(execLog)
         }
     }
 
@@ -86,7 +94,7 @@ abstract class ChangeAgentDao: ChangeLogDao, ExecuteAgentDao, ExecuteQueueDao, U
         val inserted: Boolean
         mutexLocks[MutexType.ANALYZED]!!.withLock {
             mutexLocks[MutexType.CALL_DETAIL]!!.withLock {
-                inserted = logInsert(callDetail)
+                inserted = localLogInsert(callDetail)
             }
         }
 
@@ -154,21 +162,17 @@ abstract class ChangeAgentDao: ChangeLogDao, ExecuteAgentDao, ExecuteQueueDao, U
                 }
             }
 
+            // rowID of data in respective table. Used in upload queues for referencing a row.
+            val linkedRowID: Long
+
             // Need to insert ChangeLog before inserting QTU so that rowID gets set.
             mutexLocks[MutexType.CHANGE]!!.withLock {
-                insertChangeLog(changeLog)
+                linkedRowID = insertChangeLog(changeLog)
             }
 
             // No need to upload non-contact updates since they don't affect other users.
             if (this.getChangeType() != ChangeType.NON_CONTACT_UPDATE) {
                 mutexLocks[MutexType.UPLOAD_CHANGE]!!.withLock {
-                    /*
-                    getRowID() should not return null, but if it does the !! will throw an Error,
-                    which will cause the overarching changeFromClient() to retry.
-                     */
-                    val linkedRowID = getChangeRowID(changeID)
-                        ?: throw Exception("changeID = $changeID doesn't exist!")
-
                     val upLog = UploadChangeQueue(linkedRowID = linkedRowID)
                     insertChangeQTU(upLog)
                 }

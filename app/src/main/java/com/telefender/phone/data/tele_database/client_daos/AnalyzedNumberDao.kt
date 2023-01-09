@@ -17,19 +17,31 @@ import timber.log.Timber
 interface AnalyzedNumberDao : ParametersDao, StoredMapDao, UploadAnalyzedQueueDao {
 
     /**
-     * Unvalidated insert for AnalyzedNumber. Don't use outside of Dao.
+     * Inserts AnalyzedNumber and checks that the analyzedJson is valid. Returns inserted
+     * rowID.
+     *
+     * NOTE: throws an Exception if the analyzedJson is invalid, so make sure that you handle the
+     * possible Exception higher up.
+     */
+    suspend fun insertAnalyzedNum(analyzedNumber: AnalyzedNumber) : Long {
+        if (analyzedNumber.analyzedJson.isValidAnalyzed()) {
+            return insertAnalyzedNumQuery(analyzedNumber)
+        } else {
+            throw Exception("analyzedJson is invalid - $analyzedNumber")
+        }
+    }
+
+    /**
+     * Unvalidated insert for AnalyzedNumber. Returns inserted rowID. Don't use outside of Dao.
      */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertAnalyzedNumQuery(vararg analyzedNumber: AnalyzedNumber)
+    suspend fun insertAnalyzedNumQuery(analyzedNumber: AnalyzedNumber) : Long
 
     @Query("SELECT * FROM analyzed_number")
     suspend fun getAllAnalyzedNum() : List<AnalyzedNumber>
 
     @Query("SELECT * FROM analyzed_number WHERE rowID = :rowID")
-    suspend fun getAnalyzedNum(rowID: Int) : AnalyzedNumber?
-
-    @Query("SELECT rowID FROM analyzed_number WHERE normalizedNumber = :normalizedNumber AND instanceNumber = :instanceNumber")
-    suspend fun getAnalyzedRowID(normalizedNumber: String, instanceNumber: String) : Int?
+    suspend fun getAnalyzedNum(rowID: Long) : AnalyzedNumber?
 
     /**
      * TODO: Maybe we need to put a valid check for analyzedJson here?
@@ -134,7 +146,7 @@ interface AnalyzedNumberDao : ParametersDao, StoredMapDao, UploadAnalyzedQueueDa
                     isOrganization = false
                 )
 
-            insertAnalyzedNumQuery(
+            val linkedRowID = insertAnalyzedNumQuery(
                 AnalyzedNumber(
                     normalizedNumber = normalizedNumber,
                     instanceNumber = instanceNumber,
@@ -144,14 +156,8 @@ interface AnalyzedNumberDao : ParametersDao, StoredMapDao, UploadAnalyzedQueueDa
             )
 
             mutexLocks[MutexType.UPLOAD_ANALYZED]!!.withLock {
-                val linkedRowID = getAnalyzedRowID(normalizedNumber, instanceNumber)
-
-                if (linkedRowID != null) {
-                    val upLog = UploadAnalyzedQueue(linkedRowID = linkedRowID)
-                    insertAnalyzedQTU(upLog)
-                } else {
-                    Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: Associated AnalyzedNumber linkedRowID doesn't exist!")
-                }
+                val upLog = UploadAnalyzedQueue(linkedRowID = linkedRowID)
+                insertAnalyzedQTU(upLog)
             }
 
             return true

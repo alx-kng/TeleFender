@@ -105,7 +105,7 @@
            />
 
         <service
-            android:name="com.telefender.phone.data.server_related.firebase.DodoFirebaseService"
+            android:name="com.telefender.phone.data.server_related.firebase.TeleFirebaseService"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />

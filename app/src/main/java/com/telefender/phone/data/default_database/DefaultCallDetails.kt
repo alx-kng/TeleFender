@@ -25,7 +25,7 @@ object DefaultCallDetails{
     suspend fun getDefaultCallDetails(context: Context): MutableList<CallDetail> {
 
         return withContext(Dispatchers.IO) {
-            val instanceNumber = MiscHelpers.getInstanceNumber(context)
+            val instanceNumber = MiscHelpers.getUserNumberStored(context)
 
             val projection = arrayOf(
                 CallLog.Calls.NUMBER,

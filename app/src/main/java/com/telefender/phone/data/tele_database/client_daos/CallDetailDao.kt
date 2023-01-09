@@ -8,13 +8,23 @@ import kotlinx.coroutines.flow.Flow
 interface CallDetailDao: StoredMapDao {
 
     /**
+     * Inserts CallDetail and returns inserted rowID.
+     */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertCallDetailIgnore(callDetail: CallDetail) : Long
+
+    /**
      * TODO: Double check that Transaction is unnecessary here since insertDetailSync() is
      *  already wrapped in a Transaction inside ExecuteAgent's logInsert().
+     * 
+     * Syncs CallDetail retrieved from default database with our CallDetails and
+     * returns inserted rowID.
+     * 
+     * NOTE: MUST ONLY BE USED FOR SYNCING CallDetails, since it also updates the lastLogSyncTime
+     * in StoredMap.
      */
-    suspend fun insertDetailSync(callDetail: CallDetail) : Boolean {
+    suspend fun insertCallDetailSync(callDetail: CallDetail) : Boolean {
         with(callDetail) {
-            val instanceNumber = getUserNumber()!!
-
             if (callDetailExists(callEpochDate)) {
                 /*
                 Makes sure call is not synced before setting values. Preserves memory lifetime
@@ -28,23 +38,18 @@ interface CallDetailDao: StoredMapDao {
                         callEpochDate = callEpochDate,
                         callLocation = callLocation,
                         callDuration = callDuration,
-                        callDirection = callDirection
+                        callDirection = callDirection,
+                        instanceNumber = instanceNumber
                     )
 
-                    updateStoredMap(
-                        number = instanceNumber,
-                        lastSyncTime = callEpochDate
-                    )
+                    updateStoredMap(lastLogSyncTime = callEpochDate)
 
                     return true
                 }
             } else {
-                insertDetailIgnore(this)
+                insertCallDetailIgnore(this)
 
-                updateStoredMap(
-                    number = instanceNumber,
-                    lastSyncTime = callEpochDate
-                )
+                updateStoredMap(lastLogSyncTime = callEpochDate)
 
                 return true
             }
@@ -58,10 +63,10 @@ interface CallDetailDao: StoredMapDao {
      * (only if inserted first <-> else statement).
      */
     @Transaction
-    suspend fun insertDetailSkeleton(callDetail: CallDetail) {
+    suspend fun insertCallDetailSkeleton(callDetail: CallDetail) {
         if (callDetailExists(callDetail.callEpochDate)) {
             with(callDetail) {
-                updateUnallowed(callEpochDate, unallowed)
+                updateUnallowed(callEpochDate, instanceNumber, unallowed)
             }
         } else {
             val unSyncedCallDetail = with(callDetail) {
@@ -78,12 +83,9 @@ interface CallDetailDao: StoredMapDao {
                 )
             }
 
-            insertDetailIgnore(unSyncedCallDetail)
+            insertCallDetailIgnore(unSyncedCallDetail)
         }
     }
-
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertDetailIgnore(vararg callDetail: CallDetail)
 
     /**
      * TODO: Maybe check for null values to make sure that null values don't override non-null
@@ -97,7 +99,7 @@ interface CallDetailDao: StoredMapDao {
             callDuration = :callDuration,
             callLocation = :callLocation,
             callDirection = :callDirection
-        WHERE callEpochDate = :callEpochDate
+        WHERE callEpochDate = :callEpochDate AND instanceNumber = :instanceNumber
         """)
     suspend fun syncDetail(
         rawNumber: String,
@@ -107,38 +109,91 @@ interface CallDetailDao: StoredMapDao {
         callLocation: String?,
         callDuration: Long,
         callDirection: Int,
+        instanceNumber: String,
     )
 
     @Query("""
         UPDATE call_detail 
         SET unallowed = :unallowed
-        WHERE callEpochDate = :callEpochDate
+        WHERE callEpochDate = :callEpochDate AND instanceNumber = :instanceNumber
         """)
     suspend fun updateUnallowed(
         callEpochDate: Long,
+        instanceNumber: String,
         unallowed: Boolean
     )
-
-    @Query("SELECT EXISTS (SELECT * FROM call_detail WHERE callEpochDate = :callEpochDate)")
-    suspend fun callDetailExists(callEpochDate: Long) : Boolean
-
-    /**
-     * Check synced by whether or not callType was set or not.
-     */
-    @Query("SELECT EXISTS (SELECT callType FROM call_detail WHERE callEpochDate = :callEpochDate)")
-    suspend fun callSynced(callEpochDate: Long) : Boolean
 
     @Query("SELECT * FROM call_detail ORDER BY callEpochDate DESC")
     fun getFlowCallDetails(): Flow<List<CallDetail>>
 
-    @Query("SELECT * FROM call_detail ORDER BY callEpochDate DESC")
-    suspend fun getCallDetails(): List<CallDetail>
+    @Query("SELECT * FROM call_detail WHERE rowID = :rowID")
+    suspend fun getCallDetail(rowID: Long) : CallDetail?
 
-    @Query("SELECT * FROM call_detail ORDER BY callEpochDate DESC LIMIT :amount")
-    suspend fun getCallDetailsPartial(amount: Int): List<CallDetail>
+    /**********************************************************************************************
+     * Check if CallDetail under given instanceNumber exists. If no instanceNumber is passed in,
+     * then we assume we are querying from the user's own CallDetails.
+     *********************************************************************************************/
 
-    @Query("SELECT callEpochDate FROM call_detail ORDER BY callEpochDate DESC LIMIT 1")
-    suspend fun getMostRecentCallDetailDate() : Long?
+    suspend fun callDetailExists(callEpochDate: Long, instanceParam: String? = null) : Boolean {
+        val instanceNumber = instanceParam ?: getUserNumber()!!
+        return callDetailExistsQuery(callEpochDate, instanceNumber)
+    }
+
+    @Query("SELECT EXISTS (SELECT * FROM call_detail WHERE callEpochDate = :callEpochDate AND instanceNumber = :instanceNumber)")
+    suspend fun callDetailExistsQuery(callEpochDate: Long, instanceNumber: String) : Boolean
+
+    /**********************************************************************************************
+     * Check synced by whether or not callType was set or not. Only applicable to user's own
+     * CallDetails.
+     *********************************************************************************************/
+
+    suspend fun callSynced(callEpochDate: Long) : Boolean {
+        val instanceNumber = getUserNumber()!!
+        return callSyncedQuery(callEpochDate, instanceNumber)
+    }
+
+    @Query("SELECT EXISTS (SELECT callType FROM call_detail WHERE callEpochDate = :callEpochDate AND instanceNumber = :instanceNumber)")
+    suspend fun callSyncedQuery(callEpochDate: Long, instanceNumber: String) : Boolean
+
+    /**********************************************************************************************
+     * Retrieves all CallDetails associated with the given instanceNumber. If nothing is passed in,
+     * then we assume we are retrieving the user's own CallDetails.
+     *********************************************************************************************/
+
+    suspend fun getCallDetails(instanceParam: String? = null) : List<CallDetail> {
+        val instanceNumber = instanceParam ?: getUserNumber()!!
+        return getCallDetailsQuery(instanceNumber)
+    }
+
+    @Query("SELECT * FROM call_detail WHERE instanceNumber = :instanceNumber ORDER BY callEpochDate DESC")
+    suspend fun getCallDetailsQuery(instanceNumber: String) : List<CallDetail>
+
+
+    /**********************************************************************************************
+     * Retrieves partial CallDetails associated with the given instanceNumber. If nothing is passed
+     * in, then we assume we are retrieving the user's own CallDetails.
+     *********************************************************************************************/
+
+    suspend fun getCallDetailsPartial(instanceParam: String? = null, amount: Int) : List<CallDetail> {
+        val instanceNumber = instanceParam ?: getUserNumber()!!
+        return getCallDetailsPartialQuery(instanceNumber, amount)
+    }
+
+    @Query("SELECT * FROM call_detail WHERE instanceNumber = :instanceNumber ORDER BY callEpochDate DESC LIMIT :amount")
+    suspend fun getCallDetailsPartialQuery(instanceNumber: String, amount: Int) : List<CallDetail>
+
+    /**********************************************************************************************
+     * Retrieves most recent CallDetail date associated with the given instanceNumber. If nothing
+     * is passed in, then we assume we are querying from the user's own CallDetails.
+     *********************************************************************************************/
+
+    suspend fun getNewestCallDate(instanceParam: String? = null) : Long? {
+        val instanceNumber = instanceParam ?: getUserNumber()!!
+        return getNewestCallDateQuery(instanceNumber)
+    }
+
+    @Query("SELECT callEpochDate FROM call_detail WHERE instanceNumber = :instanceNumber ORDER BY callEpochDate DESC LIMIT 1")
+    suspend fun getNewestCallDateQuery(instanceNumber: String) : Long?
 
     @Query("DELETE FROM call_detail")
     suspend fun deleteAllCallDetails()

@@ -131,7 +131,7 @@ object TableInitializers {
         }
 
         val changeID = UUID.randomUUID().toString()
-        val instanceNumber = MiscHelpers.getInstanceNumber(context)
+        val instanceNumber = MiscHelpers.getUserNumberStored(context)
         val teleCID = UUID.nameUUIDFromBytes((cursor.getString(0) + instanceNumber).toByteArray()).toString()
         val changeTime = Instant.now().toEpochMilli()
 
@@ -167,7 +167,7 @@ object TableInitializers {
 
         val changeID = UUID.randomUUID().toString()
         val changeTime = Instant.now().toEpochMilli()
-        val instanceNumber = MiscHelpers.getInstanceNumber(context)
+        val instanceNumber = MiscHelpers.getUserNumberStored(context)
 
         val defaultCID = cursor.getString(0)
         val teleCID = UUID.nameUUIDFromBytes((defaultCID + instanceNumber).toByteArray()).toString()

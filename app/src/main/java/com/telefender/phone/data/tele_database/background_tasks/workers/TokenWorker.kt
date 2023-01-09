@@ -8,8 +8,8 @@ import androidx.work.*
 import com.telefender.phone.App
 import com.telefender.phone.data.server_related.ServerInteractions
 import com.telefender.phone.data.tele_database.ClientRepository
-import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
-import com.telefender.phone.data.tele_database.background_tasks.WorkerType
+import com.telefender.phone.data.tele_database.background_tasks.WorkStates
+import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.helpers.MiscHelpers
 import timber.log.Timber
 import java.util.*
@@ -21,7 +21,7 @@ object TokenScheduler{
     val tokenPeriodTag = "periodicTokenWorker"
 
     fun initiateOneTimeTokenWorker(context : Context) : UUID {
-        WorkerStates.setState(WorkerType.ONE_TIME_TOKEN, WorkInfo.State.RUNNING)
+        WorkStates.setState(WorkType.ONE_TIME_TOKEN, WorkInfo.State.RUNNING)
 
         val tokenRequest = OneTimeWorkRequestBuilder<CoroutineTokenWorker>()
             .setBackoffCriteria(
@@ -40,7 +40,7 @@ object TokenScheduler{
 
     //TODO for all workers with work that can wait a bit, maybe we set constraints so it begins when charging/full battery
     fun initiatePeriodicTokenWorker(context : Context) : UUID {
-        WorkerStates.setState(WorkerType.PERIODIC_TOKEN, WorkInfo.State.RUNNING)
+        WorkStates.setState(WorkType.PERIODIC_TOKEN, WorkInfo.State.RUNNING)
 
         val syncRequest = PeriodicWorkRequestBuilder<CoroutineTokenWorker>(1, TimeUnit.DAYS)
             .setBackoffCriteria(
@@ -73,15 +73,15 @@ class CoroutineTokenWorker(
         val repository: ClientRepository = (applicationContext as App).repository
         val scope = (applicationContext as App).applicationScope
 
-        val instanceNumber = MiscHelpers.getInstanceNumber(context)!!
+        val instanceNumber = MiscHelpers.getUserNumberStored(context)
 
-        val key = repository.getClientKey(instanceNumber)
-        val token = repository.getFireBaseToken(instanceNumber)
+        val key = repository.getClientKey()
+        val token = repository.getFireBaseToken()
         ServerInteractions.tokenPostRequest(context, repository, scope, token!!)
 
         when (stateVarString) {
-            "oneTimeTokenState" ->  WorkerStates.setState(WorkerType.ONE_TIME_TOKEN, WorkInfo.State.SUCCEEDED)
-            "periodicTokenState" -> WorkerStates.setState(WorkerType.PERIODIC_TOKEN, WorkInfo.State.SUCCEEDED)
+            "oneTimeTokenState" ->  WorkStates.setState(WorkType.ONE_TIME_TOKEN, WorkInfo.State.SUCCEEDED)
+            "periodicTokenState" -> WorkStates.setState(WorkType.PERIODIC_TOKEN, WorkInfo.State.SUCCEEDED)
             else -> {
                 Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: TOKEN WORKER THREAD: Worker state variable name is wrong")
             }

@@ -44,7 +44,7 @@ object TeleCallDetails {
         if (repository == null) { return }
 
         CoroutineScope(Dispatchers.Default).launch {
-            val instanceNumber = repository.getInstanceNumber()
+            val instanceNumber = repository.getUserNumber()
             val rawNumber = call.number()
             val normalizedNumber = MiscHelpers.normalizedNumber(rawNumber)
                 ?: MiscHelpers.bareNumber(rawNumber)
@@ -52,7 +52,7 @@ object TeleCallDetails {
             val duration = call.callDurationMILLI()
 
             val callDetail = CallDetail(
-                rawNumber = rawNumber ?: MiscHelpers.INVALID_NUMBER,
+                rawNumber = rawNumber ?: MiscHelpers.UNKNOWN_NUMBER,
                 normalizedNumber = normalizedNumber,
                 callType = null,
                 callEpochDate = epochDate,
@@ -67,7 +67,7 @@ object TeleCallDetails {
 
             for (i in 1..retryAmount) {
                 try {
-                    repository.insertDetailSkeleton(callDetail)
+                    repository.insertCallDetailSkeleton(callDetail)
                     break
                 } catch (e: Exception) {
                     Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: insertCallDetail() RETRYING...")

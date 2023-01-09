@@ -4,6 +4,9 @@ import android.content.Context
 import android.provider.CallLog
 import android.telephony.TelephonyManager
 import com.google.i18n.phonenumbers.PhoneNumberUtil
+import com.telefender.phone.App
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import timber.log.Timber
 
 
@@ -11,15 +14,41 @@ import timber.log.Timber
 object MiscHelpers {
 
     const val DEBUG_LOG_TAG = "TELE_DEBUG"
-    const val INVALID_NUMBER = "NULL / INVALID NUMBER"
+    const val UNKNOWN_NUMBER = "UNKNOWN NUMBER"
 
     /**
-     * Gets user's phone number.
+     * Gets user's phone number from own database. Doesn't need permissions. Throws Exception if
+     * unable to retrieve number for some reason.
+     *
+     * NOTE: should ONLY BE USED after database initialization!
      */
-    fun getInstanceNumber(context: Context) : String {
-        val tMgr = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-        val number = tMgr.line1Number
-        return normalizedNumber(number) ?: bareNumber(number)
+    suspend fun getUserNumberStored(context: Context) : String {
+        val repository = (context.applicationContext as App).repository
+        return repository.getUserNumber()!!
+    }
+
+    /**
+     * TODO: Maybe check for permissions here later.
+     *
+     * Gets user's phone number. Tries to retrieve from own database before resorting to retrieving
+     * using permissions.
+     */
+    fun getUserNumberUncertain(context: Context) : String {
+        val databaseNumber = try {
+            runBlocking(Dispatchers.Default) {
+                getUserNumberStored(context)
+            }
+        } catch (e: Exception) {
+            null
+        }
+
+        return if (databaseNumber != null) {
+            databaseNumber
+        } else {
+            val tMgr = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+            val number = tMgr.line1Number
+            return normalizedNumber(number) ?: bareNumber(number)
+        }
     }
 
     /**
@@ -55,7 +84,8 @@ object MiscHelpers {
      * Pseudo normalized number used in case it's not possible to normalize number.
      */
     fun bareNumber(number: String?) : String {
-        return number?.replace("(\\s|\\(|\\)|-|\\.|,)".toRegex(), "") ?: INVALID_NUMBER
+        val cleaned = number?.replace("(\\s|\\(|\\)|-|\\.|,)".toRegex(), "")
+        return if (cleaned != null && cleaned != "") cleaned else UNKNOWN_NUMBER
     }
 
     /**
@@ -68,14 +98,13 @@ object MiscHelpers {
 
     /**
      * TODO: Voicemail call log refine
-     * TODO: Incorporate into algorithm.
      *
      * Duct tape way to check if call log is a voicemail or not. Uses the idea that
      * voicemail call logs always have a '+' in front of the number and are incoming.
      * Don't know how this changes between carriers.
      * NOTE: Requires non-normalized raw number.
      */
-    fun isVoiceMail(direction: Int?, rawNumber: String) : Boolean {
+    private fun isVoiceMail(direction: Int?, rawNumber: String) : Boolean {
         return rawNumber.isNotEmpty() && rawNumber[0] == '+' && direction == CallLog.Calls.INCOMING_TYPE
     }
 

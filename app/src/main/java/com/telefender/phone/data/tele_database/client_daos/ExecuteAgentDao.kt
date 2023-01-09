@@ -3,6 +3,8 @@ package com.telefender.phone.data.tele_database.client_daos
 import android.provider.CallLog
 import androidx.room.Dao
 import androidx.room.Transaction
+import com.telefender.phone.data.server_related.GenericDataType
+import com.telefender.phone.data.server_related.toGenericDataType
 import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.entities.*
@@ -25,9 +27,9 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
     AnalyzedNumberDao, ChangeLogDao, ExecuteQueueDao, UploadChangeQueueDao, StoredMapDao, ParametersDao {
 
     suspend fun executeAll(){
-        withContext(Dispatchers.IO) {
-            val retryAmount = 5
+        val retryAmount = 5
 
+        withContext(Dispatchers.IO) {
             for (i in 1..retryAmount) {
                 try {
                     while (hasQTE()) {
@@ -38,6 +40,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                 } catch (e: Exception) {
                     Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: " +
                         "executeAll() RETRYING... ${e.message}")
+                    e.printStackTrace()
                     delay(2000)
                 }
             }
@@ -52,15 +55,29 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
         for (i in 1..retryAmount) {
             try {
                 val qte = getFirstQTE()!!
-                val qteRowID = qte.rowID
 
-                // If executeChange() doesn't go through, then the QTE error counter increases.
+                // If the data execution doesn't go through, then we increment the QTE error counter.
                 mutexLocks[MutexType.EXECUTE]!!.withLock {
-                    incrementQTEErrors(qteRowID, 1)
+                    incrementQTEErrors(qte.rowID, 1)
                 }
 
-                val changeLog = getChangeLog(qte.linkedRowID)!!
-                executeChange(changeLog, true, qteRowID)
+                val dataType = qte.genericDataType.toGenericDataType()
+                    ?: throw Exception("genericDataType = ${qte.genericDataType} is invalid!")
+
+                when(dataType) {
+                    GenericDataType.CHANGE_DATA -> {
+                        val changeLog = getChangeLog(qte.linkedRowID)!!
+                        executeChange(changeLog, true, qte.rowID)
+                    }
+                    GenericDataType.ANALYZED_DATA -> {
+                        val analyzedNumber = getAnalyzedNum(qte.linkedRowID)!!
+                        executeServerAnalyzed(analyzedNumber, qte.rowID)
+                    }
+                    GenericDataType.LOG_DATA -> {
+                        val callDetail = getCallDetail(qte.linkedRowID)!!
+                        executeServerCallDetail(callDetail, qte.rowID)
+                    }
+                }
 
                 break
             } catch (e: Exception) {
@@ -78,6 +95,34 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
     }
 
     /**
+     * TODO: Do other execution related to the analyzedNumber if necessary.
+     *
+     * Handles the execution of AnalyzedNumbers from QTE. Since server AnalyzedNumbers are already
+     * inserted in ChangeAgentDao, we don't re-insert here. If the execution is successful, we
+     * delete the associated QTE (which is why the function is wrapped as a Transaction).
+     */
+    @Transaction
+    suspend fun executeServerAnalyzed(analyzedNumber: AnalyzedNumber, qteRowID: Long) {
+        mutexLocks[MutexType.EXECUTE]!!.withLock {
+            deleteQTE(qteRowID)
+        }
+    }
+
+    /**
+     * TODO: Do other execution related to the callDetail if necessary.
+     *
+     * Handles the execution of CallDetails from QTE. Since server CallDetails are already
+     * inserted in ChangeAgentDao, we don't re-insert here. If the execution is successful, we
+     * delete the associated QTE (which is why the function is wrapped as a Transaction).
+     */
+    @Transaction
+    suspend fun executeServerCallDetail(callDetail: CallDetail, qteRowID: Long) {
+        mutexLocks[MutexType.EXECUTE]!!.withLock {
+            deleteQTE(qteRowID)
+        }
+    }
+
+    /**
      * TODO: For changes from server, we can choose to delete the associated ChangeLogs if the
      *  storage / speed becomes too slow. A reason why we might keep the ChangeLogs from server
      *  is that we can completely recalculate the AnalyzedNumbers (if a huge algorithm change or
@@ -90,7 +135,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
      * the ExecuteQueue. We have also already confirmed that deadlock is not possible with our
      * mutex lock usage.
      */
-    suspend fun executeChange(changeLog: ChangeLog, fromServer: Boolean = false, qteRowID: Int? = null) {
+    suspend fun executeChange(changeLog: ChangeLog, fromServer: Boolean = false, qteRowID: Long? = null) {
         if (changeLog.getChangeType() == ChangeType.INSTANCE_DELETE) {
             executeChangeINSD(changeLog, qteRowID!!)
         } else {
@@ -104,7 +149,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
      * delete might take a while (still probably less than 10 seconds), and we
      * wouldn't want the data to be inaccessible during that time.
      */
-    suspend fun executeChangeINSD(changeLog: ChangeLog, qteRowID: Int) {
+    suspend fun executeChangeINSD(changeLog: ChangeLog, qteRowID: Long) {
         with(changeLog) {
             if (this.getChangeType() ==  ChangeType.INSTANCE_DELETE) {
                 insDelete(this, instanceNumber, qteRowID)
@@ -118,7 +163,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
      * Other part of executeChange(). Handles all non-instance-delete actions.
      */
     @Transaction
-    suspend fun executeChangeNORM(changeLog: ChangeLog, fromServer: Boolean, qteRowID: Int? = null) {
+    suspend fun executeChangeNORM(changeLog: ChangeLog, fromServer: Boolean, qteRowID: Long? = null) {
         if (fromServer && qteRowID == null) {
             throw Exception("qteRowID was null for server change!")
         }
@@ -217,11 +262,11 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
      * Inserts call into CallDetail table and updates AnalyzedNumber. Only updates
      * AnalyzedNumber if it is inserted.
      *
-     * NOTE: Should ONLY be used for user's own call logs.
+     * NOTE: Should ONLY be used for SYNCING user's own call logs
      */
     @Transaction
-    suspend fun logInsert(callDetail: CallDetail) : Boolean {
-        val inserted = insertDetailSync(callDetail)
+    suspend fun localLogInsert(callDetail: CallDetail) : Boolean {
+        val inserted = insertCallDetailSync(callDetail)
 
         if (inserted) {
             with(callDetail) {
@@ -394,9 +439,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
     /**
      * TODO: Maybe redundant transaction annotation with higher level functions.
      *
-     * Inserts contact given CID, instance. Higher level function than the corresponding
-     * DAO function as it automatically modifies AnalyzedNumbers and provides a more
-     * detailed NullPointerException.
+     * Inserts contact given CID and instanceNumber.
      */
     @Transaction
     suspend fun cInsert(CID: String?, instanceNumber: String?) {
@@ -652,7 +695,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
      * instance delete fails midway, then the execute log won't be deleted, meaning the instance
      * delete will continue where it left off in the next execution cycle.
      */
-    suspend fun insDelete(changeLog: ChangeLog, instanceNumber: String?, qteRowID: Int) {
+    suspend fun insDelete(changeLog: ChangeLog, instanceNumber: String?, qteRowID: Long) {
         if (instanceNumber == null) {
             throw NullPointerException("instanceNumber was null for insDelete")
         } else {
@@ -691,7 +734,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
      * to succeed or both to fail.
      */
     @Transaction
-    suspend fun finalDelete(changeLog: ChangeLog, instance: Instance, qteRowID: Int) {
+    suspend fun finalDelete(changeLog: ChangeLog, instance: Instance, qteRowID: Long) {
         deleteInstanceNumbers(instance)
 
         // Instance delete must be from server, so delete associated QTE.

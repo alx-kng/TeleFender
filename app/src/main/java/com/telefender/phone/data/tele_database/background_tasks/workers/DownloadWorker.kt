@@ -10,12 +10,14 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.work.*
 import com.telefender.phone.App
-import com.telefender.phone.data.server_related.ServerInteractions
 import com.telefender.phone.data.tele_database.ClientRepository
-import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
-import com.telefender.phone.data.tele_database.background_tasks.WorkerType
+import com.telefender.phone.data.tele_database.background_tasks.WorkStates
+import com.telefender.phone.data.tele_database.background_tasks.WorkType
+import com.telefender.phone.data.tele_database.background_tasks.ServerWorkHelpers
 import com.telefender.phone.gui.MainActivity
 import com.telefender.phone.helpers.MiscHelpers
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import timber.log.Timber
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -27,7 +29,7 @@ object DownloadScheduler {
     
     fun initiateOneTimeDownloadWorker(context : Context) : UUID {
 
-        WorkerStates.setState(WorkerType.ONE_TIME_DOWNLOAD, WorkInfo.State.RUNNING)
+        WorkStates.setState(WorkType.ONE_TIME_DOWNLOAD, WorkInfo.State.RUNNING)
 
         val downloadRequest = OneTimeWorkRequestBuilder<CoroutineDownloadWorker>()
             .setInputData(workDataOf("variableName" to "oneTimeDownloadState", "notificationID" to "7777"))
@@ -48,7 +50,7 @@ object DownloadScheduler {
 
     fun initiatePeriodicDownloadWorker(context : Context) : UUID {
 
-        WorkerStates.setState(WorkerType.PERIODIC_DOWNLOAD, WorkInfo.State.RUNNING)
+        WorkStates.setState(WorkType.PERIODIC_DOWNLOAD, WorkInfo.State.RUNNING)
 
         val downloadRequest = PeriodicWorkRequestBuilder<CoroutineDownloadWorker>(1, TimeUnit.HOURS)
             .setInputData(workDataOf("variableName" to "periodicDownloadState", "notificationID" to "8888"))
@@ -77,6 +79,8 @@ class CoroutineDownloadWorker(
     val CHANNEL_ID = "alxkng5737"
     var stateVarString: String? = null
 
+    val scope = CoroutineScope(Dispatchers.IO)
+
     @RequiresApi(Build.VERSION_CODES.O)
     override suspend fun doWork() : Result {
         stateVarString = inputData.getString("variableName")
@@ -90,16 +94,17 @@ class CoroutineDownloadWorker(
             }
         }
 
-        val repository: ClientRepository? = (applicationContext as App).repository
-        if (repository != null) {
-            ServerInteractions.downloadPostRequest(context, repository, (applicationContext as App).applicationScope)
-        } else {
-            return Result.retry()
-        }
+        val repository: ClientRepository = (applicationContext as App).repository
+
+        /**
+         * Downloads changes from server
+         */
+        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: DOWNLOAD WORKER STARTED")
+        ServerWorkHelpers.downloadData(context, repository, scope, "DOWNlOAD WORKER")
 
         when (stateVarString) {
-            "oneTimeDownloadState" -> WorkerStates.setState(WorkerType.ONE_TIME_DOWNLOAD, WorkInfo.State.SUCCEEDED)
-            "periodicDownloadState" -> WorkerStates.setState(WorkerType.PERIODIC_DOWNLOAD, WorkInfo.State.SUCCEEDED)
+            "oneTimeDownloadState" -> WorkStates.setState(WorkType.ONE_TIME_DOWNLOAD, WorkInfo.State.SUCCEEDED)
+            "periodicDownloadState" -> WorkStates.setState(WorkType.PERIODIC_DOWNLOAD, WorkInfo.State.SUCCEEDED)
             else -> {
                 Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: DOWNLOAD WORKER THREAD: Worker state variable name is wrong")
             }

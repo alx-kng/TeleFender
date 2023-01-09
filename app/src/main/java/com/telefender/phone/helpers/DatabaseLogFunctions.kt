@@ -83,7 +83,7 @@ object DatabaseLogFunctions {
     fun logUploadAnalyzedLogs(database : ClientDatabase?, repository: ClientRepository?) {
         CoroutineScope(Dispatchers.Default).launch {
             val uploadLogs = (database?.uploadAnalyzedQueueDao()?.getAllAnalyzedQTU() ?: repository?.getAllAnalyzedQTU()) ?: listOf()
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: UPLOAD_ANALYZED LOG SIZE: %s", uploadLogs.size.toString())
+            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: UPLOAD_ANALYZED_POST LOG SIZE: %s", uploadLogs.size.toString())
 
             for (uploadLog in uploadLogs) {
                 Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: %s", uploadLog.toString())
@@ -95,9 +95,12 @@ object DatabaseLogFunctions {
         CoroutineScope(Dispatchers.Default).launch {
 
             val callLogs = if (amount == null) {
-                (database?.callDetailDao()?.getCallDetails() ?: repository?.getCallDetails()) ?: listOf()
+                database?.callDetailDao()?.getCallDetails()
+                    ?: repository?.getCallDetails() ?: listOf()
             } else {
-                (database?.callDetailDao()?.getCallDetailsPartial(amount) ?: repository?.getCallDetailsPartial(amount)) ?: listOf()
+                database?.callDetailDao()?.getCallDetailsPartial(amount = amount)
+                    ?: repository?.getCallDetailsPartial(amount = amount)
+                    ?: listOf()
             }
 
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: # OF PRINTED CALL LOGS: %s", callLogs.size.toString())
@@ -110,7 +113,7 @@ object DatabaseLogFunctions {
 
     fun logAnalyzedNumbers(database : ClientDatabase? = null, repository: ClientRepository? = null) {
         CoroutineScope(Dispatchers.Default).launch {
-            val analyzedNumbers = (database?.analyzedNumberDao()?.getAllAnalyzedNum()) ?: listOf()
+            val analyzedNumbers = database?.analyzedNumberDao()?.getAllAnalyzedNum() ?: listOf()
             Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: ANALYZED NUMBER SIZE: %s", analyzedNumbers.size.toString())
 
             for (analyzedNumber in analyzedNumbers) {

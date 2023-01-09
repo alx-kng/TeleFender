@@ -6,8 +6,8 @@ import com.android.volley.Response
 import com.telefender.phone.data.server_related.*
 import com.telefender.phone.data.server_related.ServerInteractions.uploadAnalyzedRequest
 import com.telefender.phone.data.tele_database.ClientRepository
-import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
-import com.telefender.phone.data.tele_database.background_tasks.WorkerType
+import com.telefender.phone.data.tele_database.background_tasks.WorkStates
+import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.helpers.MiscHelpers
 import kotlinx.coroutines.*
 import timber.log.Timber
@@ -28,15 +28,16 @@ class UploadAnalyzedRequestGen(
             requestJson: String?,
             context: Context,
             repository: ClientRepository,
-            scope: CoroutineScope
+            scope: CoroutineScope,
+            errorCount: Int,
         ) : UploadAnalyzedRequestGen {
 
             return UploadAnalyzedRequestGen(
-                method,
-                url,
-                uploadAnalyzedResponseHandler(context, repository, scope),
-                uploadAnalyzedErrorHandler,
-                requestJson
+                method = method,
+                url = url,
+                listener = uploadAnalyzedResponseHandler(context, repository, scope, errorCount),
+                errorListener = uploadAnalyzedErrorHandler,
+                requestJson = requestJson,
             )
         }
     }
@@ -49,7 +50,8 @@ class UploadAnalyzedRequestGen(
 private fun uploadAnalyzedResponseHandler(
     context: Context,
     repository: ClientRepository,
-    scope: CoroutineScope
+    scope: CoroutineScope,
+    errorCount: Int
 ) : Response.Listener<String> {
 
     return Response.Listener<String> { response ->
@@ -70,14 +72,17 @@ private fun uploadAnalyzedResponseHandler(
              * the corresponding upload logs from the UploadAnalyzedQueue table
              */
             scope.launch(Dispatchers.IO) {
+                var nextErrorCount = errorCount
+
                 when (uploadResponse.status) {
                     "ok" -> {
+                        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: UPLOAD_ANALYZED - $uploadResponse")
                         repository.deleteAnalyzedQTUInclusive(uploadResponse.lastUploadedRowID)
                     }
                     else -> {
                         Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: PARTIALLY UPLOADED ANALYZED WITH ERROR: ${uploadResponse.error}")
-
                         repository.deleteAnalyzedQTUExclusive(uploadResponse.lastUploadedRowID)
+                        nextErrorCount++
                     }
 
                 }
@@ -88,20 +93,20 @@ private fun uploadAnalyzedResponseHandler(
                 if (repository.hasAnalyzedQTU()) {
                     Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: MORE ANALYZED TO UPLOAD")
 
-                    uploadAnalyzedRequest(context, repository, scope)
+                    uploadAnalyzedRequest(context, repository, scope, nextErrorCount)
                 } else {
                     Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: All ANALYZED UPLOADS COMPLETE")
 
-                    WorkerStates.setState(WorkerType.UPLOAD_ANALYZED, WorkInfo.State.SUCCEEDED)
+                    WorkStates.setState(WorkType.UPLOAD_ANALYZED_POST, WorkInfo.State.SUCCEEDED)
                 }
             }
         } else {
-            WorkerStates.setState(WorkerType.UPLOAD_ANALYZED, WorkInfo.State.FAILED)
+            WorkStates.setState(WorkType.UPLOAD_ANALYZED_POST, WorkInfo.State.FAILED)
 
             if (uploadResponse != null) {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN UPLOAD_ANALYZED: ${uploadResponse.error}")
+                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN UPLOAD_ANALYZED_POST: ${uploadResponse.error}")
             } else {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN UPLOAD_ANALYZED: RESPONSE IS NULL")
+                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN UPLOAD_ANALYZED_POST: RESPONSE IS NULL")
             }
         }
     }
@@ -110,6 +115,6 @@ private fun uploadAnalyzedResponseHandler(
 private val uploadAnalyzedErrorHandler = Response.ErrorListener { error ->
     if (error.toString() != "null") {
         Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY $error")
-        WorkerStates.setState(WorkerType.UPLOAD_ANALYZED, WorkInfo.State.FAILED)
+        WorkStates.setState(WorkType.UPLOAD_ANALYZED_POST, WorkInfo.State.FAILED)
     }
 }

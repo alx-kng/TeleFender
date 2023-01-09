@@ -14,7 +14,7 @@ interface UploadAnalyzedQueueDao {
     suspend fun insertAnalyzedQTU(vararg uploadQueue: UploadAnalyzedQueue)
 
     @Query("SELECT * FROM upload_analyzed_queue WHERE linkedRowID = :linkedRowID")
-    suspend fun getAnalyzedQTU(linkedRowID: Int) : UploadAnalyzedQueue?
+    suspend fun getAnalyzedQTU(linkedRowID: Long) : UploadAnalyzedQueue?
 
     @Query("SELECT * FROM upload_analyzed_queue WHERE linkedRowID = (SELECT min(linkedRowID) from upload_analyzed_queue) LIMIT 1")
     suspend fun getFirstAnalyzedQTU() : UploadAnalyzedQueue
@@ -29,7 +29,7 @@ interface UploadAnalyzedQueueDao {
     suspend fun getAllAnalyzedQTUOrdered() : List<UploadAnalyzedQueue>
 
     @Query("SELECT errorCounter FROM upload_analyzed_queue WHERE linkedRowID = :linkedRowID ")
-    suspend fun getAnalyzedQTUErrorCounter(linkedRowID: Int) : Int
+    suspend fun getAnalyzedQTUErrorCounter(linkedRowID: Long) : Int
 
     @Query("SELECT linkedRowID FROM upload_analyzed_queue WHERE errorCounter > 0")
     suspend fun getAnalyzedQTUErrorLogs() : List<Int>
@@ -38,14 +38,14 @@ interface UploadAnalyzedQueueDao {
     suspend fun hasAnalyzedQTU() : Boolean
 
     @Query("DELETE FROM upload_analyzed_queue WHERE linkedRowID = :linkedRowID")
-    suspend fun deleteAnalyzedQTU(linkedRowID: Int)
+    suspend fun deleteAnalyzedQTU(linkedRowID: Long)
 
     @Query("DELETE FROM upload_analyzed_queue")
     suspend fun deleteAllAnalyzedQTU()
 
     @Query("DELETE FROM upload_analyzed_queue WHERE linkedRowID <= :linkedRowID")
-    suspend fun deleteAnalyzedQTUInclusive(linkedRowID: Int)
+    suspend fun deleteAnalyzedQTUInclusive(linkedRowID: Long)
 
     @Query("DELETE FROM upload_analyzed_queue WHERE linkedRowID < :linkedRowID")
-    suspend fun deleteAnalyzedQTUExclusive(linkedRowID: Int)
+    suspend fun deleteAnalyzedQTUExclusive(linkedRowID: Long)
 }

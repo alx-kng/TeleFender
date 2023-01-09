@@ -10,17 +10,16 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.work.*
 import com.telefender.phone.App
-import com.telefender.phone.data.server_related.ServerInteractions
 import com.telefender.phone.data.tele_database.ClientDatabase
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.TableSynchronizer
-import com.telefender.phone.data.tele_database.background_tasks.WorkerStates
-import com.telefender.phone.data.tele_database.background_tasks.WorkerType
+import com.telefender.phone.data.tele_database.background_tasks.ServerWorkHelpers
+import com.telefender.phone.data.tele_database.background_tasks.WorkStates
+import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.gui.MainActivity
 import com.telefender.phone.helpers.MiscHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import timber.log.Timber
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -32,7 +31,7 @@ object OmegaPeriodicScheduler {
     val periodicOmegaWorkerTag = "periodicOmegaWorker"
 
     fun initiateOneTimeOmegaWorker(context : Context) : UUID {
-        WorkerStates.setState(WorkerType.ONE_TIME_OMEGA, WorkInfo.State.RUNNING)
+        WorkStates.setState(WorkType.ONE_TIME_OMEGA, WorkInfo.State.RUNNING)
 
         val uploadRequest = OneTimeWorkRequestBuilder<CoroutineOmegaWorker>()
             .setInputData(workDataOf("variableName" to "oneTimeOmegaState", "notificationID" to "6565"))
@@ -52,7 +51,7 @@ object OmegaPeriodicScheduler {
     }
 
     fun initiatePeriodicOmegaWorker(context : Context) : UUID {
-        WorkerStates.setState(WorkerType.PERIODIC_OMEGA, WorkInfo.State.RUNNING)
+        WorkStates.setState(WorkType.PERIODIC_OMEGA, WorkInfo.State.RUNNING)
 
         val uploadRequest = PeriodicWorkRequestBuilder<CoroutineOmegaWorker>(15, TimeUnit.MINUTES)
             .setInputData(workDataOf("variableName" to "periodicOmegaState", "notificationID" to "5656"))
@@ -72,7 +71,7 @@ object OmegaPeriodicScheduler {
     }
 
     fun cancelOneTimeOmegaWorker(context: Context) {
-        WorkerStates.setState(WorkerType.ONE_TIME_OMEGA, null)
+        WorkStates.setState(WorkType.ONE_TIME_OMEGA, null)
 
         WorkManager
             .getInstance(context)
@@ -80,7 +79,7 @@ object OmegaPeriodicScheduler {
     }
 
     fun cancelPeriodicOmegaWorker(context: Context) {
-        WorkerStates.setState(WorkerType.PERIODIC_OMEGA, null)
+        WorkStates.setState(WorkType.PERIODIC_OMEGA, null)
 
         WorkManager
             .getInstance(context)
@@ -88,18 +87,19 @@ object OmegaPeriodicScheduler {
     }
 }
 
-// TODO: Test OmegaWorker more
+/**
+ * TODO: Test OmegaWorker more
+ * TODO: Clean up / finish notification implementation in getForegroundInfo()
+ */
 class CoroutineOmegaWorker(
-    context: Context,
+    val context: Context,
     params: WorkerParameters
 ) : CoroutineWorker(context, params) {
 
     private var NOTIFICATION_ID : Int? = -1
     private val CHANNEL_ID = "alxkng5737"
     private var stateVarString: String? = null
-    private val retryAmount = 5
 
-    val context: Context? = context
     val scope = CoroutineScope(Dispatchers.IO)
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -126,104 +126,67 @@ class CoroutineOmegaWorker(
             }
         }
 
-        val repository: ClientRepository? = (applicationContext as App).repository
-        val database: ClientDatabase? = (applicationContext as App).database
+        val repository: ClientRepository = (applicationContext as App).repository
+        val database: ClientDatabase = (applicationContext as App).database
 
-        if (context != null && database != null && repository != null) {
+        /**
+         * Sync with contacts and call logs
+         */
+        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA SYNC STARTED")
+        TableSynchronizer.syncContacts(context, database, context.contentResolver)
+        TableSynchronizer.syncCallLogs(context, repository, context.contentResolver)
 
-            /**
-             * Sync with contacts and call logs
-             */
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA SYNC STARTED")
-            TableSynchronizer.syncContacts(context, database, context.contentResolver)
-            TableSynchronizer.syncCallLogs(context, repository, context.contentResolver)
+        /**
+         * Downloads changes from server
+         */
+        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA DOWNLOAD STARTED")
+        ServerWorkHelpers.downloadData(context, repository, scope, "OMEGA")
 
-            /**
-             * Downloads changes from server
-             */
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA DOWNLOAD STARTED")
-            for (i in 1..retryAmount) {
-                WorkerStates.setState(WorkerType.DOWNLOAD_POST, WorkInfo.State.RUNNING)
-                ServerInteractions.downloadPostRequest(context, repository, scope)
+        /**
+         * Executes logs in ExecuteQueue
+         */
+        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA EXECUTE STARTED")
+        repository.executeAll()
 
-                val success = WorkerStates.workerWaiter(WorkerType.DOWNLOAD_POST, "DOWNLOAD", stopOnFail = true, certainFinish = true)
-                if (success) break
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA DOWNLOAD RETRYING")
-                delay(2000)
-            }
-
-            /**
-             * Executes logs in ExecuteQueue
-             */
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA EXECUTE STARTED")
-            repository.executeAll()
-
-            /**
-             * Uploads changes to server
-             * If a big error occurs, like a 404, the upload should not continue
-             */
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_CHANGE STARTED")
-            WorkerStates.setState(WorkerType.UPLOAD_CHANGES, WorkInfo.State.RUNNING)
-            if (repository.hasChangeQTU()) {
-                ServerInteractions.uploadChangeRequest(context, repository, scope)
-            } else {
-                WorkerStates.setState(WorkerType.UPLOAD_CHANGES, WorkInfo.State.SUCCEEDED)
-            }
-
-            // Makes sure upload doesn't have a big error before retrying.
-            if (!WorkerStates.workerWaiter(WorkerType.UPLOAD_CHANGES, "UPLOAD_CHANGE", stopOnFail = true, certainFinish = true)) {
-                Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA PERIODIC ENDED EARLY. PROBLEM WITH UPLOAD_CHANGE.")
-                return Result.failure()
-            }
-
-            // Makes sure everything is uploaded.
-            if (repository.hasChangeQTU()) {
-                delay(1000)
-                return Result.retry()
-            }
-
-
-            /**
-             * TODO: Clean this up!!!!
-             */
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_ANALYZED STARTED")
-            WorkerStates.setState(WorkerType.UPLOAD_ANALYZED, WorkInfo.State.RUNNING)
-            if (repository.hasAnalyzedQTU()) {
-                ServerInteractions.uploadAnalyzedRequest(context, repository, scope)
-            } else {
-                WorkerStates.setState(WorkerType.UPLOAD_ANALYZED, WorkInfo.State.SUCCEEDED)
-            }
-
-            // Makes sure upload doesn't have a big error before retrying.
-            if (!WorkerStates.workerWaiter(WorkerType.UPLOAD_ANALYZED, "UPLOAD_ANALYZED", stopOnFail = true, certainFinish = true)) {
-                Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA PERIODIC ENDED EARLY. PROBLEM WITH UPLOAD_ANALYZED.")
-                return Result.failure()
-            }
-
-            // Makes sure everything is uploaded.
-            if (repository.hasAnalyzedQTU()) {
-                delay(1000)
-                return Result.retry()
-            }
-
-            when (stateVarString) {
-                "oneTimeOmegaState" -> {
-                    WorkerStates.setState(WorkerType.ONE_TIME_OMEGA, WorkInfo.State.SUCCEEDED)
-                    Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA ONE TIME ENDED")
-                }
-                "periodicOmegaState" -> {
-                    WorkerStates.setState(WorkerType.PERIODIC_OMEGA, WorkInfo.State.SUCCEEDED)
-                    Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA PERIODIC ENDED")
-                }
-                else -> {
-                    Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA WORKER THREAD: Worker state variable name is wrong")
-                }
-            }
-
-            return Result.success()
-        } else {
-            return Result.retry()
+        /**
+         * Uploads changes to server. Returns next Result action if uploadChange()
+         * doesn't return null (failure or retry).
+         */
+        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_CHANGE STARTED")
+        val uploadChangeResult = ServerWorkHelpers.uploadChange(context, repository, scope, "OMEGA")
+        if (uploadChangeResult != null) {
+            return uploadChangeResult
         }
+
+        /**
+         * TODO: Confirm that we want to upload AnalyzedNumbers here. Or maybe, have some type
+         *  or condition that allows us to choose whether or not we want to upload
+         *  AnalyzedNumbers or not. -> Maybe pull out into Parameters table.
+         *
+         * Uploads analyzedNumbers to server. Returns next Result action if uploadAnalyzed()
+         * doesn't return null (failure or retry).
+         */
+        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_ANALYZED STARTED")
+        val uploadAnalyzedResult = ServerWorkHelpers.uploadAnalyzed(context, repository, scope, "OMEGA")
+        if (uploadAnalyzedResult != null) {
+            return uploadAnalyzedResult
+        }
+
+        when (stateVarString) {
+            "oneTimeOmegaState" -> {
+                WorkStates.setState(WorkType.ONE_TIME_OMEGA, WorkInfo.State.SUCCEEDED)
+                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA ONE TIME ENDED")
+            }
+            "periodicOmegaState" -> {
+                WorkStates.setState(WorkType.PERIODIC_OMEGA, WorkInfo.State.SUCCEEDED)
+                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA PERIODIC ENDED")
+            }
+            else -> {
+                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA WORKER THREAD: Worker state variable name is wrong")
+            }
+        }
+
+        return Result.success()
     }
 
     override suspend fun getForegroundInfo() : ForegroundInfo {

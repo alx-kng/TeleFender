@@ -13,7 +13,7 @@ interface ExecuteQueueDao {
     suspend fun insertQTE(vararg qte: ExecuteQueue)
 
     @Query("UPDATE execute_queue SET errorCounter = errorCounter + :counterDelta WHERE rowID = :rowID")
-    suspend fun incrementQTEErrors(rowID: Int, counterDelta: Int)
+    suspend fun incrementQTEErrors(rowID: Long, counterDelta: Int)
 
     @Query("SELECT EXISTS (SELECT * FROM execute_queue LIMIT 1)")
     suspend fun hasQTE() : Boolean
@@ -25,19 +25,19 @@ interface ExecuteQueueDao {
     suspend fun getFirstQTE() : ExecuteQueue?
 
     @Query("SELECT * FROM execute_queue WHERE rowID = :rowID")
-    suspend fun getQTE(rowID: Int) : ExecuteQueue
+    suspend fun getQTE(rowID: Long) : ExecuteQueue
     
     @Query("SELECT * FROM execute_queue ORDER BY rowID ASC")
     suspend fun getAllQTE() : List<ExecuteQueue>
 
     @Query("SELECT errorCounter FROM execute_queue WHERE rowID = :rowID ")
-    suspend fun getQTEErrorCounter(rowID: Int) : Int?
+    suspend fun getQTEErrorCounter(rowID: Long) : Int?
 
     @Query("SELECT rowID FROM execute_queue WHERE errorCounter > 0")
     suspend fun getQTEErrorLogs() : List<Int>
 
     @Query("DELETE FROM execute_queue WHERE rowID = :rowID")
-    suspend fun deleteQTE(rowID: Int)
+    suspend fun deleteQTE(rowID: Long)
 
     @Query("DELETE FROM execute_queue")
     suspend fun deleteAllQTE()
