@@ -44,6 +44,8 @@ class UploadAnalyzedRequestGen(
 }
 
 /**
+ * TODO: Is it correct to use deleteQTUExclusive for partial upload error?
+ *
  * Basically checks response from server for lastUploadRow and deletes the successfully uploaded
  * rows from the QTU. If there are more QTUs, then another upload request is launched.
  */
@@ -83,6 +85,7 @@ private fun uploadAnalyzedResponseHandler(
                         Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: PARTIALLY UPLOADED ANALYZED WITH ERROR: ${uploadResponse.error}")
                         repository.deleteAnalyzedQTUExclusive(uploadResponse.lastUploadedRowID)
                         nextErrorCount++
+                        delay(2000)
                     }
 
                 }

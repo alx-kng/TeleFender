@@ -5,6 +5,8 @@ import android.provider.CallLog
 import android.telephony.TelephonyManager
 import com.google.i18n.phonenumbers.PhoneNumberUtil
 import com.telefender.phone.App
+import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
+import com.telefender.phone.data.tele_database.entities.Parameters
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import timber.log.Timber
@@ -48,6 +50,20 @@ object MiscHelpers {
             val tMgr = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
             val number = tMgr.line1Number
             return normalizedNumber(number) ?: bareNumber(number)
+        }
+    }
+
+    fun getAnalyzedNumber(context: Context, normalizedNumber: String) : AnalyzedNumber? {
+        val repository = (context.applicationContext as App).repository
+        return runBlocking(Dispatchers.Default) {
+            repository.getAnalyzedNum(normalizedNumber)
+        }
+    }
+
+    fun getParameters(context: Context) : Parameters {
+        val repository = (context.applicationContext as App).repository
+        return runBlocking(Dispatchers.Default) {
+            repository.getParameters()
         }
     }
 

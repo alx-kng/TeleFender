@@ -14,6 +14,10 @@ interface StoredMapDao {
     suspend fun insertStoredMapQuery(vararg storedMap : StoredMap)
 
     /**
+     * TODO: Maybe make StoredMap retrieval safer by following the method in ParametersDao. That
+     *  way, if the user's only StoredMap gets deleted SOMEHOW, then we can just re-create an
+     *  empty StoredMap and possibly redo setup process. Still iffy though.
+     *
      * Initializes StoredMap with user's number. After first initialization, this function is
      * basically locked to make sure there is ONLY ONE StoredMap (which contains the user's number).
      * Make sure that you are passing in the right number!!!

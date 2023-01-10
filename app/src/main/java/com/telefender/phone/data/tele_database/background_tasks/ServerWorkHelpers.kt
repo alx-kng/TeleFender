@@ -14,6 +14,9 @@ object ServerWorkHelpers {
 
     private const val retryAmount = 5
 
+    /**
+     * Downloads GenericData from server. Retries the request here if something goes wrong.
+     */
     suspend fun downloadData(
         context: Context,
         repository: ClientRepository,

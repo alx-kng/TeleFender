@@ -113,7 +113,7 @@ object WorkStates {
      *
      * Work wait function that only return when the corresponding work is finished. Acts as a
      * roadblock of sorts so that the code following the waiter isn't run until corresponding
-     * work finishes. Returns whether or not the worker succeeded.
+     * work finishes. Returns whether or not the work succeeded.
      *
      * Requires that worker is running, otherwise the waiter returns (in order to
      * prevent infinite loop). Also, it's not really meant to be used for periodic workers,

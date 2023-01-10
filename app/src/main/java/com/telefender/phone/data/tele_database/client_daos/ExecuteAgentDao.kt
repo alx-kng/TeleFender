@@ -294,7 +294,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                             lastCallDuration = callDuration,
                             maxDuration = max(maxDuration, if(!isVoicemail) callDuration else 0),
                             avgDuration = if (isIncoming || isOutgoing) {
-                                getNewAvg(avgDuration, numIncoming + numOutgoing, callDuration)
+                                getNewAvg(avgDuration, numIncoming + numOutgoing + 1, callDuration)
                             } else {
                                 avgDuration
                             },
@@ -305,7 +305,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                             lastIncomingDuration = if (isIncoming) callDuration else lastIncomingDuration,
                             maxIncomingDuration = max(maxIncomingDuration, if(isIncoming) callDuration else 0),
                             avgIncomingDuration = if (isIncoming) {
-                                getNewAvg(avgDuration, numIncoming, callDuration)
+                                getNewAvg(avgIncomingDuration, numIncoming, callDuration)
                             } else {
                                 avgIncomingDuration
                             },
@@ -316,7 +316,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                             lastOutgoingDuration = if (isOutgoing) callDuration else lastOutgoingDuration,
                             maxOutgoingDuration = max(maxOutgoingDuration, if(isOutgoing) callDuration else 0),
                             avgOutgoingDuration = if (isOutgoing) {
-                                getNewAvg(avgDuration, numOutgoing, callDuration)
+                                getNewAvg(avgOutgoingDuration, numOutgoing, callDuration)
                             } else {
                                 avgOutgoingDuration
                             },
@@ -327,7 +327,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                             lastVoicemailDuration = if (isVoicemail) callDuration else lastVoicemailDuration,
                             maxVoicemailDuration = max(maxVoicemailDuration, if(isVoicemail) callDuration else 0),
                             avgVoicemailDuration = if (isVoicemail) {
-                                getNewAvg(avgDuration, numVoicemail, callDuration)
+                                getNewAvg(avgVoicemailDuration, numVoicemail, callDuration)
                             } else {
                                 avgVoicemailDuration
                             },

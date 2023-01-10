@@ -35,6 +35,8 @@ data class Parameters(
     val initialNotifyGate: Int,
     val verifiedSpamNotifyGate: Int,
     val superSpamNotifyGate: Int,
+    val incomingGate: Int, // inclusive seconds in order to let through
+    val outgoingGate: Int // inclusive seconds in order to let through
 )
 
 @Entity(tableName = "instance")
@@ -141,7 +143,7 @@ data class AnalyzedNumber(
     val rowID: Long = 0,
     val normalizedNumber: String, // should use cleaned number
     val instanceNumber: String,
-    val numTotalCalls: Int,
+    val numTotalCalls: Int, // includes any type of call
     val analyzedJson: String = "{}"
 ) {
 
@@ -168,6 +170,8 @@ data class AnalyzedNumber(
  *  example, if a person calls multiple times but doesn't leave a voicemail, then we have more
  *  reason to suspect that they might be spam. As a result, increasing the notify gate to
  *  something like 3 or 4 might be beneficial in not overcrowding the NotifyList.
+ *
+ * TODO: Add another field for if number also has TeleFender app downloaded.
  *
  * Used for analyzed fields not used in selection criteria for AnalyzedNumber. Stored as JSON.
  * Currently not using [algoAllowed]. Instead, we will calculate on the spot.

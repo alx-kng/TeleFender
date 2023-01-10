@@ -18,6 +18,11 @@ import timber.log.Timber
 class App : Application() {
 
     /**
+     * TODO: See if we can optimize memory / object creation to prevent too much work for
+     *  garbage collector.
+     */
+
+    /**
      * TODO: Clean up scopes to allow for better structured concurrency. I think we might be creating
      *  too many local scopes in functions right now.
      *

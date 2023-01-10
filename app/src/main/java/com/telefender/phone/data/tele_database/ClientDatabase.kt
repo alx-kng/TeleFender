@@ -283,6 +283,14 @@ abstract class ClientDatabase : RoomDatabase() {
         private var INSTANCE: ClientDatabase? = null
 
         /**
+         * TODO: YOU LISTEN TO ME RIGHT NOW!!! FIND OUT WHAT HAPPENS IF YOU CALL BEFORE USER SETUP
+         *  FINISHES AND THE SYNC OBSERVER IS LAUNCHED. FROM PRELIMINARY TESTING, IT SEEMS LIKE
+         *  THE DATABASE CAN STILL BE ACCESSED EVEN BEFORE THE SETUP / getDatabase() returns.
+         *  MAYBE IT'S CALLING A getDatabase() a SECOND TIME AND SOMEHOW RECEIVING THE INSTANCE???
+         *  ALSO, WHAT'S WORSE IS WHAT HAPPENS IF YOU GET A CALL BEFORE THE INITIALIZATION
+         *  FINISHES, WHAT THEN???? IF IT'S POSSIBLE, THEN MAKE SURE TO INITIALIZATION GUARD ALL
+         *  POSSIBLE PLACES WHERE TELE DATABASE USAGE CAN BE INITIATED!!!
+         *
          * TODO: Do sync somewhere on reentering app (or maybe don't because of periodic worker),
          *  since getDatabase() isn't always called.
          *

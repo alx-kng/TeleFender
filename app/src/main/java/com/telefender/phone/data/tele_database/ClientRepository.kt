@@ -103,10 +103,43 @@ class ClientRepository(
     }
 
     /***********************************************************************************************
-     * TODO: perhaps add the data analysis queries to the CallDetailDao and create an
-     *  updateMiscellaneous() function (and perhaps an update call logs function), which will be
-     *  called when the observer detects a change to the ACTUAL call logs.
+     * StoredMap Queries
+     **********************************************************************************************/
+
+    /**
+     * TODO: Perhaps we should include Parameters initialization as part of initialization
+     *  process.
      *
+     * Gets Parameters associated with user. Requires use of lock since it may initialize the
+     * Parameters if they didn't previously exist (only happens on first access).
+     */
+    @WorkerThread
+    suspend fun getParameters() : Parameters {
+        return mutexLocks[MutexType.PARAMETERS]!!.withLock {
+            parametersDao.getParameters()
+        }
+    }
+
+    @WorkerThread
+    suspend fun updateParameters(
+        initialNotifyGate: Int? = null,
+        verifiedSpamNotifyGate: Int? = null,
+        superSpamNotifyGate: Int? = null,
+        incomingGate: Int? = null,
+        outgoingGate: Int? = null
+    ) {
+        mutexLocks[MutexType.PARAMETERS]!!.withLock {
+            parametersDao.updateParameters(
+                initialNotifyGate = initialNotifyGate,
+                verifiedSpamNotifyGate = verifiedSpamNotifyGate,
+                superSpamNotifyGate = superSpamNotifyGate,
+                incomingGate = incomingGate,
+                outgoingGate = outgoingGate
+            )
+        }
+    }
+
+    /***********************************************************************************************
      * CallDetail Queries
      **********************************************************************************************/
 

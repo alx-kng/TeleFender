@@ -46,7 +46,7 @@ class CallService : InCallService() {
          * directly started. Also, safe calls and unsafe calls are handled separately.
          */
         if (call.getStateCompat() == Call.STATE_RINGING) {
-            if (RuleChecker.isSafe(call.number())) {
+            if (RuleChecker.isSafe(this, call.number())) {
                 safeCall()
             } else {
                 unsafeCall(call)
