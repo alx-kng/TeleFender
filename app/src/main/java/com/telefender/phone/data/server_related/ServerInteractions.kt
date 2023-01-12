@@ -13,7 +13,7 @@ import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
 import com.telefender.phone.data.tele_database.entities.ChangeLog
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.*
 import org.json.JSONException
 import timber.log.Timber
@@ -27,13 +27,13 @@ object ServerInteractions {
     @SuppressLint("MissingPermission")
     suspend fun downloadDataRequest(context: Context, repository: ClientRepository, scope: CoroutineScope) {
         val url = "https://dev.scribblychat.com/callbook/downloadChanges"
-        val instanceNumber = MiscHelpers.getUserNumberStored(context)
+        val instanceNumber = TeleHelpers.getUserNumberStored(context) ?: return
 
         val key = repository.getClientKey()
         val lastServerRowID = repository.getLastServerRowID()
 
         if (key == null) {
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: CLIENT KEY IS NULL")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: CLIENT KEY IS NULL")
             return
         }
 
@@ -70,19 +70,19 @@ object ServerInteractions {
         errorCount: Int
     ) {
         if (errorCount == retryAmount) {
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: UPLOAD_CHANGE RETRY MAX")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: UPLOAD_CHANGE RETRY MAX")
             WorkStates.setState(WorkType.UPLOAD_CHANGE_POST, WorkInfo.State.FAILED)
             return
         }
 
         val url = "https://dev.scribblychat.com/callbook/uploadChanges"
-        val instanceNumber = MiscHelpers.getUserNumberStored(context)
+        val instanceNumber = TeleHelpers.getUserNumberStored(context) ?: return
 
         val key = repository.getClientKey()
         val uploadRequestJson: String
 
         if (key == null) {
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: CLIENT KEY IS NULL")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: CLIENT KEY IS NULL")
             return
         }
 
@@ -105,7 +105,7 @@ object ServerInteractions {
                 uploadRequestJson = UploadChangeRequest(instanceNumber, key, changeLogs).toJson()
             }
 
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG} UPLOAD_CHANGE REQUEST JSON: $uploadRequestJson")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG} UPLOAD_CHANGE REQUEST JSON: $uploadRequestJson")
 
             val stringRequest = UploadChangeRequestGen.create(
                 method = Request.Method.POST,
@@ -120,7 +120,7 @@ object ServerInteractions {
             // Adds entire string request to request queue
             RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
         } catch (e: Exception) {
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ${e.message}")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ${e.message}")
             e.printStackTrace()
         }
     }
@@ -138,19 +138,19 @@ object ServerInteractions {
         errorCount: Int
     ) {
         if (errorCount == retryAmount) {
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: UPLOAD_ANALYZED RETRY MAX")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: UPLOAD_ANALYZED RETRY MAX")
             WorkStates.setState(WorkType.UPLOAD_ANALYZED_POST, WorkInfo.State.FAILED)
             return
         }
 
         val url = "https://dev.scribblychat.com/callbook/uploadAnalyzedNumbers"
-        val instanceNumber = MiscHelpers.getUserNumberStored(context)
+        val instanceNumber = TeleHelpers.getUserNumberStored(context) ?: return
 
         val key = repository.getClientKey()
         val uploadRequestJson: String
 
         if (key == null) {
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: CLIENT KEY IS NULL")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: CLIENT KEY IS NULL")
             return
         }
 
@@ -173,7 +173,7 @@ object ServerInteractions {
                 uploadRequestJson = UploadAnalyzedRequest(instanceNumber, key, analyzedNumbers).toJson()
             }
 
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG} UPLOAD_ANALYZED_POST REQUEST JSON: $uploadRequestJson")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG} UPLOAD_ANALYZED_POST REQUEST JSON: $uploadRequestJson")
 
             val stringRequest = UploadAnalyzedRequestGen.create(
                 method = Request.Method.POST,
@@ -188,7 +188,7 @@ object ServerInteractions {
             // Adds entire string request to request queue
             RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
         } catch (e: Exception) {
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ${e.message}")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ${e.message}")
             e.printStackTrace()
         }
     }
@@ -208,7 +208,7 @@ object ServerInteractions {
         token: String
     ) {
         val url = ""
-        val instanceNumber = MiscHelpers.getUserNumberStored(context)
+        val instanceNumber = TeleHelpers.getUserNumberStored(context) ?: return
 
         val key = repository.getClientKey()
         val tokenRequestJson : String
@@ -216,7 +216,7 @@ object ServerInteractions {
         if (key != null) {
             tokenRequestJson = TokenRequest(instanceNumber, key, token).toJson()
         } else {
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: CLIENT KEY IS NULL")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: CLIENT KEY IS NULL")
             return
         }
 

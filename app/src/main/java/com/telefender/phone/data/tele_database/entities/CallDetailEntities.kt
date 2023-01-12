@@ -4,7 +4,7 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.squareup.moshi.JsonClass
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 
 
 // TODO: Move this stuff to other files and maybe move CallDetail to TeleEntities.
@@ -25,7 +25,7 @@ data class GroupedCallDetail(
 
     override fun toString() : String {
         return "rawNumber: $rawNumber callEpochDate: $callEpochDate" +
-            " callLocation: $callLocation callDirection: ${MiscHelpers.getDirectionString(callDirection)}" +
+            " callLocation: $callLocation callDirection: ${TeleHelpers.getDirectionString(callDirection)}" +
             " unallowed: $unallowed"
     }
 }
@@ -79,7 +79,7 @@ data class CallDetail(
     override fun toString() : String {
         return "rawNumber: $rawNumber callType: $callType callEpochDate: $callEpochDate callDuration: " +
             "$callDuration callLocation: $callLocation " +
-            "callDirection: ${MiscHelpers.getDirectionString(callDirection)} " +
+            "callDirection: ${TeleHelpers.getDirectionString(callDirection)} " +
             "unallowed: $unallowed normalizedNumber: $normalizedNumber"
     }
 

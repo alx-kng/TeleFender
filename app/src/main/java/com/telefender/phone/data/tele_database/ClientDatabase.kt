@@ -12,7 +12,6 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.ktx.messaging
-import com.telefender.phone.App
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.background_tasks.TableInitializers
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
@@ -22,8 +21,8 @@ import com.telefender.phone.data.tele_database.background_tasks.workers.SetupSch
 import com.telefender.phone.data.tele_database.client_daos.*
 import com.telefender.phone.data.tele_database.entities.*
 import com.telefender.phone.helpers.DatabaseLogFunctions
-import com.telefender.phone.helpers.MiscHelpers
-import com.telefender.phone.permissions.PermissionRequester
+import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.permissions.Permissions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -80,13 +79,15 @@ abstract class ClientDatabase : RoomDatabase() {
         @RequiresApi(Build.VERSION_CODES.O)
         override fun onCreate(db: SupportSQLiteDatabase) {
             super.onCreate(db)
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: INSIDE DATABASE CALLBACK")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: INSIDE DATABASE CALLBACK")
             INSTANCE?.let { database ->
                 scope.launch {
+                    firstTimeAccess = true
 
                     database.waitForLogPermissions(context, "CALLBACK")
 
                     database.initCoreDatabase(context)
+                    database.waitForInitialization(context, scope)
 
                     // User setup goes before rest of database, because that may take a long time.
                     database.userSetup(context)
@@ -94,12 +95,15 @@ abstract class ClientDatabase : RoomDatabase() {
                     // TODO: Fix Firebase
 //                    database.initFirebase()
 
+                    database.initRestOfDatabase(context)
+
                     /*
                      Unfortunately, doing setup before results in the waiter in getDatabase() to
                      be lifted first, but rest of database should still be initialized during the
                      time of the omega worker. Also, even if rest of database doesn't finish, it
                      should be taken care of during sync.
                      */
+                    firstTimeAccess = false
                 }
             }
         }
@@ -115,23 +119,23 @@ abstract class ClientDatabase : RoomDatabase() {
     protected suspend fun initCoreDatabase(context: Context) {
         initializationRunning = true
 
-        if (!PermissionRequester.hasLogPermissions(context)) {
-            Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: No log permissions in initCoreDatabase()")
+        if (!Permissions.hasLogPermissions(context)) {
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: No log permissions in initCoreDatabase()")
             return
         }
 
-        Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: initCoreDatabase()")
+        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: initCoreDatabase()")
 
-        val instanceNumber = MiscHelpers.getUserNumberUncertain(context)
+        val instanceNumber = TeleHelpers.getUserNumberUncertain(context) ?: return
 
         // Makes sure that retrieved instanceNumber isn't invalid (due to errors or something).
-        if (instanceNumber != MiscHelpers.UNKNOWN_NUMBER) {
+        if (instanceNumber != TeleHelpers.UNKNOWN_NUMBER) {
             // Initializes stored map table with user number. Lock for extra safety.
             mutexLocks[MutexType.STORED_MAP]!!.withLock {
                 this.storedMapDao().initStoredMap(instanceNumber)
             }
 
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: " +
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
                 "Initial StoredMap - ${this.storedMapDao().getStoredMap()?.userNumber}")
 
             // Inserts the single user instance with changeAgentDao
@@ -148,53 +152,32 @@ abstract class ClientDatabase : RoomDatabase() {
 
     protected suspend fun userSetup(context: Context) {
         // Don't continue if initialization wasn't successful.
-        val instanceNumber = MiscHelpers.getUserNumberUncertain(context)
-        if (!isInitialized(instanceNumber)) {
-            return
-        }
+        if (!isInitialized()) return
 
         SetupScheduler.initiateSetupWorker(context)
         WorkStates.workWaiter(WorkType.SETUP)
     }
 
     /**
-     * TODO: Do we need the permission check here? Should we even use this function?
-     *
-     * Initializes the contact, contact number, and call log tables. Requires call log and contact
-     * permissions. Probably won't use this since rest of database can just be initialized by
-     * sync during omega worker (at the end of getDatabase())
+     * Initializes the contacts, contact numbers, and call logs tables. Requires call log and
+     * contact permissions.
      */
-    protected suspend fun initRestOfDatabase(context: Context, contentResolver: ContentResolver) {
-        if (!PermissionRequester.hasLogPermissions(context)) {
-            Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: No log permissions in initRestOfDatabase()")
-            return
-        }
-
-        val repository = (context.applicationContext as App).repository
-
-        // Goes through each call log and inserts to db
-        TableInitializers.initCallDetails(context, repository)
-
-        // Goes through contacts and inserts contacts (and corresponding numbers) into db
-        TableInitializers.initContact(context, this, contentResolver)
-
-        // Goes through contact numbers and inserts numbers into db
-        TableInitializers.initContactNumber(context, this, contentResolver)
-
-        DatabaseLogFunctions.logSelect(null, repository, listOf(0, 1, 2, 3, 4, 5, 6))
+    protected suspend fun initRestOfDatabase(context: Context) {
+        TableInitializers.initContacts(context, this, context.contentResolver)
+        TableInitializers.initCallDetails(context)
     }
 
     protected fun initFirebase() {
         // Gets firebase token
         Firebase.messaging.token.addOnCompleteListener(OnCompleteListener { task ->
             if (!task.isSuccessful) {
-                Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: Fetching FCM registration token failed %s", task.exception)
+                Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: Fetching FCM registration token failed %s", task.exception)
                 return@OnCompleteListener
             }
 
             // Get new FCM registration token
             val token = task.result
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: TOKEN: %s", token ?: "TOKEN WAS NULL")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: TOKEN: %s", token ?: "TOKEN WAS NULL")
         })
     }
 
@@ -203,10 +186,10 @@ abstract class ClientDatabase : RoomDatabase() {
      * loop if not called at the right location.
      */
     protected suspend fun waitForLogPermissions(context: Context, invokeLocation: String) {
-        while (!PermissionRequester.hasLogPermissions(context)) {
+        while (!Permissions.hasLogPermissions(context)) {
             delay(500)
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: INSIDE $invokeLocation | HAS CALL LOG PERMISSION: " +
-                "${PermissionRequester.hasLogPermissions(context)}")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: INSIDE $invokeLocation | HAS CALL LOG PERMISSION: " +
+                "${Permissions.hasLogPermissions(context)}")
         }
     }
 
@@ -214,35 +197,30 @@ abstract class ClientDatabase : RoomDatabase() {
      * Not only waits for core database initialization, but also restarts initialization if it not
      * initialized and no exec worker running.
      */
-    private suspend fun waitForInitialization(scope: CoroutineScope, context: Context) {
-        val instanceNumber = MiscHelpers.getUserNumberUncertain(context)
-
-        while (!isInitialized(instanceNumber)) {
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: getDatabase() - DATABASE INITIALIZED = FALSE")
+    private suspend fun waitForInitialization(context: Context, scope: CoroutineScope) {
+        while (!isInitialized()) {
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: getDatabase() - DATABASE INITIALIZED = FALSE")
             delay(500)
 
             /*
              * initializationRunning = true not put in scope so that initializationRunning is
              * up-to-date for check in next while loop iteration.
              */
-            if (!initializationRunning && !isInitialized(instanceNumber)) {
+            if (!initializationRunning && !isInitialized()) {
                 initializationRunning = true
                 scope.launch {
                     initCoreDatabase(context)
                 }
             }
         }
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: getDatabase() - DATABASE INITIALIZED = TRUE")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: getDatabase() - DATABASE INITIALIZED = TRUE")
     }
 
     /**
-     * Stored map is initialized when there is a row. Don't check database initialized status
-     * if stored map isn't initialized.
+     * Checks if database is initialized.
      */
-    private suspend fun isInitialized(userNumber: String) : Boolean {
-        return userNumber != MiscHelpers.UNKNOWN_NUMBER
-            && this.instanceDao().hasInstance(userNumber)
-            && this.storedMapDao().databaseInitialized()
+    private suspend fun isInitialized() : Boolean {
+        return this.storedMapDao().databaseInitialized()
     }
 
     /**
@@ -260,20 +238,26 @@ abstract class ClientDatabase : RoomDatabase() {
     private suspend fun waitForSetup(context: Context) {
         while (!isSetup()) {
             delay(500)
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: getDatabase() - USER SETUP = FALSE")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: getDatabase() - USER SETUP = FALSE")
 
-            if (WorkStates.getState(WorkType.SETUP) == null){
+            if (WorkStates.getState(WorkType.SETUP) == null) {
                 SetupScheduler.initiateSetupWorker(context)
             }
         }
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: getDatabase() - USER SETUP = TRUE")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: getDatabase() - USER SETUP = TRUE")
     }
 
+    /**
+     * Checks if user is setup.
+     */
     private suspend fun isSetup() : Boolean {
         return this.storedMapDao().getStoredMap()?.clientKey != null
     }
 
     companion object {
+
+        // Used to stall Omega workers until initRestOfDatabase() finishes on first ever access.
+        var firstTimeAccess = false
 
         // true if initCoreDatabase() is running.
         var initializationRunning = false
@@ -325,7 +309,7 @@ abstract class ClientDatabase : RoomDatabase() {
                 instance
             }
 
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: GET DATABASE CALLED!")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: GET DATABASE CALLED!")
 
             runBlocking {
                 scope.launch {
@@ -333,8 +317,14 @@ abstract class ClientDatabase : RoomDatabase() {
 
                     // TODO: Probably need to restart firebase initialization process too.
                     // Waits for / restarts core database initialization and user setup.
-                    instanceTemp.waitForInitialization(scope, context)
+                    instanceTemp.waitForInitialization(context, scope)
                     instanceTemp.waitForSetup(context)
+
+                    // Wait for other possible initialization.
+                    while (firstTimeAccess) {
+                        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: Waiting for rest of database!")
+                        delay(500)
+                    }
 
                     OmegaPeriodicScheduler.initiateOneTimeOmegaWorker(context)
                     WorkStates.workWaiter(WorkType.ONE_TIME_OMEGA)

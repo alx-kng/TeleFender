@@ -2,10 +2,9 @@ package com.telefender.phone.data.tele_database.client_daos
 
 import androidx.room.Dao
 import androidx.room.Insert
-import androidx.room.Query
 import androidx.room.OnConflictStrategy
+import androidx.room.Query
 import com.telefender.phone.data.tele_database.entities.ChangeLog
-import java.sql.RowId
 
 @Dao
 interface ChangeLogDao {

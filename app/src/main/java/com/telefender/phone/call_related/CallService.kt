@@ -4,14 +4,15 @@ package com.telefender.phone.call_related
 import android.provider.CallLog
 import android.telecom.Call
 import android.telecom.InCallService
-import com.telefender.phone.App
 import com.telefender.phone.data.tele_database.TeleCallDetails
 import com.telefender.phone.data.tele_database.background_tasks.workers.SyncScheduler
 import com.telefender.phone.gui.InCallActivity
 import com.telefender.phone.gui.IncomingCallActivity
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import timber.log.Timber
 
+
+// TODO: CHECK IF NO PERMISSION FOR SILENCE MODE
 class CallService : InCallService() {
 
     override fun onCreate() {
@@ -20,7 +21,7 @@ class CallService : InCallService() {
         // Sets CallService context.
         _context = this
 
-        Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: CallService onCreate()")
+        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: CallService onCreate()")
     }
 
     override fun onDestroy() {
@@ -29,7 +30,7 @@ class CallService : InCallService() {
         // Removes CallService context for safety.
         _context = null
 
-        Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: CallService onDestroy()")
+        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: CallService onDestroy()")
     }
 
     /**
@@ -81,11 +82,9 @@ class CallService : InCallService() {
      *  specifically in terms of showing UI.
      */
     private fun unsafeCall(call: Call) {
-        val repository = ((this.applicationContext) as App).repository
-
         when(CallManager.currentMode) {
             HandleMode.BLOCK_MODE -> {
-                TeleCallDetails.insertCallDetail(repository, call, true, CallLog.Calls.BLOCKED_TYPE)
+                TeleCallDetails.insertCallDetail(this, call, true, CallLog.Calls.BLOCKED_TYPE)
                 CallManager.hangup()
             }
             HandleMode.SILENCE_MODE -> {

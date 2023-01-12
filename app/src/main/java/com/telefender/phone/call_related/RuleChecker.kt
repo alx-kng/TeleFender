@@ -1,44 +1,43 @@
 package com.telefender.phone.call_related
 
 import android.content.Context
-import com.telefender.phone.App
 import com.telefender.phone.data.tele_database.entities.Analyzed
 import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
 import com.telefender.phone.data.tele_database.entities.Parameters
-import com.telefender.phone.helpers.MiscHelpers
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
+import com.telefender.phone.helpers.TeleHelpers
 import timber.log.Timber
 
 object RuleChecker {
 
     /**
-     * TODO: Double check algo (specifically smsVerified) and put in possible stuff for NotifyList.
+     * TODO: Preliminary algo:
+     *  - Double check (specifically smsVerified)
+     *  - Put in possible stuff for NotifyList.
      *
      * Returns whether or not number should be allowed. Read "TeleFender - Algorithm Overview" for
      * more info.
      */
     fun isSafe(context: Context, number: String?): Boolean {
 
-        val normalizedNumber = MiscHelpers.normalizedNumber(number)
-            ?: MiscHelpers.bareNumber(number)
+        val normalizedNumber = TeleHelpers.normalizedNumber(number)
+            ?: TeleHelpers.bareNumber(number)
 
-        if (normalizedNumber == MiscHelpers.UNKNOWN_NUMBER) return false
+        if (normalizedNumber == TeleHelpers.UNKNOWN_NUMBER) return false
 
         val analyzedNumber: AnalyzedNumber
         val analyzed: Analyzed
         val parameters: Parameters
 
         try {
-            analyzedNumber = MiscHelpers.getAnalyzedNumber(context, normalizedNumber)!!
+            analyzedNumber = TeleHelpers.getAnalyzedNumber(context, normalizedNumber)!!
             analyzed = analyzedNumber.getAnalyzed()
-            parameters = MiscHelpers.getParameters(context)
+            parameters = TeleHelpers.getParameters(context)!!
         } catch (e: Exception) {
             /*
             Allow number through if some huge internal error occurs so that the user isn't hard locked
             from receiving outside calls.
              */
-            Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: isSafe() - MAYDAY MAYDAY! ${e.message}")
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: isSafe() - MAYDAY MAYDAY! ${e.message}")
             e.printStackTrace()
             return true
         }

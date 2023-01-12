@@ -10,7 +10,7 @@ import com.telefender.phone.data.server_related.ServerInteractions
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import timber.log.Timber
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -73,8 +73,6 @@ class CoroutineTokenWorker(
         val repository: ClientRepository = (applicationContext as App).repository
         val scope = (applicationContext as App).applicationScope
 
-        val instanceNumber = MiscHelpers.getUserNumberStored(context)
-
         val key = repository.getClientKey()
         val token = repository.getFireBaseToken()
         ServerInteractions.tokenPostRequest(context, repository, scope, token!!)
@@ -83,7 +81,7 @@ class CoroutineTokenWorker(
             "oneTimeTokenState" ->  WorkStates.setState(WorkType.ONE_TIME_TOKEN, WorkInfo.State.SUCCEEDED)
             "periodicTokenState" -> WorkStates.setState(WorkType.PERIODIC_TOKEN, WorkInfo.State.SUCCEEDED)
             else -> {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: TOKEN WORKER THREAD: Worker state variable name is wrong")
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: TOKEN WORKER THREAD: Worker state variable name is wrong")
             }
         }
         return Result.success()

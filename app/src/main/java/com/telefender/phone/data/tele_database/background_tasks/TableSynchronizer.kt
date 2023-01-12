@@ -11,7 +11,7 @@ import com.telefender.phone.data.default_database.DefaultContacts
 import com.telefender.phone.data.tele_database.*
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.entities.*
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
@@ -36,18 +36,20 @@ object TableSynchronizer {
     */
     suspend fun syncCallLogs(context: Context, repository: ClientRepository, contentResolver: ContentResolver) {
         for (i in 1..retryAmount) {
-            val success = syncCallLogsHelper(context, repository, contentResolver)
-            if (success) break
-
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: syncCallImmediate() RETRYING...")
-            delay(2000)
+            try {
+                syncCallLogsHelper(context, repository, contentResolver)
+                break
+            } catch (e: Exception) {
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: syncCallImmediate() RETRYING...")
+                delay(2000)
+            }
         }
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
-    suspend fun syncCallLogsHelper(context: Context, repository: ClientRepository, contentResolver: ContentResolver) : Boolean {
+    suspend fun syncCallLogsHelper(context: Context, repository: ClientRepository, contentResolver: ContentResolver) {
 
-        val instanceNumber = MiscHelpers.getUserNumberStored(context)
+        val instanceNumber = TeleHelpers.getUserNumberStored(context)!!
         val lastLogSyncTime = repository.getLastLogSyncTime()!!
 
         /*
@@ -78,14 +80,14 @@ object TableSynchronizer {
             while (curs.moveToNext()) {
                 val rawNumber = curs.getString(0)
                 // If normalizedNumber is null, use bareNumber() cleaning of rawNumber.
-                val normalizedNumber = MiscHelpers.normalizedNumber(rawNumber)
-                    ?: MiscHelpers.bareNumber(rawNumber)
+                val normalizedNumber = TeleHelpers.normalizedNumber(rawNumber)
+                    ?: TeleHelpers.bareNumber(rawNumber)
                 val typeInt = curs.getInt(1)
                 // Epoch date is in milliseconds and is the creation time.
                 val date = curs.getString(2).toLong()
                 val duration = curs.getString(3).toLong()
                 val location = curs.getString(4)
-                val dir = MiscHelpers.getTrueDirection(typeInt, rawNumber)
+                val dir = TeleHelpers.getTrueDirection(typeInt, rawNumber)
 
                 val callDetail = CallDetail(
                     rawNumber = rawNumber,
@@ -98,21 +100,15 @@ object TableSynchronizer {
                     instanceNumber = instanceNumber
                 )
 
-                try {
-                    val inserted = repository.callFromClient(callDetail)
-                    if (inserted) {
-                        Timber.i("${MiscHelpers.DEBUG_LOG_TAG} syncCallLogs(): SYNCED: $callDetail")
-                    } else {
-                        Timber.i("${MiscHelpers.DEBUG_LOG_TAG} syncCallLogs(): ALREADY SYNCED: $callDetail")
-                    }
-                } catch (e: Exception) {
-                    return false
+                val inserted = repository.callFromClient(callDetail)
+                if (inserted) {
+                    Timber.i("${TeleHelpers.DEBUG_LOG_TAG} syncCallLogs(): SYNCED: $callDetail")
+                } else {
+                    Timber.i("${TeleHelpers.DEBUG_LOG_TAG} syncCallLogs(): ALREADY SYNCED: $callDetail")
                 }
             }
             curs.close()
         }
-
-        return true
     }
 
     /**********************************************************************************************
@@ -148,7 +144,7 @@ object TableSynchronizer {
                 syncContactsHelper(context, database, contentResolver)
                 break
             } catch (e: Exception) {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: syncContacts() RETRYING...")
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: syncContacts() RETRYING...")
                 delay(2000)
             }
         }
@@ -173,10 +169,11 @@ object TableSynchronizer {
     suspend fun checkForInserts(
         context: Context,
         database: ClientDatabase,
-        contentResolver : ContentResolver
+        contentResolver : ContentResolver,
+        firstAccess: Boolean = false
     ) : HashMap<String, MutableList<ContactNumber>> {
 
-        val instanceNumber = MiscHelpers.getUserNumberStored(context)
+        val instanceNumber = TeleHelpers.getUserNumberStored(context)!!
         val mutexSync = mutexLocks[MutexType.SYNC]!!
         val curs: Cursor? = DefaultContacts.getContactNumberCursor(contentResolver)
 
@@ -187,9 +184,9 @@ object TableSynchronizer {
         val defaultContactHashMap = HashMap<String, MutableList<ContactNumber>>()
 
         if (curs == null) {
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: Contact Number cursor is null; BAD")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: Contact Number cursor is null; BAD")
         } else {
-            Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: Inside table synchronizer")
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: Inside table synchronizer")
             while (!curs.isAfterLast) {
                 /**
                  * Need to turn default CID into UUID version of CID since default CID is not the
@@ -199,12 +196,12 @@ object TableSynchronizer {
                 val teleCID = UUID.nameUUIDFromBytes((defaultCID + instanceNumber).toByteArray()).toString()
                 val rawNumber = curs.getString(1)
                 val normalizedNumber = curs.getString(2)
-                    ?: MiscHelpers.normalizedNumber(rawNumber)
-                    ?: MiscHelpers.bareNumber(rawNumber)
+                    ?: TeleHelpers.normalizedNumber(rawNumber)
+                    ?: TeleHelpers.bareNumber(rawNumber)
                 val versionNumber = curs.getString(3).toInt()
 
                 // Corresponding contact numbers (by CID) in our database
-                val matchCID: List<ContactNumber> = database.contactNumberDao().getContactNumbers_CID(teleCID)
+                val matchCID: List<ContactNumber> = database.contactNumberDao().getContactNumbersByCID(teleCID)
 
                 // Corresponding contact numbers (by PK) in our database
                 val matchPK: ContactNumber? = database.contactNumberDao().getContactNumbersRow(teleCID, normalizedNumber)
@@ -219,7 +216,7 @@ object TableSynchronizer {
                  */
                 if (matchCID.isEmpty()) {
                     mutexSync.withLock {
-                        if (DefaultContacts.contactExists(contentResolver, defaultCID)) {
+                        if (firstAccess || DefaultContacts.contactExists(contentResolver, defaultCID)) {
                             val changeID = UUID.randomUUID().toString()
                             val changeTime = Instant.now().toEpochMilli()
 
@@ -250,7 +247,7 @@ object TableSynchronizer {
                  */
                 if (matchPK == null) {
                     mutexSync.withLock {
-                        if (DefaultContacts.contactNumberExists(contentResolver, defaultCID, rawNumber)) {
+                        if (firstAccess || DefaultContacts.contactNumberExists(contentResolver, defaultCID, rawNumber)) {
                             val changeID = UUID.randomUUID().toString()
                             val changeTime = Instant.now().toEpochMilli()
 
@@ -278,6 +275,12 @@ object TableSynchronizer {
                     }
                 }
 
+                // No need add to HashMap if from first database access, as won't look at deletes.
+                if (firstAccess) {
+                    curs.moveToNext()
+                    continue
+                }
+
                 val contactNumber = ContactNumber(
                     CID = teleCID,
                     normalizedNumber = normalizedNumber,
@@ -299,7 +302,7 @@ object TableSynchronizer {
             }
             curs.close()
         }
-        Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: AFTER SYNC INSERTS")
+        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: AFTER SYNC INSERTS")
         // Contains all CIDs and their lists of contact numbers from default database (in our format)
         return defaultContactHashMap
     }
@@ -315,8 +318,8 @@ object TableSynchronizer {
         defaultContactHashMap: HashMap<String, MutableList<ContactNumber>>,
         contentResolver: ContentResolver
     )  {
-        val instanceNumber = MiscHelpers.getUserNumberStored(context)
-        val teleCN: List<ContactNumber> = database.contactNumberDao().getAllContactNumbers_Ins(instanceNumber)
+        val instanceNumber = TeleHelpers.getUserNumberStored(context)!!
+        val teleCN: List<ContactNumber> = database.contactNumberDao().getContactNumbersByIns(instanceNumber)
         val mutexSync = mutexLocks[MutexType.SYNC]!!
 
         for (contactNumber: ContactNumber in teleCN) {

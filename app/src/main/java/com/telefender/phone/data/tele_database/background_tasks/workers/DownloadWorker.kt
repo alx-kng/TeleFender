@@ -15,7 +15,7 @@ import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.data.tele_database.background_tasks.ServerWorkHelpers
 import com.telefender.phone.gui.MainActivity
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import timber.log.Timber
@@ -90,7 +90,7 @@ class CoroutineDownloadWorker(
             try {
                 setForeground(getForegroundInfo())
             } catch(e: Exception) {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: %s", e.message!!)
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", e.message!!)
             }
         }
 
@@ -99,14 +99,14 @@ class CoroutineDownloadWorker(
         /**
          * Downloads changes from server
          */
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: DOWNLOAD WORKER STARTED")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: DOWNLOAD WORKER STARTED")
         ServerWorkHelpers.downloadData(context, repository, scope, "DOWNlOAD WORKER")
 
         when (stateVarString) {
             "oneTimeDownloadState" -> WorkStates.setState(WorkType.ONE_TIME_DOWNLOAD, WorkInfo.State.SUCCEEDED)
             "periodicDownloadState" -> WorkStates.setState(WorkType.PERIODIC_DOWNLOAD, WorkInfo.State.SUCCEEDED)
             else -> {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: DOWNLOAD WORKER THREAD: Worker state variable name is wrong")
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: DOWNLOAD WORKER THREAD: Worker state variable name is wrong")
             }
         }
 
@@ -114,7 +114,7 @@ class CoroutineDownloadWorker(
     }
 
     override suspend fun getForegroundInfo() : ForegroundInfo {
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: DOWNLOAD WORKER FOREGROUND")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: DOWNLOAD WORKER FOREGROUND")
 
         val pendingIntent: PendingIntent =
             Intent(applicationContext, MainActivity::class.java).let { notificationIntent ->

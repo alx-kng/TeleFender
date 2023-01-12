@@ -11,7 +11,7 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import com.telefender.phone.R
 import com.telefender.phone.databinding.ActivityInCallBinding
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import timber.log.Timber
 
 /**
@@ -21,6 +21,9 @@ import timber.log.Timber
  * TODO: VERY IMPORTANT BUG!!! - If you initiate a call from default phone app (when the current
  *  default dialer is our tele phone app), then the InCallActivity closes for some reason, and
  *  you can no longer access the call.
+ *
+ * TODO: Make sure to request that dialer activity shows of in-call screen during add call, or
+ *  at least bring up keyguard.
  */
 class InCallActivity : AppCompatActivity() {
 
@@ -54,7 +57,7 @@ class InCallActivity : AppCompatActivity() {
         // Lets IncomingCallActivity know that InCallActivity is already running.
         _running = false
         _context = null
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: IN CALL DESTROYED")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: IN CALL DESTROYED")
     }
 
     /**
@@ -68,7 +71,7 @@ class InCallActivity : AppCompatActivity() {
         }
     }
 
-    fun inCallOverLockScreen() {
+    private fun inCallOverLockScreen() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
         } else {

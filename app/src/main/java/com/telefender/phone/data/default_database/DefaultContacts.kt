@@ -11,7 +11,7 @@ import android.provider.ContactsContract
 import android.provider.ContactsContract.CommonDataKinds.Phone
 import android.provider.ContactsContract.PhoneLookup
 import android.provider.ContactsContract.RawContacts
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -90,7 +90,7 @@ object DefaultContacts {
             }
             cur.close()
 
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: CONTACT RETRIEVAL FINISHED")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CONTACT RETRIEVAL FINISHED")
             return@withContext contacts
         }
     }
@@ -205,7 +205,7 @@ object DefaultContacts {
             null
         )
 
-        Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: contactNumber: $rawNumber exists = ${curs != null && curs.moveToFirst()}")
+        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: contactNumber: $rawNumber exists = ${curs != null && curs.moveToFirst()}")
 
         val exists = curs != null && curs.moveToFirst()
         curs?.close()

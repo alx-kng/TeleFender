@@ -5,10 +5,11 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.*
 import com.telefender.phone.data.default_database.*
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 
 
 /*
@@ -42,14 +43,11 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
     fun activateDummy() {}
 
     private suspend fun addDividers(contacts: List<ContactDetail>) {
-        Log.i("${MiscHelpers.DEBUG_LOG_TAG}", "ADD DIVIDER START")
         val tempDividers =  mutableListOf<ContactItem>()
 
         withContext(Dispatchers.Default) {
-            Log.i("${MiscHelpers.DEBUG_LOG_TAG}", "ADD DIVIDER MIDDLE")
-
             val miscContacts = mutableListOf<ContactItem>()
-            var _currLetter: Char? = null
+            var currLetter: Char? = null
 
             for (contact in contacts) {
                 // First non-whitespace character. Guaranteed to exist.
@@ -63,9 +61,9 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
                 }
 
                 // New divider is added if the first letter is different from before.
-                if (_currLetter == null || firstLetter != _currLetter) {
-                    _currLetter = firstLetter
-                    tempDividers.add(Divider(_currLetter.toString()))
+                if (currLetter == null || firstLetter != currLetter) {
+                    currLetter = firstLetter
+                    tempDividers.add(Divider(currLetter.toString()))
                 }
 
                 tempDividers.add(contact)
@@ -84,7 +82,6 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
             tempDividers.removeFirst()
         }
 
-        Log.i("${MiscHelpers.DEBUG_LOG_TAG}", "ADD DIVIDER END")
         _dividedContacts = tempDividers
     }
 
@@ -93,7 +90,7 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
             val tempContacts = DefaultContacts.getContactDetails(context)
             addDividers(tempContacts)
 
-            Log.i("${MiscHelpers.DEBUG_LOG_TAG}", "ABOUT TO ASSIGN CONTACTS VALUE")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: ABOUT TO ASSIGN CONTACTS VALUE")
             _contacts.value = tempContacts
         }
     }

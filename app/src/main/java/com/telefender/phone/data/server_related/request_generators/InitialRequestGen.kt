@@ -7,7 +7,7 @@ import com.telefender.phone.data.server_related.*
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -69,7 +69,7 @@ private fun initialPostResponseHandler(
                 repository.updateStoredMap(sessionID = sessionResponse.sessionID)
 
                 val sessionID = repository.getSessionID()
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: sessionID = $sessionID")
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: sessionID = $sessionID")
 
                 UserSetup.verifyPostRequest(context, repository, scope)
             }
@@ -77,9 +77,9 @@ private fun initialPostResponseHandler(
             WorkStates.setState(WorkType.SETUP, WorkInfo.State.FAILED)
 
             if (sessionResponse != null) {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN REQUEST INSTALLATION: %s", sessionResponse.error)
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN REQUEST INSTALLATION: %s", sessionResponse.error)
             } else {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN REQUEST INSTALLATION: SESSION RESPONSE IS NULL")
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN REQUEST INSTALLATION: SESSION RESPONSE IS NULL")
             }
         }
     }
@@ -87,7 +87,7 @@ private fun initialPostResponseHandler(
 
 private val initialPostErrorHandler = Response.ErrorListener { error ->
     if (error.toString() != "null") {
-        Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY $error")
+        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY $error")
         WorkStates.setState(WorkType.SETUP, WorkInfo.State.FAILED)
     }
 }

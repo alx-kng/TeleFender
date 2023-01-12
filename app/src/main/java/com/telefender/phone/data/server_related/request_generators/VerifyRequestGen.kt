@@ -6,7 +6,7 @@ import com.telefender.phone.data.server_related.*
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -66,7 +66,7 @@ private fun verifyPostResponseHandler(
                 repository.updateStoredMap(clientKey = keyResponse.key)
 
                 val key = repository.getClientKey()
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: key = $key")
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: key = $key")
 
                 WorkStates.setState(WorkType.SETUP, WorkInfo.State.SUCCEEDED)
             }
@@ -74,9 +74,9 @@ private fun verifyPostResponseHandler(
             WorkStates.setState(WorkType.SETUP, WorkInfo.State.FAILED)
 
             if (keyResponse != null) {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN VERIFY INSTALLATION: $keyResponse.error",)
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN VERIFY INSTALLATION: $keyResponse.error",)
             } else {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN VERIFY INSTALLATION: SESSION RESPONSE IS NULL")
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN VERIFY INSTALLATION: SESSION RESPONSE IS NULL")
             }
         }
     }
@@ -84,7 +84,7 @@ private fun verifyPostResponseHandler(
 
 private val verifyPostErrorHandler = Response.ErrorListener { error ->
     if (error.toString() != "null") {
-        Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY $error")
+        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY $error")
         WorkStates.setState(WorkType.SETUP, WorkInfo.State.FAILED)
     }
 }

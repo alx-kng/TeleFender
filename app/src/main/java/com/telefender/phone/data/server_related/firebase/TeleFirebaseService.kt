@@ -3,7 +3,7 @@ package com.telefender.phone.data.server_related.firebase
 import android.annotation.SuppressLint
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import timber.log.Timber
 
 // TODO: Fix firebase
@@ -36,25 +36,25 @@ class TeleFirebaseService : FirebaseMessagingService() {
      */
     @SuppressLint("MissingPermission")
     override fun onNewToken(token: String) {
-        Timber.d("${MiscHelpers.DEBUG_LOG_TAG}: Refreshed token: $token")
+        Timber.d("${TeleHelpers.DEBUG_LOG_TAG}: Refreshed token: $token")
 
 //        runBlocking {
 //            (application as App).applicationScope.launch {
 //                while (applicationContext.getSystemService(TelecomManager::class.java).defaultDialerPackage != applicationContext.packageName
-//                    || !PermissionRequester.hasPermissions(applicationContext, arrayOf(Manifest.permission.READ_CALL_LOG))) {
+//                    || !Permissions.hasPermissions(applicationContext, arrayOf(Manifest.permission.READ_CALL_LOG))) {
 //                    delay(500)
-//                    Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: INSIDE NEW TOKEN COROUTINE | HAS CALL LOG PERMISSION: %s", PermissionRequester.hasPermissions(applicationContext, arrayOf(
+//                    Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: INSIDE NEW TOKEN COROUTINE | HAS CALL LOG PERMISSION: %s", Permissions.hasPermissions(applicationContext, arrayOf(
 //                        Manifest.permission.READ_CALL_LOG)))
 //                }
 //
 //                val tMgr = applicationContext.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
-//                val instanceNumber : String = MiscHelpers.normalizedNumber(tMgr.line1Number)!!
+//                val instanceNumber : String = TeleHelpers.normalizedNumber(tMgr.line1Number)!!
 //                val repository : ClientRepository? = (application as App).repository
 //
 //                var isSetup = repository?.hasCredKey(instanceNumber!!) ?: false
 //                while (!isSetup) {
 //                    delay(500)
-//                    Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: INSIDE GET DATABASE COROUTINE. USER SETUP = %s", isSetup)
+//                    Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: INSIDE GET DATABASE COROUTINE. USER SETUP = %s", isSetup)
 //
 //                    isSetup = repository?.hasCredKey(instanceNumber!!) ?: false
 //                }

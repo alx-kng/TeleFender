@@ -5,7 +5,7 @@ import androidx.work.ListenableWorker
 import androidx.work.WorkInfo
 import com.telefender.phone.data.server_related.ServerInteractions
 import com.telefender.phone.data.tele_database.ClientRepository
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import timber.log.Timber
@@ -29,7 +29,7 @@ object ServerWorkHelpers {
 
             val success = WorkStates.workWaiter(WorkType.DOWNLOAD_POST, "DOWNLOAD", stopOnFail = true, certainFinish = true)
             if (success) break
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: $workerName - DOWNLOAD RETRYING")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $workerName - DOWNLOAD RETRYING")
             delay(2000)
         }
     }
@@ -62,7 +62,7 @@ object ServerWorkHelpers {
         connection issues. As a result, this failure is given BEFORE the response is received.
          */
         if (!WorkStates.workWaiter(WorkType.UPLOAD_CHANGE_POST, "UPLOAD_CHANGE", stopOnFail = true, certainFinish = true)) {
-            Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: $workerName ENDED EARLY. PROBLEM WITH UPLOAD_CHANGE.")
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: $workerName ENDED EARLY. PROBLEM WITH UPLOAD_CHANGE.")
             return ListenableWorker.Result.failure()
         }
 
@@ -82,6 +82,12 @@ object ServerWorkHelpers {
         workerName: String
     ) : ListenableWorker.Result? {
 
+        // Only upload AnalyzedNumbers if the Parameters specify so.
+        val parameters = repository.getParameters()
+        if (parameters?.shouldUploadAnalyzed != true) {
+            return null
+        }
+
         WorkStates.setState(WorkType.UPLOAD_ANALYZED_POST, WorkInfo.State.RUNNING)
         if (repository.hasAnalyzedQTU()) {
             ServerInteractions.uploadAnalyzedRequest(context, repository, scope, errorCount = 0)
@@ -97,7 +103,7 @@ object ServerWorkHelpers {
         connection issues. As a result, this failure is given BEFORE the response is received.
          */
         if (!WorkStates.workWaiter(WorkType.UPLOAD_ANALYZED_POST, "UPLOAD_ANALYZED", stopOnFail = true, certainFinish = true)) {
-            Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: $workerName ENDED EARLY. PROBLEM WITH UPLOAD_ANALYZED.")
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: $workerName ENDED EARLY. PROBLEM WITH UPLOAD_ANALYZED.")
             return ListenableWorker.Result.failure()
         }
 

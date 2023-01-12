@@ -32,8 +32,8 @@ import com.telefender.phone.R
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.databinding.ActivityMainBinding
 import com.telefender.phone.gui.model.*
-import com.telefender.phone.helpers.MiscHelpers
-import com.telefender.phone.permissions.PermissionRequester
+import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.permissions.Permissions
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
@@ -111,7 +111,7 @@ class MainActivity : AppCompatActivity() {
          * Makes RecentsFragment more smooth on first enter by preloading call logs in MainActivity.
          * If this is still too slow, you can consider querying only a portion of the call logs.
          */
-        if (PermissionRequester.hasPermissions(this, arrayOf(
+        if (Permissions.hasPermissions(this, arrayOf(
                 android.Manifest.permission.READ_CALL_LOG,
                 android.Manifest.permission.READ_CONTACTS))
         ) {
@@ -180,7 +180,7 @@ class MainActivity : AppCompatActivity() {
          * Registers UI Call log observer if not registered before (in case permissions weren't
          * granted before).
          */
-        if (PermissionRequester.hasPermissions(this, arrayOf(
+        if (Permissions.hasPermissions(this, arrayOf(
                 android.Manifest.permission.READ_CALL_LOG,
                 android.Manifest.permission.READ_CONTACTS))
             && callLogObserverUI == null
@@ -263,9 +263,9 @@ class MainActivity : AppCompatActivity() {
             val number = dialerViewModel.dialNumber.value
             val uri = "tel:${number}".toUri()
             telecomManager.placeCall(uri, null)
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OUTGOING CALL TO $number")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OUTGOING CALL TO $number")
         } catch (e: Exception) {
-            Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: OUTGOING CALL FAILED!")
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: OUTGOING CALL FAILED!")
         }
     }
 
@@ -275,9 +275,9 @@ class MainActivity : AppCompatActivity() {
             val telecomManager = getSystemService(Context.TELECOM_SERVICE) as TelecomManager
             val uri = "tel:${number}".toUri()
             telecomManager.placeCall(uri, null)
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OUTGOING CALL TO $number")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OUTGOING CALL TO $number")
         } catch (e: Exception) {
-            Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: OUTGOING CALL FAILED!")
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: OUTGOING CALL FAILED!")
         }
     }
 
@@ -351,7 +351,7 @@ class MainActivity : AppCompatActivity() {
 
         override fun onChange(selfChange: Boolean) {
             super.onChange(selfChange)
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OBSERVED NEW CALL LOG - UI - id = $id")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OBSERVED NEW CALL LOG - UI - id = $id")
 
             recentsViewModel.updateCallLogs()
         }

@@ -5,8 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.telefender.phone.data.tele_database.entities.Parameters
-import com.telefender.phone.data.tele_database.entities.StoredMap
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 
 
 @Dao
@@ -16,11 +15,13 @@ interface ParametersDao : StoredMapDao {
     suspend fun insertParametersQuery(vararg parameters: Parameters)
 
     suspend fun initParameters(userNumber: String) : Boolean {
-        return if (getParametersQuery(userNumber) == null && userNumber != MiscHelpers.UNKNOWN_NUMBER) {
+        return if (getParametersQuery(userNumber) == null && userNumber != TeleHelpers.UNKNOWN_NUMBER) {
             // Initial parameter values.
             insertParametersQuery(
                 Parameters(
                     userNumber = userNumber,
+                    shouldUploadAnalyzed = true,
+                    shouldUploadLogs = false,
                     initialNotifyGate = 2,
                     verifiedSpamNotifyGate = 7,
                     superSpamNotifyGate = 14,
@@ -38,39 +39,59 @@ interface ParametersDao : StoredMapDao {
     /**
      * Retrieves parameters. If no Parameters available, then initialize values.
      *
-     * NOTE: We assume here that StoredMap is initialized.
+     * NOTE: It's STRONGLY advised that you put a try-catch around any use cases of this,
+     * especially if you plan on non-null asserting the return, as there is a real possibility of
+     * an error (especially if the database isn't yet initialized).
      */
-    suspend fun getParameters() : Parameters {
-        val userNumber = getUserNumber()!!
+    suspend fun getParameters() : Parameters? {
+        val userNumber = getUserNumber() ?: return null
         initParameters(userNumber)
-        return getParametersQuery(userNumber)!!
+        return getParametersQuery(userNumber)
     }
 
     @Query("SELECT * FROM parameters WHERE userNumber = :userNumber")
     suspend fun getParametersQuery(userNumber: String) : Parameters?
 
     suspend fun updateParameters(
+        shouldUploadAnalyzed: Boolean? = null,
+        shouldUploadLogs: Boolean? = null,
         initialNotifyGate: Int? = null,
         verifiedSpamNotifyGate: Int? = null,
         superSpamNotifyGate: Int? = null,
         incomingGate: Int? = null,
         outgoingGate: Int? = null
-    ) {
-        val userNumber = getUserNumber()!!
+    ) : Boolean {
+        val userNumber = getUserNumber() ?: return false
         initParameters(userNumber)
 
         updateParametersQuery(
             userNumber = userNumber,
+            shouldUploadAnalyzed = shouldUploadAnalyzed,
+            shouldUploadLogs = shouldUploadLogs,
             initialNotifyGate = initialNotifyGate,
             verifiedSpamNotifyGate = verifiedSpamNotifyGate,
             superSpamNotifyGate = superSpamNotifyGate,
             incomingGate = incomingGate,
             outgoingGate = outgoingGate
         )
+
+        return true
     }
 
     @Query(
-        """UPDATE parameters SET 
+        """UPDATE parameters SET
+        shouldUploadAnalyzed =
+            CASE
+                WHEN :shouldUploadAnalyzed IS NOT NULL
+                    THEN :shouldUploadAnalyzed
+                ELSE shouldUploadAnalyzed
+            END,
+        shouldUploadLogs =
+            CASE
+                WHEN :shouldUploadLogs IS NOT NULL
+                    THEN :shouldUploadLogs
+                ELSE shouldUploadLogs
+            END,
         initialNotifyGate =
         CASE
             WHEN :initialNotifyGate IS NOT NULL
@@ -105,6 +126,8 @@ interface ParametersDao : StoredMapDao {
     )
     suspend fun updateParametersQuery(
         userNumber: String,
+        shouldUploadAnalyzed: Boolean?,
+        shouldUploadLogs: Boolean?,
         initialNotifyGate: Int?,
         verifiedSpamNotifyGate: Int?,
         superSpamNotifyGate: Int?,

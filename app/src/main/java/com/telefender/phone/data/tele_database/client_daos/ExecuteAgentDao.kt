@@ -8,7 +8,7 @@ import com.telefender.phone.data.server_related.toGenericDataType
 import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.entities.*
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.withLock
@@ -38,7 +38,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
 
                     break
                 } catch (e: Exception) {
-                    Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: " +
+                    Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
                         "executeAll() RETRYING... ${e.message}")
                     e.printStackTrace()
                     delay(2000)
@@ -87,7 +87,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                  */
                 if (i == retryAmount) throw Exception("executeFirst() FAILED")
 
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: " +
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
                     "executeFirst() RETRYING... ${e.message}")
                 delay(1000)
             }
@@ -154,7 +154,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
             if (this.getChangeType() ==  ChangeType.INSTANCE_DELETE) {
                 insDelete(this, instanceNumber, qteRowID)
             } else {
-                Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: executeAgentINSD() - wrong type $type")
+                Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: executeAgentINSD() - wrong type $type")
             }
         }
     }
@@ -245,7 +245,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                     insInsert(instanceNumber = instanceNumber)
                 }
                 else -> {
-                    Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: executeAgentNORM() - wrong type $type")
+                    Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: executeAgentNORM() - wrong type $type")
                 }
             }
 
@@ -282,7 +282,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
 
                 with(oldAnalyzed) {
 
-                    updateAnalyzedNum(
+                    val success = updateAnalyzedNum(
                         normalizedNumber = normalizedNumber,
                         numTotalCalls = analyzedNumber.numTotalCalls + 1,
                         analyzed = oldAnalyzed.copy(
@@ -345,6 +345,8 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                             lastBlockedTime = if (isBlocked) callEpochDate else lastBlockedTime,
                         )
                     )
+
+                    TeleHelpers.assert(success, "updateAnalyzedNum()")
                 }
             }
         }
@@ -366,12 +368,12 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
             throw NullPointerException("instanceNumber || normalizedNumber || safeAction was null for nonContactUpdate")
         } else {
             // Only update AnalyzedNumbers if change is from user's number (local client change).
-            if (instanceNumber!! == getUserNumber()) {
+            if (instanceNumber!! == getUserNumber()!!) {
                 val analyzedNumber = getAnalyzedNum(normalizedNumber!!)!!
                 val oldAnalyzed = analyzedNumber.getAnalyzed()
                 with(oldAnalyzed) {
 
-                    val parameters = getParameters()
+                    val parameters = getParameters()!!
 
                     val newNotifyGate: Int
                     val newIsBlocked: Boolean
@@ -411,19 +413,20 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                          * we would like to reset notifyGate to give credit to number.
                          */
                         SafeAction.SMS_VERIFY -> {
-                            updateAnalyzedNum(
+                            val success = updateAnalyzedNum(
                                 normalizedNumber = normalizedNumber,
                                 analyzed = oldAnalyzed.copy(
                                     notifyGate = parameters.initialNotifyGate,
                                     smsVerified = true
                                 )
                             )
+                            TeleHelpers.assert(success, "updateAnalyzedNum()")
 
                             return
                         }
                     }
 
-                    updateAnalyzedNum(
+                    val success = updateAnalyzedNum(
                         normalizedNumber = normalizedNumber,
                         analyzed = this.copy(
                             notifyGate = newNotifyGate,
@@ -431,6 +434,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                             isBlocked = newIsBlocked
                         )
                     )
+                    TeleHelpers.assert(success, "updateAnalyzedNum()")
                 }
             }
         }
@@ -475,8 +479,8 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
             Only update AnalyzedNumbers for child ContactNumbers if the Contact's instance number
             is the same as user number (contact is direct contact).
              */
-            if (instanceNumber!! == getUserNumber()) {
-                val contactNumberChildren : List<ContactNumber> = getContactNumbers_CID(CID)
+            if (instanceNumber!! == getUserNumber()!!) {
+                val contactNumberChildren : List<ContactNumber> = getContactNumbersByCID(CID)
                 for (contactNumber in contactNumberChildren) {
                     val normalizedNumber = contactNumber.normalizedNumber
 
@@ -485,13 +489,14 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
 
                     val numBlockedDelta = if (blocked) 1 else -1
 
-                    updateAnalyzedNum(
+                    val success = updateAnalyzedNum(
                         normalizedNumber = normalizedNumber,
                         analyzed = oldAnalyzed.copy(
                             isBlocked = blocked,
                             numMarkedBlocked = oldAnalyzed.numMarkedBlocked + numBlockedDelta
                         )
                     )
+                    TeleHelpers.assert(success, "updateAnalyzedNum()")
                 }
             }
         }
@@ -510,14 +515,14 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
             /*
             Gets all contact numbers associated with that contact and deletes them as well.
              */
-            val contactNumberChildren : List<ContactNumber> = getContactNumbers_CID(CID)
+            val contactNumberChildren : List<ContactNumber> = getContactNumbersByCID(CID)
             for (contactNumber in contactNumberChildren) {
                 with(contactNumber) {
                     cnDelete(CID, normalizedNumber, instanceNumber, degree)
                 }
             }
 
-            deleteContact_CID(CID)
+            deleteContact(CID)
         }
     }
 
@@ -570,10 +575,10 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
             val oldAnalyzed = analyzedNumber.getAnalyzed()
             with(oldAnalyzed) {
                 val newDegreeString = changeDegreeString(degreeString, degree, false)
-                val parameters = getParameters()
+                val parameters = getParameters()!!
 
-                if (instanceNumber == getUserNumber()) {
-                    updateAnalyzedNum(
+                if (instanceNumber == getUserNumber()!!) {
+                    val success = updateAnalyzedNum(
                         normalizedNumber = normalizedNumber,
                         analyzed = this.copy(
                             notifyGate = parameters.initialNotifyGate,
@@ -583,8 +588,9 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                             minDegree = 0
                         )
                     )
+                    TeleHelpers.assert(success, "updateAnalyzedNum()")
                 } else {
-                    updateAnalyzedNum(
+                    val success = updateAnalyzedNum(
                         normalizedNumber = normalizedNumber,
                         analyzed = this.copy(
                             notifyGate = parameters.initialNotifyGate,
@@ -593,6 +599,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                             minDegree = getMinDegree(newDegreeString)
                         )
                     )
+                    TeleHelpers.assert(success, "updateAnalyzedNum()")
                 }
             }
         }
@@ -647,10 +654,10 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
             with(oldAnalyzed) {
                 val newDegreeString = changeDegreeString(degreeString, degree!!, true)
 
-                if (instanceNumber == getUserNumber()) {
+                if (instanceNumber == getUserNumber()!!) {
                     val numBlockedDelta = if (contactBlocked(CID) == true) 1 else 0
 
-                    updateAnalyzedNum(
+                    val success = updateAnalyzedNum(
                         normalizedNumber = normalizedNumber,
                         analyzed = this.copy(
                             numMarkedBlocked = numMarkedBlocked - numBlockedDelta,
@@ -659,8 +666,9 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                             minDegree = getMinDegree(newDegreeString),
                         )
                     )
+                    TeleHelpers.assert(success, "updateAnalyzedNum()")
                 } else {
-                    updateAnalyzedNum(
+                    val success = updateAnalyzedNum(
                         normalizedNumber = normalizedNumber,
                         analyzed = this.copy(
                             numTreeContacts = numTreeContacts - 1,
@@ -668,10 +676,11 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                             minDegree = getMinDegree(newDegreeString),
                         )
                     )
+                    TeleHelpers.assert(success, "updateAnalyzedNum()")
                 }
             }
 
-            deleteContactNumbers_PK(CID, normalizedNumber)
+            deleteContactNumbers(CID, normalizedNumber)
         }
     }
 

@@ -5,7 +5,7 @@ import android.media.AudioManager
 import android.os.Build
 import android.telecom.CallAudioState
 import androidx.lifecycle.MutableLiveData
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import timber.log.Timber
 
 object AudioHelpers {
@@ -80,7 +80,7 @@ object AudioHelpers {
         }
 
         speakerStatus.value = speakerOn
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: speaker: ${speakerStatus.value}")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: speaker: ${speakerStatus.value}")
     }
 
 }

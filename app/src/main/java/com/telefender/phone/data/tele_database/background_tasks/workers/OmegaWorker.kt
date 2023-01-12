@@ -17,7 +17,7 @@ import com.telefender.phone.data.tele_database.background_tasks.ServerWorkHelper
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.gui.MainActivity
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import timber.log.Timber
@@ -27,8 +27,8 @@ import java.util.concurrent.TimeUnit
 // TODO: Change delay and backoff time later for production / optimization.
 object OmegaPeriodicScheduler {
 
-    val oneTimeOmegaWorkerTag = "oneTimeOmegaWorker"
-    val periodicOmegaWorkerTag = "periodicOmegaWorker"
+    const val oneTimeOmegaWorkerTag = "oneTimeOmegaWorker"
+    const val periodicOmegaWorkerTag = "periodicOmegaWorker"
 
     fun initiateOneTimeOmegaWorker(context : Context) : UUID {
         WorkStates.setState(WorkType.ONE_TIME_OMEGA, WorkInfo.State.RUNNING)
@@ -111,18 +111,18 @@ class CoroutineOmegaWorker(
         try {
             setForeground(getForegroundInfo())
         } catch(e: Exception) {
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: %s", e.message!!)
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", e.message!!)
         }
 
         when (stateVarString) {
             "oneTimeOmegaState" -> {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA ONE TIME STARTED")
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA ONE TIME STARTED")
             }
             "periodicOmegaState" -> {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA PERIODIC STARTED")
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA PERIODIC STARTED")
             }
             else -> {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA WORKER THREAD: Worker state variable name is wrong")
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA WORKER THREAD: Worker state variable name is wrong")
             }
         }
 
@@ -132,41 +132,41 @@ class CoroutineOmegaWorker(
         /**
          * Sync with contacts and call logs
          */
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA SYNC STARTED")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA SYNC STARTED")
         TableSynchronizer.syncContacts(context, database, context.contentResolver)
         TableSynchronizer.syncCallLogs(context, repository, context.contentResolver)
 
         /**
          * Downloads changes from server
          */
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA DOWNLOAD STARTED")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA DOWNLOAD STARTED")
         ServerWorkHelpers.downloadData(context, repository, scope, "OMEGA")
 
         /**
          * Executes logs in ExecuteQueue
          */
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA EXECUTE STARTED")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA EXECUTE STARTED")
         repository.executeAll()
 
         /**
          * Uploads changes to server. Returns next Result action if uploadChange()
          * doesn't return null (failure or retry).
          */
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_CHANGE STARTED")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_CHANGE STARTED")
         val uploadChangeResult = ServerWorkHelpers.uploadChange(context, repository, scope, "OMEGA")
         if (uploadChangeResult != null) {
             return uploadChangeResult
         }
 
         /**
-         * TODO: Confirm that we want to upload AnalyzedNumbers here. Or maybe, have some type
-         *  or condition that allows us to choose whether or not we want to upload
-         *  AnalyzedNumbers or not. -> Maybe pull out into Parameters table.
+         * TODO: Confirm that we want to upload AnalyzedNumbers here. Note that we already have a
+         *  parameter that allows us to choose whether or not we want to upload
+         *  AnalyzedNumbers.
          *
          * Uploads analyzedNumbers to server. Returns next Result action if uploadAnalyzed()
          * doesn't return null (failure or retry).
          */
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_ANALYZED STARTED")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_ANALYZED STARTED")
         val uploadAnalyzedResult = ServerWorkHelpers.uploadAnalyzed(context, repository, scope, "OMEGA")
         if (uploadAnalyzedResult != null) {
             return uploadAnalyzedResult
@@ -175,14 +175,14 @@ class CoroutineOmegaWorker(
         when (stateVarString) {
             "oneTimeOmegaState" -> {
                 WorkStates.setState(WorkType.ONE_TIME_OMEGA, WorkInfo.State.SUCCEEDED)
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA ONE TIME ENDED")
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA ONE TIME ENDED")
             }
             "periodicOmegaState" -> {
                 WorkStates.setState(WorkType.PERIODIC_OMEGA, WorkInfo.State.SUCCEEDED)
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA PERIODIC ENDED")
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA PERIODIC ENDED")
             }
             else -> {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA WORKER THREAD: Worker state variable name is wrong")
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA WORKER THREAD: Worker state variable name is wrong")
             }
         }
 
@@ -190,7 +190,7 @@ class CoroutineOmegaWorker(
     }
 
     override suspend fun getForegroundInfo() : ForegroundInfo {
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA WORKER FOREGROUND")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA WORKER FOREGROUND")
 
         val pendingIntent: PendingIntent =
             Intent(applicationContext, MainActivity::class.java).let { notificationIntent ->

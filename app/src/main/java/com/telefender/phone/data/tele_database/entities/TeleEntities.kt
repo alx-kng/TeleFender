@@ -4,7 +4,6 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 
@@ -32,6 +31,8 @@ data class StoredMap(
 @Entity(tableName = "parameters")
 data class Parameters(
     @PrimaryKey val userNumber: String,
+    val shouldUploadAnalyzed: Boolean,
+    val shouldUploadLogs: Boolean,
     val initialNotifyGate: Int,
     val verifiedSpamNotifyGate: Int,
     val superSpamNotifyGate: Int,
@@ -134,7 +135,7 @@ data class ContactNumber(
 @JsonClass(generateAdapter = true)
 @Entity(tableName = "analyzed_number",
     indices = [
-        Index(value = ["normalizedNumber", "instanceNumber"]),
+        Index(value = ["instanceNumber", "normalizedNumber"]),
         Index(value = ["normalizedNumber"])
     ]
 )
@@ -171,7 +172,7 @@ data class AnalyzedNumber(
  *  reason to suspect that they might be spam. As a result, increasing the notify gate to
  *  something like 3 or 4 might be beneficial in not overcrowding the NotifyList.
  *
- * TODO: Add another field for if number also has TeleFender app downloaded.
+ * TODO: Add another field for if number also has TeleFender app downloaded -> maybe not.
  *
  * Used for analyzed fields not used in selection criteria for AnalyzedNumber. Stored as JSON.
  * Currently not using [algoAllowed]. Instead, we will calculate on the spot.

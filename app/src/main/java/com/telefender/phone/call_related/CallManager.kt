@@ -6,7 +6,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import com.telefender.phone.call_related.CallManager.connections
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import timber.log.Timber
 
 
@@ -289,7 +289,7 @@ object CallManager {
                 val newConnection = Connection(call)
                 connections.add(newConnection)
 
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: CONNECTION ADDED")
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CONNECTION ADDED")
             }
         }
 
@@ -312,7 +312,7 @@ object CallManager {
         })
 
         logCalls()
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: CALL ADDED")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CALL ADDED")
     }
 
     /**
@@ -327,11 +327,11 @@ object CallManager {
 
         updateFocusedConnection()
 
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: CALL REMOVED")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CALL REMOVED")
     }
 
     fun answer() {
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: ANSWER PRESSED ==============================================")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: ANSWER PRESSED ==============================================")
         focusedConnection.value?.call?.answer(VideoProfile.STATE_AUDIO_ONLY)
     }
 
@@ -339,7 +339,7 @@ object CallManager {
      * When hangup() is called, onCallRemoved() of CallService is automatically invoked.
      */
     fun hangup() {
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: HANGUP PRESSED ==============================================")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: HANGUP PRESSED ==============================================")
         if (focusedConnection.value?.state == Call.STATE_RINGING) {
             focusedConnection.value?.call?.reject(false, null)
         } else {
@@ -376,7 +376,7 @@ object CallManager {
      */
     fun merge() {
         if (!isStableState() && connections.size == 2) {
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: NOT STABLE STATE")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: NOT STABLE STATE")
             logConnections()
             logCalls()
             return
@@ -388,15 +388,15 @@ object CallManager {
         if (conferenceableCalls.isNotEmpty()) {
             focusedCall?.conference(conferenceableCalls.first())
 
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: CONFERENCEABLE ==========================================")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CONFERENCEABLE ==========================================")
         } else {
             val conferenceCapability = focusedCall?.hasCapability(Call.Details.CAPABILITY_MERGE_CONFERENCE) ?: false
             if (conferenceCapability) {
                 focusedCall?.mergeConference()
 
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: MERGED WORKED =======================================")
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: MERGED WORKED =======================================")
             } else {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: MERGED NOT WORKED ===================================")
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: MERGED NOT WORKED ===================================")
             }
         }
     }
@@ -406,7 +406,7 @@ object CallManager {
         val hasConferenceable = !focusedCall?.conferenceableCalls.isNullOrEmpty()
         val conferenceCapability = focusedCall?.hasCapability(Call.Details.CAPABILITY_MERGE_CONFERENCE) ?: false
 
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: canMerge = ${hasConferenceable || conferenceCapability}")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: canMerge = ${hasConferenceable || conferenceCapability}")
         return (hasConferenceable || conferenceCapability)
     }
 
@@ -417,7 +417,7 @@ object CallManager {
 
     fun logConnections() {
         for (connection in connections) {
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: CONNECTIONS ======= " +
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CONNECTIONS ======= " +
                 "connection state: ${callStateString(connection.state)}"
             )
         }
@@ -425,7 +425,7 @@ object CallManager {
 
     fun logCalls() {
         for (call in calls) {
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: CALLS ============= " +
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CALLS ============= " +
                 "${call.details?.handle?.schemeSpecificPart}" +
                 " | in conference: ${call.isConference()}" +
                 " | call state: ${callStateString(call.getStateCompat())}" +

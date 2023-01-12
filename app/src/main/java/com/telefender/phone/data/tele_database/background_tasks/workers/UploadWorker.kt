@@ -15,7 +15,7 @@ import com.telefender.phone.data.tele_database.background_tasks.ServerWorkHelper
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.gui.MainActivity
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import timber.log.Timber
@@ -90,7 +90,7 @@ class CoroutineUploadWorker(
             try {
                 setForeground(getForegroundInfo())
             } catch(e: Exception) {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: %s", e.message!!)
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", e.message!!)
             }
         }
 
@@ -100,7 +100,7 @@ class CoroutineUploadWorker(
          * Uploads changes to server. Returns next Result action if uploadChange()
          * doesn't return null (failure or retry).
          */
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_CHANGE STARTED")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_CHANGE STARTED")
         val uploadChangeResult = ServerWorkHelpers.uploadChange(context, repository, scope, "UPLOAD WORKER")
         if (uploadChangeResult != null) {
             return uploadChangeResult
@@ -114,7 +114,7 @@ class CoroutineUploadWorker(
          * Uploads analyzedNumbers to server. Returns next Result action if uploadAnalyzed()
          * doesn't return null (failure or retry).
          */
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_ANALYZED_POST STARTED")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_ANALYZED_POST STARTED")
         val uploadAnalyzedResult = ServerWorkHelpers.uploadAnalyzed(context, repository, scope, "UPLOAD WORKER")
         if (uploadAnalyzedResult != null) {
             return uploadAnalyzedResult
@@ -124,14 +124,14 @@ class CoroutineUploadWorker(
             "oneTimeUploadState" ->  WorkStates.setState(WorkType.ONE_TIME_UPLOAD, WorkInfo.State.SUCCEEDED)
             "periodicUploadState" -> WorkStates.setState(WorkType.PERIODIC_UPLOAD, WorkInfo.State.RUNNING)
             else -> {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: UPLOAD_CHANGE WORKER THREAD: Worker state variable name is wrong")
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: UPLOAD_CHANGE WORKER THREAD: Worker state variable name is wrong")
             }
         }
         return Result.success()
     }
 
     override suspend fun getForegroundInfo() : ForegroundInfo {
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: UPLOAD_CHANGE WORKER FOREGROUND")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: UPLOAD_CHANGE WORKER FOREGROUND")
 
         val pendingIntent: PendingIntent =
             Intent(applicationContext, MainActivity::class.java).let { notificationIntent ->

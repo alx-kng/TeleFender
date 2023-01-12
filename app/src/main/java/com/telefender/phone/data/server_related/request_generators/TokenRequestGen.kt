@@ -9,7 +9,7 @@ import com.telefender.phone.data.server_related.toServerResponse
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import timber.log.Timber
 
@@ -60,9 +60,9 @@ private fun tokenResponseHandler(
             WorkStates.setState(WorkType.UPLOAD_TOKEN, WorkInfo.State.FAILED)
 
             if (defaultResponse != null) {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN TOKEN UPLOAD_CHANGE: ${defaultResponse.error}")
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN TOKEN UPLOAD_CHANGE: ${defaultResponse.error}")
             } else {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN TOKEN UPLOAD_CHANGE: DEFAULT RESPONSE IS NULL")
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN TOKEN UPLOAD_CHANGE: DEFAULT RESPONSE IS NULL")
             }
         }
     }
@@ -70,7 +70,7 @@ private fun tokenResponseHandler(
 
 private val tokenErrorHandler = Response.ErrorListener { error ->
     if (error.toString() != "null") {
-        Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: VOLLEY $error")
+        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY $error")
         WorkStates.setState(WorkType.UPLOAD_TOKEN, WorkInfo.State.FAILED)
     }
 }

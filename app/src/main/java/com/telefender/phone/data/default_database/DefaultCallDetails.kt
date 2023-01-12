@@ -6,7 +6,7 @@ import android.os.Build
 import android.provider.CallLog
 import androidx.annotation.RequiresApi
 import com.telefender.phone.data.tele_database.entities.CallDetail
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -25,7 +25,10 @@ object DefaultCallDetails{
     suspend fun getDefaultCallDetails(context: Context): MutableList<CallDetail> {
 
         return withContext(Dispatchers.IO) {
-            val instanceNumber = MiscHelpers.getUserNumberStored(context)
+
+            // If user number retrieval fails somehow, return empty list.
+            val instanceNumber = TeleHelpers.getUserNumberUncertain(context)
+                ?: return@withContext mutableListOf()
 
             val projection = arrayOf(
                 CallLog.Calls.NUMBER,
@@ -48,14 +51,14 @@ object DefaultCallDetails{
                 while (curs.moveToNext()) {
                     val rawNumber = curs.getString(0)
                     // If normalizedNumber is null, use bareNumber() cleaning of rawNumber.
-                    val normalizedNumber = MiscHelpers.normalizedNumber(rawNumber)
-                        ?: MiscHelpers.bareNumber(rawNumber)
+                    val normalizedNumber = TeleHelpers.normalizedNumber(rawNumber)
+                        ?: TeleHelpers.bareNumber(rawNumber)
                     val typeInt = curs.getInt(1)
                     // Epoch date is in milliseconds and is the creation time.
                     val date = curs.getString(2).toLong()
                     val duration = curs.getString(3).toLong()
                     val location = curs.getString(4)
-                    val dir = MiscHelpers.getTrueDirection(typeInt, rawNumber)
+                    val dir = TeleHelpers.getTrueDirection(typeInt, rawNumber)
 
                     val callDetail = CallDetail(
                         rawNumber = rawNumber,
@@ -72,7 +75,7 @@ object DefaultCallDetails{
                 curs.close()
             }
 
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: CALL LOG RETRIEVAL FINISHED")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CALL LOG RETRIEVAL FINISHED")
             return@withContext calls
         }
     }

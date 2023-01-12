@@ -17,10 +17,10 @@ object DatabaseLogFunctions {
     fun logInstanceLogs(database : ClientDatabase?, repository: ClientRepository?) {
         CoroutineScope(Dispatchers.Default).launch {
             val instanceLogs = (database?.instanceDao()?.getAllInstance()) ?: listOf()
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: INSTANCE LOG SIZE: %s", instanceLogs.size.toString())
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: INSTANCE LOG SIZE: %s", instanceLogs.size.toString())
 
             for (instanceLog in instanceLogs) {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: %s", instanceLog.toString())
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", instanceLog.toString())
             }
         }
     }
@@ -28,10 +28,10 @@ object DatabaseLogFunctions {
     fun logContacts(database : ClientDatabase?, repository : ClientRepository?) {
         CoroutineScope(Dispatchers.Default).launch {
             val contacts = (database?.contactDao()?.getAllContacts() ?: repository?.getAllContacts()) ?: listOf()
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: CONTACT SIZE ARRAY.SIZE: %s", contacts.size.toString())
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CONTACT SIZE ARRAY.SIZE: %s", contacts.size.toString())
             
             for (contact in contacts) {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: %s", contact.toString())
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", contact.toString())
             }
         }
     }
@@ -39,9 +39,9 @@ object DatabaseLogFunctions {
     fun logContactNumbers(database: ClientDatabase?, repository : ClientRepository?) {
         CoroutineScope(Dispatchers.Default).launch {
             val contactNumbers = (database?.contactNumberDao()?.getAllContactNumbers() ?: repository?.getAllContactNumbers()) ?: listOf()
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: CONTACT NUMBERS SIZE: %s", contactNumbers.size.toString())
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CONTACT NUMBERS SIZE: %s", contactNumbers.size.toString())
             for (contactNumber in contactNumbers) {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: %s", contactNumber.toString())
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", contactNumber.toString())
             }
         }
     }
@@ -49,11 +49,11 @@ object DatabaseLogFunctions {
     fun logChangeLogs(database : ClientDatabase?, repository: ClientRepository?) {
         CoroutineScope(Dispatchers.Default).launch {
             val changeLogs = (database?.changeLogDao()?.getAllChangeLogs() ?: repository?.getAllChangeLogs()) ?: listOf()
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: CHANGE LOG SIZE: %s", changeLogs.size.toString())
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CHANGE LOG SIZE: %s", changeLogs.size.toString())
 
             for (changeLog in changeLogs) {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: %s", changeLog.toString())
-                //Log.i("${MiscHelpers.DEBUG_LOG_TAG}: CHANGE LOG JSON", ServerInteractions.changeLogToJson(changeLog))
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", changeLog.toString())
+                //Log.i("${TeleHelpers.DEBUG_LOG_TAG}: CHANGE LOG JSON", ServerInteractions.changeLogToJson(changeLog))
             }
         }
     }
@@ -61,10 +61,10 @@ object DatabaseLogFunctions {
     fun logExecuteLogs(database : ClientDatabase?, repository: ClientRepository?) {
         CoroutineScope(Dispatchers.Default).launch {
             val executeLogs = (database?.executeQueueDao()?.getAllQTE() ?: repository?.getAllQTE()) ?: listOf()
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: EXECUTE LOG SIZE: %s", executeLogs.size.toString())
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: EXECUTE LOG SIZE: %s", executeLogs.size.toString())
 
             for (executeLog in executeLogs) {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: %s", executeLog.toString())
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", executeLog.toString())
             }
         }
     }
@@ -72,10 +72,10 @@ object DatabaseLogFunctions {
     fun logUploadChangeLogs(database : ClientDatabase?, repository: ClientRepository?) {
         CoroutineScope(Dispatchers.Default).launch {
             val uploadLogs = (database?.uploadChangeQueueDao()?.getAllChangeQTU() ?: repository?.getAllChangeQTU()) ?: listOf()
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: UPLOAD_CHANGE LOG SIZE: %s", uploadLogs.size.toString())
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: UPLOAD_CHANGE LOG SIZE: %s", uploadLogs.size.toString())
 
             for (uploadLog in uploadLogs) {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: %s", uploadLog.toString())
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", uploadLog.toString())
             }
         }
     }
@@ -83,10 +83,10 @@ object DatabaseLogFunctions {
     fun logUploadAnalyzedLogs(database : ClientDatabase?, repository: ClientRepository?) {
         CoroutineScope(Dispatchers.Default).launch {
             val uploadLogs = (database?.uploadAnalyzedQueueDao()?.getAllAnalyzedQTU() ?: repository?.getAllAnalyzedQTU()) ?: listOf()
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: UPLOAD_ANALYZED_POST LOG SIZE: %s", uploadLogs.size.toString())
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: UPLOAD_ANALYZED_POST LOG SIZE: %s", uploadLogs.size.toString())
 
             for (uploadLog in uploadLogs) {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: %s", uploadLog.toString())
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", uploadLog.toString())
             }
         }
     }
@@ -103,10 +103,10 @@ object DatabaseLogFunctions {
                     ?: listOf()
             }
 
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: # OF PRINTED CALL LOGS: %s", callLogs.size.toString())
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: # OF PRINTED CALL LOGS: %s", callLogs.size.toString())
 
             for (callDetail: CallDetail in callLogs) {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: CALL LOG: %s", callDetail.toString())
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CALL LOG: %s", callDetail.toString())
             }
         }
     }
@@ -114,10 +114,10 @@ object DatabaseLogFunctions {
     fun logAnalyzedNumbers(database : ClientDatabase? = null, repository: ClientRepository? = null) {
         CoroutineScope(Dispatchers.Default).launch {
             val analyzedNumbers = database?.analyzedNumberDao()?.getAllAnalyzedNum() ?: listOf()
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: ANALYZED NUMBER SIZE: %s", analyzedNumbers.size.toString())
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: ANALYZED NUMBER SIZE: %s", analyzedNumbers.size.toString())
 
             for (analyzedNumber in analyzedNumbers) {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: $analyzedNumber")
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $analyzedNumber")
             }
         }
     }
@@ -184,13 +184,13 @@ object DatabaseLogFunctions {
 
             val callLogs = database?.callDetailDao()?.getCallDetails() ?: repository?.getCallDetails() ?: listOf()
 
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: # OF CALL LOGS: %s", callLogs.size.toString())
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: # OF CALL LOGS: %s", callLogs.size.toString())
 
             var callDetailChunk = mutableListOf<CallDetail>()
             var i = 0
             for (callDetail in callLogs) {
                 if (i == 100) {
-                    Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: JSON = ${callDetailChunkToJson(CallDetailChunk(callDetailChunk))}")
+                    Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: JSON = ${callDetailChunkToJson(CallDetailChunk(callDetailChunk))}")
                     callDetailChunk = mutableListOf()
                     i = 0
                 }
@@ -218,13 +218,13 @@ object DatabaseLogFunctions {
     fun logAnalyzedNumbersJson(database : ClientDatabase? = null, repository: ClientRepository? = null) {
         CoroutineScope(Dispatchers.Default).launch {
             val analyzedNumbers = (database?.analyzedNumberDao()?.getAllAnalyzedNum()) ?: listOf()
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: ANALYZED NUMBER SIZE: %s", analyzedNumbers.size.toString())
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: ANALYZED NUMBER SIZE: %s", analyzedNumbers.size.toString())
 
             var analyzedChunk = mutableListOf<AnalyzedNumber>()
             var i = 0
             for (analyzedNumber in analyzedNumbers) {
                 if (i == 100) {
-                    Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: JSON = ${analyzedChunkToJson(AnalyzedChunk(analyzedChunk))}")
+                    Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: JSON = ${analyzedChunkToJson(AnalyzedChunk(analyzedChunk))}")
                     analyzedChunk = mutableListOf()
                     i = 0
                 }
@@ -232,7 +232,7 @@ object DatabaseLogFunctions {
                 i++
             }
 
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: JSON = ${analyzedChunkToJson(AnalyzedChunk(analyzedChunk))}")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: JSON = ${analyzedChunkToJson(AnalyzedChunk(analyzedChunk))}")
         }
     }
 }

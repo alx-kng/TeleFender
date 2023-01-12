@@ -13,7 +13,7 @@ import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.gui.MainActivity
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import timber.log.Timber
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -79,13 +79,13 @@ class CoroutineExecuteWorker(
         stateVarString = inputData.getString("variableName")
         NOTIFICATION_ID = inputData.getString("notificationID")?.toInt()
 
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: EXECUTE STARTED")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: EXECUTE STARTED")
 
         if (stateVarString == "oneTimeExecState") {
             try {
                 setForeground(getForegroundInfo())
             } catch(e: Exception) {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: %s", e.message!!)
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", e.message!!)
             }
         }
 
@@ -94,22 +94,22 @@ class CoroutineExecuteWorker(
         /**
          * Executes logs in ExecuteQueue
          */
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: EXECUTE WORKER STARTED")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: EXECUTE WORKER STARTED")
         repository.executeAll()
 
         when (stateVarString) {
             "oneTimeExecState" -> WorkStates.setState(WorkType.ONE_TIME_EXEC, WorkInfo.State.SUCCEEDED)
             "periodicExecState" -> WorkStates.setState(WorkType.PERIODIC_EXEC, WorkInfo.State.SUCCEEDED)
             else -> {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: EXECUTE WORKER THREAD: Worker state variable name is wrong")
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: EXECUTE WORKER THREAD: Worker state variable name is wrong")
             }
         }
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: EXECUTE ENDED")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: EXECUTE ENDED")
         return Result.success()
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: EXECUTE WORKER FOREGROUND")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: EXECUTE WORKER FOREGROUND")
 
         val pendingIntent: PendingIntent =
             Intent(applicationContext, MainActivity::class.java).let { notificationIntent ->

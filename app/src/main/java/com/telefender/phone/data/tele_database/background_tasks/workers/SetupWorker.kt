@@ -15,8 +15,8 @@ import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.gui.MainActivity
-import com.telefender.phone.helpers.MiscHelpers
-import com.telefender.phone.permissions.PermissionRequester
+import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.permissions.Permissions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import timber.log.Timber
@@ -27,8 +27,8 @@ object SetupScheduler {
     val setupTag = "setupWorker"
 
     fun initiateSetupWorker(context: Context): UUID? {
-        if (!PermissionRequester.hasLogPermissions(context)) {
-            Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: No log permissions in initiateSetupWorker()")
+        if (!Permissions.hasLogPermissions(context)) {
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: No log permissions in initiateSetupWorker()")
             return null
         }
 
@@ -68,7 +68,7 @@ class CoroutineSetupWorker(
         try {
             setForeground(getForegroundInfo())
         } catch(e: Exception) {
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: %s", e.message!!)
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", e.message!!)
         }
 
         val repository : ClientRepository = (applicationContext as App).repository
@@ -81,16 +81,16 @@ class CoroutineSetupWorker(
         UserSetup.initialPostRequest(context, repository, scope)
 
         if(!WorkStates.workWaiter(WorkType.SETUP, "SETUP WORKER", stopOnFail = true)) {
-            Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: SETUP WORKER RETRYING...")
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: SETUP WORKER RETRYING...")
             return Result.retry()
         }
 
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: SETUP WORKER DONE")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SETUP WORKER DONE")
         return Result.success()
     }
 
     override suspend fun getForegroundInfo() : ForegroundInfo {
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: SETUP WORKER FOREGROUND")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SETUP WORKER FOREGROUND")
 
         val pendingIntent: PendingIntent =
             Intent(applicationContext, MainActivity::class.java).let { notificationIntent ->

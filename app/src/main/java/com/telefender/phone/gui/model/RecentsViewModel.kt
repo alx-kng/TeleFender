@@ -5,7 +5,7 @@ import android.app.Application
 import androidx.lifecycle.*
 import com.telefender.phone.data.default_database.DefaultCallDetails
 import com.telefender.phone.data.tele_database.entities.*
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -105,7 +105,7 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
      * displayed on the right of each call log number.
      */
     private suspend fun groupCallLogs(logs: List<CallDetail>) {
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG} GROUP CALL LOG STARTING...")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG} GROUP CALL LOG STARTING...")
         val tempGroups = mutableListOf<GroupedCallDetail>()
 
         withContext(Dispatchers.Default) {
@@ -141,7 +141,7 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
             val tempLogs = DefaultCallDetails.getDefaultCallDetails(context)
             groupCallLogs(tempLogs)
 
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: ABOUT TO ASSIGN LOGS VALUE")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: ABOUT TO ASSIGN LOGS VALUE")
             _callLogs.value = tempLogs
         }
     }

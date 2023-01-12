@@ -17,8 +17,7 @@ interface CallDetailDao: StoredMapDao {
      * TODO: Double check that Transaction is unnecessary here since insertDetailSync() is
      *  already wrapped in a Transaction inside ExecuteAgent's logInsert().
      * 
-     * Syncs CallDetail retrieved from default database with our CallDetails and
-     * returns inserted rowID.
+     * Syncs CallDetail from default database with our CallDetails and returns inserted rowID.
      * 
      * NOTE: MUST ONLY BE USED FOR SYNCING CallDetails, since it also updates the lastLogSyncTime
      * in StoredMap.
@@ -59,8 +58,11 @@ interface CallDetailDao: StoredMapDao {
     }
 
     /**
-     * Purposely don't set callType so that sync knows that this CallDetail is not synced
-     * (only if inserted first <-> else statement).
+     * For inserting a CallDetail skeleton that contains info on the unallowed status of the call.
+     * Purposely don't set callType so that sync knows that this CallDetail is not synced (only if
+     * inserted first <-> else statement).
+     *
+     * NOTE: Should be wrapped in try-catch, as the underlying mechanism can throw exceptions.
      */
     @Transaction
     suspend fun insertCallDetailSkeleton(callDetail: CallDetail) {
@@ -131,10 +133,11 @@ interface CallDetailDao: StoredMapDao {
 
     /**********************************************************************************************
      * Check if CallDetail under given instanceNumber exists. If no instanceNumber is passed in,
-     * then we assume we are querying from the user's own CallDetails.
+     * then we assume we are querying from the user's own CallDetails. For now these are private
+     * because they have the possibility of throwing Exception when not used in the right place.
      *********************************************************************************************/
 
-    suspend fun callDetailExists(callEpochDate: Long, instanceParam: String? = null) : Boolean {
+    private suspend fun callDetailExists(callEpochDate: Long, instanceParam: String? = null) : Boolean {
         val instanceNumber = instanceParam ?: getUserNumber()!!
         return callDetailExistsQuery(callEpochDate, instanceNumber)
     }
@@ -144,10 +147,11 @@ interface CallDetailDao: StoredMapDao {
 
     /**********************************************************************************************
      * Check synced by whether or not callType was set or not. Only applicable to user's own
-     * CallDetails.
+     * CallDetails. For now these are private because they have the possibility of throwing
+     * Exception when not used in the right place.
      *********************************************************************************************/
 
-    suspend fun callSynced(callEpochDate: Long) : Boolean {
+    private suspend fun callSynced(callEpochDate: Long) : Boolean {
         val instanceNumber = getUserNumber()!!
         return callSyncedQuery(callEpochDate, instanceNumber)
     }
@@ -157,11 +161,12 @@ interface CallDetailDao: StoredMapDao {
 
     /**********************************************************************************************
      * Retrieves all CallDetails associated with the given instanceNumber. If nothing is passed in,
-     * then we assume we are retrieving the user's own CallDetails.
+     * then we assume we are retrieving the user's own CallDetails. Returns null if can't retrieve
+     * user's number.
      *********************************************************************************************/
 
-    suspend fun getCallDetails(instanceParam: String? = null) : List<CallDetail> {
-        val instanceNumber = instanceParam ?: getUserNumber()!!
+    suspend fun getCallDetails(instanceParam: String? = null) : List<CallDetail>? {
+        val instanceNumber = instanceParam ?: getUserNumber() ?: return null
         return getCallDetailsQuery(instanceNumber)
     }
 
@@ -171,11 +176,12 @@ interface CallDetailDao: StoredMapDao {
 
     /**********************************************************************************************
      * Retrieves partial CallDetails associated with the given instanceNumber. If nothing is passed
-     * in, then we assume we are retrieving the user's own CallDetails.
+     * in, then we assume we are retrieving the user's own CallDetails. Returns null if can't retrieve
+     * user's number.
      *********************************************************************************************/
 
-    suspend fun getCallDetailsPartial(instanceParam: String? = null, amount: Int) : List<CallDetail> {
-        val instanceNumber = instanceParam ?: getUserNumber()!!
+    suspend fun getCallDetailsPartial(instanceParam: String? = null, amount: Int) : List<CallDetail>? {
+        val instanceNumber = instanceParam ?: getUserNumber() ?: return null
         return getCallDetailsPartialQuery(instanceNumber, amount)
     }
 

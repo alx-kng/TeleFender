@@ -10,11 +10,10 @@ import android.provider.CallLog
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
-import com.telefender.phone.App
 import com.telefender.phone.call_related.*
 import com.telefender.phone.data.tele_database.TeleCallDetails
 import com.telefender.phone.databinding.ActivityIncomingCallBinding
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.*
 import timber.log.Timber
 
@@ -47,7 +46,7 @@ class IncomingCallActivity : AppCompatActivity() {
      */
     private val observer = Observer { isIncoming: Boolean->
         if (!isIncoming) {
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: INCOMING FINISHED: focusedCall state: ${
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: INCOMING FINISHED: focusedCall state: ${
                 CallManager.callStateString(CallManager.focusedCall.getStateCompat())}")
 
             scope.cancel()
@@ -67,7 +66,7 @@ class IncomingCallActivity : AppCompatActivity() {
          * If the call is unsafe and app is in silence mode, the call is declined after [silenceDelay]
          * if call isn't already disconnected or connected.
          */
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: SAFE - ${intent.extras?.getBoolean("Safe")}")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SAFE - ${intent.extras?.getBoolean("Safe")}")
         val safe = intent.extras?.getBoolean("Safe") ?: true
         if (!safe && CallManager.currentMode == HandleMode.SILENCE_MODE) {
             scope.launch {
@@ -80,7 +79,10 @@ class IncomingCallActivity : AppCompatActivity() {
         binding.displayNumber.text = CallManager.focusedCall.number() ?: "Unknown number"
 
         binding.answerIncoming.setOnClickListener {
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: Silence Block Action: No block action taken because call was answered by user.")
+            if (!safe) {
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                    "Silence Block Action: No block action taken because call was answered by user.")
+            }
 
             CallManager.lastAnsweredCall = CallManager.focusedCall
             scope.cancel()
@@ -110,17 +112,14 @@ class IncomingCallActivity : AppCompatActivity() {
         CallManager.incomingCallLiveData.removeObserver(observer)
 
         if (!answered) {
-            val repository = ((CallService.context?.applicationContext) as App).repository
-
-            val direction = when (unallowed) {
-                true -> CallLog.Calls.BLOCKED_TYPE
-                false, null -> {
-                    if (rejected) CallLog.Calls.REJECTED_TYPE else CallLog.Calls.MISSED_TYPE
-                }
+            val direction = if (unallowed == true || rejected) {
+                CallLog.Calls.REJECTED_TYPE
+            } else {
+                CallLog.Calls.MISSED_TYPE
             }
 
             val unallowedParam = unallowed ?: false
-            TeleCallDetails.insertCallDetail(repository, incomingCall!!, unallowedParam, direction)
+            TeleCallDetails.insertCallDetail(this, incomingCall!!, unallowedParam, direction)
         }
 
         super.finish()
@@ -158,11 +157,11 @@ class IncomingCallActivity : AppCompatActivity() {
      */
     private suspend fun silenceHangup() {
         for (i in 1..10) {
-            Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: INSIDE SILENCE HANGUP $i")
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: INSIDE SILENCE HANGUP $i")
             delay(silenceDelay / 10)
         }
 
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: " +
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
             "Silence Block Action: Block action was taken because call was not answered or disconnected by user.")
 
         unallowed = true

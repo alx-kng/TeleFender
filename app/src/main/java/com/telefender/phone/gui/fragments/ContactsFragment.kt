@@ -18,7 +18,7 @@ import com.telefender.phone.gui.adapters.ContactsAdapter
 import com.telefender.phone.gui.decoration.ContactHeaderDecoration
 import com.telefender.phone.gui.model.ContactsViewModel
 import com.telefender.phone.gui.model.ContactsViewModelFactory
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 
 // TODO: Consider not showing contacts that don't have a number associated with them.
 class ContactsFragment : Fragment() {
@@ -99,7 +99,7 @@ class ContactsFragment : Fragment() {
 
         override fun onChange(selfChange: Boolean) {
             super.onChange(selfChange)
-            Log.i("${MiscHelpers.DEBUG_LOG_TAG}", "NEW CONTACT")
+            Log.i(TeleHelpers.DEBUG_LOG_TAG, "NEW CONTACT")
 
             contactsViewModel.updateContacts()
         }

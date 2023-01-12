@@ -7,7 +7,7 @@ import com.telefender.phone.data.server_related.GenericDataType
 import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.entities.*
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
@@ -37,7 +37,7 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
                 changeFromServerHelper(genericData)
                 break
             } catch (e: Exception) {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: " +
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
                     "changeFromServer() RETRYING... ${e.message}")
                 delay(2000)
             }
@@ -136,7 +136,7 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
                  */
                 if (i == retryAmount && bubbleError) throw Exception("changeFromClient() FAILED")
 
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: " +
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
                     "changeFromClient() RETRYING... ${e.message}")
                 delay(2000)
             }

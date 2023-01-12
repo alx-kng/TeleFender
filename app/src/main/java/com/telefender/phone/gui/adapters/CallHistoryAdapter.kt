@@ -17,7 +17,7 @@ import com.telefender.phone.data.tele_database.entities.CallDetail
 import com.telefender.phone.data.tele_database.entities.CallDetailItem
 import com.telefender.phone.data.tele_database.entities.CallHistoryFooter
 import com.telefender.phone.data.tele_database.entities.CallHistoryHeader
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -211,7 +211,7 @@ class CallHistoryAdapter (
     }
 
     private fun getDirectionString(direction: Int, rawNumber: String): String {
-        val trueDirection = MiscHelpers.getTrueDirection(direction, rawNumber)
+        val trueDirection = TeleHelpers.getTrueDirection(direction, rawNumber)
 
         val directionString = when (trueDirection) {
             CallLog.Calls.INCOMING_TYPE  -> "Incoming Call"

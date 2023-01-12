@@ -14,8 +14,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.telefender.phone.R
 import com.telefender.phone.data.tele_database.entities.GroupedCallDetail
-import com.telefender.phone.helpers.MiscHelpers
-import timber.log.Timber
+import com.telefender.phone.helpers.TeleHelpers
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.LocalDateTime
@@ -160,7 +159,7 @@ class RecentsAdapter(
     }
 
     private fun getDirectionIcon(direction: Int, rawNumber: String): Int {
-        val trueDirection = MiscHelpers.getTrueDirection(direction, rawNumber)
+        val trueDirection = TeleHelpers.getTrueDirection(direction, rawNumber)
 
         val icon = when (trueDirection) {
             CallLog.Calls.INCOMING_TYPE -> R.drawable.ic_baseline_call_received_24

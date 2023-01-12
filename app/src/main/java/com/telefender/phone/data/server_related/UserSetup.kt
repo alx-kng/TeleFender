@@ -6,7 +6,7 @@ import com.android.volley.Request
 import com.telefender.phone.data.server_related.request_generators.InitialRequestGen
 import com.telefender.phone.data.server_related.request_generators.VerifyRequestGen
 import com.telefender.phone.data.tele_database.ClientRepository
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import org.json.JSONException
 import timber.log.Timber
@@ -21,11 +21,11 @@ object UserSetup {
     @SuppressLint("MissingPermission", "HardwareIds")
     suspend fun initialPostRequest(context : Context, repository: ClientRepository, scope: CoroutineScope) {
         val url = "https://dev.scribblychat.com/callbook/requestInstallation"
-        val instanceNumber = MiscHelpers.getUserNumberStored(context)
+        val instanceNumber = TeleHelpers.getUserNumberStored(context) ?: return
 
         val requestJson : String = DefaultRequest(instanceNumber).toJson()
 
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: initialRequestJson = $requestJson")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: initialRequestJson = $requestJson")
 
         try {
             val stringRequest = InitialRequestGen.create(
@@ -50,13 +50,13 @@ object UserSetup {
     @SuppressLint("MissingPermission", "HardwareIds")
     suspend fun verifyPostRequest(context : Context, repository: ClientRepository, scope: CoroutineScope) {
         val url = "https://dev.scribblychat.com/callbook/verifyInstallation"
-        val instanceNumber = MiscHelpers.getUserNumberStored(context)
+        val instanceNumber = TeleHelpers.getUserNumberStored(context) ?: return
 
         val otp = 111111
         val sessionID = repository.getSessionID()
         val verifyRequestJson = VerifyRequest(instanceNumber, sessionID!!, otp).toJson()
 
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: verifyRequestJson = $verifyRequestJson")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: verifyRequestJson = $verifyRequestJson")
 
         try {
             val stringRequest = VerifyRequestGen.create(

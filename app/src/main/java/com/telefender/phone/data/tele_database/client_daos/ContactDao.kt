@@ -34,7 +34,7 @@ interface ContactDao {
     suspend fun getContactSize() : Int?
 
     @Query("DELETE FROM contact WHERE CID = :CID")
-    suspend fun deleteContact_CID(CID: String)
+    suspend fun deleteContact(CID: String)
 
     @Query("DELETE FROM contact")
     suspend fun deleteAllContacts()

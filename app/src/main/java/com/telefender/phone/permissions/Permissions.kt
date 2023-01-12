@@ -6,42 +6,38 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.telecom.TelecomManager
 import androidx.core.app.ActivityCompat
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import timber.log.Timber
 
 
-object PermissionRequester {
+object Permissions {
     /**
      * Starts dialer to request permissions in PERMISSIONS array, using hasPermissions as a helper.
      */
-    fun multiplePermissions(context: Context?, activity: Activity) {
-        Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: multiple permissions called")
+    fun multiplePermissions(context: Context, activity: Activity) {
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: multiple permissions called")
         // The request code is used in ActivityCompat.requestPermissions()
         // and returned in the Activity's onRequestPermissionsResult()
         val PERMISSION_ALL = 1
-        val PERMISSIONS = arrayOf(
+        val permissions = arrayOf(
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
             Manifest.permission.ADD_VOICEMAIL
         )
 
-        if (!hasPermissions(context, PERMISSIONS)) {
-            ActivityCompat.requestPermissions(activity, PERMISSIONS, PERMISSION_ALL)
+        if (!hasPermissions(context, permissions)) {
+            ActivityCompat.requestPermissions(activity, permissions, PERMISSION_ALL)
         } 
     }
 
     /**
      * Returns whether or not App has all the permissions in provided permission array
      */
-    fun hasPermissions(context: Context?, permissions: Array<String>): Boolean {
-        if (context != null && permissions != null) {
-            for (permission in permissions) {
-                if (ActivityCompat.checkSelfPermission(
-                        context,
-                        permission!!
-                    ) != PackageManager.PERMISSION_GRANTED
-                ) {
-                    return false
-                }
+    fun hasPermissions(context: Context, permissions: Array<String>): Boolean {
+        for (permission in permissions) {
+            if (ActivityCompat.checkSelfPermission(context, permission)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                return false
             }
         }
         return true

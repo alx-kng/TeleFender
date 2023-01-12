@@ -5,12 +5,9 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.telefender.phone.data.tele_database.MutexType
-import com.telefender.phone.data.tele_database.TeleLocks
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.entities.*
-import com.telefender.phone.helpers.MiscHelpers
 import kotlinx.coroutines.sync.withLock
-import timber.log.Timber
 
 
 @Dao
@@ -60,8 +57,8 @@ interface AnalyzedNumberDao : ParametersDao, StoredMapDao, UploadAnalyzedQueueDa
         normalizedNumber: String,
         instanceParam: String? = null,
     ) : AnalyzedNumber? {
-        val userNumber = getUserNumber()!!
-        val instanceNumber = instanceParam ?: userNumber
+        val userNumber = getUserNumber()
+        val instanceNumber = instanceParam ?: userNumber ?: return null
 
         if (instanceNumber == userNumber){
             initAnalyzedNum(normalizedNumber, instanceNumber)
@@ -69,7 +66,7 @@ interface AnalyzedNumberDao : ParametersDao, StoredMapDao, UploadAnalyzedQueueDa
         return getAnalyzedNumQuery(normalizedNumber, instanceNumber)
     }
 
-    @Query("SELECT * FROM analyzed_number WHERE normalizedNumber = :normalizedNumber AND instanceNumber = :instanceNumber")
+    @Query("SELECT * FROM analyzed_number WHERE instanceNumber = :instanceNumber AND normalizedNumber = :normalizedNumber")
     suspend fun getAnalyzedNumQuery(normalizedNumber: String, instanceNumber: String) : AnalyzedNumber?
 
     /**
@@ -86,7 +83,7 @@ interface AnalyzedNumberDao : ParametersDao, StoredMapDao, UploadAnalyzedQueueDa
     suspend fun initAnalyzedNum(normalizedNumber: String, instanceNumber: String) : Boolean {
         if (getAnalyzedNumQuery(normalizedNumber, instanceNumber) == null) {
             // We assume that StoredMap is initialized by now due to being core.
-            val parameters = getParameters()
+            val parameters = getParameters() ?: return false
 
             val baseAnalyzed =
                 Analyzed(
@@ -178,8 +175,8 @@ interface AnalyzedNumberDao : ParametersDao, StoredMapDao, UploadAnalyzedQueueDa
         numTotalCalls: Int? = null,
         analyzed: Analyzed? = null
     ) : Boolean {
-        val userNumber = getUserNumber()!!
-        val instanceNumber = instanceParam ?: userNumber
+        val userNumber = getUserNumber()
+        val instanceNumber = instanceParam ?: userNumber ?: return false
 
         if (instanceNumber == userNumber) {
             initAnalyzedNum(normalizedNumber, instanceNumber)
@@ -215,8 +212,9 @@ interface AnalyzedNumberDao : ParametersDao, StoredMapDao, UploadAnalyzedQueueDa
      */
     suspend fun updateAnalyzedNum(analyzedNumber: AnalyzedNumber) : Boolean {
         with(analyzedNumber) {
+            val userNumber = getUserNumber() ?: return false
 
-            if (instanceNumber == getUserNumber()!!) {
+            if (instanceNumber == userNumber) {
                 initAnalyzedNum(normalizedNumber, instanceNumber)
 
                 updateAnalyzedNumQuery(
@@ -259,7 +257,7 @@ interface AnalyzedNumberDao : ParametersDao, StoredMapDao, UploadAnalyzedQueueDa
                 THEN :analyzedJson
             ELSE analyzedJson
         END
-        WHERE normalizedNumber = :normalizedNumber AND instanceNumber = :instanceNumber"""
+        WHERE instanceNumber = :instanceNumber AND normalizedNumber = :normalizedNumber"""
     )
     suspend fun updateAnalyzedNumQuery(
         normalizedNumber: String,

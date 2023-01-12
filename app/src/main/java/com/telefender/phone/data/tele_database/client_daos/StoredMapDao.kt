@@ -2,7 +2,7 @@ package com.telefender.phone.data.tele_database.client_daos
 
 import androidx.room.*
 import com.telefender.phone.data.tele_database.entities.StoredMap
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 
 @Dao
 interface StoredMapDao {
@@ -22,8 +22,8 @@ interface StoredMapDao {
      * basically locked to make sure there is ONLY ONE StoredMap (which contains the user's number).
      * Make sure that you are passing in the right number!!!
      */
-    suspend fun initStoredMap(userNumber: String) : Boolean{
-        return if (getStoredMap() == null && userNumber != MiscHelpers.UNKNOWN_NUMBER) {
+    suspend fun initStoredMap(userNumber: String) : Boolean {
+        return if (getStoredMap() == null && userNumber != TeleHelpers.UNKNOWN_NUMBER) {
             // Initialize StoredMap with just userNumber.
             insertStoredMapQuery(StoredMap(userNumber = userNumber))
 
@@ -54,9 +54,9 @@ interface StoredMapDao {
         databaseInitialized: Boolean? = null,
         lastLogSyncTime: Long? = null,
         lastServerRowID: Long? = null
-    ) {
+    ) : Boolean {
         // Retrieves user number if possible and returns if not.
-        val userNumber = getUserNumber() ?: return
+        val userNumber = getUserNumber() ?: return false
 
         updateStoredMapQuery(
             userNumber = userNumber,
@@ -67,6 +67,8 @@ interface StoredMapDao {
             lastLogSyncTime = lastLogSyncTime,
             lastServerRowID = lastServerRowID
         )
+
+        return true
     }
 
     @Query(

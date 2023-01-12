@@ -11,7 +11,7 @@ import com.telefender.phone.R
 import com.telefender.phone.databinding.FragmentDialerBinding
 import com.telefender.phone.gui.MainActivity
 import com.telefender.phone.gui.model.DialerViewModel
-import com.telefender.phone.permissions.PermissionRequester
+import com.telefender.phone.permissions.Permissions
 
 // TODO: Make number display touchable / editable
 // TODO: FUCKING PROBLEM WITH BACK BUTTON IN DIALER FRAGMENT
@@ -43,7 +43,7 @@ class DialerFragment : Fragment() {
             makeCall()
         }
 
-        PermissionRequester.multiplePermissions(activity, activity as Activity)
+        Permissions.multiplePermissions(requireContext(), activity as Activity)
     }
 
     override fun onDestroyView() {

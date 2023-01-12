@@ -62,6 +62,11 @@ class ClientRepository(
     }
 
     @WorkerThread
+    suspend fun databaseInitialized() : Boolean {
+        return storedMapDao.databaseInitialized()
+    }
+
+    @WorkerThread
     suspend fun getClientKey(): String? {
         return storedMapDao.getStoredMap()?.clientKey
     }
@@ -89,8 +94,8 @@ class ClientRepository(
         databaseInitialized: Boolean? = null,
         lastLogSyncTime: Long? = null,
         lastServerRowID: Long? = null
-    ) {
-        mutexLocks[MutexType.STORED_MAP]!!.withLock {
+    ) : Boolean {
+        return mutexLocks[MutexType.STORED_MAP]!!.withLock {
             storedMapDao.updateStoredMap(
                 sessionID = sessionID,
                 clientKey = clientKey,
@@ -112,9 +117,13 @@ class ClientRepository(
      *
      * Gets Parameters associated with user. Requires use of lock since it may initialize the
      * Parameters if they didn't previously exist (only happens on first access).
+     *
+     * NOTE: It's STRONGLY advised that you put a try-catch around any use cases of this,
+     * especially if you plan on non-null asserting the return, as there is a real possibility of
+     * an error (especially if the database isn't yet initialized).
      */
     @WorkerThread
-    suspend fun getParameters() : Parameters {
+    suspend fun getParameters() : Parameters? {
         return mutexLocks[MutexType.PARAMETERS]!!.withLock {
             parametersDao.getParameters()
         }
@@ -122,14 +131,18 @@ class ClientRepository(
 
     @WorkerThread
     suspend fun updateParameters(
+        shouldUploadAnalyzed: Boolean? = null,
+        shouldUploadLogs: Boolean? = null,
         initialNotifyGate: Int? = null,
         verifiedSpamNotifyGate: Int? = null,
         superSpamNotifyGate: Int? = null,
         incomingGate: Int? = null,
         outgoingGate: Int? = null
-    ) {
-        mutexLocks[MutexType.PARAMETERS]!!.withLock {
+    ) : Boolean {
+        return mutexLocks[MutexType.PARAMETERS]!!.withLock {
             parametersDao.updateParameters(
+                shouldUploadAnalyzed = shouldUploadAnalyzed,
+                shouldUploadLogs = shouldUploadLogs,
                 initialNotifyGate = initialNotifyGate,
                 verifiedSpamNotifyGate = verifiedSpamNotifyGate,
                 superSpamNotifyGate = superSpamNotifyGate,
@@ -147,12 +160,12 @@ class ClientRepository(
      * getCallLogs() as an extra function just in case
      */
     @WorkerThread
-    suspend fun getCallDetails(instanceNumber: String? = null): List<CallDetail> {
+    suspend fun getCallDetails(instanceNumber: String? = null): List<CallDetail>? {
         return callDetailDao.getCallDetails(instanceNumber)
     }
 
     @WorkerThread
-    suspend fun getCallDetailsPartial(instanceNumber: String? = null, amount: Int): List<CallDetail> {
+    suspend fun getCallDetailsPartial(instanceNumber: String? = null, amount: Int): List<CallDetail>? {
         return callDetailDao.getCallDetailsPartial(instanceNumber, amount)
     }
 
@@ -161,6 +174,11 @@ class ClientRepository(
         return callDetailDao.getNewestCallDate(instanceNumber)
     }
 
+    /**
+     * For inserting a CallDetail skeleton that contains info on the unallowed status of the call.
+     *
+     * NOTE: Should be wrapped in try-catch, as the underlying mechanism can throw exceptions.
+     */
     @WorkerThread
     suspend fun insertCallDetailSkeleton(callDetail: CallDetail) {
         mutexLocks[MutexType.CALL_DETAIL]!!.withLock {

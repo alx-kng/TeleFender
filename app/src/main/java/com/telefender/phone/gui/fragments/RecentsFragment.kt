@@ -15,11 +15,6 @@ import com.telefender.phone.gui.adapters.RecentsAdapter
 import com.telefender.phone.gui.model.RecentsViewModel
 import com.telefender.phone.gui.model.RecentsViewModelFactory
 import com.telefender.phone.helpers.DatabaseLogFunctions
-import com.telefender.phone.helpers.MiscHelpers
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import timber.log.Timber
 
 /*
 TODO: Handle case where permissions aren't given (or default dialer isn't granted).

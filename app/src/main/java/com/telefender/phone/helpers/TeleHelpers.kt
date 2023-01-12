@@ -7,16 +7,52 @@ import com.google.i18n.phonenumbers.PhoneNumberUtil
 import com.telefender.phone.App
 import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
 import com.telefender.phone.data.tele_database.entities.Parameters
+import com.telefender.phone.permissions.Permissions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import timber.log.Timber
 
 
-// TODO: Consider adding retry amount to be used for entire app.
-object MiscHelpers {
+/*
+TODO: Consider adding retry amount to be used for entire app.
+ */
+object TeleHelpers {
 
     const val DEBUG_LOG_TAG = "TELE_DEBUG"
     const val UNKNOWN_NUMBER = "UNKNOWN NUMBER"
+
+    /**
+     * Just our simple custom assert function.
+     */
+    fun assert(success: Boolean, from: String? = null) {
+        if (!success) throw Exception("assert() FAILURE from $from")
+    }
+
+    /**
+     * TODO: See if these tiny runBlocking{} usages are very bad?
+     *
+     * Checks if database is initialized, user is setup, and that the wanted permissions are given.
+     */
+    fun hasValidStatus(
+        context: Context,
+        initializedRequired: Boolean = true,
+        setupRequired: Boolean = true,
+        logPermission: Boolean = false,
+        contactPermission: Boolean = false
+    ) : Boolean {
+
+        if (logPermission && !Permissions.hasLogPermissions(context)) return false
+
+        if (contactPermission && !Permissions.hasContactPermissions(context)) return false
+
+        val repository = (context.applicationContext as App).repository
+        return runBlocking(Dispatchers.Default) {
+            val databaseCondition = !initializedRequired || repository.databaseInitialized()
+            val setupCondition = !setupRequired || repository.hasClientKey()
+
+            databaseCondition && setupCondition
+        }
+    }
 
     /**
      * Gets user's phone number from own database. Doesn't need permissions. Throws Exception if
@@ -24,33 +60,35 @@ object MiscHelpers {
      *
      * NOTE: should ONLY BE USED after database initialization!
      */
-    suspend fun getUserNumberStored(context: Context) : String {
+    suspend fun getUserNumberStored(context: Context) : String? {
         val repository = (context.applicationContext as App).repository
-        return repository.getUserNumber()!!
+        val userNumber = repository.getUserNumber()
+
+        if (userNumber == null) {
+            Timber.e("$DEBUG_LOG_TAG: getUserNumberStored() returned null!!!")
+        }
+
+        return userNumber
     }
 
     /**
-     * TODO: Maybe check for permissions here later.
-     *
      * Gets user's phone number. Tries to retrieve from own database before resorting to retrieving
      * using permissions.
      */
-    fun getUserNumberUncertain(context: Context) : String {
-        val databaseNumber = try {
-            runBlocking(Dispatchers.Default) {
-                getUserNumberStored(context)
-            }
-        } catch (e: Exception) {
-            null
+    fun getUserNumberUncertain(context: Context) : String? {
+        val databaseNumber = runBlocking(Dispatchers.Default) {
+            getUserNumberStored(context)
         }
 
-        return if (databaseNumber != null) {
-            databaseNumber
-        } else {
-            val tMgr = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-            val number = tMgr.line1Number
-            return normalizedNumber(number) ?: bareNumber(number)
-        }
+        return databaseNumber ?:
+            if (!Permissions.hasLogPermissions(context)) {
+                Timber.e("$DEBUG_LOG_TAG: User number was null due to lack of permissions!!!")
+                return null
+            } else {
+                val tMgr = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+                val number = tMgr.line1Number
+                return normalizedNumber(number) ?: bareNumber(number)
+            }
     }
 
     fun getAnalyzedNumber(context: Context, normalizedNumber: String) : AnalyzedNumber? {
@@ -60,7 +98,7 @@ object MiscHelpers {
         }
     }
 
-    fun getParameters(context: Context) : Parameters {
+    fun getParameters(context: Context) : Parameters? {
         val repository = (context.applicationContext as App).repository
         return runBlocking(Dispatchers.Default) {
             repository.getParameters()
@@ -70,7 +108,6 @@ object MiscHelpers {
     /**
      * TODO: Maybe dynamically get country code later.
      * TODO: Maybe combine normalizedNumber() and bareNumber()?
-     * TODO: Maybe we should let bareNumber() handle numbers with # sign?
      *
      * Puts number in normalized E164 form (assuming US country code). If the number is invalid,
      * an invalid message string is returned instead of null.

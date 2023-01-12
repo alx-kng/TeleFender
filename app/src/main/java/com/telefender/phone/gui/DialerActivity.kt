@@ -26,7 +26,7 @@ import androidx.core.net.toUri
 import androidx.core.view.isVisible
 import com.telefender.phone.R
 import com.telefender.phone.call_related.CallManager
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.android.synthetic.main.activity_dialer.*
 import timber.log.Timber
 
@@ -84,7 +84,7 @@ class DialerActivity : AppCompatActivity() {
 
         phoneNumberInput.setOnEditorActionListener { _, _, _ ->
             initOutgoingCall()
-            Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: DIALED")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: DIALED")
             true
         }
     }
@@ -92,9 +92,8 @@ class DialerActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
 
-        if ((CallManager.focusedConnection.value?.state ?: Call.STATE_DISCONNECTED) == Call.STATE_ACTIVE ||
-            (CallManager.focusedConnection.value?.state ?: Call.STATE_DISCONNECTING) == Call.STATE_RINGING
-        ) {
+        val focusedState = CallManager.focusedConnection.value?.state ?: Call.STATE_DISCONNECTED
+        if (focusedState == Call.STATE_ACTIVE ||focusedState == Call.STATE_RINGING) {
             fromDialer = true
             go_back_to_call.isVisible = true
             go_back_to_call.setOnClickListener {

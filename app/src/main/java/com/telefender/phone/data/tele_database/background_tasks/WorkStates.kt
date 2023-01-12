@@ -1,7 +1,7 @@
 package com.telefender.phone.data.tele_database.background_tasks
 
 import androidx.work.WorkInfo
-import com.telefender.phone.helpers.MiscHelpers
+import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -128,7 +128,7 @@ object WorkStates {
         var state = getState(workType)
 
         if (state !in allowedStates) {
-            Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: ${workType.name} waiter called when worker is not running.")
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: ${workType.name} waiter called when worker is not running.")
             setState(workType, null)
             return false
         }
@@ -141,7 +141,7 @@ object WorkStates {
                 break
             }
             if (runningMsg != null) {
-                Timber.i("${MiscHelpers.DEBUG_LOG_TAG}: $runningMsg: %s", state.toString())
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $runningMsg: %s", state.toString())
             }
             delay(500)
             state = getState(workType)
@@ -164,7 +164,7 @@ object WorkStates {
 
     fun setState(workType: WorkType, workState: WorkInfo.State?) {
         if (workState !in allowedStates && workState != null) {
-            Timber.e("${MiscHelpers.DEBUG_LOG_TAG}: setState() - invalid workState")
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: setState() - invalid workState")
             return
         }
 
