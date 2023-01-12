@@ -24,6 +24,9 @@ object ServerInteractions {
 
     private const val retryAmount = 5
 
+    /**
+     * TODO: Put error counter like the upload requests.
+     */
     @SuppressLint("MissingPermission")
     suspend fun downloadDataRequest(context: Context, repository: ClientRepository, scope: CoroutineScope) {
         val url = "https://dev.scribblychat.com/callbook/downloadChanges"

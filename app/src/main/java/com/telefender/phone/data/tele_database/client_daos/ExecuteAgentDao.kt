@@ -21,6 +21,11 @@ import kotlin.math.roundToInt
 /**
  * TODO: Make sure that ExecuteQueue actions won't compete with the regular Sync actions even if
  *  they are in the same thread pool (Dispatchers.IO).
+ *
+ *
+ * TODO: EXECUTE ENGINE HAS ERRORS WHEN PROCESSING EXECUTE QUEUE.
+ *
+ * TODO: DOUBLE CHECK TRANSACTION!!!!!!!!!!!!!!!!!!!!
  */
 @Dao
 interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetailDao,

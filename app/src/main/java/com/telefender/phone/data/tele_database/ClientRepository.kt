@@ -244,11 +244,6 @@ class ClientRepository(
     /***********************************************************************************************
      * ChangeLog Queries
      **********************************************************************************************/
-    
-    @WorkerThread
-    suspend fun lastServerChangeID() : Int? {
-        return changeLogDao.lastServerChangeID()
-    }
 
     @WorkerThread
     suspend fun getAllChangeLogs(): List<ChangeLog> {
@@ -382,8 +377,8 @@ class ClientRepository(
      * See documentation for changeAgentDao.changeFromServer(). Locks handled at ExecuteAgent level.
      */
     @WorkerThread
-    suspend fun changeFromServer(genericData: GenericData) {
-        changeAgentDao.changeFromServer(genericData)
+    suspend fun changeFromServer(genericData: GenericData) : Boolean {
+        return changeAgentDao.changeFromServer(genericData)
     }
 
 

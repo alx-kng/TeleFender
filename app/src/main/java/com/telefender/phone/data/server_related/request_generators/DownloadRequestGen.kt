@@ -78,7 +78,8 @@ private fun downloadResponseHandler(
                 for (genericData in downloadResponse.data) {
 
                     // Inserts GenericData into right table and into ExecuteQueue
-                    repository.changeFromServer(genericData)
+                    val success = repository.changeFromServer(genericData)
+                    if (!success) break
                 }
 
                 /**

@@ -31,19 +31,24 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
      * retrying with the lastServerRowID), we still retry here to decrease load on server (by not
      * re-requesting unnecessarily).
      */
-    suspend fun changeFromServer(genericData: GenericData) {
+    suspend fun changeFromServer(genericData: GenericData) : Boolean {
         for (i in 1..retryAmount) {
             try {
                 changeFromServerHelper(genericData)
-                break
+                return true
             } catch (e: Exception) {
                 Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
                     "changeFromServer() RETRYING... ${e.message}")
                 delay(2000)
             }
         }
+
+        return false
     }
 
+    /**
+     * TODO: ERROR WITH ROW_ID
+     */
     @Transaction
     open suspend fun changeFromServerHelper(genericData: GenericData) {
         val dataType = genericData.getGenericDataType()
@@ -56,6 +61,7 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
             GenericDataType.CHANGE_DATA -> mutexLocks[MutexType.CHANGE]!!.withLock {
                 with(genericData.changeLog!!) {
                     linkedRowID = insertChangeLog(this)
+                    Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CH - serverRowID: ${genericData.serverRowID} | $this}")
                 }
             }
             GenericDataType.ANALYZED_DATA -> mutexLocks[MutexType.ANALYZED]!!.withLock {
@@ -76,6 +82,10 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
                 linkedRowID = linkedRowID
             )
             insertQTE(execLog)
+        }
+
+        mutexLocks[MutexType.STORED_MAP]!!.withLock {
+            updateStoredMap(lastServerRowID = genericData.serverRowID)
         }
     }
 

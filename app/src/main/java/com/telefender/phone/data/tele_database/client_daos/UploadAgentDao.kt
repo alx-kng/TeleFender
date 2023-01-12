@@ -47,7 +47,6 @@ interface UploadAgentDao: InstanceDao, ContactDao, ContactNumberDao,
                 changeTime = changeTime,
                 type = type,
                 errorCounter = errorCounter,
-                serverChangeID = serverChangeID,
             )
 
             //val changeLogAsJson = changeLogToJson(changeLog)

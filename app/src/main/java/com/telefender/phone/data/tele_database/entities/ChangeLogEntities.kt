@@ -1,17 +1,12 @@
 package com.telefender.phone.data.tele_database.entities
 
-import androidx.room.Entity
-import androidx.room.ForeignKey
-import androidx.room.Index
-import androidx.room.PrimaryKey
+import androidx.room.*
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import com.telefender.phone.data.server_related.GenericDataType
 
 
 /**
- * TODO: Get rid of serverChangeID
- *
  * Everything outside of [changeJson] is an essential field. Essential fields (aside from being
  * used frequently) might also be used as selection criteria for ChangeLog. RowID is PK for
  * various reasons, one important one being the natural ordering of ChangeLogs which can be
@@ -21,7 +16,6 @@ import com.telefender.phone.data.server_related.GenericDataType
 @Entity(tableName = "change_log",
     indices = [
         Index(value = ["changeID"], unique = true),
-        Index(value = ["serverChangeID"])
     ]
 )
 data class ChangeLog(
@@ -31,7 +25,6 @@ data class ChangeLog(
     val changeTime: Long,
     val type: String,
     val instanceNumber: String,
-    val serverChangeID: Int? = null,
     val errorCounter : Int = 0,
     val changeJson: String = "{}"
 ) {
@@ -68,7 +61,6 @@ data class ChangeLog(
             changeTime: Long,
             type: ChangeType,
             instanceNumber: String,
-            serverChangeID: Int? = null,
             errorCounter : Int = 0,
             changeJson: String = "{}"
         ) : ChangeLog {
@@ -79,7 +71,6 @@ data class ChangeLog(
                 changeTime = changeTime,
                 type = type.serverString,
                 instanceNumber = instanceNumber,
-                serverChangeID = serverChangeID,
                 errorCounter = errorCounter,
                 changeJson = changeJson
             )

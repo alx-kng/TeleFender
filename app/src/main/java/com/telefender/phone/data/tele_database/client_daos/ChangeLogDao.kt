@@ -21,9 +21,6 @@ interface ChangeLogDao {
     @Query("SELECT changeID FROM change_log LIMIT 0")
     suspend fun dummyQuery(): String?
 
-    @Query("SELECT serverChangeID FROM change_log WHERE serverChangeID NOT null ORDER BY serverChangeID DESC LIMIT 1")
-    suspend fun lastServerChangeID(): Int?
-
     @Query("SELECT changeTime FROM change_log ORDER BY changeTime DESC LIMIT 1")
     suspend fun getLatestChangeLogTime() : Int?
 

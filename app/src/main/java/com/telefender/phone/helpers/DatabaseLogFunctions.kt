@@ -28,7 +28,7 @@ object DatabaseLogFunctions {
     fun logContacts(database : ClientDatabase?, repository : ClientRepository?) {
         CoroutineScope(Dispatchers.Default).launch {
             val contacts = (database?.contactDao()?.getAllContacts() ?: repository?.getAllContacts()) ?: listOf()
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CONTACT SIZE ARRAY.SIZE: %s", contacts.size.toString())
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CONTACT SIZE: %s", contacts.size.toString())
             
             for (contact in contacts) {
                 Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", contact.toString())
@@ -142,7 +142,7 @@ object DatabaseLogFunctions {
         }
         if (3 in logWhich) {
             logChangeLogs(database, repository)
-            delay(300)
+            delay(800)
         }
         if (4 in logWhich) {
             logExecuteLogs(database, repository)
