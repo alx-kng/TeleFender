@@ -1,10 +1,13 @@
 package com.telefender.phone.data.tele_database
 
 import androidx.annotation.WorkerThread
-import com.telefender.phone.data.server_related.GenericData
+import com.telefender.phone.data.server_related.ServerData
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.client_daos.*
 import com.telefender.phone.data.tele_database.entities.*
+import com.telefender.phone.data.tele_database.entities.CallDetail
+import com.telefender.phone.data.tele_database.entities.Contact
+import com.telefender.phone.data.tele_database.entities.ContactNumber
 import kotlinx.coroutines.sync.withLock
 
 
@@ -21,6 +24,7 @@ class ClientRepository(
 
     private val uploadChangeQueueDao : UploadChangeQueueDao,
     private val uploadAnalyzedQueueDao: UploadAnalyzedQueueDao,
+    private val errorQueueDao: ErrorQueueDao,
 
     private val executeQueueDao : ExecuteQueueDao,
     private val changeLogDao : ChangeLogDao,
@@ -338,6 +342,44 @@ class ClientRepository(
     }
 
     /***********************************************************************************************
+     * ErrorQueue Queries
+     **********************************************************************************************/
+
+    @WorkerThread
+    suspend fun getAllErrorLogOrdered() : List<ErrorQueue> {
+        return errorQueueDao.getAllErrorLogOrdered()
+    }
+
+    @WorkerThread
+    suspend fun getChunkErrorLog(amount: Int) : List<ErrorQueue> {
+        return errorQueueDao.getChunkErrorLog(amount)
+    }
+
+    @WorkerThread
+    suspend fun getAllErrorLog() : List<ErrorQueue> {
+        return errorQueueDao.getAllErrorLog()
+    }
+
+    @WorkerThread
+    suspend fun hasErrorLog() : Boolean {
+        return errorQueueDao.hasErrorLog()
+    }
+
+    @WorkerThread
+    suspend fun deleteErrorLogInclusive(linkedRowID: Long) {
+        mutexLocks[MutexType.ERROR_LOG]!!.withLock {
+            errorQueueDao.deleteErrorLogInclusive(linkedRowID)
+        }
+    }
+
+    @WorkerThread
+    suspend fun deleteErrorLogExclusive(linkedRowID: Long) {
+        mutexLocks[MutexType.ERROR_LOG]!!.withLock {
+            errorQueueDao.deleteErrorLogExclusive(linkedRowID)
+        }
+    }
+
+    /***********************************************************************************************
      * ExecuteQueue Queries
      **********************************************************************************************/
 
@@ -377,8 +419,8 @@ class ClientRepository(
      * See documentation for changeAgentDao.changeFromServer(). Locks handled at ExecuteAgent level.
      */
     @WorkerThread
-    suspend fun changeFromServer(genericData: GenericData) : Boolean {
-        return changeAgentDao.changeFromServer(genericData)
+    suspend fun changeFromServer(serverData: ServerData) : Boolean {
+        return changeAgentDao.changeFromServer(serverData)
     }
 
 

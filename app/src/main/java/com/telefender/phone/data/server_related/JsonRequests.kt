@@ -1,11 +1,11 @@
 package com.telefender.phone.data.server_related
 
 import com.squareup.moshi.Json
-import com.telefender.phone.data.tele_database.entities.ChangeLog
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
 import com.telefender.phone.data.tele_database.entities.CallDetail
+import com.telefender.phone.data.tele_database.entities.ChangeLog
 
 
 // parse request - instanceNumber, key, changes: [{rowid, chgid, changeTime, type, cid, name, number}, ...]

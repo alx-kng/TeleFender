@@ -21,6 +21,7 @@ interface ChangeLogDao {
     @Query("SELECT changeID FROM change_log LIMIT 0")
     suspend fun dummyQuery(): String?
 
+    // TODO: Should prob
     @Query("SELECT changeTime FROM change_log ORDER BY changeTime DESC LIMIT 1")
     suspend fun getLatestChangeLogTime() : Int?
 
@@ -30,7 +31,7 @@ interface ChangeLogDao {
     @Query("SELECT * FROM change_log WHERE rowID = :rowID")
     suspend fun getChangeLog(rowID: Long) : ChangeLog?
     
-    @Query("SELECT * FROM change_log ORDER BY changeTime ASC")
+    @Query("SELECT * FROM change_log ORDER BY rowID ASC")
     suspend fun getAllChangeLogs() : List<ChangeLog>
 
     @Query("SELECT COUNT(changeID) FROM change_log")
@@ -46,13 +47,13 @@ interface ChangeLogDao {
     suspend fun updateChgLogErrorCounterAbsolute(changeID: String, errorCounter : Int)
 
     @Query("DELETE FROM change_log WHERE changeID = :changeID")
-    suspend fun deleteChangeLogByID(changeID: String)
+    suspend fun deleteChangeLogByCHID(changeID: String)
 
     @Query("DELETE FROM change_log WHERE instanceNumber = :instanceNumber")
     suspend fun deleteChangeLogByINS(instanceNumber: String)
 
-    @Query("DELETE FROM change_log WHERE changeTime = :changeTime")
-    suspend fun deleteChangeLogByTime(changeTime: String)
+    @Query("DELETE FROM change_log WHERE rowID = :rowID")
+    suspend fun deleteChangeLogByRowID(rowID: Long)
 
     @Query("DELETE FROM change_log")
     suspend fun deleteAllChangeLogs()

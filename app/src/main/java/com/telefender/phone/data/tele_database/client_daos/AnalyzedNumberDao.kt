@@ -73,6 +73,7 @@ interface AnalyzedNumberDao : ParametersDao, StoredMapDao, UploadAnalyzedQueueDa
      * TODO: Check if we're initializing the right values.
      * TODO: Confirm / find better control follow for adding to UploadAnalyzedQueue.
      * TODO: More error handling for AnalyzedQTU adding.
+     * TODO: OH SHIT, WE CAN'T PUT ANALYZED FROM NEW CHANGELOGS IN HERE, or can we?
      *
      * Initializes AnalyzedNumber row for number (under the user's number) if it doesn't already
      * exist. Returns whether row was initialized. Additionally, if initialized, we also add an

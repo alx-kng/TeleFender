@@ -4,6 +4,9 @@ import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import com.telefender.phone.data.tele_database.entities.*
+import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
+import com.telefender.phone.data.tele_database.entities.ChangeLog
+import com.telefender.phone.data.tele_database.entities.CallDetail
 
 
 // TODO: Clean up these classes!!!
@@ -45,7 +48,7 @@ class DownloadResponse(
     status: String,
     error: String?,
     @Json(name= "data")
-    val data: List<GenericData>
+    val data: List<ServerData>
 ) : DefaultResponse(status, error) {
 
     override fun toString(): String {
@@ -55,7 +58,7 @@ class DownloadResponse(
 }
 
 @JsonClass(generateAdapter = true)
-data class GenericData(
+data class ServerData(
     val type: String,
     val serverRowID: Long,
     val changeLog: ChangeLog? = null,
@@ -68,23 +71,6 @@ data class GenericData(
     fun getGenericDataType() : GenericDataType? {
         return type.toGenericDataType()
     }
-}
-
-enum class GenericDataType(val serverString: String) {
-    CHANGE_DATA("CHNG"), ANALYZED_DATA("ANUM"), LOG_DATA("CLOG")
-}
-
-/**
- * Converts serverStr to ChangeType if possible.
- */
-fun String.toGenericDataType() : GenericDataType? {
-    for (genericDataType in GenericDataType.values()) {
-        if (this == genericDataType.serverString) {
-            return genericDataType
-        }
-    }
-
-    return null
 }
 
 @JsonClass(generateAdapter = true)

@@ -25,6 +25,8 @@ TODO: Provide way to access incoming activity from main activity in case user ge
 TODO: Just saw another small bug where the original default dialer suddenly took over during
  incoming call (after leaving phone all night). However, our app returned after we reentered app.
  Don't know how big of a problem this is.
+
+TODO: Occasionally undesirable keyguard dismissal for showing over lockscreen.
  */
 class IncomingCallActivity : AppCompatActivity() {
 

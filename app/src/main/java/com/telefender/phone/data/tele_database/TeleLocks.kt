@@ -1,10 +1,11 @@
 package com.telefender.phone.data.tele_database
 
+import android.drm.DrmStore.Action.EXECUTE
 import kotlinx.coroutines.sync.Mutex
 
 
 enum class MutexType {
-    UPLOAD_CHANGE, UPLOAD_ANALYZED, UPLOAD_LOG, EXECUTE, CHANGE, STORED_MAP, PARAMETERS,
+    UPLOAD_CHANGE, UPLOAD_ANALYZED, UPLOAD_LOG, ERROR_LOG, EXECUTE, CHANGE, STORED_MAP, PARAMETERS,
     INSTANCE, CONTACT, CONTACT_NUMBER, CALL_DETAIL, ANALYZED, SYNC
 }
 
@@ -17,6 +18,7 @@ object TeleLocks {
     private val mutexUploadChange = Mutex()
     private val mutexUploadAnalyzed = Mutex()
     private val mutexUploadLog = Mutex()
+    private val mutexErrorLog = Mutex()
 
     private val mutexExecute = Mutex()
     private val mutexChange = Mutex()
@@ -36,6 +38,7 @@ object TeleLocks {
         MutexType.UPLOAD_CHANGE to mutexUploadChange,
         MutexType.UPLOAD_ANALYZED to mutexUploadAnalyzed,
         MutexType.UPLOAD_LOG to mutexUploadLog,
+        MutexType.ERROR_LOG to mutexErrorLog,
 
         MutexType.EXECUTE to mutexExecute,
         MutexType.CHANGE to mutexChange,

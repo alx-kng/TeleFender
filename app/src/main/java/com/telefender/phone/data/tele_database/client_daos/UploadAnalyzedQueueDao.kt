@@ -16,8 +16,8 @@ interface UploadAnalyzedQueueDao {
     @Query("SELECT * FROM upload_analyzed_queue WHERE linkedRowID = :linkedRowID")
     suspend fun getAnalyzedQTU(linkedRowID: Long) : UploadAnalyzedQueue?
 
-    @Query("SELECT * FROM upload_analyzed_queue WHERE linkedRowID = (SELECT min(linkedRowID) from upload_analyzed_queue) LIMIT 1")
-    suspend fun getFirstAnalyzedQTU() : UploadAnalyzedQueue
+    @Query("SELECT * FROM upload_analyzed_queue ORDER BY linkedRowID ASC LIMIT 1")
+    suspend fun getFirstAnalyzedQTU() : UploadAnalyzedQueue?
 
     @Query("SELECT * FROM upload_analyzed_queue ORDER BY linkedRowID ASC LIMIT :amount")
     suspend fun getChunkAnalyzedQTU(amount: Int) : List<UploadAnalyzedQueue>

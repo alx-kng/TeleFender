@@ -410,6 +410,7 @@ object CallManager {
         return (hasConferenceable || conferenceCapability)
     }
 
+    // TODO: PUT THIS IN CALL.
     fun keypad(c: Char) {
         focusedConnection.value?.call?.playDtmfTone(c)
         focusedConnection.value?.call?.stopDtmfTone()

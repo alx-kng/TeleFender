@@ -35,6 +35,7 @@ import timber.log.Timber
     ExecuteQueue::class,
     UploadChangeQueue::class,
     UploadAnalyzedQueue::class,
+    ErrorQueue::class,
     StoredMap::class,
     Parameters::class,
     CallDetail::class,
@@ -51,6 +52,7 @@ abstract class ClientDatabase : RoomDatabase() {
 
     abstract fun uploadChangeQueueDao() : UploadChangeQueueDao
     abstract fun uploadAnalyzedQueueDao() : UploadAnalyzedQueueDao
+    abstract fun errorQueueDao() : ErrorQueueDao
 
     abstract fun changeLogDao() : ChangeLogDao
     abstract fun executeQueueDao() : ExecuteQueueDao

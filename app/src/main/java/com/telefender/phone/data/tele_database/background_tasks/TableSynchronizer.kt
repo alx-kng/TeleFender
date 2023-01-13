@@ -8,7 +8,9 @@ import android.os.Build
 import android.provider.CallLog
 import androidx.annotation.RequiresApi
 import com.telefender.phone.data.default_database.DefaultContacts
-import com.telefender.phone.data.tele_database.*
+import com.telefender.phone.data.tele_database.ClientDatabase
+import com.telefender.phone.data.tele_database.ClientRepository
+import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.entities.*
 import com.telefender.phone.helpers.TeleHelpers
@@ -17,6 +19,7 @@ import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 import java.time.Instant
 import java.util.*
+
 
 object TableSynchronizer {
 
@@ -360,7 +363,6 @@ object TableSynchronizer {
                         )
                     }
                 }
-
             } else {
                 // Corresponding contact number (by PK) in android default database
                 var matchPK: ContactNumber? = null

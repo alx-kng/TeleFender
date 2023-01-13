@@ -3,8 +3,6 @@ package com.telefender.phone.data.tele_database.client_daos
 import android.provider.CallLog
 import androidx.room.Dao
 import androidx.room.Transaction
-import com.telefender.phone.data.server_related.GenericDataType
-import com.telefender.phone.data.server_related.toGenericDataType
 import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.entities.*
@@ -22,14 +20,22 @@ import kotlin.math.roundToInt
  * TODO: Make sure that ExecuteQueue actions won't compete with the regular Sync actions even if
  *  they are in the same thread pool (Dispatchers.IO).
  *
- *
- * TODO: EXECUTE ENGINE HAS ERRORS WHEN PROCESSING EXECUTE QUEUE.
+ * TODO: Maybe we should only execute the ExecuteLogs without errors or linkedRowID = -1. This might
+ *  work since the execute engine is pretty much decoupled from anything server related, so it
+ *  shouldn't (???) affect future downloads.
  *
  * TODO: DOUBLE CHECK TRANSACTION!!!!!!!!!!!!!!!!!!!!
+ *
+ * TODO: Error log stuff for execute fail.
  */
 @Dao
 interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetailDao,
-    AnalyzedNumberDao, ChangeLogDao, ExecuteQueueDao, UploadChangeQueueDao, StoredMapDao, ParametersDao {
+    AnalyzedNumberDao, ChangeLogDao, ExecuteQueueDao, UploadChangeQueueDao, StoredMapDao,
+    ParametersDao, ErrorQueueDao {
+
+    companion object {
+        var currErrorLog : ErrorQueue? = null
+    }
 
     suspend fun executeAll(){
         val retryAmount = 5

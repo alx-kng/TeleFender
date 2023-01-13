@@ -1,129 +1,11 @@
 package com.telefender.phone.data.tele_database.entities
 
 import androidx.room.Entity
-import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 
-
-// TODO: Probably store current block mode in StoredMap
-@Entity(tableName = "stored_map")
-data class StoredMap(
-    @PrimaryKey val userNumber: String,
-    val sessionID: String? = null,
-    val clientKey: String? = null, // UUID key to push and pull changes to / from server
-    val fireBaseToken: String? = null,
-    val databaseInitialized: Boolean = false,
-    val lastLogSyncTime: Long = 0,
-    val lastServerRowID: Long? = null,
-) {
-
-    override fun toString() : String {
-        return "STORED MAP - number: $userNumber sessionID: $sessionID clientKey: $clientKey" +
-            " fireBaseToken: $fireBaseToken databaseInitialized: $databaseInitialized" +
-            " lastLogSyncTime: $lastLogSyncTime lastServerRowID: $lastServerRowID"
-    }
-}
-
-@JsonClass(generateAdapter = true)
-@Entity(tableName = "parameters")
-data class Parameters(
-    @PrimaryKey val userNumber: String,
-    val shouldUploadAnalyzed: Boolean,
-    val shouldUploadLogs: Boolean,
-    val initialNotifyGate: Int,
-    val verifiedSpamNotifyGate: Int,
-    val superSpamNotifyGate: Int,
-    val incomingGate: Int, // inclusive seconds in order to let through
-    val outgoingGate: Int // inclusive seconds in order to let through
-)
-
-@Entity(tableName = "instance")
-data class Instance(
-    @PrimaryKey val number: String
-) {
-
-    override fun toString() : String {
-        return "INSTANCE - number: " + this.number
-    }
-}
-
-// TODO: Should we add defaultCID column to Contact table?
-@Entity(tableName = "contact",
-    foreignKeys = [ForeignKey(
-        entity = Instance::class,
-        parentColumns = arrayOf("number"),
-        childColumns = arrayOf("instanceNumber"),
-        onDelete = ForeignKey.NO_ACTION
-    )],
-    indices = [Index(value = ["instanceNumber"])]
-)
-data class Contact(
-    @PrimaryKey val CID: String,
-    val instanceNumber : String,
-    val blocked: Boolean = false
-) {
-
-    override fun toString() : String {
-        return "CONTACT -  CID: $CID instanceNumber: $instanceNumber blocked: $blocked"
-    }
-}
-
-@Entity(tableName = "contact_number",
-    primaryKeys = ["CID", "normalizedNumber"],
-    foreignKeys = [
-        ForeignKey(
-            entity = Contact::class,
-            parentColumns = arrayOf("CID"),
-            childColumns = arrayOf("CID"),
-            onDelete = ForeignKey.NO_ACTION
-            ),
-        ForeignKey(
-            entity = Instance::class,
-            parentColumns = arrayOf("number"),
-            childColumns = arrayOf("instanceNumber"),
-            onDelete = ForeignKey.NO_ACTION
-        )],
-    indices = [
-        Index(value = ["normalizedNumber"]),
-        Index(value = ["rawNumber"]),
-        Index(value = ["instanceNumber"]),
-        Index(value = ["CID"])
-    ]
-)
-data class ContactNumber(
-    val CID: String,
-    val normalizedNumber: String, // E164 representation
-    val defaultCID: String,
-    val rawNumber: String,
-    val instanceNumber: String,
-    val versionNumber: Int = 0,
-    val degree: Int
-) {
-    /**
-     * Returns true if PK of two ContactNumbers are equal.
-     */
-    override fun equals(other: Any?): Boolean {
-        return if (other is ContactNumber) {
-            (this.CID == other.CID && this.normalizedNumber == other.normalizedNumber)
-        } else {
-            false
-        }
-    }
-    override fun toString() : String {
-        return "CONTACT NUMBER -  CID: " + this.CID  +  " number: " + this.normalizedNumber +
-            " versionNumber: " + this.versionNumber
-    }
-
-    override fun hashCode(): Int {
-        var result = CID.hashCode()
-        result = 31 * result + normalizedNumber.hashCode()
-        result = 31 * result + versionNumber
-        return result
-    }
-}
 
 /**
  * TODO: Maybe add tele-marketing mode that's an in-between to safe / spam mode for notify list
@@ -141,7 +23,7 @@ data class ContactNumber(
 )
 data class AnalyzedNumber(
     @PrimaryKey(autoGenerate = true)
-    val rowID: Long = 0,
+    var rowID: Long = 0, // needs to be var so that we can reset downloaded analyzed' rowID.
     val normalizedNumber: String, // should use cleaned number
     val instanceNumber: String,
     val numTotalCalls: Int, // includes any type of call
@@ -155,6 +37,12 @@ data class AnalyzedNumber(
      */
     fun getAnalyzed() : Analyzed {
         return analyzedJson.toAnalyzed()!!
+    }
+
+    fun toJson() : String {
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(AnalyzedNumber::class.java)
+        return adapter.serializeNulls().toJson(this)
     }
 
     override fun toString() : String {

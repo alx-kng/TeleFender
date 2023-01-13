@@ -15,8 +15,8 @@ interface UploadChangeQueueDao {
     @Query("SELECT * FROM upload_change_queue WHERE linkedRowID = :linkedRowID")
     suspend fun getChangeQTU(linkedRowID: Long) : UploadChangeQueue?
 
-    @Query("SELECT * FROM upload_change_queue WHERE linkedRowID = (SELECT min(linkedRowID) from upload_change_queue) LIMIT 1")
-    suspend fun getFirstChangeQTU() : UploadChangeQueue
+    @Query("SELECT * FROM upload_change_queue ORDER BY linkedRowID ASC LIMIT 1")
+    suspend fun getFirstChangeQTU() : UploadChangeQueue?
 
     @Query("SELECT * FROM upload_change_queue ORDER BY linkedRowID ASC LIMIT :amount")
     suspend fun getChunkChangeQTU(amount: Int) : List<UploadChangeQueue>

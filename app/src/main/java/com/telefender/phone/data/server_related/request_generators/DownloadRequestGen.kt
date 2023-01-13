@@ -45,8 +45,8 @@ class DownloadRequestGen(
 }
 
 /**
- * Retrieves DownloadResponse object containing (status, error, List<GenericData>)
- * and inserts each GenericData value into our database using changeFromServer() in ChangeAgentDao.
+ * Retrieves DownloadResponse object containing (status, error, List<ServerData>)
+ * and inserts each ServerData value into our database using changeFromServer() in ChangeAgentDao.
  */
 private fun downloadResponseHandler(
     context: Context,
@@ -77,7 +77,7 @@ private fun downloadResponseHandler(
             scope.launch(Dispatchers.IO) {
                 for (genericData in downloadResponse.data) {
 
-                    // Inserts GenericData into right table and into ExecuteQueue
+                    // Inserts ServerData into right table and into ExecuteQueue
                     val success = repository.changeFromServer(genericData)
                     if (!success) break
                 }

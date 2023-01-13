@@ -4,7 +4,10 @@ import android.annotation.SuppressLint
 import android.app.Application
 import androidx.lifecycle.*
 import com.telefender.phone.data.default_database.DefaultCallDetails
-import com.telefender.phone.data.tele_database.entities.*
+import com.telefender.phone.data.tele_database.entities.CallDetail
+import com.telefender.phone.gui.adapters.CallDetailItem
+import com.telefender.phone.gui.adapters.CallHistoryFooter
+import com.telefender.phone.gui.adapters.CallHistoryHeader
 import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -206,6 +209,27 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
         if (endOfDay >= today) {
             dayLogFilter()
         }
+    }
+}
+
+/***************************************************************************************************
+ * For RecentsFragment
+ **************************************************************************************************/
+
+// TODO: Make this also include normalized number for UI.
+data class GroupedCallDetail(
+    val rawNumber: String,
+    var callEpochDate: Long,
+    var callLocation: String?,
+    val callDirection: Int,
+    val unallowed: Boolean,
+    var amount: Int,
+    var firstEpochID: Long) {
+
+    override fun toString() : String {
+        return "rawNumber: $rawNumber callEpochDate: $callEpochDate" +
+            " callLocation: $callLocation callDirection: ${TeleHelpers.getDirectionString(callDirection)}" +
+            " unallowed: $unallowed"
     }
 }
 

@@ -14,12 +14,14 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.telefender.phone.R
 import com.telefender.phone.data.tele_database.entities.CallDetail
-import com.telefender.phone.data.tele_database.entities.CallDetailItem
-import com.telefender.phone.data.tele_database.entities.CallHistoryFooter
-import com.telefender.phone.data.tele_database.entities.CallHistoryHeader
 import com.telefender.phone.helpers.TeleHelpers
 import java.text.SimpleDateFormat
 import java.util.*
+
+interface CallDetailItem
+
+object CallHistoryHeader : CallDetailItem
+object CallHistoryFooter : CallDetailItem
 
 class CallHistoryAdapter (
     private val context: Context,
@@ -86,6 +88,7 @@ class CallHistoryAdapter (
             is CallDetail -> current.callEpochDate
             is CallHistoryHeader -> INFO_UUID
             is CallHistoryFooter -> FOOTER_UUID
+            else -> throw Exception("Bad Item Type")
         }
     }
 
@@ -94,6 +97,7 @@ class CallHistoryAdapter (
             is CallDetail -> CALL_VIEW_TYPE
             is CallHistoryHeader -> INFO_VIEW_TYPE
             is CallHistoryFooter -> FOOTER_VIEW_TYPE
+            else -> throw Exception("Bad Item Type")
         }
     }
 

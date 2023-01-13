@@ -43,6 +43,7 @@ class App : Application() {
 
             uploadChangeQueueDao = database.uploadChangeQueueDao(),
             uploadAnalyzedQueueDao = database.uploadAnalyzedQueueDao(),
+            errorQueueDao = database.errorQueueDao(),
 
             executeQueueDao = database.executeQueueDao(),
             changeLogDao = database.changeLogDao(),
