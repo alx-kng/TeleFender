@@ -64,8 +64,7 @@ private fun uploadChangeResponseHandler(
             response.toServerResponse(ServerResponseType.DEFAULT)
 
         /**
-         * Guarantees that response has the right status before trying to iterate through upload
-         * logs. Also upload logs shouldn't be null.
+         * Guarantees that response has the right status before trying to continue requests.
          */
         if (uploadResponse != null && uploadResponse is UploadResponse) {
 

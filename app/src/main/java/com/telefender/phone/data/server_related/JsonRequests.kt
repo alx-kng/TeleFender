@@ -6,6 +6,7 @@ import com.squareup.moshi.Moshi
 import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
 import com.telefender.phone.data.tele_database.entities.CallDetail
 import com.telefender.phone.data.tele_database.entities.ChangeLog
+import com.telefender.phone.data.tele_database.entities.ErrorQueue
 
 
 // parse request - instanceNumber, key, changes: [{rowid, chgid, changeTime, type, cid, name, number}, ...]
@@ -146,6 +147,7 @@ class UploadAnalyzedRequest(
 class UploadLogsRequest(
     instanceNumber : String,
     key : String,
+    @Json(name = "changes")
     val logs : List<CallDetail>
 ) : KeyRequest(instanceNumber, key) {
 
@@ -159,6 +161,30 @@ class UploadLogsRequest(
     override fun toString() : String {
         return "${super.toString()} numLogs = ${logs.size}" +
             "firstLogSent: ${logs.firstOrNull()?.normalizedNumber}"
+    }
+}
+
+/**
+ * Inherits from KeyRequest, request class for uploading CallDetails.
+ */
+@JsonClass(generateAdapter = true)
+class UploadErrorRequest(
+    instanceNumber : String,
+    key : String,
+    @Json(name = "changes")
+    val errorLogs : List<ErrorQueue>
+) : KeyRequest(instanceNumber, key) {
+
+    override fun toJson() : String {
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(UploadErrorRequest::class.java)
+
+        return adapter.serializeNulls().toJson(this)
+    }
+
+    override fun toString() : String {
+        return "${super.toString()} numErrors = ${errorLogs.size}" +
+            "firstErrorSent: ${errorLogs.firstOrNull()?.serverRowID}"
     }
 }
 

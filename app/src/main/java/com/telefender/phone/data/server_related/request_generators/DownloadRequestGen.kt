@@ -71,8 +71,9 @@ private fun downloadResponseHandler(
              * TODO: We not initializing next download request in parallel in order to decrease
              *  load on server, but if this really requires speed later, we can change it.
              *
-             * TODO: Don't immediately do another Download request if success of changeFromServer()
-             *  is false -> Pretty much implemented, but double check!
+             * TODO: Should we set Download_Post state to Failed or Success for the
+             *  changeFromServer() error. Making it failed, will make us retry the entire
+             *  download post request.
              *
              * Remember that the lambda might not be called inside a suspend environment, so you
              * should launch another coroutine to do database work or launch another post request.

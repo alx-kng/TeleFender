@@ -101,10 +101,7 @@ class CoroutineUploadWorker(
          * doesn't return null (failure or retry).
          */
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_CHANGE STARTED")
-        val uploadChangeResult = ServerWorkHelpers.uploadChange(context, repository, scope, "UPLOAD WORKER")
-        if (uploadChangeResult != null) {
-            return uploadChangeResult
-        }
+        ServerWorkHelpers.uploadChange(context, repository, scope, "UPLOAD WORKER")
 
         /**
          * TODO: Confirm that we want to upload AnalyzedNumbers here. Or maybe, have some type
@@ -115,10 +112,13 @@ class CoroutineUploadWorker(
          * doesn't return null (failure or retry).
          */
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_ANALYZED_POST STARTED")
-        val uploadAnalyzedResult = ServerWorkHelpers.uploadAnalyzed(context, repository, scope, "UPLOAD WORKER")
-        if (uploadAnalyzedResult != null) {
-            return uploadAnalyzedResult
-        }
+        ServerWorkHelpers.uploadAnalyzed(context, repository, scope, "UPLOAD WORKER")
+
+        /**
+         * Uploads error logs to server.
+         */
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_ERROR STARTED")
+        ServerWorkHelpers.uploadError(context, repository, scope, "OMEGA")
 
         when (stateVarString) {
             "oneTimeUploadState" ->  WorkStates.setState(WorkType.ONE_TIME_UPLOAD, WorkInfo.State.SUCCEEDED)

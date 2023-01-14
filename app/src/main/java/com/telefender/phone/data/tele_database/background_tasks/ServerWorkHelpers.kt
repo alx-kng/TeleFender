@@ -35,7 +35,7 @@ object ServerWorkHelpers {
     }
 
     /**
-     * TODO: Not doing retry here anymore. Double check for better solutions though.
+     * TODO: Double check retry strategy.
      *
      * Uploads changes to server. If a big error occurs, like a 404, the upload doesn't continue.
      * Returns whether the worker should continue, retry, or fail.
@@ -45,7 +45,7 @@ object ServerWorkHelpers {
         repository: ClientRepository,
         scope: CoroutineScope,
         workerName: String
-    ) : ListenableWorker.Result? {
+    ) {
 
         WorkStates.setState(WorkType.UPLOAD_CHANGE_POST, WorkInfo.State.RUNNING)
         if (repository.hasChangeQTU()) {
@@ -55,22 +55,18 @@ object ServerWorkHelpers {
         }
 
         /*
-        Acts as waiter for uploading ChangeLogs, but also makes sure upload doesn't have a big
-        error before continuing.
+        Acts as waiter for uploading ChangeLogs.
 
-        NOTE: this failure has more to do with the request being faulty / the server having
-        connection issues. As a result, this failure is given BEFORE the response is received.
+        NOTE: failures have more to do with the request being faulty / the server having
+        connection issues or execution problems.
          */
         if (!WorkStates.workWaiter(WorkType.UPLOAD_CHANGE_POST, "UPLOAD_CHANGE", stopOnFail = true, certainFinish = true)) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: $workerName ENDED EARLY. PROBLEM WITH UPLOAD_CHANGE.")
-            return ListenableWorker.Result.failure()
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: INSIDE $workerName WORKER. PROBLEM WITH UPLOAD_CHANGE.")
         }
-
-        return null
     }
 
     /**
-     * TODO: Not doing retry here anymore. Double check for better solutions though.
+     * TODO: Double check retry strategy.
      *
      * Uploads analyzedNumbers to server. If a big error occurs, like a 404, the upload doesn't
      * continue. Returns whether the worker should continue, retry, or fail.
@@ -80,12 +76,12 @@ object ServerWorkHelpers {
         repository: ClientRepository,
         scope: CoroutineScope,
         workerName: String
-    ) : ListenableWorker.Result? {
+    ) {
 
         // Only upload AnalyzedNumbers if the Parameters specify so.
         val parameters = repository.getParameters()
         if (parameters?.shouldUploadAnalyzed != true) {
-            return null
+            return
         }
 
         WorkStates.setState(WorkType.UPLOAD_ANALYZED_POST, WorkInfo.State.RUNNING)
@@ -96,18 +92,44 @@ object ServerWorkHelpers {
         }
 
         /*
-        Acts as waiter for uploading AnalyzedNumbers, but also makes sure upload doesn't have a
-        big error before continuing.
+        Acts as waiter for uploading AnalyzedNumbers.
 
-        NOTE: this failure has more to do with the request being faulty / the server having
-        connection issues. As a result, this failure is given BEFORE the response is received.
+        NOTE: failures have more to do with the request being faulty / the server having
+        connection issues or execution problems.
          */
         if (!WorkStates.workWaiter(WorkType.UPLOAD_ANALYZED_POST, "UPLOAD_ANALYZED", stopOnFail = true, certainFinish = true)) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: $workerName ENDED EARLY. PROBLEM WITH UPLOAD_ANALYZED.")
-            return ListenableWorker.Result.failure()
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: INSIDE $workerName WORKER. PROBLEM WITH UPLOAD_ANALYZED.")
         }
-
-        return null
     }
 
+    /**
+     * TODO: Double check retry strategy.
+     *
+     * Uploads changes to server. If a big error occurs, like a 404, the upload doesn't continue.
+     * Returns whether the worker should continue, retry, or fail.
+     */
+    suspend fun uploadError(
+        context: Context,
+        repository: ClientRepository,
+        scope: CoroutineScope,
+        workerName: String
+    ) {
+
+        WorkStates.setState(WorkType.UPLOAD_ERROR_POST, WorkInfo.State.RUNNING)
+        if (repository.hasErrorLog()) {
+            ServerInteractions.uploadErrorRequest(context, repository, scope, errorCount = 0)
+        } else {
+            WorkStates.setState(WorkType.UPLOAD_ERROR_POST, WorkInfo.State.SUCCEEDED)
+        }
+
+        /*
+        Acts as waiter for uploading ErrorLogs.
+
+        NOTE: failures have more to do with the request being faulty / the server having
+        connection issues or execution problems.
+         */
+        if (!WorkStates.workWaiter(WorkType.UPLOAD_ERROR_POST, "UPLOAD_ERROR", stopOnFail = true, certainFinish = true)) {
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: INSIDE $workerName WORKER. PROBLEM WITH UPLOAD_ERROR.")
+        }
+    }
 }

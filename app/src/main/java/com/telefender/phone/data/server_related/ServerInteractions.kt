@@ -4,10 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import androidx.work.WorkInfo
 import com.android.volley.Request
-import com.telefender.phone.data.server_related.request_generators.DownloadRequestGen
-import com.telefender.phone.data.server_related.request_generators.TokenRequestGen
-import com.telefender.phone.data.server_related.request_generators.UploadAnalyzedRequestGen
-import com.telefender.phone.data.server_related.request_generators.UploadChangeRequestGen
+import com.telefender.phone.data.server_related.request_generators.*
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
@@ -27,18 +24,19 @@ object ServerInteractions {
     private const val retryAmount = 5
 
     /**
-     * TODO: Put error counter like the upload requests.
+     * TODO: Maybe we should put in error counter like the upload requests.
      */
-    @SuppressLint("MissingPermission")
     suspend fun downloadDataRequest(context: Context, repository: ClientRepository, scope: CoroutineScope) {
         val url = "https://dev.scribblychat.com/callbook/downloadChanges"
-        val instanceNumber = TeleHelpers.getUserNumberStored(context) ?: return
-
+        val instanceNumber = TeleHelpers.getUserNumberStored(context)
         val key = repository.getClientKey()
         val lastServerRowID = repository.getLastServerRowID()
 
-        if (key == null) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: CLIENT KEY IS NULL")
+        if (instanceNumber == null || key == null) {
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                "VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
+
+            WorkStates.setState(WorkType.DOWNLOAD_POST, WorkInfo.State.FAILED)
             return
         }
 
@@ -67,7 +65,6 @@ object ServerInteractions {
      *
      * Sends a post request containing the ChangeLogs to the server.
      */
-    @SuppressLint("MissingPermission", "HardwareIds")
     suspend fun uploadChangeRequest(
         context: Context,
         repository: ClientRepository,
@@ -81,13 +78,15 @@ object ServerInteractions {
         }
 
         val url = "https://dev.scribblychat.com/callbook/uploadChanges"
-        val instanceNumber = TeleHelpers.getUserNumberStored(context) ?: return
-
+        val instanceNumber = TeleHelpers.getUserNumberStored(context)
         val key = repository.getClientKey()
         val uploadRequestJson: String
 
-        if (key == null) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: CLIENT KEY IS NULL")
+        if (instanceNumber == null || key == null) {
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                "VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
+
+            WorkStates.setState(WorkType.UPLOAD_CHANGE_POST, WorkInfo.State.FAILED)
             return
         }
 
@@ -135,7 +134,6 @@ object ServerInteractions {
      *
      * Sends a post request containing the AnalyzedNumbers to the server.
      */
-    @SuppressLint("MissingPermission", "HardwareIds")
     suspend fun uploadAnalyzedRequest(
         context: Context,
         repository: ClientRepository,
@@ -149,20 +147,22 @@ object ServerInteractions {
         }
 
         val url = "https://dev.scribblychat.com/callbook/uploadAnalyzedNumbers"
-        val instanceNumber = TeleHelpers.getUserNumberStored(context) ?: return
-
+        val instanceNumber = TeleHelpers.getUserNumberStored(context)
         val key = repository.getClientKey()
         val uploadRequestJson: String
 
-        if (key == null) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: CLIENT KEY IS NULL")
+        if (instanceNumber == null || key == null) {
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                "VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
+
+            WorkStates.setState(WorkType.UPLOAD_ANALYZED_POST, WorkInfo.State.FAILED)
             return
         }
 
         try {
             withContext(Dispatchers.IO) {
 
-                // Gets first 200 upload logs in order of linkedRowID.
+                // Gets first chunk of upload logs in order of linkedRowID.
                 val uploadLogs = repository.getChunkAnalyzedQTU(70)
 
                 // Retrieves corresponding AnalyzedNumber for each upload log
@@ -199,13 +199,69 @@ object ServerInteractions {
     }
 
     /**
+     * TODO: Double check that retry strategy is correct
+     *
+     * Sends a post request containing the ErrorLogs to the server.
+     */
+    suspend fun uploadErrorRequest(
+        context: Context,
+        repository: ClientRepository,
+        scope: CoroutineScope,
+        errorCount: Int
+    ) {
+        if (errorCount == retryAmount) {
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: UPLOAD_ERROR RETRY MAX")
+            WorkStates.setState(WorkType.UPLOAD_ERROR_POST, WorkInfo.State.FAILED)
+            return
+        }
+
+        val url = "https://dev.scribblychat.com/callbook/uploadErrorLog"
+        val instanceNumber = TeleHelpers.getUserNumberStored(context)
+        val key = repository.getClientKey()
+        val uploadRequestJson: String
+
+        if (instanceNumber == null || key == null) {
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                "VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
+
+            WorkStates.setState(WorkType.UPLOAD_ERROR_POST, WorkInfo.State.FAILED)
+            return
+        }
+
+        try {
+            withContext(Dispatchers.IO) {
+                // Gets first chunk of ErrorLogs in order of linkedRowID.
+                val errorLogs = repository.getChunkErrorLog(100)
+                uploadRequestJson = UploadErrorRequest(instanceNumber, key, errorLogs).toJson()
+            }
+
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG} UPLOAD_CHANGE REQUEST JSON: $uploadRequestJson")
+
+            val stringRequest = UploadErrorRequestGen.create(
+                method = Request.Method.POST,
+                url = url,
+                requestJson = uploadRequestJson,
+                context = context,
+                repository = repository,
+                scope = scope,
+                errorCount = errorCount
+            )
+
+            // Adds entire string request to request queue
+            RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
+        } catch (e: Exception) {
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ${e.message}")
+            e.printStackTrace()
+        }
+    }
+
+    /**
      * TODO: Don't know url right now.
      * TODO: Make sure user is always setup before this (I think we already have, but double check).
      *
      * Could be used with the suggested token checkup every month, or used whenever token updates
      * in general as it is incredibly important server has access to reliable tokens for every device.
      */
-    @SuppressLint("MissingPermission", "HardwareIds")
     suspend fun tokenPostRequest(
         context: Context,
         repository: ClientRepository,
@@ -213,17 +269,18 @@ object ServerInteractions {
         token: String
     ) {
         val url = ""
-        val instanceNumber = TeleHelpers.getUserNumberStored(context) ?: return
-
+        val instanceNumber = TeleHelpers.getUserNumberStored(context)
         val key = repository.getClientKey()
-        val tokenRequestJson : String
 
-        if (key != null) {
-            tokenRequestJson = TokenRequest(instanceNumber, key, token).toJson()
-        } else {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: CLIENT KEY IS NULL")
+        if (instanceNumber == null || key == null) {
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                "VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
+
+            WorkStates.setState(WorkType.UPLOAD_TOKEN, WorkInfo.State.FAILED)
             return
         }
+
+        val tokenRequestJson = TokenRequest(instanceNumber, key, token).toJson()
 
         try {
             val stringRequest = TokenRequestGen.create(

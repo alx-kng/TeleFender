@@ -149,28 +149,26 @@ class CoroutineOmegaWorker(
         repository.executeAll()
 
         /**
-         * Uploads changes to server. Returns next Result action if uploadChange()
-         * doesn't return null (failure or retry).
+         * Uploads changes to server.
          */
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_CHANGE STARTED")
-        val uploadChangeResult = ServerWorkHelpers.uploadChange(context, repository, scope, "OMEGA")
-        if (uploadChangeResult != null) {
-            return uploadChangeResult
-        }
+        ServerWorkHelpers.uploadChange(context, repository, scope, "OMEGA")
 
         /**
          * TODO: Confirm that we want to upload AnalyzedNumbers here. Note that we already have a
          *  parameter that allows us to choose whether or not we want to upload
          *  AnalyzedNumbers.
          *
-         * Uploads analyzedNumbers to server. Returns next Result action if uploadAnalyzed()
-         * doesn't return null (failure or retry).
+         * Uploads analyzedNumbers to server.
          */
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_ANALYZED STARTED")
-        val uploadAnalyzedResult = ServerWorkHelpers.uploadAnalyzed(context, repository, scope, "OMEGA")
-        if (uploadAnalyzedResult != null) {
-            return uploadAnalyzedResult
-        }
+        ServerWorkHelpers.uploadAnalyzed(context, repository, scope, "OMEGA")
+
+        /**
+         * Uploads error logs to server.
+         */
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_ERROR STARTED")
+        ServerWorkHelpers.uploadError(context, repository, scope, "OMEGA")
 
         when (stateVarString) {
             "oneTimeOmegaState" -> {
