@@ -45,7 +45,7 @@ data class ExecuteQueue(
     val rowID: Long = 0,
     val serverRowID: Long,
     val genericDataType: String,
-    val linkedRowID: Long,
+    val linkedRowID: Long, // rowID within corresponding data table.
     val errorCounter : Int = 0
 ) {
     override fun toString() : String {

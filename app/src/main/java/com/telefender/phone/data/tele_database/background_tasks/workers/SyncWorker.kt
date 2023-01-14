@@ -130,7 +130,6 @@ class CoroutineCatchSyncWorker(
     private var callLogObserverSync: CallLogObserverSync =
         CallLogObserverSync(Handler(Looper.getMainLooper()), context, scope)
 
-
     @RequiresApi(Build.VERSION_CODES.O)
     override suspend fun doWork() : Result {
         NOTIFICATION_ID = inputData.getString("notificationID")?.toInt()

@@ -23,9 +23,9 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
 
     private val retryAmount = 5
 
-    private var currErrorLog : ErrorQueue? = null
-
     /**
+     * TODO: Double check changeFromServer(). Preliminary tests have passed.
+     *
      * Function to handle a data downloaded from server. Adds data to the ExecuteQueue. We don't
      * need mutexSync here because downloaded CallDetails / AnalyzedNumbers are separate from
      * user's CallDetails and AnalyzedNumbers and won't affect their sync.
@@ -34,11 +34,14 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
      * re-requesting unnecessarily).
      */
     suspend fun changeFromServer(serverData: ServerData) : Boolean {
+        // Reset current ErrorLog before change insertion just be safe.
+        var currErrorLog : ErrorQueue? = null
+
         for (i in 1..retryAmount) {
             try {
-                changeFromServerHelper(serverData)
-                currErrorLog = null
-                return true
+                currErrorLog = changeFromServerHelper(serverData) ?: return true
+
+                throw Exception("linkedRowID was -1 (unsuccessful insert)")
             } catch (e: Exception) {
                 Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
                     "changeFromServer() RETRYING... ${e.message}")
@@ -56,11 +59,8 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
         return false
     }
 
-    /**
-     * TODO: If error insert into ErrorQueue.
-     */
     @Transaction
-    open suspend fun changeFromServerHelper(serverData: ServerData) {
+    open suspend fun changeFromServerHelper(serverData: ServerData) : ErrorQueue? {
         val dataType = serverData.getGenericDataType()
             ?: throw Exception("genericDataType = ${serverData.type} is invalid!")
 
@@ -83,7 +83,10 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
                     linkedRowID = insertChangeLog(this)
 
                     if (linkedRowID < 0) {
-                        currErrorLog = ErrorQueue.create(
+                        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                            "insertChangeLog() failed! with $this")
+
+                        return ErrorQueue.create(
                             instanceNumber = getUserNumber()!!,
                             serverRowID = serverData.serverRowID,
                             errorType = ErrorType.DOWNLOAD_ERROR,
@@ -91,8 +94,6 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
                             errorDataType = dataType,
                             errorDataJson = this.toJson()
                         )
-
-                        throw Exception("insertChangeLog() failed! with $this")
                     }
                 }
             }
@@ -102,7 +103,10 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
                     linkedRowID = insertAnalyzedNum(this)
 
                     if (linkedRowID < 0) {
-                        currErrorLog = ErrorQueue.create(
+                        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                            "insertAnalyzedNum() failed! with $this")
+
+                        return ErrorQueue.create(
                             instanceNumber = getUserNumber()!!,
                             serverRowID = serverData.serverRowID,
                             errorType = ErrorType.DOWNLOAD_ERROR,
@@ -110,8 +114,6 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
                             errorDataType = dataType,
                             errorDataJson = this.toJson()
                         )
-
-                        throw Exception("insertAnalyzedNum() failed! with $this")
                     }
                 }
             }
@@ -121,7 +123,10 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
                     linkedRowID = insertCallDetailIgnore(this)
 
                     if (linkedRowID < 0) {
-                        currErrorLog = ErrorQueue.create(
+                        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                            "insertCallDetailIgnore() failed! with $this")
+
+                        return ErrorQueue.create(
                             instanceNumber = getUserNumber()!!,
                             serverRowID = serverData.serverRowID,
                             errorType = ErrorType.DOWNLOAD_ERROR,
@@ -129,8 +134,6 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
                             errorDataType = dataType,
                             errorDataJson = this.toJson()
                         )
-
-                        throw Exception("insertCallDetailIgnore() failed! with $this")
                     }
                 }
             }
@@ -148,6 +151,8 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
         mutexLocks[MutexType.STORED_MAP]!!.withLock {
             updateStoredMap(lastServerRowID = serverData.serverRowID)
         }
+
+        return null
     }
 
     /**

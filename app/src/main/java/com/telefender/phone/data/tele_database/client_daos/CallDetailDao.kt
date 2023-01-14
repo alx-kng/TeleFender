@@ -201,6 +201,13 @@ interface CallDetailDao: StoredMapDao {
     @Query("SELECT callEpochDate FROM call_detail WHERE instanceNumber = :instanceNumber ORDER BY callEpochDate DESC LIMIT 1")
     suspend fun getNewestCallDateQuery(instanceNumber: String) : Long?
 
+    /**********************************************************************************************
+     * Deletion functions
+     *********************************************************************************************/
+
+    @Query("DELETE FROM call_detail WHERE rowID = :rowID")
+    suspend fun deleteCallDetail(rowID: Long)
+
     @Query("DELETE FROM call_detail")
     suspend fun deleteAllCallDetails()
 }

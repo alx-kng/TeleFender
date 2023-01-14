@@ -266,4 +266,7 @@ interface AnalyzedNumberDao : ParametersDao, StoredMapDao, UploadAnalyzedQueueDa
         numTotalCalls: Int?,
         analyzedJson: String?
     )
+
+    @Query("DELETE FROM analyzed_number WHERE rowID = :rowID")
+    suspend fun deleteAnalyzedNumber(rowID: Long)
 }

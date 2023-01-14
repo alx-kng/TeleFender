@@ -3,6 +3,8 @@ package com.telefender.phone.data.tele_database.client_daos
 import android.provider.CallLog
 import androidx.room.Dao
 import androidx.room.Transaction
+import com.telefender.phone.data.default_database.DefaultContacts.deleteContact
+import com.telefender.phone.data.default_database.DefaultContacts.insertContact
 import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.entities.*
@@ -20,13 +22,8 @@ import kotlin.math.roundToInt
  * TODO: Make sure that ExecuteQueue actions won't compete with the regular Sync actions even if
  *  they are in the same thread pool (Dispatchers.IO).
  *
- * TODO: Maybe we should only execute the ExecuteLogs without errors or linkedRowID = -1. This might
- *  work since the execute engine is pretty much decoupled from anything server related, so it
- *  shouldn't (???) affect future downloads.
- *
- * TODO: DOUBLE CHECK TRANSACTION!!!!!!!!!!!!!!!!!!!!
- *
- * TODO: Error log stuff for execute fail.
+ * TODO: Double check executeAll() and double check Transactions (IMPORTANT!!!). Preliminary tests
+ *  have passed.
  */
 @Dao
 interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetailDao,
@@ -34,38 +31,31 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
     ParametersDao, ErrorQueueDao {
 
     companion object {
-        var currErrorLog : ErrorQueue? = null
+        private const val retryAmount = 5
     }
 
     suspend fun executeAll(){
-        val retryAmount = 5
-
         withContext(Dispatchers.IO) {
-            for (i in 1..retryAmount) {
-                try {
-                    while (hasQTE()) {
-                        executeFirst(retryAmount)
-                    }
-
-                    break
-                } catch (e: Exception) {
-                    Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
-                        "executeAll() RETRYING... ${e.message}")
-                    e.printStackTrace()
-                    delay(2000)
-                }
+            while (hasQTE()) {
+                executeFirst()
             }
         }
     }
 
     /**
-     * Finds first task to execute and passes it's corresponding ChangeLog to
-     * helper function executeFirstTransaction.
+     * Finds first row to execute and passes the corresponding data (either ChangeLog,
+     * AnalyzedNumber, or CallDetail) to its specific execution function.
      */
-    suspend fun executeFirst(retryAmount: Int) {
+    suspend fun executeFirst() {
+        var currErrorLog: ErrorQueue? = null
+        var currQTE: ExecuteQueue? = null
+        var currDataType: GenericDataType? = null
+
         for (i in 1..retryAmount) {
             try {
+                // Still store in val to ensure that qte is non-null in the uses below.
                 val qte = getFirstQTE()!!
+                currQTE = qte
 
                 // If the data execution doesn't go through, then we increment the QTE error counter.
                 mutexLocks[MutexType.EXECUTE]!!.withLock {
@@ -74,18 +64,68 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
 
                 val dataType = qte.genericDataType.toGenericDataType()
                     ?: throw Exception("genericDataType = ${qte.genericDataType} is invalid!")
+                currDataType = dataType
 
+                /*
+                Error log is inserted preemptively, since if the execution function errors out,
+                then the currErrorLog will not be reset to null. To prevent redundant object
+                creation, we first check that the qte and currErrorLog have different serverRowIDs
+                before creating a new ErrorLog (note that this scenario is practically nonexistent
+                but could be possible if we ever had multiple execute workers).
+                 */
                 when(dataType) {
                     GenericDataType.CHANGE_DATA -> {
                         val changeLog = getChangeLog(qte.linkedRowID)!!
+
+                        currErrorLog = if (currErrorLog?.serverRowID != qte.serverRowID) {
+                            ErrorQueue.create(
+                                instanceNumber = getUserNumber()!!,
+                                serverRowID = qte.serverRowID,
+                                errorType = ErrorType.EXECUTE_ERROR,
+                                errorMessage = "executeChange() failed",
+                                errorDataType = dataType,
+                                errorDataJson = changeLog.toJson()
+                            )
+                        } else {
+                            currErrorLog
+                        }
+
                         executeChange(changeLog, true, qte.rowID)
                     }
                     GenericDataType.ANALYZED_DATA -> {
                         val analyzedNumber = getAnalyzedNum(qte.linkedRowID)!!
+
+                        currErrorLog = if (currErrorLog?.serverRowID != qte.serverRowID) {
+                            ErrorQueue.create(
+                                instanceNumber = getUserNumber()!!,
+                                serverRowID = qte.serverRowID,
+                                errorType = ErrorType.EXECUTE_ERROR,
+                                errorMessage = "executeServerAnalyzed() failed",
+                                errorDataType = dataType,
+                                errorDataJson = analyzedNumber.toJson()
+                            )
+                        } else {
+                            currErrorLog
+                        }
+
                         executeServerAnalyzed(analyzedNumber, qte.rowID)
                     }
                     GenericDataType.LOG_DATA -> {
                         val callDetail = getCallDetail(qte.linkedRowID)!!
+
+                        currErrorLog = if (currErrorLog?.serverRowID != qte.serverRowID) {
+                            ErrorQueue.create(
+                                instanceNumber = getUserNumber()!!,
+                                serverRowID = qte.serverRowID,
+                                errorType = ErrorType.EXECUTE_ERROR,
+                                errorMessage = "executeServerCallDetail() failed",
+                                errorDataType = dataType,
+                                errorDataJson = callDetail.toJson()
+                            )
+                        } else {
+                            currErrorLog
+                        }
+
                         executeServerCallDetail(callDetail, qte.rowID)
                     }
                 }
@@ -93,14 +133,70 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                 break
             } catch (e: Exception) {
                 /*
-                We need to throw an Exception here so that the enclosing executeAll() can retry
-                if the lower level executeFirst() fails too many times.
+                If the last retry fails, then we need to insert an ErrorLog and delete the
+                corresponding ExecuteLog and data row.
                  */
-                if (i == retryAmount) throw Exception("executeFirst() FAILED")
+                if (i == retryAmount) {
+                    moveToErrorLogs(currErrorLog, currQTE, currDataType)
+                    return
+                }
 
                 Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
                     "executeFirst() RETRYING... ${e.message}")
                 delay(1000)
+            }
+        }
+    }
+
+    private suspend fun moveToErrorLogs(
+        currErrorLog: ErrorQueue?,
+        currQTE: ExecuteQueue?,
+        currDataType: GenericDataType?
+    ) {
+        if (currErrorLog == null || currQTE == null || currDataType == null) {
+            return
+        }
+
+        for (i in 1..retryAmount) {
+            try {
+                moveToErrorLogsHelper(currErrorLog, currQTE, currDataType)
+                return
+            } catch (e: Exception) {
+                // If the ErrorLog transaction fails too many times, just return.
+                if (i == retryAmount) return
+
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                    "moveToErrorLogs() RETRYING... ${e.message}")
+                delay(1000)
+            }
+        }
+    }
+
+    /**
+     * Inserts ErrorLog and deletes the corresponding ExecuteLog and data row (can be from
+     * ChangeLog, AnalyzedNumber, or CallDetail) so that executeAll() can continue to the next
+     * ExecuteLog without getting stuck forever. Wraps in Transaction so that all of the actions
+     * happen together.
+     */
+    @Transaction
+    private suspend fun moveToErrorLogsHelper(
+        currErrorLog: ErrorQueue,
+        currQTE: ExecuteQueue,
+        currDataType: GenericDataType
+    ) {
+        mutexLocks[MutexType.ERROR_LOG]!!.withLock {
+            insertErrorLog(currErrorLog)
+        }
+
+        mutexLocks[MutexType.EXECUTE]!!.withLock {
+            deleteQTE(currQTE.rowID)
+        }
+
+        mutexLocks[MutexType.CHANGE]!!.withLock {
+            when(currDataType) {
+                GenericDataType.CHANGE_DATA -> deleteChangeLogByRowID(currQTE.linkedRowID)
+                GenericDataType.ANALYZED_DATA -> deleteAnalyzedNumber(currQTE.linkedRowID)
+                GenericDataType.LOG_DATA -> deleteCallDetail(currQTE.linkedRowID)
             }
         }
     }

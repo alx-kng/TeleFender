@@ -36,6 +36,7 @@ object DatabaseLogFunctions {
         }
     }
 
+    // TODO: Print instanceNumber.
     fun logContactNumbers(database: ClientDatabase?, repository : ClientRepository?) {
         CoroutineScope(Dispatchers.Default).launch {
             val contactNumbers = (database?.contactNumberDao()?.getAllContactNumbers() ?: repository?.getAllContactNumbers()) ?: listOf()
