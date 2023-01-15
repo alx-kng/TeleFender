@@ -1,10 +1,9 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
-// TODO: Look into updating kotlinVersion to 1.7.0 with chrome bookmark and updating gradle.
 buildscript {
 
     ext {
-        kotlinVersion = '1.6.21'
-        nav_version = "2.4.2"
+        kotlinVersion = '1.7.10'
+        nav_version = "2.5.3"
     }
 
     repositories {
@@ -14,9 +13,9 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:7.2.1'
-        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:kotlinVersion'
-        classpath 'com.google.gms:google-services:4.3.10'
+        classpath 'com.android.tools.build:gradle:7.2.2'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
+        classpath 'com.google.gms:google-services:4.3.14'
         classpath "androidx.navigation:navigation-safe-args-gradle-plugin:$nav_version"
 //         classpath 'com.google.firebase:firebase-crashlytics-gradle:2.8.1'
 
@@ -39,21 +38,22 @@ task clean(type: Delete) {
 
 ext {
     // Core / Kotlin
-    activityVersion = '1.4.0'
-    appCompatVersion = '1.4.2'
+    appCompatVersion = '1.6.0'
+    activityVersion = '1.6.1'
     coroutines = '1.6.0'
     coreKtx = '1.7.0'
 
     // UI and Lifecycle
-    constraintLayoutVersion = '2.1.2'
+    constraintLayoutVersion = '2.1.4'
     lifecycleVersion = '2.4.1'
-    materialVersion = "1.6.1"
+    livedataLifecycleVersion = '2.5.1'
+    materialVersion = "1.7.0"
 
     // Work
     workVersion = "2.7.1"
 
     // Room
-    roomVersion = '2.4.2'
+    roomVersion = '2.5.0'
 
     // DataStore
     dataStoreVersion = '1.0.0'
@@ -65,11 +65,12 @@ ext {
     volleyVersion = '1.2.1'
 
     // Firebase
-    firebaseVersion = "29.0.3"
+    firebaseBomVersion = "29.0.3"
+    firebaseMessagingVersion = "23.1.1"
 
     // Testing
     junitVersion = '4.13.2'
     espressoVersion = '3.1.0'
-    androidxJunitVersion = '1.1.2'
+    androidxJunitVersion = '1.1.5'
     coreTestingVersion = '2.1.0'
 }

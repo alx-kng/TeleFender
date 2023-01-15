@@ -13,7 +13,7 @@ import com.telefender.phone.data.tele_database.entities.ChangeLog
 interface UploadAgentDao: InstanceDao, ContactDao, ContactNumberDao,
     ChangeLogDao, ExecuteQueueDao, UploadChangeQueueDao {
 
-    @RequiresApi(Build.VERSION_CODES.N)
+    
     suspend fun uploadAll(context : Context, repository: ClientRepository) {
         while (hasChangeQTU()) {
             uploadFirst(context, repository)
@@ -23,7 +23,7 @@ interface UploadAgentDao: InstanceDao, ContactDao, ContactNumberDao,
      * Finds first task to upload and passes it's corresponding ChangeLog to
      * helper function uploadToServer.
      */
-    @RequiresApi(Build.VERSION_CODES.N)
+    
     suspend fun uploadFirst(context: Context, repository: ClientRepository) {
 
         val firstJob = getFirstChangeQTU()
@@ -33,7 +33,7 @@ interface UploadAgentDao: InstanceDao, ContactDao, ContactNumberDao,
     /**
      * Takes ChangeLog arguments and uploads to server, deletes QTU if result code is success
      */
-    @RequiresApi(Build.VERSION_CODES.N)
+    
     suspend fun uploadToServer(
         changeLog: ChangeLog,
         context : Context,

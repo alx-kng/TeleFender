@@ -68,7 +68,7 @@ class DialerActivity : AppCompatActivity() {
         offerReplacingDefaultDialer()
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
+    
     override fun onStart() {
         super.onStart()
 
@@ -131,7 +131,7 @@ class DialerActivity : AppCompatActivity() {
     }
 
 
-    @RequiresApi(Build.VERSION_CODES.O)
+    
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -174,7 +174,7 @@ class DialerActivity : AppCompatActivity() {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
+    
     companion object {
         const val REQUEST_PERMISSION = 0
 

@@ -67,7 +67,7 @@ class CoroutineTokenWorker(
     var stateVarString: String? = null
 
     @SuppressLint("MissingPermission", "HardwareIds")
-    @RequiresApi(Build.VERSION_CODES.O)
+    
     override suspend fun doWork() : Result {
 
         val repository: ClientRepository = (applicationContext as App).repository

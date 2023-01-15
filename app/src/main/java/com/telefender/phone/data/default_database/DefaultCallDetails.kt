@@ -21,13 +21,13 @@ object DefaultCallDetails{
      *
      * Returns list of CallDetail objects using contentResolver.query()
      */
-    @RequiresApi(Build.VERSION_CODES.O)
+    
     suspend fun getDefaultCallDetails(context: Context): MutableList<CallDetail> {
 
         return withContext(Dispatchers.IO) {
 
             // If user number retrieval fails somehow, return empty list.
-            val instanceNumber = TeleHelpers.getUserNumberUncertain(context)
+            val instanceNumber = TeleHelpers.getUserNumberStored(context)
                 ?: return@withContext mutableListOf()
 
             val projection = arrayOf(
@@ -77,19 +77,6 @@ object DefaultCallDetails{
 
             Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CALL LOG RETRIEVAL FINISHED")
             return@withContext calls
-        }
-    }
-
-    /**
-     * Writes all Call logs to LogCat console
-     */
-    @RequiresApi(Build.VERSION_CODES.O)
-    fun logCallDetails(context: Context) {
-        CoroutineScope(Dispatchers.IO).launch {
-            val calls = getDefaultCallDetails(context)
-            for (call in calls) {
-                Timber.i("CALL LOG: %s", call.toString())
-            }
         }
     }
 }

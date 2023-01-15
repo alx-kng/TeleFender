@@ -28,6 +28,7 @@ object TableSynchronizer {
 
     /**
      * TODO: Maybe move the default retrieval to DefaultCallDetails
+     * TODO: Seems to be some duplicate logs during sync -> look into possible causes.
      *
      * Syncs our CallDetail database with Android's CallDetail database. Returns whether or not
      * the sync successfully finished without errors. Used for both periodic and
@@ -37,6 +38,7 @@ object TableSynchronizer {
      *
      * Also, we've confirmed that checkBackPeriod is necessary.
     */
+    
     suspend fun syncCallLogs(context: Context, repository: ClientRepository, contentResolver: ContentResolver) {
         for (i in 1..retryAmount) {
             try {
@@ -49,8 +51,8 @@ object TableSynchronizer {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    suspend fun syncCallLogsHelper(context: Context, repository: ClientRepository, contentResolver: ContentResolver) {
+    
+    private suspend fun syncCallLogsHelper(context: Context, repository: ClientRepository, contentResolver: ContentResolver) {
 
         val instanceNumber = TeleHelpers.getUserNumberStored(context)!!
         val lastLogSyncTime = repository.getLastLogSyncTime()!!
@@ -141,6 +143,7 @@ object TableSynchronizer {
      * without numbers to our Tele database. However, this should not be an issue to the algorithm,
      * as only contacts with contact numbers affect the algorithm.
     ***********************************************************************************************/
+    
     suspend fun syncContacts(context: Context, database: ClientDatabase, contentResolver: ContentResolver) {
         for (i in 1..retryAmount) {
             try {
@@ -153,9 +156,8 @@ object TableSynchronizer {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    @SuppressLint("MissingPermission")
-    suspend fun syncContactsHelper(context: Context, database: ClientDatabase, contentResolver: ContentResolver) {
+    
+    private suspend fun syncContactsHelper(context: Context, database: ClientDatabase, contentResolver: ContentResolver) {
         val defaultContactHashMap = checkForInserts(context, database, contentResolver)
         checkForUpdatesAndDeletes(context, database, defaultContactHashMap, contentResolver)
     }
@@ -167,7 +169,7 @@ object TableSynchronizer {
      * Deals with any potential insertions into the Android default database and updates ours, as
      * well as returning a HashMap of all ContactNumber for use in checking for updates and deletes
     */
-    @RequiresApi(Build.VERSION_CODES.O)
+    
     @SuppressLint("MissingPermission")
     suspend fun checkForInserts(
         context: Context,
@@ -314,8 +316,7 @@ object TableSynchronizer {
      * TODO: Double check logic.
      * TODO: Handle case where multiple contact numbers with same PK.
      */
-    @RequiresApi(Build.VERSION_CODES.O)
-    suspend fun checkForUpdatesAndDeletes(
+    private suspend fun checkForUpdatesAndDeletes(
         context: Context,
         database: ClientDatabase,
         defaultContactHashMap: HashMap<String, MutableList<ContactNumber>>,

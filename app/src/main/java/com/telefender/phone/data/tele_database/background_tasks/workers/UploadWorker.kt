@@ -81,7 +81,7 @@ class CoroutineUploadWorker(
 
     val scope = CoroutineScope(Dispatchers.IO)
 
-    @RequiresApi(Build.VERSION_CODES.O)
+    
     override suspend fun doWork() : Result {
         stateVarString = inputData.getString("variableName")
         NOTIFICATION_ID = inputData.getString("notificationID")?.toInt()

@@ -5,6 +5,9 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
+import android.window.OnBackInvokedDispatcher
+import androidx.activity.OnBackPressedCallback
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
@@ -25,6 +28,7 @@ import timber.log.Timber
  * TODO: Make sure to request that dialer activity shows of in-call screen during add call, or
  *  at least bring up keyguard.
  */
+
 class InCallActivity : AppCompatActivity() {
 
     private val CHANNEL_ID = "alxkng5737"
@@ -44,6 +48,26 @@ class InCallActivity : AppCompatActivity() {
             .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         navController = navHostFragment.navController
 
+        /**
+         * Don't allow back press when in InCallFragment.
+         *
+         * NOTE: The isEnabled pattern prevents onBackPressed() from invoking the current callback,
+         * which causes an infinite loop (more in Android - General Notes).
+         */
+        onBackPressedDispatcher.addCallback(this, object: OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: Back pressed in InCallActivity!")
+
+                if (navController.currentDestination!!.id == R.id.inCallFragment) {
+                    return
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                    isEnabled = true
+                }
+            }
+        })
+
         // Lets IncomingCallActivity know that InCallActivity is already running.
         _running = true
         _context = this
@@ -60,17 +84,6 @@ class InCallActivity : AppCompatActivity() {
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: IN CALL DESTROYED")
     }
 
-    /**
-     * Don't allow back press when in InCallFragment.
-     */
-    override fun onBackPressed() {
-        if (navController.currentDestination!!.id == R.id.inCallFragment) {
-            return
-        } else {
-            super.onBackPressed()
-        }
-    }
-
     private fun inCallOverLockScreen() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
@@ -81,6 +94,7 @@ class InCallActivity : AppCompatActivity() {
         }
     }
 
+    // TODO: Maybe get rid of static Context and find better solution.
     companion object {
 
         private var _running = false

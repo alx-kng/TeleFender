@@ -96,7 +96,7 @@ data class Contact(
 ) {
 
     override fun toString() : String {
-        return "CONTACT -  CID: $CID instanceNumber: $instanceNumber blocked: $blocked"
+        return "CONTACT - instanceNumber: $instanceNumber CID: $CID blocked: $blocked"
     }
 }
 
@@ -142,8 +142,8 @@ data class ContactNumber(
         }
     }
     override fun toString() : String {
-        return "CONTACT NUMBER -  CID: " + this.CID  +  " number: " + this.normalizedNumber +
-            " versionNumber: " + this.versionNumber
+        return "CONTACT NUMBER - instanceNumber: $instanceNumber CID: $CID " +
+            "normalizedNumber: $normalizedNumber versionNumber: $versionNumber"
     }
 
     override fun hashCode(): Int {

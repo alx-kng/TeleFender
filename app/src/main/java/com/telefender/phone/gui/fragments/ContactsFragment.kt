@@ -20,7 +20,13 @@ import com.telefender.phone.gui.model.ContactsViewModel
 import com.telefender.phone.gui.model.ContactsViewModelFactory
 import com.telefender.phone.helpers.TeleHelpers
 
-// TODO: Consider not showing contacts that don't have a number associated with them.
+
+/**
+ * TODO: Consider not showing contacts that don't have a number associated with them.
+ *
+ * TODO: If you go to CallHistoryFragment, tap on ContactsFragment, and press back, then we go
+ *  back to CallHistoryFragment, but I feel like we should stay in ContactsFragment.
+ */
 class ContactsFragment : Fragment() {
 
     private var _binding: FragmentContactsBinding? = null
@@ -42,10 +48,9 @@ class ContactsFragment : Fragment() {
 
         setAppBarTitle(getString(R.string.contacts))
 
-        val context = context!!
         val recyclerView = binding.contactsRecyclerView
 
-        val adapter = ContactsAdapter(context)
+        val adapter = ContactsAdapter(requireContext())
         adapter.setHasStableIds(true)
         recyclerView.adapter = adapter
 

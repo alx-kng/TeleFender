@@ -19,7 +19,7 @@ object TableInitializers {
     /**
      * Called once to initialize the Instance table during database initialization.
      */
-    @RequiresApi(Build.VERSION_CODES.O)
+    
     @SuppressLint("MissingPermission")
     suspend fun initInstance(context: Context, database: ClientDatabase, instanceNumber: String) {
         val changeID = UUID.randomUUID().toString()
@@ -40,11 +40,10 @@ object TableInitializers {
      * Called once to initialize the Contact / ContactNumber table during the database's first
      * access. Uses implementation of TableSynchronizer.checkForInserts().
      */
-    @RequiresApi(Build.VERSION_CODES.O)
+    
     suspend fun initContacts(context: Context, database: ClientDatabase, contentResolver: ContentResolver) {
         if (!TeleHelpers.hasValidStatus(context,
                 initializedRequired = true,
-                logPermission = true,
                 contactPermission = true
             )
         ) {
@@ -59,7 +58,7 @@ object TableInitializers {
      * Called once to initialize the CallDetail table during the database's first access. Uses
      * implementation of TableSynchronizer.syncCallLogs().
      */
-    @RequiresApi(Build.VERSION_CODES.O)
+    
     suspend fun initCallDetails(context: Context) {
         if (!TeleHelpers.hasValidStatus(context,
                 initializedRequired = true,

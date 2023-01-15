@@ -50,7 +50,7 @@ interface StoredMapDao {
     suspend fun updateStoredMap(
         sessionID: String? = null,
         clientKey: String? = null,
-        fireBaseToken: String? = null,
+        firebaseToken: String? = null,
         databaseInitialized: Boolean? = null,
         lastLogSyncTime: Long? = null,
         lastServerRowID: Long? = null
@@ -62,7 +62,7 @@ interface StoredMapDao {
             userNumber = userNumber,
             sessionID = sessionID,
             clientKey = clientKey,
-            fireBaseToken = fireBaseToken,
+            firebaseToken = firebaseToken,
             databaseInitialized = databaseInitialized,
             lastLogSyncTime = lastLogSyncTime,
             lastServerRowID = lastServerRowID
@@ -85,11 +85,11 @@ interface StoredMapDao {
                     THEN :clientKey
                 ELSE clientKey
             END,
-        fireBaseToken =
+        firebaseToken =
             CASE
-                WHEN :fireBaseToken IS NOT NULL
-                    THEN :fireBaseToken
-                ELSE fireBaseToken
+                WHEN :firebaseToken IS NOT NULL
+                    THEN :firebaseToken
+                ELSE firebaseToken
             END,
         databaseInitialized =
             CASE
@@ -115,7 +115,7 @@ interface StoredMapDao {
         userNumber: String,
         sessionID: String?,
         clientKey: String?,
-        fireBaseToken: String?,
+        firebaseToken: String?,
         databaseInitialized: Boolean?,
         lastLogSyncTime: Long?,
         lastServerRowID: Long?

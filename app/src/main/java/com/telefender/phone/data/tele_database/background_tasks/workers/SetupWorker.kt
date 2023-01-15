@@ -61,7 +61,7 @@ class CoroutineSetupWorker(
     val CHANNEL_ID = "alxkng5737"
     val scope = CoroutineScope(Dispatchers.IO)
 
-    @RequiresApi(Build.VERSION_CODES.O)
+    
     override suspend fun doWork() : Result {
         WorkStates.setState(WorkType.SETUP, WorkInfo.State.RUNNING)
 

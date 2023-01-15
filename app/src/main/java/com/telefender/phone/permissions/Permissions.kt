@@ -11,21 +11,29 @@ import timber.log.Timber
 
 
 object Permissions {
+
     /**
-     * Starts dialer to request permissions in PERMISSIONS array, using hasPermissions as a helper.
+     * TODO: Find out more about this "request code" bullshit.
+     *
+     * Requests core permissions (e.g., READ_CONTACTS, READ_CALL_LOG, READ_PHONE_STATE). Used when
+     * the default dialer permissions aren't granted.
      */
-    fun multiplePermissions(context: Context, activity: Activity) {
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: multiple permissions called")
-        // The request code is used in ActivityCompat.requestPermissions()
-        // and returned in the Activity's onRequestPermissionsResult()
-        val PERMISSION_ALL = 1
+    fun coreAltPermissions(context: Context, activity: Activity) {
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: coreAltPermissions() called")
+
+        /*
+        Old guy's comment -> The request code is used in ActivityCompat.requestPermissions() and
+        returned in the Activity's onRequestPermissionsResult().
+         */
+        val requestCode = 1
         val permissions = arrayOf(
-            Manifest.permission.WRITE_EXTERNAL_STORAGE,
-            Manifest.permission.ADD_VOICEMAIL
+            Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.READ_CALL_LOG,
+            Manifest.permission.READ_CONTACTS,
         )
 
         if (!hasPermissions(context, permissions)) {
-            ActivityCompat.requestPermissions(activity, permissions, PERMISSION_ALL)
+            ActivityCompat.requestPermissions(activity, permissions, requestCode)
         } 
     }
 
@@ -41,6 +49,11 @@ object Permissions {
             }
         }
         return true
+    }
+
+    fun hasPhoneStatePermissions(context: Context) : Boolean {
+        return context.getSystemService(TelecomManager::class.java).defaultDialerPackage == context.packageName
+            || hasPermissions(context, arrayOf(Manifest.permission.READ_PHONE_STATE))
     }
 
     fun hasLogPermissions(context: Context) : Boolean {

@@ -42,11 +42,9 @@ class CallHistoryFragment : Fragment() {
         val date = Date(recentsViewModel.selectTime)
         val time = simpleDate.format(date)
 
-        val context = context!!
         val recyclerView = binding.recyclerView
 
-        val adapter = CallHistoryAdapter(context, number, time)
-
+        val adapter = CallHistoryAdapter(requireContext(), number, time)
         // To disable recycler view blinking (smooth reloading experience).
         adapter.setHasStableIds(true)
         recyclerView.adapter = adapter

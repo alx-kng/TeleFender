@@ -1,5 +1,6 @@
 package com.telefender.phone.gui
 
+import android.annotation.SuppressLint
 import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
@@ -8,6 +9,8 @@ import android.os.Bundle
 import android.os.PowerManager
 import android.provider.CallLog
 import android.view.WindowManager
+import androidx.activity.OnBackPressedCallback
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 import com.telefender.phone.call_related.*
@@ -46,10 +49,12 @@ class IncomingCallActivity : AppCompatActivity() {
      * NOTE: In order to cancel [observer], you must use the Observer constructor with lambda,
      * other wise, removeObserver() won't be able to find a reference to the observer.
      */
+
     private val observer = Observer { isIncoming: Boolean->
         if (!isIncoming) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: INCOMING FINISHED: focusedCall state: ${
-                CallManager.callStateString(CallManager.focusedCall.getStateCompat())}")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: INCOMING FINISHED: focusedCall state: " +
+                CallManager.callStateString(CallManager.focusedCall.getStateCompat())
+            )
 
             scope.cancel()
             finish()
@@ -77,6 +82,15 @@ class IncomingCallActivity : AppCompatActivity() {
         }
 
         CallManager.incomingCallLiveData.observeForever(observer)
+
+        /**
+         * Don't allow back press when in IncomingActivity.
+         */
+        onBackPressedDispatcher.addCallback(this, object: OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                return
+            }
+        })
 
         binding.displayNumber.text = CallManager.focusedCall.number() ?: "Unknown number"
 
@@ -139,13 +153,6 @@ class IncomingCallActivity : AppCompatActivity() {
     }
 
     /**
-     * Don't allow back press when in IncomingActivity.
-     */
-    override fun onBackPressed() {
-        return
-    }
-
-    /**
      * TODO: Double check logic
      *
      * Hangup in silence mode if unsafe call isn't already answered, declined, or disconnected.
@@ -163,7 +170,7 @@ class IncomingCallActivity : AppCompatActivity() {
             delay(silenceDelay / 10)
         }
 
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s",
             "Silence Block Action: Block action was taken because call was not answered or disconnected by user.")
 
         unallowed = true

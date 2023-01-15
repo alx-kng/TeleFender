@@ -67,7 +67,7 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
         // rowID of data in respective table. Used in ExecuteQueue for referencing a row.
         val linkedRowID: Long
 
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CH - serverRowID: ${serverData.serverRowID} | $this}")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CHANGE_LOG - serverRowID: ${serverData.serverRowID} | $this}")
 
         /*
         The rowID = 0 resets downloaded rowID's, which conflict with user's own rowID PK. This way,

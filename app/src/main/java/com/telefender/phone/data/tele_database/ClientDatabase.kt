@@ -20,7 +20,8 @@ import com.telefender.phone.data.tele_database.background_tasks.workers.OmegaPer
 import com.telefender.phone.data.tele_database.background_tasks.workers.SetupScheduler
 import com.telefender.phone.data.tele_database.client_daos.*
 import com.telefender.phone.data.tele_database.entities.*
-import com.telefender.phone.helpers.DatabaseLogFunctions
+import com.telefender.phone.helpers.DatabaseLogger
+import com.telefender.phone.helpers.PrintTypes
 import com.telefender.phone.helpers.TeleHelpers
 import com.telefender.phone.permissions.Permissions
 import kotlinx.coroutines.CoroutineScope
@@ -78,7 +79,7 @@ abstract class ClientDatabase : RoomDatabase() {
          * continue. So, waitForInitialization(), waitForSetup(), waitForFirebase() are restarted
          * inside getDatabase(), which is called everytime the app is freshly opened (no task).
          */
-        @RequiresApi(Build.VERSION_CODES.O)
+        
         override fun onCreate(db: SupportSQLiteDatabase) {
             super.onCreate(db)
             Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: INSIDE DATABASE CALLBACK")
@@ -292,7 +293,7 @@ abstract class ClientDatabase : RoomDatabase() {
          * opened (no task).
          */
         @SuppressLint("MissingPermission")
-        @RequiresApi(Build.VERSION_CODES.O)
+        
         fun getDatabase(
             context: Context,
             scope: CoroutineScope,
@@ -331,10 +332,27 @@ abstract class ClientDatabase : RoomDatabase() {
                     OmegaPeriodicScheduler.initiateOneTimeOmegaWorker(context)
                     WorkStates.workWaiter(WorkType.ONE_TIME_OMEGA)
 
+                    val loggerJob = DatabaseLogger.omegaLogger(
+                        database = instanceTemp,
+                        logSelect = listOf(
+                            PrintTypes.CALL_LOG,
+                            PrintTypes.INSTANCE,
+                            PrintTypes.CONTACT,
+                            PrintTypes.CONTACT_NUMBER,
+                            PrintTypes.CHANGE_LOG,
+                            PrintTypes.ERROR_LOG,
+                            PrintTypes.EXECUTE_LOG,
+                            PrintTypes.UPLOAD_CHANGE,
+                            PrintTypes.UPLOAD_ANALYZED,
+                        )
+                    )
+
+                    // Wait for logger to finish before initiating OmegaPeriodic.
+                    loggerJob.join()
+
                     // Initialize Omega Periodic Worker (sync, download, execute, upload)
                     OmegaPeriodicScheduler.initiatePeriodicOmegaWorker(context)
 
-                    DatabaseLogFunctions.logSelect(instanceTemp, null, listOf(0, 1, 2, 3, 4, 5, 6))
                 }
             }
 

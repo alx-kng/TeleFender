@@ -14,7 +14,8 @@ import com.telefender.phone.gui.MainActivity
 import com.telefender.phone.gui.adapters.RecentsAdapter
 import com.telefender.phone.gui.model.RecentsViewModel
 import com.telefender.phone.gui.model.RecentsViewModelFactory
-import com.telefender.phone.helpers.DatabaseLogFunctions
+import com.telefender.phone.helpers.DatabaseLogger
+import com.telefender.phone.helpers.PrintTypes
 
 /*
 TODO: Handle case where permissions aren't given (or default dialer isn't granted).
@@ -79,8 +80,11 @@ class RecentsFragment : Fragment() {
     override fun onStart() {
         super.onStart()
 
-        val database = (requireContext().applicationContext as App).database
-        DatabaseLogFunctions.logAnalyzedNumbers(database)
+        val repository = (requireContext().applicationContext as App).repository
+        DatabaseLogger.omegaLogger(
+            repository = repository,
+            logSelect = listOf(PrintTypes.ANALYZED_NUMBER)
+        )
     }
 
     override fun onDestroyView() {

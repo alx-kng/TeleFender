@@ -42,8 +42,6 @@ class DialerFragment : Fragment() {
         binding.dialPhone.setOnClickListener {
             makeCall()
         }
-
-        Permissions.multiplePermissions(requireContext(), activity as Activity)
     }
 
     override fun onDestroyView() {

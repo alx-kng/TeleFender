@@ -37,9 +37,12 @@ object TeleHelpers {
         context: Context,
         initializedRequired: Boolean = true,
         setupRequired: Boolean = true,
+        phoneStatePermission: Boolean = false,
         logPermission: Boolean = false,
         contactPermission: Boolean = false
     ) : Boolean {
+
+        if (phoneStatePermission && !Permissions.hasPhoneStatePermissions(context)) return false
 
         if (logPermission && !Permissions.hasLogPermissions(context)) return false
 
@@ -81,7 +84,7 @@ object TeleHelpers {
         }
 
         return databaseNumber ?:
-            if (!Permissions.hasLogPermissions(context)) {
+            if (!Permissions.hasPhoneStatePermissions(context)) {
                 Timber.e("$DEBUG_LOG_TAG: User number was null due to lack of permissions!!!")
                 return null
             } else {

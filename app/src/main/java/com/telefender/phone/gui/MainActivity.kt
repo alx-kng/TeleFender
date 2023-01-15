@@ -18,6 +18,7 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -40,6 +41,9 @@ import timber.log.Timber
 
 /**
  * TODO make sure the app opens up to last used fragment.
+ *
+ * TODO: Probably need to request notifications permission in case default dialer is rejected.
+ *  That way, Firebase push notifications still work.
  *
  * TODO opening and reopening app clearly has some bugs that causes splash screen to not show on first
  *  open and causes reentering the app through Recents (android) screen to look glitchy. Actually,
@@ -69,6 +73,10 @@ class MainActivity : AppCompatActivity() {
     /**
      * TODO: Should request regular call log / phone permissions if user denies default dialer
      *  permissions (to stop app from crashing in recents and contacts). Find better user flow.
+     *   -> basic coreAltPermissions() called, but we probably need to do more.
+     *   -> Maybe we shouldn't immediately request all and only request permissions on screens
+     *   that need it (e.g., if user tries to enter contacts screen, then first request contact
+     *   permissions).
      *
      * Used to request default dialer permissions. If the default dialer is accepted, it then
      * asks for Do Not Disturb permissions to allow app to silence calls.
@@ -81,6 +89,8 @@ class MainActivity : AppCompatActivity() {
                 val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
                 startActivityForResult(intent, 120)
             }
+        } else {
+            Permissions.coreAltPermissions(this, this)
         }
     }
 
@@ -155,6 +165,27 @@ class MainActivity : AppCompatActivity() {
             true
         }
         binding.bottomNavigation.selectedItemId = R.id.dialerFragment
+
+        /**
+         * TODO: Back button breaks.
+         *
+         * Needed to override onBackPressed() so that we could change the bottom navigation
+         * selected item to the shown fragment. Otherwise, when you press back button, the
+         * fragment shown changes, but the bottom selected item doesn't.
+         *
+         * NOTE: The isEnabled pattern prevents onBackPressed() from invoking the current callback,
+         * which causes an infinite loop (more in Android - General Notes).
+         */
+        onBackPressedDispatcher.addCallback(this, object: OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: Back pressed in MainActivity!")
+
+                isEnabled = false
+                onBackPressedDispatcher.onBackPressed()
+                updateBottomHighlight()
+                isEnabled= true
+            }
+        })
     }
 
     /**
@@ -212,16 +243,6 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    /**
-     * Needed to override onBackPressed() so that we could change the bottom
-     * navigation selected item to the shown fragment. Otherwise, when you press back button, the
-     * fragment shown changes, but the bottom selected item doesn't.
-     */
-    override fun onBackPressed() {
-        super.onBackPressed()
-        updateBottomHighlight()
-    }
-
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.top_app_bar, menu)
         return true
@@ -230,7 +251,7 @@ class MainActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.more -> {
-                Log.i("MainActivity","More menu button pressed!")
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: MainActivity: More menu button pressed!")
                 return true
             }
             else -> super.onOptionsItemSelected(item)
@@ -358,22 +379,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun notificationChannelCreator() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // Create the NotificationChannel
-            val name = getString(R.string.channel_name)
-            val descriptionText = getString(R.string.channel_description)
-            val importance = NotificationManager.IMPORTANCE_DEFAULT
-            val mChannel = NotificationChannel(CHANNEL_ID, name, importance)
-            mChannel.description = descriptionText
-            mChannel.setSound(null, null)
-            // Register the channel with the system; you can't change the importance
-            // or other notification behaviors after this
-            val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(mChannel)
-        }
+        // Create the NotificationChannel
+        val name = getString(R.string.channel_name)
+        val descriptionText = getString(R.string.channel_description)
+        val importance = NotificationManager.IMPORTANCE_DEFAULT
+        val mChannel = NotificationChannel(CHANNEL_ID, name, importance)
+        mChannel.description = descriptionText
+        mChannel.setSound(null, null)
+        // Register the channel with the system; you can't change the importance
+        // or other notification behaviors after this
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.createNotificationChannel(mChannel)
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
+    
     companion object {
         fun start(context: Context) {
             Intent(context, MainActivity::class.java)

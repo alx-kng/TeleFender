@@ -30,9 +30,6 @@ fun String.toGenericDataType() : GenericDataType? {
 
 
 /***************************************************************************************************
- * TODO: Maybe add serverRowID to ExecuteLog for debugging purposes, that way even if linkedRowID
- *  is -1, we can still trace back the data that causes a faulty execution.
- *
  * We only have one ExecuteQueue since it doesn't really matter right now if ChangeLogs,
  * AnalyzedNumbers, and CallDetails (although we probably won't download other user's CallDetails
  * due to data size) are executed in a mixed order. That is, we have no need to prioritize the
@@ -141,6 +138,10 @@ data class ErrorQueue(
     val errorCounter : Int = 0
 ) {
 
+    override fun toString(): String {
+        return "ERROR LOG: rowID: $rowID instanceNumber: $instanceNumber serverRowID: $serverRowID errorJson$errorJson"
+    }
+
     companion object {
         /**
          * Creates ErrorQueue log. Also allows you to modify arguments to fit form to database
@@ -176,7 +177,7 @@ data class ErrorQueue(
 data class Error(
     val errorType: String, // Execute error
     val errorMessage: String,
-    val errorDataType: String, // ANUM, CLOG
+    val errorDataType: String, // ANALYZED_NUMBER, CALL_LOG
     val errorDataJson: String, // ChangeLog json
 ) {
 

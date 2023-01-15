@@ -130,7 +130,7 @@ class CoroutineCatchSyncWorker(
     private var callLogObserverSync: CallLogObserverSync =
         CallLogObserverSync(Handler(Looper.getMainLooper()), context, scope)
 
-    @RequiresApi(Build.VERSION_CODES.O)
+    
     override suspend fun doWork() : Result {
         NOTIFICATION_ID = inputData.getString("notificationID")?.toInt()
 
@@ -279,7 +279,7 @@ class CoroutineSyncWorker(
     val CHANNEL_ID = "alxkng5737"
     var stateVarString: String? = null
 
-    @RequiresApi(Build.VERSION_CODES.O)
+    
     override suspend fun doWork() : Result {
         stateVarString = inputData.getString("variableName")
         NOTIFICATION_ID = inputData.getString("notificationID")?.toInt()

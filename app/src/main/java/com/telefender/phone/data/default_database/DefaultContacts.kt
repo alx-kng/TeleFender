@@ -123,7 +123,7 @@ object DefaultContacts {
 
     /**
      * TODO: Need to retrieve blocked status.
-     * TODO: Consider using E164 representation (normalized) for number.
+     * TODO: Need to check permissions here?
      *
      * Returns a cursor containing all numbers in Android's Phone table.
      * Also contains data_version column for syncing (probably not used anymore).

@@ -1,5 +1,6 @@
 package com.telefender.phone
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.os.Build
 import androidx.annotation.RequiresApi
@@ -14,7 +15,7 @@ import kotlinx.coroutines.SupervisorJob
 
 import timber.log.Timber
 
-@RequiresApi(Build.VERSION_CODES.O)
+
 class App : Application() {
 
     /**

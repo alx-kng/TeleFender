@@ -77,7 +77,7 @@ class ClientRepository(
 
     @WorkerThread
     suspend fun getFireBaseToken() : String? {
-        return storedMapDao.getStoredMap()?.fireBaseToken
+        return storedMapDao.getStoredMap()?.firebaseToken
     }
 
     @WorkerThread
@@ -94,7 +94,7 @@ class ClientRepository(
     suspend fun updateStoredMap(
         sessionID: String? = null,
         clientKey: String? = null,
-        fireBaseToken: String? = null,
+        firebaseToken: String? = null,
         databaseInitialized: Boolean? = null,
         lastLogSyncTime: Long? = null,
         lastServerRowID: Long? = null
@@ -103,7 +103,7 @@ class ClientRepository(
             storedMapDao.updateStoredMap(
                 sessionID = sessionID,
                 clientKey = clientKey,
-                fireBaseToken = fireBaseToken,
+                firebaseToken = firebaseToken,
                 databaseInitialized = databaseInitialized,
                 lastLogSyncTime = lastLogSyncTime,
                 lastServerRowID = lastServerRowID
@@ -218,6 +218,13 @@ class ClientRepository(
         }
     }
 
+    @WorkerThread
+    suspend fun getAllAnalyzedNum() : List<AnalyzedNumber> {
+        return mutexLocks[MutexType.ANALYZED]!!.withLock {
+            analyzedNumberDao.getAllAnalyzedNum()
+        }
+    }
+
     /***********************************************************************************************
      * Instance Queries
      **********************************************************************************************/
@@ -225,6 +232,11 @@ class ClientRepository(
     @WorkerThread
     suspend fun hasInstance(instanceNumber: String) : Boolean {
         return instanceDao.hasInstance(instanceNumber)
+    }
+
+    @WorkerThread
+    suspend fun getAllInstance() : List<Instance> {
+        return instanceDao.getAllInstance()
     }
 
     /***********************************************************************************************
