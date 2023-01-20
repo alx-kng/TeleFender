@@ -62,6 +62,11 @@ data class ContactDetail(
     }
 }
 
+/**
+ * TODO: Consider changing this default database retrieval structure to a ContentProvider, but it
+ *  may or may not be necessary seeing as that ContentProvider is often used to expose data to
+ *  other applications.
+ */
 object DefaultContacts {
 
     suspend fun getContactDetails(context: Context) : MutableList<ContactDetail> {

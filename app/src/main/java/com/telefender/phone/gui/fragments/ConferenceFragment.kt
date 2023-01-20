@@ -38,9 +38,8 @@ class ConferenceFragment : Fragment() {
             findNavController().popBackStack()
         }
 
-        val context = context!!
         val recyclerView = binding.conferenceRecyclerView
-        val adapter = ConferenceAdapter(context)
+        val adapter = ConferenceAdapter(requireContext())
 
         adapter.setHasStableIds(true)
         recyclerView.adapter = adapter

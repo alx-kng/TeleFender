@@ -14,6 +14,11 @@ import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 
+/**
+ * TODO: Consider changing this default database retrieval structure to a ContentProvider, but it
+ *  may or may not be necessary seeing as that ContentProvider is often used to expose data to
+ *  other applications.
+ */
 object DefaultCallDetails{
 
     /**

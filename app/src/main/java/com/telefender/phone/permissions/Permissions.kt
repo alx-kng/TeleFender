@@ -1,6 +1,6 @@
 package com.telefender.phone.permissions
 
-import android.Manifest
+import android.Manifest.permission.*
 import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
@@ -27,9 +27,9 @@ object Permissions {
          */
         val requestCode = 1
         val permissions = arrayOf(
-            Manifest.permission.READ_PHONE_STATE,
-            Manifest.permission.READ_CALL_LOG,
-            Manifest.permission.READ_CONTACTS,
+            READ_PHONE_STATE,
+            READ_CALL_LOG,
+            READ_CONTACTS,
         )
 
         if (!hasPermissions(context, permissions)) {
@@ -51,18 +51,26 @@ object Permissions {
         return true
     }
 
-    fun hasPhoneStatePermissions(context: Context) : Boolean {
+    /**
+     * Checks if app is default dialer by seeing if the default dialer package name is the same as
+     * our app's package name.
+     */
+    fun isDefaultDialer(context: Context) : Boolean {
         return context.getSystemService(TelecomManager::class.java).defaultDialerPackage == context.packageName
-            || hasPermissions(context, arrayOf(Manifest.permission.READ_PHONE_STATE))
+    }
+
+    fun hasPhoneStatePermissions(context: Context) : Boolean {
+        return isDefaultDialer(context)
+            || hasPermissions(context, arrayOf(READ_PHONE_STATE))
     }
 
     fun hasLogPermissions(context: Context) : Boolean {
-        return context.getSystemService(TelecomManager::class.java).defaultDialerPackage == context.packageName
-            || hasPermissions(context, arrayOf(Manifest.permission.READ_CALL_LOG))
+        return isDefaultDialer(context)
+            || hasPermissions(context, arrayOf(READ_CALL_LOG))
     }
 
     fun hasContactPermissions(context: Context) : Boolean {
-        return context.getSystemService(TelecomManager::class.java).defaultDialerPackage == context.packageName
-            || hasPermissions(context, arrayOf(Manifest.permission.READ_CONTACTS))
+        return isDefaultDialer(context)
+            || hasPermissions(context, arrayOf(READ_CONTACTS))
     }
 }

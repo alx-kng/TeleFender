@@ -14,7 +14,6 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.telecom.TelecomManager
-import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -22,7 +21,6 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.net.toUri
 import androidx.navigation.NavController
@@ -49,6 +47,9 @@ import timber.log.Timber
  *  open and causes reentering the app through Recents (android) screen to look glitchy. Actually,
  *  now it doesn't seem to happen anymore. Maybe the OS had to finish compiling some extra stuff for
  *  the app. Keep an eye on this.
+ *
+ * TODO: IMPORTANT!!! Make known the dangers of pressing "Don't ask again" on the default dialer
+ *  dialog to the user.
  */
 class MainActivity : AppCompatActivity() {
 
