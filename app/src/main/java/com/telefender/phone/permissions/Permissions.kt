@@ -29,6 +29,28 @@ object Permissions {
     }
 
     /**
+     * Returns whether or not App has all the permissions in provided permission array
+     */
+    fun hasPermissions(context: Context, permissions: Array<String>): Boolean {
+        for (permission in permissions) {
+            if (ActivityCompat.checkSelfPermission(context, permission)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                return false
+            }
+        }
+        return true
+    }
+
+    /**
+     * Checks if app is default dialer by seeing if the default dialer package name is the same as
+     * our app's package name.
+     */
+    fun isDefaultDialer(context: Context) : Boolean {
+        return context.getSystemService(TelecomManager::class.java).defaultDialerPackage == context.packageName
+    }
+
+    /**
      * TODO: Find out more about this "request code" bullshit.
      *
      * Requests core permissions (e.g., READ_CONTACTS, READ_CALL_LOG, READ_PHONE_STATE). Used when
@@ -53,28 +75,6 @@ object Permissions {
         } 
     }
 
-    /**
-     * Returns whether or not App has all the permissions in provided permission array
-     */
-    fun hasPermissions(context: Context, permissions: Array<String>): Boolean {
-        for (permission in permissions) {
-            if (ActivityCompat.checkSelfPermission(context, permission)
-                != PackageManager.PERMISSION_GRANTED
-            ) {
-                return false
-            }
-        }
-        return true
-    }
-
-    /**
-     * Checks if app is default dialer by seeing if the default dialer package name is the same as
-     * our app's package name.
-     */
-    fun isDefaultDialer(context: Context) : Boolean {
-        return context.getSystemService(TelecomManager::class.java).defaultDialerPackage == context.packageName
-    }
-
     fun hasPhoneStatePermissions(context: Context) : Boolean {
         return isDefaultDialer(context)
             || hasPermissions(context, arrayOf(phoneStatePermission))
@@ -88,5 +88,25 @@ object Permissions {
     fun hasContactPermissions(context: Context) : Boolean {
         return isDefaultDialer(context)
             || hasPermissions(context, arrayOf(READ_CONTACTS))
+    }
+
+    /**
+     * Requests the POST_NOTIFICATIONS permission if the app doesn't currently have it and needs it.
+     */
+    fun notificationPermission(context: Context, activity: Activity) {
+        if (!hasNotificationPermission(context)) {
+            ActivityCompat.requestPermissions(activity, arrayOf(POST_NOTIFICATIONS), 1)
+        }
+    }
+
+    /**
+     * Checks if the app can post notifications. When the SDK < 33 (Android 13), any app can
+     * post notifications, but starting from Android 13, apps need to request the POST_NOTIFICATIONS
+     * permission first. However, if the app is the default dialer, the app doesn't need to request
+     * the permissions (regardless of build version).
+     */
+    fun hasNotificationPermission(context: Context) : Boolean {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
+            || hasPermissions(context, arrayOf(POST_NOTIFICATIONS))
     }
 }
