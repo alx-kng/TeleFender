@@ -5,14 +5,14 @@
     >
 
     <!-- Core permissions -->
-    <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
+    <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" android:maxSdkVersion="29"/>
     <uses-permission android:name="android.permission.READ_CALL_LOG"/>
     <uses-permission android:name="android.permission.READ_CONTACTS"/>
 
     <!-- Other danger permissions (received through default dialer request) -->
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.WRITE_CONTACTS"/>
-    <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- Possibly unnecessary permissions -->
@@ -111,25 +111,30 @@
         <service
            android:name="androidx.work.impl.foreground.SystemForegroundService"
            android:foregroundServiceType="dataSync"
-           />
+            />
 
         <service
             android:name="com.telefender.phone.data.server_related.firebase.TeleFirebaseService"
-            android:exported="false">
+            android:exported="false"
+            >
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
 
+        <!-- TODO: Use our own channel. -->
+        <!-- Sets the notification channel that push notifications should go through. -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="@string/default_notification_channel_id" />
+            android:value="@string/default_notification_channel_id"
+            />
 
         <service
             android:name="com.telefender.phone.call_related.CallService"
             android:permission="android.permission.BIND_INCALL_SERVICE"
             android:exported="false"
             >
+
             <intent-filter>
                 <action android:name="android.telecom.InCallService" />
             </intent-filter>
@@ -138,6 +143,7 @@
                 android:name="android.telecom.IN_CALL_SERVICE_UI"
                 android:value="true"
                 />
+
         </service>
 
     </application>

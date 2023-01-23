@@ -40,8 +40,8 @@ class TeleFirebaseService : FirebaseMessagingService() {
 
 //        runBlocking {
 //            (application as App).applicationScope.launch {
-//                while (applicationContext.getSystemService(TelecomManager::class.java).defaultDialerPackage != applicationContext.packageName
-//                    || !Permissions.hasPermissions(applicationContext, arrayOf(Manifest.permission.READ_CALL_LOG))) {
+////                while (applicationContext.getSystemService(TelecomManager::class.java).defaultDialerPackage != applicationContext.packageName
+////                    || !Permissions.hasPermissions(applicationContext, arrayOf(Manifest.permission.READ_CALL_LOG))) {
 //                    delay(500)
 //                    Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: INSIDE NEW TOKEN COROUTINE | HAS CALL LOG PERMISSION: %s", Permissions.hasPermissions(applicationContext, arrayOf(
 //                        Manifest.permission.READ_CALL_LOG)))

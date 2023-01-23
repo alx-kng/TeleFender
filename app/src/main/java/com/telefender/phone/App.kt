@@ -15,13 +15,16 @@ import kotlinx.coroutines.SupervisorJob
 
 import timber.log.Timber
 
-
+/**
+ * TODO: See if we can optimize memory / object creation to prevent too much work for
+ *  garbage collector.
+ *
+ * TODO: When we add the notification channel here, maybe put a waiter on the notification
+ *  channel creation, since we don't want the POST_NOTIFICATIONS request dialog to show before the
+ *  default dialer request. If the default dialer is successfully granted first, I'm pretty sure
+ *  we won't even need to request the POST_NOTIFICATIONS permission.
+ */
 class App : Application() {
-
-    /**
-     * TODO: See if we can optimize memory / object creation to prevent too much work for
-     *  garbage collector.
-     */
 
     /**
      * TODO: Clean up scopes to allow for better structured concurrency. I think we might be creating

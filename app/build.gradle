@@ -2,10 +2,13 @@ plugins {
     id 'com.android.application'
     id 'kotlin-android'
     id 'kotlin-kapt'
-    // TODO possibly migrate over from 'kotlin-android-extensions' (which is deprecated)
+    /*
+    TODO possibly migrate over from 'kotlin-android-extensions' (which is deprecated). Apparently,
+     ViewBinding is already a replacement for this plugin, so maybe we can just remove it.
+     */
     id 'kotlin-android-extensions'
     id 'androidx.navigation.safeargs.kotlin'
-//    id 'com.google.gms.google-services'
+    id 'com.google.gms.google-services'
 
 }
 android {
@@ -75,9 +78,9 @@ dependencies {
     // UI
     implementation "androidx.constraintlayout:constraintlayout:$rootProject.constraintLayoutVersion"
     implementation "com.google.android.material:material:$rootProject.materialVersion"
-    implementation "androidx.navigation:navigation-fragment-ktx:$nav_version"
-    implementation "androidx.navigation:navigation-ui-ktx:$nav_version"
-    implementation "androidx.navigation:navigation-runtime-ktx:$nav_version"
+    implementation "androidx.navigation:navigation-fragment-ktx:$navVersion"
+    implementation "androidx.navigation:navigation-ui-ktx:$navVersion"
+    implementation "androidx.navigation:navigation-runtime-ktx:$navVersion"
 
     // WorkManager components
 
