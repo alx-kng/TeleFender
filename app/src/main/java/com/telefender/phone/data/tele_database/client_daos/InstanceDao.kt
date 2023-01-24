@@ -9,8 +9,12 @@ interface InstanceDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertInstanceNumbers(vararg instances: Instance)
 
+    /**
+     * Returns a nullable Int that indicates whether the update was successful. If 1 is returned,
+     * then the update was successful, otherwise the update failed.
+     */
     @Query("UPDATE instance SET number = :newNumber WHERE number = :oldNumber")
-    suspend fun updateInstanceNumbers(oldNumber: String, newNumber: String)
+    suspend fun updateInstanceNumbers(oldNumber: String, newNumber: String) : Int?
     
     @Query("SELECT * FROM instance")
     suspend fun getAllInstance() : List<Instance>

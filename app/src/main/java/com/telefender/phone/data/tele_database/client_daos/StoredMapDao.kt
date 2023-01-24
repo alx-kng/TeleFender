@@ -47,6 +47,9 @@ interface StoredMapDao {
         return getStoredMap()?.databaseInitialized == true
     }
 
+    /**
+     * Returns whether or not the update was successful.
+     */
     suspend fun updateStoredMap(
         sessionID: String? = null,
         clientKey: String? = null,
@@ -58,7 +61,7 @@ interface StoredMapDao {
         // Retrieves user number if possible and returns if not.
         val userNumber = getUserNumber() ?: return false
 
-        updateStoredMapQuery(
+        val result =  updateStoredMapQuery(
             userNumber = userNumber,
             sessionID = sessionID,
             clientKey = clientKey,
@@ -68,9 +71,13 @@ interface StoredMapDao {
             lastServerRowID = lastServerRowID
         )
 
-        return true
+        return result == 1
     }
 
+    /**
+     * Returns a nullable Int that indicates whether the update was successful. If 1 is returned,
+     * then the update was successful, otherwise the update failed.
+     */
     @Query(
         """UPDATE stored_map SET 
         sessionID =
@@ -119,8 +126,12 @@ interface StoredMapDao {
         databaseInitialized: Boolean?,
         lastLogSyncTime: Long?,
         lastServerRowID: Long?
-    )
+    ) : Int?
 
+    /**
+     * Returns a nullable Int that indicates whether the delete was successful. If 1 is returned,
+     * then the delete was successful, otherwise the delete failed.
+     */
     @Query("DELETE FROM stored_map")
-    suspend fun deleteStoredMap()
+    suspend fun deleteStoredMap() : Int?
 }

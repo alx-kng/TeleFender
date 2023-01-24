@@ -182,34 +182,34 @@ interface AnalyzedNumberDao : ParametersDao, StoredMapDao, UploadAnalyzedQueueDa
         if (instanceNumber == userNumber) {
             initAnalyzedNum(normalizedNumber, instanceNumber)
 
-            updateAnalyzedNumQuery(
+            val result = updateAnalyzedNumQuery(
                 normalizedNumber = normalizedNumber,
                 instanceNumber  = instanceNumber,
                 numTotalCalls = numTotalCalls,
                 analyzedJson = analyzed?.toJson()
             )
 
-            return true
+            return result == 1
         } else {
             // Check if exists before updating.
             if (getAnalyzedNumQuery(normalizedNumber, instanceNumber) == null) {
                 return false
             }
 
-            updateAnalyzedNumQuery(
+            val result = updateAnalyzedNumQuery(
                 normalizedNumber = normalizedNumber,
                 instanceNumber  = instanceNumber,
                 numTotalCalls = numTotalCalls,
                 analyzedJson = analyzed?.toJson()
             )
 
-            return true
+            return result == 1
         }
     }
 
     /**
      * Updates AnalyzedNumber. If trying to update user's AnalyzedNumber and no row exists,
-     * we initialize it. Returns whether row was successfully inserted.
+     * we initialize it. Returns whether row was successfully inserted and updated.
      */
     suspend fun updateAnalyzedNum(analyzedNumber: AnalyzedNumber) : Boolean {
         with(analyzedNumber) {
@@ -218,32 +218,36 @@ interface AnalyzedNumberDao : ParametersDao, StoredMapDao, UploadAnalyzedQueueDa
             if (instanceNumber == userNumber) {
                 initAnalyzedNum(normalizedNumber, instanceNumber)
 
-                updateAnalyzedNumQuery(
+                val result = updateAnalyzedNumQuery(
                     normalizedNumber = normalizedNumber,
                     instanceNumber  = instanceNumber,
                     numTotalCalls = numTotalCalls,
                     analyzedJson = if (analyzedJson.isValidAnalyzed()) analyzedJson else null
                 )
 
-                return true
+                return result == 1
             } else {
                 // Check if exists before updating.
                 if (getAnalyzedNumQuery(normalizedNumber, instanceNumber) == null) {
                     return false
                 }
 
-                updateAnalyzedNumQuery(
+                val result = updateAnalyzedNumQuery(
                     normalizedNumber = normalizedNumber,
                     instanceNumber  = instanceNumber,
                     numTotalCalls = numTotalCalls,
                     analyzedJson = if (analyzedJson.isValidAnalyzed()) analyzedJson else null
                 )
 
-                return true
+                return result == 1
             }
         }
     }
 
+    /**
+     * Returns a nullable Int that indicates whether the update was successful. If 1 is returned,
+     * then the update was successful, otherwise the update failed.
+     */
     @Query(
         """UPDATE analyzed_number SET 
         numTotalCalls =
@@ -265,8 +269,12 @@ interface AnalyzedNumberDao : ParametersDao, StoredMapDao, UploadAnalyzedQueueDa
         instanceNumber: String,
         numTotalCalls: Int?,
         analyzedJson: String?
-    )
+    ) : Int?
 
+    /**
+     * Returns a nullable Int that indicates whether the delete was successful. If 1 is returned,
+     * then the delete was successful, otherwise the delete failed.
+     */
     @Query("DELETE FROM analyzed_number WHERE rowID = :rowID")
-    suspend fun deleteAnalyzedNumber(rowID: Long)
+    suspend fun deleteAnalyzedNumber(rowID: Long) : Int?
 }

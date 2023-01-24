@@ -162,6 +162,9 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
      * Handles new calls from client. Should only be called for syncing call logs. Returns whether
      * or not the CallDetail was inserted or not (may not be inserted if already synced).
      *
+     * NOTE: Throws Exception if the Sync didn't go through, so higher level function must wrap
+     * with try-catch.
+     *
      * NOTE: if you would like to retry the transaction, you must do so yourself in the caller
      * function.
      */

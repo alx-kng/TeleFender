@@ -10,9 +10,15 @@ enum class PrintTypes {
     ANALYZED_NUMBER, CALL_LOG, ERROR_LOG
 }
 
+/**
+ * TODO: Although Timber has it's own enable / disable control, we need to make sure that the
+ *  logger functions are also not enabled during production. We should probably put loggerEnabled
+ *  as a Parameter column.
+ */
 object DatabaseLogger {
 
     private val loggingScope = CoroutineScope(Dispatchers.IO)
+    private var loggerEnabled = true
 
     /**
      * Database debugging logger. Returns Job just in case you would like other suspending code to
@@ -23,7 +29,9 @@ object DatabaseLogger {
         repository: ClientRepository? = null,
         logSelect: List<PrintTypes>,
         callLogAmount: Int? = null
-    ) : Job {
+    ) : Job? {
+        if (!loggerEnabled) return null
+
         return loggingScope.launch {
             var callLogJob : Job? = null
             if (PrintTypes.CALL_LOG in logSelect) {

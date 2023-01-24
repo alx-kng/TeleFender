@@ -12,8 +12,12 @@ interface ContactDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertContact(vararg contact: Contact)
 
+    /**
+     * Returns a nullable Int that indicates whether the update was successful. If 1 is returned,
+     * then the update was successful, otherwise the update failed.
+     */
     @Query("UPDATE contact SET blocked = :blocked WHERE CID = :CID")
-    suspend fun updateContactBlocked(CID: String, blocked: Boolean)
+    suspend fun updateContactBlocked(CID: String, blocked: Boolean) : Int?
 
     @Query("SELECT instanceNumber FROM contact WHERE CID = :CID")
     suspend fun getInstanceNumber(CID: String): String?

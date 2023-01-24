@@ -37,6 +37,10 @@ interface ParametersDao : StoredMapDao {
     }
 
     /**
+     * TODO: Finish including Parameters initialization as part of initialization process!
+     */
+
+    /**
      * Retrieves parameters. If no Parameters available, then initialize values.
      *
      * NOTE: It's STRONGLY advised that you put a try-catch around any use cases of this,
@@ -52,6 +56,11 @@ interface ParametersDao : StoredMapDao {
     @Query("SELECT * FROM parameters WHERE userNumber = :userNumber")
     suspend fun getParametersQuery(userNumber: String) : Parameters?
 
+    /**
+     * TODO: init shouldn't be done here.
+     *
+     * Returns whether or not the update was successful.
+     */
     suspend fun updateParameters(
         shouldUploadAnalyzed: Boolean? = null,
         shouldUploadLogs: Boolean? = null,
@@ -64,7 +73,7 @@ interface ParametersDao : StoredMapDao {
         val userNumber = getUserNumber() ?: return false
         initParameters(userNumber)
 
-        updateParametersQuery(
+        val result = updateParametersQuery(
             userNumber = userNumber,
             shouldUploadAnalyzed = shouldUploadAnalyzed,
             shouldUploadLogs = shouldUploadLogs,
@@ -75,9 +84,13 @@ interface ParametersDao : StoredMapDao {
             outgoingGate = outgoingGate
         )
 
-        return true
+        return result == 1
     }
 
+    /**
+     * Returns a nullable Int that indicates whether the update was successful. If 1 is returned,
+     * then the update was successful, otherwise the update failed.
+     */
     @Query(
         """UPDATE parameters SET
         shouldUploadAnalyzed =
@@ -133,7 +146,7 @@ interface ParametersDao : StoredMapDao {
         superSpamNotifyGate: Int?,
         incomingGate: Int?,
         outgoingGate: Int?
-    )
+    ) : Int?
 
     @Query("DELETE FROM parameters WHERE userNumber = :userNumber")
     suspend fun deleteParameters(userNumber: String)

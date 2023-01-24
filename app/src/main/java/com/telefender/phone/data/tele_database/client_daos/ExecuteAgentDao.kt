@@ -3,8 +3,6 @@ package com.telefender.phone.data.tele_database.client_daos
 import android.provider.CallLog
 import androidx.room.Dao
 import androidx.room.Transaction
-import com.telefender.phone.data.default_database.DefaultContacts.deleteContact
-import com.telefender.phone.data.default_database.DefaultContacts.insertContact
 import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.entities.*
@@ -193,11 +191,14 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
         }
 
         mutexLocks[MutexType.CHANGE]!!.withLock {
-            when(currDataType) {
+            val result = when(currDataType) {
                 GenericDataType.CHANGE_DATA -> deleteChangeLogByRowID(currQTE.linkedRowID)
                 GenericDataType.ANALYZED_DATA -> deleteAnalyzedNumber(currQTE.linkedRowID)
                 GenericDataType.LOG_DATA -> deleteCallDetail(currQTE.linkedRowID)
             }
+
+            // delete query returns 1 if success and anything else if failure.
+            if (result != 1) throw Exception("moveToErrorLogs() - delete $currDataType failed!")
         }
     }
 
@@ -267,6 +268,9 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
     }
 
     /**
+     * TODO: Make sure inserts are verified first before continuing with AnalyzedNumbers. Throw
+     *  error if unsuccessful.
+     *
      * Other part of executeChange(). Handles all non-instance-delete actions.
      */
     @Transaction
@@ -368,6 +372,9 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
     /**
      * Inserts call into CallDetail table and updates AnalyzedNumber. Only updates
      * AnalyzedNumber if it is inserted.
+     *
+     * NOTE: Throws Exception if the Sync didn't go through, so higher level function must wrap
+     * with try-catch.
      *
      * NOTE: Should ONLY be used for SYNCING user's own call logs
      */
@@ -580,7 +587,10 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                 return
             }
 
-            updateContactBlocked(CID, blocked!!)
+            val result = updateContactBlocked(CID, blocked!!)
+
+            // updateContactBlocked() returns 1 if success and anything else if failure.
+            if (result != 1) throw Exception("updateContactBlocked() failed!")
 
             /*
             Only update AnalyzedNumbers for child ContactNumbers if the Contact's instance number
@@ -655,7 +665,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
             Prevents double insertion by checking if number exists first. Also necessary to prevent
             AnalyzedNumber from being updated multiple times for same action.
              */
-            val numberExists = getContactNumbersRow(CID!!, normalizedNumber!!) != null
+            val numberExists = getContactNumberRow(CID!!, normalizedNumber!!) != null
             if (numberExists) {
                 return
             }
@@ -725,7 +735,10 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
         if (null in listOf(CID, normalizedNumber, rawNumber, versionNumber)) {
             throw NullPointerException("CID || oldNumber || rawNumber || versionNumber was null for cnUpdate")
         } else {
-            updateContactNumbers(CID!!, normalizedNumber!!, rawNumber!!, versionNumber)
+            val result = updateContactNumber(CID!!, normalizedNumber!!, rawNumber!!, versionNumber)
+
+            // updateContactNumber() returns 1 if success and anything else if failure.
+            if (result != 1) throw Exception("updateContactNumber() failed!")
         }
     }
 
@@ -743,7 +756,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
             Prevents double deletion by checking if number is already deleted. Also necessary to
             prevent AnalyzedNumber from being updated multiple times for same action.
              */
-            val numberExists = getContactNumbersRow(CID!!, normalizedNumber!!) != null
+            val numberExists = getContactNumberRow(CID!!, normalizedNumber!!) != null
             if (!numberExists) {
                 return
             }
@@ -787,7 +800,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                 }
             }
 
-            deleteContactNumbers(CID, normalizedNumber)
+            deleteContactNumber(CID, normalizedNumber)
         }
     }
 

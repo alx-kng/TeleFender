@@ -40,20 +40,40 @@ interface ChangeLogDao {
     @Query("SELECT errorCounter FROM change_log WHERE changeID = :changeID ")
     suspend fun getChgLogErrorCounter(changeID: String) : Int?
 
+    /**
+     * Returns a nullable Int that indicates whether the update was successful. If 1 is returned,
+     * then the update was successful, otherwise the update failed.
+     */
     @Query("UPDATE change_log SET errorCounter = errorCounter + :counterDelta WHERE changeID = :changeID")
-    suspend fun updateChgLogErrorCounterDelta(changeID: String, counterDelta: Int)
+    suspend fun updateChgLogErrorCounterDelta(changeID: String, counterDelta: Int) : Int?
 
+    /**
+     * Returns a nullable Int that indicates whether the update was successful. If 1 is returned,
+     * then the update was successful, otherwise the update failed.
+     */
     @Query("UPDATE change_log SET errorCounter = :errorCounter WHERE changeID = :changeID")
-    suspend fun updateChgLogErrorCounterAbsolute(changeID: String, errorCounter : Int)
+    suspend fun updateChgLogErrorCounterAbsolute(changeID: String, errorCounter : Int) : Int?
 
+    /**
+     * Returns a nullable Int that indicates whether the delete was successful. If 1 is returned,
+     * then the delete was successful, otherwise the delete failed.
+     */
     @Query("DELETE FROM change_log WHERE changeID = :changeID")
-    suspend fun deleteChangeLogByCHID(changeID: String)
+    suspend fun deleteChangeLogByCHID(changeID: String) : Int?
 
+    /**
+     * Returns a nullable Int that indicates whether the delete was successful. If 1 is returned,
+     * then the delete was successful, otherwise the delete failed.
+     */
     @Query("DELETE FROM change_log WHERE instanceNumber = :instanceNumber")
-    suspend fun deleteChangeLogByINS(instanceNumber: String)
+    suspend fun deleteChangeLogByINS(instanceNumber: String) : Int?
 
+    /**
+     * Returns a nullable Int that indicates whether the delete was successful. If 1 is returned,
+     * then the delete was successful, otherwise the delete failed.
+     */
     @Query("DELETE FROM change_log WHERE rowID = :rowID")
-    suspend fun deleteChangeLogByRowID(rowID: Long)
+    suspend fun deleteChangeLogByRowID(rowID: Long) : Int?
 
     @Query("DELETE FROM change_log")
     suspend fun deleteAllChangeLogs()

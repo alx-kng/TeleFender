@@ -3,7 +3,9 @@ package com.telefender.phone.data.server_related.firebase
 import android.annotation.SuppressLint
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import com.telefender.phone.App
 import com.telefender.phone.helpers.TeleHelpers
+import kotlinx.coroutines.launch
 import timber.log.Timber
 
 // TODO: Fix firebase
@@ -36,33 +38,18 @@ class TeleFirebaseService : FirebaseMessagingService() {
      */
     @SuppressLint("MissingPermission")
     override fun onNewToken(token: String) {
-        Timber.d("${TeleHelpers.DEBUG_LOG_TAG}: Refreshed token: $token")
+        Timber.d("${TeleHelpers.DEBUG_LOG_TAG}: Refreshed Firebase token: $token")
 
-//        runBlocking {
-//            (application as App).applicationScope.launch {
-////                while (applicationContext.getSystemService(TelecomManager::class.java).defaultDialerPackage != applicationContext.packageName
-////                    || !Permissions.hasPermissions(applicationContext, arrayOf(Manifest.permission.READ_CALL_LOG))) {
-//                    delay(500)
-//                    Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: INSIDE NEW TOKEN COROUTINE | HAS CALL LOG PERMISSION: %s", Permissions.hasPermissions(applicationContext, arrayOf(
-//                        Manifest.permission.READ_CALL_LOG)))
-//                }
-//
-//                val tMgr = applicationContext.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
-//                val instanceNumber : String = TeleHelpers.normalizedNumber(tMgr.line1Number)!!
-//                val repository : ClientRepository? = (application as App).repository
-//
-//                var isSetup = repository?.hasCredKey(instanceNumber!!) ?: false
-//                while (!isSetup) {
-//                    delay(500)
-//                    Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: INSIDE GET DATABASE COROUTINE. USER SETUP = %s", isSetup)
-//
-//                    isSetup = repository?.hasCredKey(instanceNumber!!) ?: false
-//                }
-//
-//                repository?.updateKey(instanceNumber, null, token)
-//                //TODO CALL onetime TOKENWORKER HERE
-//            }
-//        }
+        /*
+        Since initFirebase() is called after user setup and database initialization, no need to
+        check here before inserting into database.
+         */
+        (applicationContext as App).applicationScope.launch {
+            val repository = (applicationContext as App).repository
+            repository.updateStoredMap(firebaseToken = token)
+
+
+        }
 
         // If you want to send messages to this application instance or
         // manage this apps subscriptions on the server side, send the

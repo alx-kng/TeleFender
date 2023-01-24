@@ -3,8 +3,6 @@ package com.telefender.phone.data.tele_database
 import android.annotation.SuppressLint
 import android.content.ContentResolver
 import android.content.Context
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -95,10 +93,12 @@ abstract class ClientDatabase : RoomDatabase() {
                     // User setup goes before rest of database, because that may take a long time.
                     database.userSetup(context)
 
-                    // TODO: Fix Firebase
-//                    database.initFirebase()
-
+                    // Rest of database initialization only requires that the core is initialized.
                     database.initRestOfDatabase(context)
+
+                    // Firebase token retrieval and subsequent server upload requires user setup.
+                    database.waitForSetup(context)
+                    database.initFirebase()
 
                     /*
                      Unfortunately, doing setup before results in the waiter in getDatabase() to
@@ -113,6 +113,8 @@ abstract class ClientDatabase : RoomDatabase() {
     }
 
     /**
+     * TODO: Finish initializing parameters!
+     *
      * Makes sure that most important part of database is initialized (particularly, the
      * instance and stored map tables). The instance table stores the foreign key to the contact
      * and contact number tables, so it's crucial that the instance table is created first. The
@@ -140,6 +142,10 @@ abstract class ClientDatabase : RoomDatabase() {
 
             Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
                 "Initial StoredMap - ${this.storedMapDao().getStoredMap()?.userNumber}")
+
+            mutexLocks[MutexType.PARAMETERS]!!.withLock {
+                this.parametersDao().initParameters(instanceNumber)
+            }
 
             // Inserts the single user instance with changeAgentDao
             TableInitializers.initInstance(context, this, instanceNumber)
@@ -170,18 +176,32 @@ abstract class ClientDatabase : RoomDatabase() {
         TableInitializers.initCallDetails(context)
     }
 
+    /**
+     * TODO: Note that the Firebase token isn't crucial to user-flow, as the token is mainly used
+     *  for SMS verification of incoming calls. If we don't have token, then just don't request
+     *  SMS verification from server.
+     *
+     * Retrieves Firebase token.
+     */
     protected fun initFirebase() {
-        // Gets firebase token
         Firebase.messaging.token.addOnCompleteListener(OnCompleteListener { task ->
             if (!task.isSuccessful) {
-                Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: Fetching FCM registration token failed %s", task.exception)
+                Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                    "Fetching FCM registration token failed ${task.exception}")
                 return@OnCompleteListener
             }
 
             // Get new FCM registration token
             val token = task.result
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: TOKEN: %s", token ?: "TOKEN WAS NULL")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: TOKEN: $token")
         })
+    }
+
+    /**
+     * Checks if user is setup.
+     */
+    private suspend fun hasFirebaseToken() : Boolean {
+        return this.storedMapDao().getStoredMap()?.firebaseToken != null
     }
 
     /**
@@ -329,6 +349,10 @@ abstract class ClientDatabase : RoomDatabase() {
                         delay(500)
                     }
 
+                    if (!instanceTemp.hasFirebaseToken()) {
+                        instanceTemp.initFirebase()
+                    }
+
                     OmegaPeriodicScheduler.initiateOneTimeOmegaWorker(context)
                     WorkStates.workWaiter(WorkType.ONE_TIME_OMEGA)
 
@@ -348,7 +372,7 @@ abstract class ClientDatabase : RoomDatabase() {
                     )
 
                     // Wait for logger to finish before initiating OmegaPeriodic.
-                    loggerJob.join()
+                    loggerJob?.join()
 
                     // Initialize Omega Periodic Worker (sync, download, execute, upload)
                     OmegaPeriodicScheduler.initiatePeriodicOmegaWorker(context)

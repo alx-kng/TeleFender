@@ -12,8 +12,12 @@ interface ExecuteQueueDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertQTE(vararg qte: ExecuteQueue)
 
+    /**
+     * Returns a nullable Int that indicates whether the update was successful. If 1 is returned,
+     * then the update was successful, otherwise the update failed.
+     */
     @Query("UPDATE execute_queue SET errorCounter = errorCounter + :counterDelta WHERE rowID = :rowID")
-    suspend fun incrementQTEErrors(rowID: Long, counterDelta: Int)
+    suspend fun incrementQTEErrors(rowID: Long, counterDelta: Int) : Int?
 
     @Query("SELECT EXISTS (SELECT * FROM execute_queue LIMIT 1)")
     suspend fun hasQTE() : Boolean

@@ -90,6 +90,9 @@ class ClientRepository(
         return storedMapDao.getStoredMap()?.lastServerRowID
     }
 
+    /**
+     * Returns whether or not the update was successful.
+     */
     @WorkerThread
     suspend fun updateStoredMap(
         sessionID: String? = null,
@@ -116,11 +119,7 @@ class ClientRepository(
      **********************************************************************************************/
 
     /**
-     * TODO: Perhaps we should include Parameters initialization as part of initialization
-     *  process.
-     *
-     * Gets Parameters associated with user. Requires use of lock since it may initialize the
-     * Parameters if they didn't previously exist (only happens on first access).
+     * Gets Parameters associated with user.
      *
      * NOTE: It's STRONGLY advised that you put a try-catch around any use cases of this,
      * especially if you plan on non-null asserting the return, as there is a real possibility of
@@ -128,9 +127,7 @@ class ClientRepository(
      */
     @WorkerThread
     suspend fun getParameters() : Parameters? {
-        return mutexLocks[MutexType.PARAMETERS]!!.withLock {
-            parametersDao.getParameters()
-        }
+        return parametersDao.getParameters()
     }
 
     @WorkerThread
@@ -439,6 +436,9 @@ class ClientRepository(
     /**
      * Used to add CallDetail to database and update AnalyzedNumber. Returns whether the CallDetail
      * was inserted or not (may not be inserted if log already exists and is synced).
+     *
+     * NOTE: Throws Exception if the Sync didn't go through, so higher level function must wrap
+     * with try-catch.
      *
      * NOTE: if you would like to retry the transaction, you must do so yourself in the caller
      * function.

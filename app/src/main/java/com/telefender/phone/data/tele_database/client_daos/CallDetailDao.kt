@@ -18,6 +18,13 @@ interface CallDetailDao: StoredMapDao {
      *  already wrapped in a Transaction inside ExecuteAgent's logInsert().
      * 
      * Syncs CallDetail from default database with our CallDetails and returns inserted rowID.
+     *
+     * NOTE: Throws Exception if the Sync didn't go through, so higher level function must wrap
+     * with try-catch.
+     *
+     * NOTE: Even if the lastLogSyncTime doesn't get updated correctly, we don't need to retry the
+     * whole log insert (which would've been done by throwing an Exception) because we can
+     * guarantee that on the next log sync, the any log before the lastLogSyncTime is still synced.
      * 
      * NOTE: MUST ONLY BE USED FOR SYNCING CallDetails, since it also updates the lastLogSyncTime
      * in StoredMap.
@@ -30,7 +37,7 @@ interface CallDetailDao: StoredMapDao {
                 by decreasing unnecessary writes.
                  */
                 if (!callSynced(callEpochDate)) {
-                    syncDetail(
+                    val result = syncDetail(
                         rawNumber = rawNumber,
                         normalizedNumber = normalizedNumber,
                         callType = callType,
@@ -41,12 +48,18 @@ interface CallDetailDao: StoredMapDao {
                         instanceNumber = instanceNumber
                     )
 
+                    // syncDetail returns 1 if success and anything else if failure.
+                    if (result != 1) throw Exception("insertCallDetailSync() - syncDetail() failed!")
+
                     updateStoredMap(lastLogSyncTime = callEpochDate)
 
                     return true
                 }
             } else {
-                insertCallDetailIgnore(this)
+                val result = insertCallDetailIgnore(this)
+
+                // insertCallDetailIgnore usually returns -1 if row wasn't inserted.
+                if (result < 0) throw Exception("insertCallDetailSync() - insertCallDetailIgnore() failed!")
 
                 updateStoredMap(lastLogSyncTime = callEpochDate)
 
@@ -68,30 +81,27 @@ interface CallDetailDao: StoredMapDao {
     suspend fun insertCallDetailSkeleton(callDetail: CallDetail) {
         if (callDetailExists(callDetail.callEpochDate)) {
             with(callDetail) {
-                updateUnallowed(callEpochDate, instanceNumber, unallowed)
+                val result = updateUnallowed(callEpochDate, instanceNumber, unallowed)
+
+                // updateUnallowed returns 1 if success and anything else if failure.
+                if (result != 1) throw Exception("insertCallDetailSkeleton() - updateUnallowed() failed!")
             }
         } else {
-            val unSyncedCallDetail = with(callDetail) {
-                CallDetail(
-                    rawNumber = rawNumber,
-                    normalizedNumber = normalizedNumber,
-                    callType = null,
-                    callEpochDate = callEpochDate,
-                    callDuration = callDuration,
-                    callLocation = callLocation,
-                    callDirection = callDirection,
-                    instanceNumber = instanceNumber,
-                    unallowed = unallowed
-                )
-            }
+            // Purposely don't set call type.
+            val unSyncedCallDetail = callDetail.copy(callType = null)
+            val result = insertCallDetailIgnore(unSyncedCallDetail)
 
-            insertCallDetailIgnore(unSyncedCallDetail)
+            // insertCallDetailIgnore usually returns -1 if row wasn't inserted.
+            if (result < 0) throw Exception("insertCallDetailSkeleton() - insertCallDetailIgnore() failed!")
         }
     }
 
     /**
      * TODO: Maybe check for null values to make sure that null values don't override non-null
      *  columns. Also, maybe check that the values are different before updating column.
+     *
+     * Returns a nullable Int that indicates whether the update was successful. If 1 is returned,
+     * then the update was successful, otherwise the update failed.
      */
     @Query("""
         UPDATE call_detail 
@@ -112,8 +122,12 @@ interface CallDetailDao: StoredMapDao {
         callDuration: Long,
         callDirection: Int,
         instanceNumber: String,
-    )
+    ) : Int?
 
+    /**
+     * Returns a nullable Int that indicates whether the update was successful. If 1 is returned,
+     * then the update was successful, otherwise the update failed.
+     */
     @Query("""
         UPDATE call_detail 
         SET unallowed = :unallowed
@@ -123,7 +137,7 @@ interface CallDetailDao: StoredMapDao {
         callEpochDate: Long,
         instanceNumber: String,
         unallowed: Boolean
-    )
+    ) : Int?
 
     @Query("SELECT * FROM call_detail ORDER BY callEpochDate DESC")
     fun getFlowCallDetails(): Flow<List<CallDetail>>
@@ -205,9 +219,17 @@ interface CallDetailDao: StoredMapDao {
      * Deletion functions
      *********************************************************************************************/
 
+    /**
+     * Returns a nullable Int that indicates whether the delete was successful. If 1 is returned,
+     * then the delete was successful, otherwise the delete failed.
+     */
     @Query("DELETE FROM call_detail WHERE rowID = :rowID")
-    suspend fun deleteCallDetail(rowID: Long)
+    suspend fun deleteCallDetail(rowID: Long) : Int?
 
+    /**
+     * Returns a nullable Int that indicates whether the delete was successful. If 1 is returned,
+     * then the delete was successful, otherwise the delete failed.
+     */
     @Query("DELETE FROM call_detail")
     suspend fun deleteAllCallDetails()
 }

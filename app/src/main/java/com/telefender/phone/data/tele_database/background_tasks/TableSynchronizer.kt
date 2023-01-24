@@ -4,9 +4,7 @@ import android.annotation.SuppressLint
 import android.content.ContentResolver
 import android.content.Context
 import android.database.Cursor
-import android.os.Build
 import android.provider.CallLog
-import androidx.annotation.RequiresApi
 import com.telefender.phone.data.default_database.DefaultContacts
 import com.telefender.phone.data.tele_database.ClientDatabase
 import com.telefender.phone.data.tele_database.ClientRepository
@@ -209,7 +207,7 @@ object TableSynchronizer {
                 val matchCID: List<ContactNumber> = database.contactNumberDao().getContactNumbersByCID(teleCID)
 
                 // Corresponding contact numbers (by PK) in our database
-                val matchPK: ContactNumber? = database.contactNumberDao().getContactNumbersRow(teleCID, normalizedNumber)
+                val matchPK: ContactNumber? = database.contactNumberDao().getContactNumberRow(teleCID, normalizedNumber)
 
                 /**
                  * If no ContactNumber have the same CID, that means the corresponding contact
