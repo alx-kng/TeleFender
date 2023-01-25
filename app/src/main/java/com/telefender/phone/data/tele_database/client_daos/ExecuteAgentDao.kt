@@ -213,10 +213,10 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                 return
             }
 
-            val affectedRows = deleteQTE(currQTE.rowID)
+            val rowsAffected = deleteQTE(currQTE.rowID)
 
-            // # affected rows should 1 if success and anything else if failure.
-            if (affectedRows != 1) throw Exception("moveToErrorLogs() - delete QTE = $currQTE failed!")
+            // # rows affected should 1 if success and anything else if failure.
+            if (rowsAffected != 1) throw Exception("moveToErrorLogs() - delete QTE = $currQTE failed!")
         }
     }
 
@@ -946,7 +946,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
         val qteRowsAffected = deleteQTE(qteRowID)
 
         // qteRowsAffected should be 1 if success and anything else if failure.
-        if (instanceRowsAffected != 1) throw Exception("finalDelete() - deleteQTE() failed!")
+        if (qteRowsAffected != 1) throw Exception("finalDelete() - deleteQTE() failed!")
     }
 
     suspend fun changeDegreeString(degreeString: String, degree: Int, remove: Boolean) : String {
