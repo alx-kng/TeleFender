@@ -7,6 +7,7 @@ import android.app.NotificationManager
 import android.app.role.RoleManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.database.ContentObserver
 import android.os.Build
 import android.os.Bundle
@@ -22,7 +23,9 @@ import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.PermissionChecker
 import androidx.core.net.toUri
+import androidx.databinding.DataBindingUtil.setContentView
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
@@ -32,8 +35,9 @@ import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.databinding.ActivityMainBinding
 import com.telefender.phone.gui.model.*
 import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.permissions.PermissionRequestType
 import com.telefender.phone.permissions.Permissions
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import timber.log.Timber
 
 
@@ -85,15 +89,70 @@ class MainActivity : AppCompatActivity() {
     private val startForResult = registerForActivityResult(ActivityResultContracts.StartActivityForResult())
     { result: ActivityResult ->
         if (result.resultCode == Activity.RESULT_OK) {
-            val notificationManager = applicationContext.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-            if (!notificationManager.isNotificationPolicyAccessGranted) {
-                val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
-                startActivityForResult(intent, 120)
+            /*
+            Due to a bug that prevents the default dialer from receiving the READ_PHONE_NUMBERS
+            permission (SDK > 29) automatically, we need to request the permission separately.
+             */
+            if (!Permissions.hasPhoneStatePermissions(this)) {
+                Permissions.phoneStatePermissions(this)
             }
         } else {
-            Permissions.coreAltPermissions(this, this)
+            Permissions.coreAltPermissions(this)
         }
     }
+
+    /**
+     * TODO: Fully make use of onRequestPermissionsResult()
+     *
+     * Basically, when any permission request's result is returned, onRequestPermissionsResult()
+     * is called.
+     *
+     * @param [requestCode] is the requestCode you passed into the permission request and
+     * can be used to differentiate between different permission requests.
+     *
+     * @param [permissions] is the array of permissions you requested
+     *
+     * @param [grantResults] is an array of same size of [permissions], where each index either
+     * stores a [PackageManager.PERMISSION_GRANTED] or [PackageManager.PERMISSION_DENIED] to
+     * indicate whether the corresponding permission by index in [permissions] was granted.
+     */
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        when (requestCode) {
+            PermissionRequestType.CORE_ALT.requestCode -> {
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CORE_ALT Permissions result!")
+            }
+            PermissionRequestType.PHONE_STATE.requestCode -> {
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: PHONE_STATE Permissions result!")
+
+                if (grantResults.first() == PackageManager.PERMISSION_GRANTED) {
+                    Permissions.doNotDisturbPermission(this)
+                }
+            }
+            PermissionRequestType.NOTIFICATIONS.requestCode -> {
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: NOTIFICATIONS Permissions result!")
+            }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun makeCallNoParam() {
+        try {
+            val telecomManager = getSystemService(Context.TELECOM_SERVICE) as TelecomManager
+            val number = dialerViewModel.dialNumber.value
+            val uri = "tel:${number}".toUri()
+            telecomManager.placeCall(uri, null)
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OUTGOING CALL TO $number")
+        } catch (e: Exception) {
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: OUTGOING CALL FAILED!")
+        }
+    }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -264,30 +323,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun offerReplacingDefaultDialer() {
-        if (getSystemService(TelecomManager::class.java).defaultDialerPackage != packageName) {
+        if (!Permissions.isDefaultDialer(this)) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                val roleManager : RoleManager = getSystemService(Context.ROLE_SERVICE) as RoleManager
-                val intent : Intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_DIALER)
+                val roleManager = getSystemService(Context.ROLE_SERVICE) as RoleManager
+                val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_DIALER)
                     .putExtra(TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, packageName)
+
                 startForResult.launch(intent)
             } else {
                 val intent = Intent(TelecomManager.ACTION_CHANGE_DEFAULT_DIALER)
                     .putExtra(TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, packageName)
+
                 startForResult.launch(intent)
             }
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    fun makeCallNoParam() {
-        try {
-            val telecomManager = getSystemService(Context.TELECOM_SERVICE) as TelecomManager
-            val number = dialerViewModel.dialNumber.value
-            val uri = "tel:${number}".toUri()
-            telecomManager.placeCall(uri, null)
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OUTGOING CALL TO $number")
-        } catch (e: Exception) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: OUTGOING CALL FAILED!")
         }
     }
 

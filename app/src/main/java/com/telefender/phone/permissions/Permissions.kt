@@ -2,14 +2,23 @@ package com.telefender.phone.permissions
 
 import android.Manifest.permission.*
 import android.app.Activity
+import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.provider.Settings
 import android.telecom.TelecomManager
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.app.ActivityCompat.startActivityForResult
 import com.telefender.phone.helpers.TeleHelpers
 import timber.log.Timber
 
+enum class PermissionRequestType(val requestCode: Int) {
+    CORE_ALT(1), PHONE_STATE(2), DO_NOT_DISTURB(3),
+    NOTIFICATIONS(4)
+}
 
 /**
  * TODO: Eventually include shouldShowRequestPermissionRationale()
@@ -19,6 +28,8 @@ import timber.log.Timber
 object Permissions {
 
     /**
+     * TODO: READ_PHONE_NUMBERS isn't being granted to default dialer. SUMMARIZE SOLUTION.
+     *
      * READ_PHONE_STATE is used for SDK <= 29 and READ_PHONE_NUMBERS is used for SDK > 29. These
      * permissions are used to get stuff like the user's number.
      */
@@ -51,33 +62,43 @@ object Permissions {
     }
 
     /**
-     * TODO: Find out more about this "request code" bullshit.
-     *
      * Requests core permissions (e.g., READ_CONTACTS, READ_CALL_LOG, READ_PHONE_STATE). Used when
-     * the default dialer permissions aren't granted.
+     * the default dialer permissions aren't granted. Request code is used in
+     * onRequestPermissionsResult() so that you know which permission the result is for.
      */
-    fun coreAltPermissions(context: Context, activity: Activity) {
+    fun coreAltPermissions(activity: Activity) {
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: coreAltPermissions() called")
 
-        /*
-        Old guy's comment -> The request code is used in ActivityCompat.requestPermissions() and
-        returned in the Activity's onRequestPermissionsResult().
-         */
-        val requestCode = 1
         val permissions = arrayOf(
             phoneStatePermission,
             READ_CALL_LOG,
             READ_CONTACTS,
         )
 
-        if (!hasPermissions(context, permissions)) {
-            ActivityCompat.requestPermissions(activity, permissions, requestCode)
+        if (!hasPermissions(activity, permissions)) {
+            ActivityCompat.requestPermissions(
+                activity,
+                permissions,
+                PermissionRequestType.CORE_ALT.requestCode
+            )
         } 
+    }
+
+    fun phoneStatePermissions(activity: Activity) {
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: phoneStatePermissions() called")
+
+        if (!hasPermissions(activity, arrayOf(phoneStatePermission))) {
+            ActivityCompat.requestPermissions(
+                activity,
+                arrayOf(phoneStatePermission),
+                PermissionRequestType.PHONE_STATE.requestCode
+            )
+        }
     }
 
     fun hasPhoneStatePermissions(context: Context) : Boolean {
         return isDefaultDialer(context)
-            || hasPermissions(context, arrayOf(phoneStatePermission))
+            && hasPermissions(context, arrayOf(phoneStatePermission))
     }
 
     fun hasLogPermissions(context: Context) : Boolean {
@@ -91,11 +112,27 @@ object Permissions {
     }
 
     /**
+     * Requests Do Not Disturb permissions. Technically not a normal permission request; however,
+     * we still classify Do Not Disturb and its requestCode in PermissionType.
+     */
+    fun doNotDisturbPermission(activity: Activity) {
+        val notificationManager = activity.getSystemService(AppCompatActivity.NOTIFICATION_SERVICE) as NotificationManager
+        if (!notificationManager.isNotificationPolicyAccessGranted) {
+            val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+            activity.startActivityForResult(intent, PermissionRequestType.DO_NOT_DISTURB.requestCode)
+        }
+    }
+
+    /**
      * Requests the POST_NOTIFICATIONS permission if the app doesn't currently have it and needs it.
      */
     fun notificationPermission(context: Context, activity: Activity) {
         if (!hasNotificationPermission(context)) {
-            ActivityCompat.requestPermissions(activity, arrayOf(POST_NOTIFICATIONS), 1)
+            ActivityCompat.requestPermissions(
+                activity,
+                arrayOf(POST_NOTIFICATIONS),
+                PermissionRequestType.NOTIFICATIONS.requestCode
+            )
         }
     }
 

@@ -7,6 +7,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.google.android.gms.common.config.GservicesValue.isInitialized
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.ktx.messaging
@@ -85,7 +86,7 @@ abstract class ClientDatabase : RoomDatabase() {
                 scope.launch {
                     firstTimeAccess = true
 
-                    database.waitForLogPermissions(context, "CALLBACK")
+                    database.waitForCorePermissions(context, "CALLBACK     ")
 
                     database.initCoreDatabase(context)
                     database.waitForInitialization(context, scope)
@@ -205,16 +206,20 @@ abstract class ClientDatabase : RoomDatabase() {
     }
 
     /**
-     * DANGEROUS! Waits for call log permission before continuing. This can cause an infinite
-     * loop if not called at the right location.
+     * DANGEROUS! Waits for CALL_LOG and PHONE_STATE permissions before continuing. This can cause
+     * an infinite loop if not called at the right location.
      */
-    protected suspend fun waitForLogPermissions(context: Context, invokeLocation: String) {
-        while (!Permissions.hasLogPermissions(context)) {
+    protected suspend fun waitForCorePermissions(context: Context, invokeLocation: String) {
+        while (!Permissions.hasLogPermissions(context)
+            || !Permissions.hasPhoneStatePermissions(context)
+        ) {
             delay(500)
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: INSIDE $invokeLocation | HAS CALL LOG PERMISSION: " +
-                "${Permissions.hasLogPermissions(context)}")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: INSIDE $invokeLocation | " +
+                "HAS CALL LOG PERMISSION: ${Permissions.hasLogPermissions(context)} | " +
+                "HAS PHONE STATE PERMISSION: ${Permissions.hasPhoneStatePermissions(context)}")
         }
     }
+
 
     /**
      * Not only waits for core database initialization, but also restarts initialization if it not
@@ -336,7 +341,7 @@ abstract class ClientDatabase : RoomDatabase() {
 
             runBlocking {
                 scope.launch {
-                    instanceTemp.waitForLogPermissions(context, "getDatabase()")
+                    instanceTemp.waitForCorePermissions(context, "getDatabase()")
 
                     // TODO: Probably need to restart firebase initialization process too.
                     // Waits for / restarts core database initialization and user setup.
