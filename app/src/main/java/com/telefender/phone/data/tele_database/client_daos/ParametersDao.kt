@@ -148,6 +148,10 @@ interface ParametersDao : StoredMapDao {
         outgoingGate: Int?
     ) : Int?
 
+    /**
+     * Returns a nullable Int that indicates whether the delete was successful. If 1 is returned,
+     * then the delete was successful, otherwise the delete failed.
+     */
     @Query("DELETE FROM parameters WHERE userNumber = :userNumber")
-    suspend fun deleteParameters(userNumber: String)
+    suspend fun deleteParameters(userNumber: String) : Int?
 }

@@ -75,6 +75,11 @@ interface ChangeLogDao {
     @Query("DELETE FROM change_log WHERE rowID = :rowID")
     suspend fun deleteChangeLogByRowID(rowID: Long) : Int?
 
+    /**
+     * Returns a nullable Int that indicates whether the delete was successful (number of rows
+     * delete). If a value >0 is returned, then the delete was at least partially successful,
+     * otherwise the delete completely failed (if there were existing rows).
+     */
     @Query("DELETE FROM change_log")
     suspend fun deleteAllChangeLogs()
 }

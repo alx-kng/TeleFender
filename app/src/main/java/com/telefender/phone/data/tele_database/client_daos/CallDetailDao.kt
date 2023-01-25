@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 interface CallDetailDao: StoredMapDao {
 
     /**
-     * Inserts CallDetail and returns inserted rowID.
+     * Inserts CallDetail and returns inserted rowID. Probably returns -1 if insert failure.
      */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertCallDetailIgnore(callDetail: CallDetail) : Long
@@ -227,9 +227,10 @@ interface CallDetailDao: StoredMapDao {
     suspend fun deleteCallDetail(rowID: Long) : Int?
 
     /**
-     * Returns a nullable Int that indicates whether the delete was successful. If 1 is returned,
-     * then the delete was successful, otherwise the delete failed.
+     * Returns a nullable Int that indicates whether the delete was successful (number of rows
+     * delete). If a value >0 is returned, then the delete was at least partially successful,
+     * otherwise the delete completely failed (if there were existing rows).
      */
     @Query("DELETE FROM call_detail")
-    suspend fun deleteAllCallDetails()
+    suspend fun deleteAllCallDetails() : Int?
 }

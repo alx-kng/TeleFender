@@ -9,8 +9,11 @@ import com.telefender.phone.data.tele_database.entities.ContactNumber
 @Dao
 interface ContactNumberDao {
 
+    /**
+     * Inserts ContactNumber and returns inserted rowID. Probably returns -1 if insert failure.
+     */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertContactNumbers(contactNumber: ContactNumber)
+    suspend fun insertContactNumbers(contactNumber: ContactNumber) : Long
 
     /**
      * We clean old rawNumber so that we can update with PK (CID and normalizedNumber).
@@ -52,11 +55,20 @@ interface ContactNumberDao {
     @Query("SELECT COUNT(CID) FROM contact_number")
     suspend fun getContactNumberSize() : Int?
 
+    /**
+     * Returns a nullable Int that indicates whether the delete was successful. If 1 is returned,
+     * then the delete was successful, otherwise the delete failed.
+     */
     @Query("DELETE FROM contact_number WHERE CID = :CID AND normalizedNumber = :normalizedNumber")
-    suspend fun deleteContactNumber(CID: String, normalizedNumber: String)
+    suspend fun deleteContactNumber(CID: String, normalizedNumber: String) : Int?
 
+    /**
+     * Returns a nullable Int that indicates whether the delete was successful (number of rows
+     * delete). If a value >0 is returned, then the delete was at least partially successful,
+     * otherwise the delete completely failed (if there were existing rows).
+     */
     @Query("DELETE FROM contact_number WHERE normalizedNumber = :normalizedNumber")
-    suspend fun deleteContactNumber(normalizedNumber: String)
+    suspend fun deleteContactNumber(normalizedNumber: String) : Int?
 
     @Query("DELETE FROM contact_number")
     suspend fun deleteAllContactNumbers()

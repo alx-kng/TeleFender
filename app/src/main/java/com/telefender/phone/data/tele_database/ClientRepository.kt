@@ -298,16 +298,22 @@ class ClientRepository(
         return uploadChangeQueueDao.hasChangeQTU()
     }
 
+    /**
+     * Returns number of rows deleted or null.
+     */
     @WorkerThread
-    suspend fun deleteChangeQTUInclusive(linkedRowID: Long) {
-        mutexLocks[MutexType.UPLOAD_ANALYZED]!!.withLock {
+    suspend fun deleteChangeQTUInclusive(linkedRowID: Long) : Int? {
+        return mutexLocks[MutexType.UPLOAD_ANALYZED]!!.withLock {
             uploadChangeQueueDao.deleteChangeQTUInclusive(linkedRowID)
         }
     }
 
+    /**
+     * Returns number of rows deleted or null.
+     */
     @WorkerThread
-    suspend fun deleteChangeQTUExclusive(linkedRowID: Long) {
-        mutexLocks[MutexType.UPLOAD_ANALYZED]!!.withLock {
+    suspend fun deleteChangeQTUExclusive(linkedRowID: Long) : Int? {
+        return mutexLocks[MutexType.UPLOAD_ANALYZED]!!.withLock {
             uploadChangeQueueDao.deleteChangeQTUExclusive(linkedRowID)
         }
     }
@@ -336,16 +342,22 @@ class ClientRepository(
         return uploadAnalyzedQueueDao.hasAnalyzedQTU()
     }
 
+    /**
+     * Returns number of rows deleted or null.
+     */
     @WorkerThread
-    suspend fun deleteAnalyzedQTUInclusive(linkedRowID: Long) {
-        mutexLocks[MutexType.UPLOAD_ANALYZED]!!.withLock {
+    suspend fun deleteAnalyzedQTUInclusive(linkedRowID: Long) : Int? {
+        return mutexLocks[MutexType.UPLOAD_ANALYZED]!!.withLock {
             uploadAnalyzedQueueDao.deleteAnalyzedQTUInclusive(linkedRowID)
         }
     }
 
+    /**
+     * Returns number of rows deleted or null.
+     */
     @WorkerThread
-    suspend fun deleteAnalyzedQTUExclusive(linkedRowID: Long) {
-        mutexLocks[MutexType.UPLOAD_ANALYZED]!!.withLock {
+    suspend fun deleteAnalyzedQTUExclusive(linkedRowID: Long) : Int? {
+        return mutexLocks[MutexType.UPLOAD_ANALYZED]!!.withLock {
             uploadAnalyzedQueueDao.deleteAnalyzedQTUExclusive(linkedRowID)
         }
     }
@@ -374,16 +386,22 @@ class ClientRepository(
         return errorQueueDao.hasErrorLog()
     }
 
+    /**
+     * Returns number of rows deleted or null.
+     */
     @WorkerThread
-    suspend fun deleteErrorLogInclusive(linkedRowID: Long) {
-        mutexLocks[MutexType.ERROR_LOG]!!.withLock {
+    suspend fun deleteErrorLogInclusive(linkedRowID: Long) : Int? {
+        return mutexLocks[MutexType.ERROR_LOG]!!.withLock {
             errorQueueDao.deleteErrorLogInclusive(linkedRowID)
         }
     }
 
+    /**
+     * Returns number of rows deleted or null.
+     */
     @WorkerThread
-    suspend fun deleteErrorLogExclusive(linkedRowID: Long) {
-        mutexLocks[MutexType.ERROR_LOG]!!.withLock {
+    suspend fun deleteErrorLogExclusive(linkedRowID: Long) : Int? {
+        return mutexLocks[MutexType.ERROR_LOG]!!.withLock {
             errorQueueDao.deleteErrorLogExclusive(linkedRowID)
         }
     }

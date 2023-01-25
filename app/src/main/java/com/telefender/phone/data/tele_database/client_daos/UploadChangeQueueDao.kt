@@ -36,15 +36,27 @@ interface UploadChangeQueueDao {
     @Query("SELECT EXISTS (SELECT * FROM upload_change_queue LIMIT 1)")
     suspend fun hasChangeQTU() : Boolean
 
+    /**
+     * Returns a nullable Int that indicates whether the delete was successful. If 1 is returned,
+     * then the delete was successful, otherwise the delete failed.
+     */
     @Query("DELETE FROM upload_change_queue WHERE linkedRowID = :linkedRowID")
-    suspend fun deleteChangeQTU(linkedRowID: Long)
+    suspend fun deleteChangeQTU(linkedRowID: Long) : Int?
 
-    @Query("DELETE FROM upload_change_queue")
-    suspend fun deleteAllChangeQTU()
+    /**********************************************************************************************
+     * Queries that can delete multiple rows.
+     *
+     * Returns a nullable Int that indicates whether the delete was successful (number of rows
+     * delete). If a value >0 is returned, then the delete was at least partially successful,
+     * otherwise the delete completely failed (if there were existing rows).
+     **********************************************************************************************/
     
     @Query("DELETE FROM upload_change_queue WHERE linkedRowID <= :linkedRowID")
-    suspend fun deleteChangeQTUInclusive(linkedRowID: Long)
+    suspend fun deleteChangeQTUInclusive(linkedRowID: Long) : Int?
 
     @Query("DELETE FROM upload_change_queue WHERE linkedRowID < :linkedRowID")
-    suspend fun deleteChangeQTUExclusive(linkedRowID: Long)
+    suspend fun deleteChangeQTUExclusive(linkedRowID: Long) : Int?
+
+    @Query("DELETE FROM upload_change_queue")
+    suspend fun deleteAllChangeQTU() : Int?
 }

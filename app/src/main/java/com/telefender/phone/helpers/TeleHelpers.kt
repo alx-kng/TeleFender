@@ -1,8 +1,12 @@
 package com.telefender.phone.helpers
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.os.Build
 import android.provider.CallLog
+import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
+import androidx.core.content.getSystemService
 import com.google.i18n.phonenumbers.PhoneNumberUtil
 import com.telefender.phone.App
 import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
@@ -75,21 +79,38 @@ object TeleHelpers {
     }
 
     /**
+     * TODO: Double check if subscription manager retrieval of user's number works or not.
+     * TODO: Handle multiple sim cards (numbers) for one phone.
+     *
      * Gets user's phone number. Tries to retrieve from own database before resorting to retrieving
      * using permissions.
      */
+    @SuppressLint("MissingPermission")
     fun getUserNumberUncertain(context: Context) : String? {
         val databaseNumber = runBlocking(Dispatchers.Default) {
             getUserNumberStored(context)
         }
 
         return databaseNumber ?:
-            if (!Permissions.hasPhoneStatePermissions(context)) {
+            if (Permissions.hasPhoneStatePermissions(context)) {
                 Timber.e("$DEBUG_LOG_TAG: User number was null due to lack of permissions!!!")
                 return null
             } else {
-                val tMgr = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-                val number = tMgr.line1Number
+                /*
+                Android 13 and above deprecates getLine1Number() for retrieving the user's number.
+                Instead, we must use the SubscriptionManager's getPhoneNumber(), which allows for
+                the retrieval of the user's different numbers (if they have multiple sim cards).
+                The current guess is that DEFAULT_SUBSCRIPTION_ID gives the original phone
+                account / number, which will just use for now.
+                 */
+                val number = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    val sMgr = context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE) as SubscriptionManager
+                    sMgr.getPhoneNumber(SubscriptionManager.DEFAULT_SUBSCRIPTION_ID)
+                } else {
+                    val tMgr = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+                    tMgr.line1Number
+                }
+
                 return normalizedNumber(number) ?: bareNumber(number)
             }
     }

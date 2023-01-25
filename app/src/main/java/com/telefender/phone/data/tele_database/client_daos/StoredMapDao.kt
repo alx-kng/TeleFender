@@ -129,8 +129,11 @@ interface StoredMapDao {
     ) : Int?
 
     /**
-     * Returns a nullable Int that indicates whether the delete was successful. If 1 is returned,
-     * then the delete was successful, otherwise the delete failed.
+     * Returns a nullable Int that indicates whether the delete was successful (number of rows
+     * delete). If a value >0 is returned, then the delete was at least partially successful,
+     * otherwise the delete completely failed (if there were existing rows).
+     *
+     * NOTE: Since we assume / enforce only one StoreMap row, the query should return 1 if successful.
      */
     @Query("DELETE FROM stored_map")
     suspend fun deleteStoredMap() : Int?

@@ -37,15 +37,27 @@ interface UploadAnalyzedQueueDao {
     @Query("SELECT EXISTS (SELECT * FROM upload_analyzed_queue LIMIT 1)")
     suspend fun hasAnalyzedQTU() : Boolean
 
+    /**
+     * Returns a nullable Int that indicates whether the delete was successful. If 1 is returned,
+     * then the delete was successful, otherwise the delete failed.
+     */
     @Query("DELETE FROM upload_analyzed_queue WHERE linkedRowID = :linkedRowID")
-    suspend fun deleteAnalyzedQTU(linkedRowID: Long)
+    suspend fun deleteAnalyzedQTU(linkedRowID: Long) : Int?
 
-    @Query("DELETE FROM upload_analyzed_queue")
-    suspend fun deleteAllAnalyzedQTU()
+    /**********************************************************************************************
+     * Queries that can delete multiple rows.
+     *
+     * Returns a nullable Int that indicates whether the delete was successful (number of rows
+     * delete). If a value >0 is returned, then the delete was at least partially successful,
+     * otherwise the delete completely failed (if there were existing rows).
+     **********************************************************************************************/
 
     @Query("DELETE FROM upload_analyzed_queue WHERE linkedRowID <= :linkedRowID")
-    suspend fun deleteAnalyzedQTUInclusive(linkedRowID: Long)
+    suspend fun deleteAnalyzedQTUInclusive(linkedRowID: Long) : Int?
 
     @Query("DELETE FROM upload_analyzed_queue WHERE linkedRowID < :linkedRowID")
-    suspend fun deleteAnalyzedQTUExclusive(linkedRowID: Long)
+    suspend fun deleteAnalyzedQTUExclusive(linkedRowID: Long) : Int?
+
+    @Query("DELETE FROM upload_analyzed_queue")
+    suspend fun deleteAllAnalyzedQTU() : Int?
 }

@@ -182,23 +182,41 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
         currQTE: ExecuteQueue,
         currDataType: GenericDataType
     ) {
+        /*
+        We don't check if insertion was successful here, as we just want to move on.
+         */
         mutexLocks[MutexType.ERROR_LOG]!!.withLock {
             insertErrorLog(currErrorLog)
         }
 
-        mutexLocks[MutexType.EXECUTE]!!.withLock {
-            deleteQTE(currQTE.rowID)
+        /*
+        We also don't check if deletion was successful here, as we don't want possible errors like
+        missing corresponding data to stop us from moving on.
+         */
+        when(currDataType) {
+            GenericDataType.CHANGE_DATA -> mutexLocks[MutexType.CHANGE]!!.withLock {
+                deleteChangeLogByRowID(currQTE.linkedRowID)
+            }
+            GenericDataType.ANALYZED_DATA -> mutexLocks[MutexType.ANALYZED]!!.withLock {
+                deleteAnalyzedNumber(currQTE.linkedRowID)
+            }
+            GenericDataType.LOG_DATA -> mutexLocks[MutexType.CALL_DETAIL]!!.withLock {
+                deleteCallDetail(currQTE.linkedRowID)
+            }
         }
 
-        mutexLocks[MutexType.CHANGE]!!.withLock {
-            val result = when(currDataType) {
-                GenericDataType.CHANGE_DATA -> deleteChangeLogByRowID(currQTE.linkedRowID)
-                GenericDataType.ANALYZED_DATA -> deleteAnalyzedNumber(currQTE.linkedRowID)
-                GenericDataType.LOG_DATA -> deleteCallDetail(currQTE.linkedRowID)
+        mutexLocks[MutexType.EXECUTE]!!.withLock {
+            val qteDeleted = getQTE(currQTE.rowID) == null
+            if (qteDeleted) {
+                Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                    "moveToErrorLogs() - QTE = $currQTE already deleted!")
+                return
             }
 
-            // delete query returns 1 if success and anything else if failure.
-            if (result != 1) throw Exception("moveToErrorLogs() - delete $currDataType failed!")
+            val affectedRows = deleteQTE(currQTE.rowID)
+
+            // # affected rows should 1 if success and anything else if failure.
+            if (affectedRows != 1) throw Exception("moveToErrorLogs() - delete QTE = $currQTE failed!")
         }
     }
 
@@ -564,8 +582,23 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
         if (null in listOf(CID, instanceNumber)) {
             throw NullPointerException("CID || instanceNumber was null for cInsert")
         } else {
-            val contact = Contact(CID!!, instanceNumber!!)
-            insertContact(contact)
+            /*
+            Prevents double insertion by checking if contact exists first.
+            Especially required since the section below will fail out for duplicate inserts.
+             */
+            val numberExists = getContactRow(CID!!) != null
+            if (numberExists) {
+                Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                    "Duplicate cInsert() for CID = $CID | instanceNumber = $instanceNumber")
+                return
+            }
+
+            val result = insertContact(
+                Contact(CID = CID, instanceNumber = instanceNumber!!)
+            )
+
+            // insertContact() usually returns -1 if row wasn't inserted.
+            if (result < 0) throw Exception("cInsert() - insertContact() failed!")
         }
     }
 
@@ -581,16 +614,20 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
             /*
             Ensures current blocked status is different from the passed in blocked value
             (to prevent duplicate update of AnalyzedNumber and unnecessary Contact update).
+            Especially required since the section below will fail out for duplicate updates.
+            Also, we just check if contact exists for safety.
              */
             val currBlockedStatus = contactBlocked(CID!!)
-            if (currBlockedStatus == blocked) {
+            if (currBlockedStatus == null || currBlockedStatus == blocked!!) {
+                Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                    "Duplicate cUpdate() for CID = $CID | instanceNumber = $instanceNumber | blocked = $blocked")
                 return
             }
 
-            val result = updateContactBlocked(CID, blocked!!)
+            val result = updateContactBlocked(CID, blocked)
 
             // updateContactBlocked() returns 1 if success and anything else if failure.
-            if (result != 1) throw Exception("updateContactBlocked() failed!")
+            if (result != 1) throw Exception("cUpdate() - updateContactBlocked() failed!")
 
             /*
             Only update AnalyzedNumbers for child ContactNumbers if the Contact's instance number
@@ -630,8 +667,16 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
             throw NullPointerException("CID was null for cDelete")
         } else {
             /*
-            Gets all contact numbers associated with that contact and deletes them as well.
+            Prevents double deletion by checking if contact is deleted first.
+            Especially required since the section below will fail out for duplicate deletes.
              */
+            val contactDeleted = getContactRow(CID) == null
+            if (contactDeleted) {
+                Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: Duplicate cDelete() for CID = $CID")
+                return
+            }
+
+            // Gets all contact numbers associated with that contact and deletes them as well.
             val contactNumberChildren : List<ContactNumber> = getContactNumbersByCID(CID)
             for (contactNumber in contactNumberChildren) {
                 with(contactNumber) {
@@ -639,7 +684,10 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                 }
             }
 
-            deleteContact(CID)
+            val result = deleteContact(CID)
+
+            // deleteContact() returns 1 if success and anything else if failure.
+            if (result != 1) throw Exception("cDelete() - deleteContact() failed!")
         }
     }
 
@@ -664,22 +712,28 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
             /*
             Prevents double insertion by checking if number exists first. Also necessary to prevent
             AnalyzedNumber from being updated multiple times for same action.
+            Especially required since the section below will fail out for duplicate inserts.
              */
             val numberExists = getContactNumberRow(CID!!, normalizedNumber!!) != null
             if (numberExists) {
+                Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                    "Duplicate cInsert() for CID = $CID | normalizedNumber = $normalizedNumber | instanceNumber = $instanceNumber")
                 return
             }
 
             val contactNumber = ContactNumber(
-                CID,
-                normalizedNumber,
-                defaultCID!!,
-                rawNumber!!,
-                instanceNumber,
-                versionNumber!!,
-                degree!!
+                CID = CID,
+                normalizedNumber = normalizedNumber,
+                defaultCID = defaultCID!!,
+                rawNumber = rawNumber!!,
+                instanceNumber = instanceNumber,
+                versionNumber = versionNumber!!,
+                degree = degree!!
             )
-            insertContactNumbers(contactNumber)
+            val result = insertContactNumbers(contactNumber)
+
+            // insertContactNumber() usually returns -1 if row wasn't inserted.
+            if (result < 0) throw Exception("cnInsert() - insertContactNumber() failed!")
 
             /*
             If number is added as a direct contact (instanceNumber = userNumber), set isBlocked to
@@ -735,7 +789,18 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
         if (null in listOf(CID, normalizedNumber, rawNumber, versionNumber)) {
             throw NullPointerException("CID || oldNumber || rawNumber || versionNumber was null for cnUpdate")
         } else {
-            val result = updateContactNumber(CID!!, normalizedNumber!!, rawNumber!!, versionNumber)
+            /*
+            Ensures current rawNumber is different from the passed in rawNumber to prevent duplicate
+            updates. Also, we just check if contactNumber exists for safety.
+             */
+            val currRawNumber = getContactNumberRow(CID!!, normalizedNumber!!)?.rawNumber
+            if (currRawNumber == null || currRawNumber == rawNumber!!) {
+                Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                    "Duplicate cnUpdate() for CID = $CID | normalizedNumber = $normalizedNumber | rawNumber = $rawNumber")
+                return
+            }
+
+            val result = updateContactNumber(CID, normalizedNumber, rawNumber, versionNumber)
 
             // updateContactNumber() returns 1 if success and anything else if failure.
             if (result != 1) throw Exception("updateContactNumber() failed!")
@@ -755,9 +820,12 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
             /*
             Prevents double deletion by checking if number is already deleted. Also necessary to
             prevent AnalyzedNumber from being updated multiple times for same action.
+            Especially required since the section below will fail out for duplicate deletes.
              */
-            val numberExists = getContactNumberRow(CID!!, normalizedNumber!!) != null
-            if (!numberExists) {
+            val numberDeleted = getContactNumberRow(CID!!, normalizedNumber!!) == null
+            if (numberDeleted) {
+                Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                    "Duplicate cDelete() for CID = $CID | normalizedNumber = $normalizedNumber | instanceNumber = $instanceNumber")
                 return
             }
 
@@ -800,7 +868,10 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                 }
             }
 
-            deleteContactNumber(CID, normalizedNumber)
+            val result = deleteContactNumber(CID, normalizedNumber)
+
+            // deleteContactNumber() returns 1 if success and anything else if failure.
+            if (result != 1) throw Exception("cnDelete() - deleteContactNumber() failed!")
         }
     }
 
@@ -814,8 +885,10 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
         if (instanceNumber == null) {
             throw NullPointerException("instanceNumber was null for insInsert")
         } else {
-            val instance = Instance(instanceNumber)
-            insertInstanceNumbers(instance)
+
+            insertInstanceNumber(
+                Instance(instanceNumber)
+            )
         }
     }
 
@@ -864,10 +937,16 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
      */
     @Transaction
     suspend fun finalDelete(changeLog: ChangeLog, instance: Instance, qteRowID: Long) {
-        deleteInstanceNumbers(instance)
+        val instanceRowsAffected = deleteInstanceNumber(instance)
+
+        // instanceRowsAffected should be 1 if success and anything else if failure.
+        if (instanceRowsAffected != 1) throw Exception("finalDelete() - deleteInstanceNumber() failed!")
 
         // Instance delete must be from server, so delete associated QTE.
-        deleteQTE(qteRowID)
+        val qteRowsAffected = deleteQTE(qteRowID)
+
+        // qteRowsAffected should be 1 if success and anything else if failure.
+        if (instanceRowsAffected != 1) throw Exception("finalDelete() - deleteQTE() failed!")
     }
 
     suspend fun changeDegreeString(degreeString: String, degree: Int, remove: Boolean) : String {

@@ -8,9 +8,12 @@ import com.telefender.phone.data.tele_database.entities.Contact
 
 @Dao
 interface ContactDao {
-    
+
+    /**
+     * Inserts Contact and returns inserted rowID. Probably returns -1 if insert failure.
+     */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertContact(vararg contact: Contact)
+    suspend fun insertContact(contact: Contact) : Long
 
     /**
      * Returns a nullable Int that indicates whether the update was successful. If 1 is returned,
@@ -37,10 +40,19 @@ interface ContactDao {
     @Query("SELECT COUNT(CID) FROM contact")
     suspend fun getContactSize() : Int?
 
+    /**
+     * Returns a nullable Int that indicates whether the delete was successful. If 1 is returned,
+     * then the delete was successful, otherwise the delete failed.
+     */
     @Query("DELETE FROM contact WHERE CID = :CID")
-    suspend fun deleteContact(CID: String)
+    suspend fun deleteContact(CID: String) : Int?
 
+    /**
+     * Returns a nullable Int that indicates whether the delete was successful (number of rows
+     * delete). If a value >0 is returned, then the delete was at least partially successful,
+     * otherwise the delete completely failed (if there were existing rows).
+     */
     @Query("DELETE FROM contact")
-    suspend fun deleteAllContacts()
+    suspend fun deleteAllContacts() : Int?
 
 }

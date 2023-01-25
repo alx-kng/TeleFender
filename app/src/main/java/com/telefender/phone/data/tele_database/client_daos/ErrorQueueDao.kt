@@ -9,9 +9,12 @@ import com.telefender.phone.data.tele_database.entities.ErrorQueue
 
 @Dao
 interface ErrorQueueDao {
-    
+
+    /**
+     * Inserts ErrorQueue and returns inserted rowID. Probably returns -1 if insert failure.
+     */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertErrorLog(errorQueue: ErrorQueue)
+    suspend fun insertErrorLog(errorQueue: ErrorQueue) : Int
 
     @Query("SELECT * FROM error_queue WHERE rowID = :rowID")
     suspend fun getErrorLogByRID(rowID: Long) : ErrorQueue?
@@ -40,15 +43,27 @@ interface ErrorQueueDao {
     @Query("SELECT EXISTS (SELECT * FROM error_queue LIMIT 1)")
     suspend fun hasErrorLog() : Boolean
 
+    /**
+     * Returns a nullable Int that indicates whether the delete was successful. If 1 is returned,
+     * then the delete was successful, otherwise the delete failed.
+     */
     @Query("DELETE FROM error_queue WHERE rowID = :rowID")
-    suspend fun deleteErrorLog(rowID: Long)
+    suspend fun deleteErrorLog(rowID: Long) : Int?
 
-    @Query("DELETE FROM error_queue")
-    suspend fun deleteAllErrorLog()
+    /**********************************************************************************************
+     * Queries that can delete multiple rows.
+     *
+     * Returns a nullable Int that indicates whether the delete was successful (number of rows
+     * delete). If a value >0 is returned, then the delete was at least partially successful,
+     * otherwise the delete completely failed (if there were existing rows).
+     **********************************************************************************************/
 
     @Query("DELETE FROM error_queue WHERE rowID <= :rowID")
-    suspend fun deleteErrorLogInclusive(rowID: Long)
+    suspend fun deleteErrorLogInclusive(rowID: Long) : Int?
 
     @Query("DELETE FROM error_queue WHERE rowID < :rowID")
-    suspend fun deleteErrorLogExclusive(rowID: Long)
+    suspend fun deleteErrorLogExclusive(rowID: Long) : Int?
+
+    @Query("DELETE FROM error_queue")
+    suspend fun deleteAllErrorLog() : Int?
 }

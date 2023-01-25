@@ -87,10 +87,16 @@ data class Instance(
         childColumns = arrayOf("instanceNumber"),
         onDelete = ForeignKey.NO_ACTION
     )],
-    indices = [Index(value = ["instanceNumber"])]
+    indices = [
+        // Enforce unique because this is actually "true" PK.
+        Index(value = ["CID"], unique = true),
+        Index(value = ["instanceNumber"])
+    ]
 )
 data class Contact(
-    @PrimaryKey val CID: String,
+    @PrimaryKey(autoGenerate = true)
+    var rowID: Long = 0,
+    val CID: String,
     val instanceNumber : String,
     val blocked: Boolean = false
 ) {
@@ -101,7 +107,6 @@ data class Contact(
 }
 
 @Entity(tableName = "contact_number",
-    primaryKeys = ["CID", "normalizedNumber"],
     foreignKeys = [
         ForeignKey(
             entity = Contact::class,
@@ -116,13 +121,16 @@ data class Contact(
             onDelete = ForeignKey.NO_ACTION
         )],
     indices = [
+        // Enforce unique because this is actually "true" PK.
+        Index(value = ["CID", "normalizedNumber"], unique = true),
         Index(value = ["normalizedNumber"]),
         Index(value = ["rawNumber"]),
         Index(value = ["instanceNumber"]),
-        Index(value = ["CID"])
     ]
 )
 data class ContactNumber(
+    @PrimaryKey(autoGenerate = true)
+    var rowID: Long = 0,
     val CID: String,
     val normalizedNumber: String, // E164 representation
     val defaultCID: String,

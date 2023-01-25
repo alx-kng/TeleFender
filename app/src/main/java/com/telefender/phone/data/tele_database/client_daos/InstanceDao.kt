@@ -7,7 +7,7 @@ import com.telefender.phone.data.tele_database.entities.Instance
 interface InstanceDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertInstanceNumbers(vararg instances: Instance)
+    suspend fun insertInstanceNumber(vararg instances: Instance)
 
     /**
      * Returns a nullable Int that indicates whether the update was successful. If 1 is returned,
@@ -24,10 +24,19 @@ interface InstanceDao {
     
     @Query("SELECT EXISTS (SELECT number FROM instance WHERE number = :instanceNumber)")
     suspend fun hasInstance(instanceNumber: String) : Boolean
-    
-    @Delete
-    suspend fun deleteInstanceNumbers(vararg instances: Instance)
 
+    /**
+     * Returns a nullable Int that indicates whether the delete was successful. If 1 is returned,
+     * then the delete was successful, otherwise the delete failed.
+     */
+    @Delete
+    suspend fun deleteInstanceNumber(instances: Instance) : Int?
+
+    /**
+     * Returns a nullable Int that indicates whether the delete was successful (number of rows
+     * delete). If a value >0 is returned, then the delete was at least partially successful,
+     * otherwise the delete completely failed (if there were existing rows).
+     */
     @Query("DELETE FROM instance")
-    suspend fun deleteAllInstanceNumbers()
+    suspend fun deleteAllInstanceNumbers() : Int?
 }
