@@ -1,9 +1,6 @@
 package com.telefender.phone.data.tele_database.client_daos
 
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
+import androidx.room.*
 import com.telefender.phone.data.tele_database.entities.ExecuteQueue
 
 @Dao
@@ -30,13 +27,17 @@ interface ExecuteQueueDao {
 
     @Query("SELECT * FROM execute_queue WHERE rowID = :rowID")
     suspend fun getQTE(rowID: Long) : ExecuteQueue?
-    
+
+    // Transaction to prevent data corruption on large returns.
+    @Transaction
     @Query("SELECT * FROM execute_queue ORDER BY rowID ASC")
     suspend fun getAllQTE() : List<ExecuteQueue>
 
     @Query("SELECT errorCounter FROM execute_queue WHERE rowID = :rowID ")
     suspend fun getQTEErrorCounter(rowID: Long) : Int?
 
+    // Transaction to prevent data corruption on large returns.
+    @Transaction
     @Query("SELECT rowID FROM execute_queue WHERE errorCounter > 0")
     suspend fun getQTEErrorLogs() : List<Int>
 

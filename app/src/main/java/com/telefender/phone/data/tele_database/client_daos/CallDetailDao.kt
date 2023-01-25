@@ -184,6 +184,8 @@ interface CallDetailDao: StoredMapDao {
         return getCallDetailsQuery(instanceNumber)
     }
 
+    // Transaction to prevent data corruption on large returns.
+    @Transaction
     @Query("SELECT * FROM call_detail WHERE instanceNumber = :instanceNumber ORDER BY callEpochDate DESC")
     suspend fun getCallDetailsQuery(instanceNumber: String) : List<CallDetail>
 
@@ -199,6 +201,8 @@ interface CallDetailDao: StoredMapDao {
         return getCallDetailsPartialQuery(instanceNumber, amount)
     }
 
+    // Transaction to prevent data corruption on large returns.
+    @Transaction
     @Query("SELECT * FROM call_detail WHERE instanceNumber = :instanceNumber ORDER BY callEpochDate DESC LIMIT :amount")
     suspend fun getCallDetailsPartialQuery(instanceNumber: String, amount: Int) : List<CallDetail>
 

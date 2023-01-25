@@ -1,9 +1,6 @@
 package com.telefender.phone.data.tele_database.client_daos
 
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
+import androidx.room.*
 import com.telefender.phone.data.tele_database.entities.ContactNumber
 
 @Dao
@@ -46,9 +43,13 @@ interface ContactNumberDao {
     @Query("SELECT * FROM contact_number WHERE CID = :CID")
     suspend fun getContactNumbersByCID(CID: String): List<ContactNumber>
 
+    // Transaction to prevent data corruption on large returns.
+    @Transaction
     @Query("SELECT * FROM contact_number WHERE instanceNumber = :instanceNumber")
     suspend fun getContactNumbersByIns(instanceNumber: String): List<ContactNumber>
 
+    // Transaction to prevent data corruption on large returns.
+    @Transaction
     @Query("SELECT * FROM contact_number")
     suspend fun getAllContactNumbers(): List<ContactNumber>
 

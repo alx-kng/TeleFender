@@ -1,9 +1,6 @@
 package com.telefender.phone.data.tele_database.client_daos
 
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
+import androidx.room.*
 import com.telefender.phone.data.tele_database.entities.ChangeLog
 
 @Dao
@@ -30,7 +27,9 @@ interface ChangeLogDao {
 
     @Query("SELECT * FROM change_log WHERE rowID = :rowID")
     suspend fun getChangeLog(rowID: Long) : ChangeLog?
-    
+
+    // Transaction to prevent data corruption on large returns.
+    @Transaction
     @Query("SELECT * FROM change_log ORDER BY rowID ASC")
     suspend fun getAllChangeLogs() : List<ChangeLog>
 

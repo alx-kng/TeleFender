@@ -1,9 +1,6 @@
 package com.telefender.phone.data.tele_database.client_daos
 
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
+import androidx.room.*
 import com.telefender.phone.data.tele_database.entities.UploadAnalyzedQueue
 
 
@@ -19,18 +16,28 @@ interface UploadAnalyzedQueueDao {
     @Query("SELECT * FROM upload_analyzed_queue ORDER BY linkedRowID ASC LIMIT 1")
     suspend fun getFirstAnalyzedQTU() : UploadAnalyzedQueue?
 
+    // Transaction to prevent data corruption on large returns.
+    @Transaction
     @Query("SELECT * FROM upload_analyzed_queue ORDER BY linkedRowID ASC LIMIT :amount")
     suspend fun getChunkAnalyzedQTU(amount: Int) : List<UploadAnalyzedQueue>
 
+    // Transaction to prevent data corruption on large returns.
+    @Transaction
     @Query("SELECT * FROM upload_analyzed_queue")
     suspend fun getAllAnalyzedQTU() : List<UploadAnalyzedQueue>
 
+    // Transaction to prevent data corruption on large returns.
+    @Transaction
     @Query("SELECT * FROM upload_analyzed_queue ORDER BY linkedRowID ASC")
     suspend fun getAllAnalyzedQTUOrdered() : List<UploadAnalyzedQueue>
 
+    // Transaction to prevent data corruption on large returns.
+    @Transaction
     @Query("SELECT errorCounter FROM upload_analyzed_queue WHERE linkedRowID = :linkedRowID ")
     suspend fun getAnalyzedQTUErrorCounter(linkedRowID: Long) : Int
 
+    // Transaction to prevent data corruption on large returns.
+    @Transaction
     @Query("SELECT linkedRowID FROM upload_analyzed_queue WHERE errorCounter > 0")
     suspend fun getAnalyzedQTUErrorLogs() : List<Int>
 

@@ -1,9 +1,6 @@
 package com.telefender.phone.data.tele_database.client_daos
 
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
+import androidx.room.*
 import com.telefender.phone.data.tele_database.entities.ErrorQueue
 
 
@@ -25,18 +22,26 @@ interface ErrorQueueDao {
     @Query("SELECT * FROM error_queue ORDER BY rowID ASC LIMIT 1")
     suspend fun getFirstErrorLog() : ErrorQueue?
 
+    // Transaction to prevent data corruption on large returns.
+    @Transaction
     @Query("SELECT * FROM error_queue ORDER BY rowID ASC LIMIT :amount")
     suspend fun getChunkErrorLog(amount: Int) : List<ErrorQueue>
 
+    // Transaction to prevent data corruption on large returns.
+    @Transaction
     @Query("SELECT * FROM error_queue")
     suspend fun getAllErrorLog() : List<ErrorQueue>
 
+    // Transaction to prevent data corruption on large returns.
+    @Transaction
     @Query("SELECT * FROM error_queue ORDER BY rowID ASC")
     suspend fun getAllErrorLogOrdered() : List<ErrorQueue>
 
     @Query("SELECT errorCounter FROM error_queue WHERE rowID = :rowID ")
     suspend fun getErrorLogErrorCounter(rowID: Long) : Int
 
+    // Transaction to prevent data corruption on large returns.
+    @Transaction
     @Query("SELECT rowID FROM error_queue WHERE errorCounter > 0")
     suspend fun getErrorLogWithError() : List<Int>
 

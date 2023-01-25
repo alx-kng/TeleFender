@@ -1,9 +1,6 @@
 package com.telefender.phone.data.tele_database.client_daos
 
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
+import androidx.room.*
 import com.telefender.phone.data.tele_database.entities.UploadChangeQueue
 
 @Dao
@@ -18,18 +15,26 @@ interface UploadChangeQueueDao {
     @Query("SELECT * FROM upload_change_queue ORDER BY linkedRowID ASC LIMIT 1")
     suspend fun getFirstChangeQTU() : UploadChangeQueue?
 
+    // Transaction to prevent data corruption on large returns.
+    @Transaction
     @Query("SELECT * FROM upload_change_queue ORDER BY linkedRowID ASC LIMIT :amount")
     suspend fun getChunkChangeQTU(amount: Int) : List<UploadChangeQueue>
 
+    // Transaction to prevent data corruption on large returns.
+    @Transaction
     @Query("SELECT * FROM upload_change_queue")
     suspend fun getAllChangeQTU() : List<UploadChangeQueue>
 
+    // Transaction to prevent data corruption on large returns.
+    @Transaction
     @Query("SELECT * FROM upload_change_queue ORDER BY linkedRowID ASC")
     suspend fun getAllChangeQTUOrdered() : List<UploadChangeQueue>
 
     @Query("SELECT errorCounter FROM upload_change_queue WHERE linkedRowID = :linkedRowID ")
     suspend fun getChangeQTUErrorCounter(linkedRowID: Long) : Int
 
+    // Transaction to prevent data corruption on large returns.
+    @Transaction
     @Query("SELECT linkedRowID FROM upload_change_queue WHERE errorCounter > 0")
     suspend fun getChangeQTUErrorLogs() : List<Int>
 

@@ -15,7 +15,9 @@ interface InstanceDao {
      */
     @Query("UPDATE instance SET number = :newNumber WHERE number = :oldNumber")
     suspend fun updateInstanceNumbers(oldNumber: String, newNumber: String) : Int?
-    
+
+    // Transaction to prevent data corruption on large returns.
+    @Transaction
     @Query("SELECT * FROM instance")
     suspend fun getAllInstance() : List<Instance>
 

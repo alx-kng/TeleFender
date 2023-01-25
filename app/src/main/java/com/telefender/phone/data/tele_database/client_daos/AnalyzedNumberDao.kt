@@ -1,9 +1,6 @@
 package com.telefender.phone.data.tele_database.client_daos
 
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
+import androidx.room.*
 import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.entities.*
@@ -34,6 +31,10 @@ interface AnalyzedNumberDao : ParametersDao, StoredMapDao, UploadAnalyzedQueueDa
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAnalyzedNumQuery(analyzedNumber: AnalyzedNumber) : Long
 
+    /**
+     * Retrieves all AnalyzedNumbers. Annotated with Transaction for large query safety.
+     */
+    @Transaction
     @Query("SELECT * FROM analyzed_number")
     suspend fun getAllAnalyzedNum() : List<AnalyzedNumber>
 
