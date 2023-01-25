@@ -14,7 +14,7 @@ interface ErrorQueueDao {
      * Inserts ErrorQueue and returns inserted rowID. Probably returns -1 if insert failure.
      */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertErrorLog(errorQueue: ErrorQueue) : Int
+    suspend fun insertErrorLog(errorQueue: ErrorQueue) : Long
 
     @Query("SELECT * FROM error_queue WHERE rowID = :rowID")
     suspend fun getErrorLogByRID(rowID: Long) : ErrorQueue?
