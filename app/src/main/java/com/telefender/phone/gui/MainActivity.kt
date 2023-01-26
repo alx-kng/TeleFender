@@ -13,7 +13,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.provider.Settings
 import android.telecom.TelecomManager
 import android.view.Menu
 import android.view.MenuItem
@@ -23,9 +22,7 @@ import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.PermissionChecker
 import androidx.core.net.toUri
-import androidx.databinding.DataBindingUtil.setContentView
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
@@ -83,8 +80,8 @@ class MainActivity : AppCompatActivity() {
      *   that need it (e.g., if user tries to enter contacts screen, then first request contact
      *   permissions).
      *
-     * Used to request default dialer permissions. If the default dialer is accepted, it then
-     * asks for Do Not Disturb permissions to allow app to silence calls.
+     * Result for default dialer request made in [requestDefaultDialer]. If the default dialer is
+     * accepted, we then ask for phone state permissions (read comment in code below).
      */
     private val startForResult = registerForActivityResult(ActivityResultContracts.StartActivityForResult())
     { result: ActivityResult ->
@@ -92,6 +89,8 @@ class MainActivity : AppCompatActivity() {
             /*
             Due to a bug that prevents the default dialer from receiving the READ_PHONE_NUMBERS
             permission (SDK > 29) automatically, we need to request the permission separately.
+            Requesting the permission separately should grant the permission to the default dialer
+            without bringing up a dialog to the user.
              */
             if (!Permissions.hasPhoneStatePermissions(this)) {
                 Permissions.phoneStatePermissions(this)
@@ -140,20 +139,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    @SuppressLint("MissingPermission")
-    fun makeCallNoParam() {
-        try {
-            val telecomManager = getSystemService(Context.TELECOM_SERVICE) as TelecomManager
-            val number = dialerViewModel.dialNumber.value
-            val uri = "tel:${number}".toUri()
-            telecomManager.placeCall(uri, null)
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OUTGOING CALL TO $number")
-        } catch (e: Exception) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: OUTGOING CALL FAILED!")
-        }
-    }
-
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -173,7 +158,7 @@ class MainActivity : AppCompatActivity() {
          * Offers to replace default dialer, automatically makes requesting permissions
          * separately unnecessary
          */
-        offerReplacingDefaultDialer()
+        requestDefaultDialer()
 
         notificationChannelCreator()
 
@@ -322,7 +307,7 @@ class MainActivity : AppCompatActivity() {
         return navController.navigateUp() || super.onSupportNavigateUp()
     }
 
-    private fun offerReplacingDefaultDialer() {
+    private fun requestDefaultDialer() {
         if (!Permissions.isDefaultDialer(this)) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val roleManager = getSystemService(Context.ROLE_SERVICE) as RoleManager
@@ -343,6 +328,19 @@ class MainActivity : AppCompatActivity() {
     fun makeCallParam(number: String) {
         try {
             val telecomManager = getSystemService(Context.TELECOM_SERVICE) as TelecomManager
+            val uri = "tel:${number}".toUri()
+            telecomManager.placeCall(uri, null)
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OUTGOING CALL TO $number")
+        } catch (e: Exception) {
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: OUTGOING CALL FAILED!")
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun makeCallNoParam() {
+        try {
+            val telecomManager = getSystemService(Context.TELECOM_SERVICE) as TelecomManager
+            val number = dialerViewModel.dialNumber.value
             val uri = "tel:${number}".toUri()
             telecomManager.placeCall(uri, null)
             Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OUTGOING CALL TO $number")

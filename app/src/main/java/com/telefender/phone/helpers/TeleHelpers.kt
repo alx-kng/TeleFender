@@ -6,7 +6,6 @@ import android.os.Build
 import android.provider.CallLog
 import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
-import androidx.core.content.getSystemService
 import com.google.i18n.phonenumbers.PhoneNumberUtil
 import com.telefender.phone.App
 import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
@@ -41,16 +40,16 @@ object TeleHelpers {
         context: Context,
         initializedRequired: Boolean = true,
         setupRequired: Boolean = true,
-        phoneStatePermission: Boolean = false,
-        logPermission: Boolean = false,
-        contactPermission: Boolean = false
+        phoneStateRequired: Boolean = false,
+        logRequired: Boolean = false,
+        contactRequired: Boolean = false
     ) : Boolean {
 
-        if (phoneStatePermission && !Permissions.hasPhoneStatePermissions(context)) return false
+        if (phoneStateRequired && !Permissions.hasPhoneStatePermissions(context)) return false
 
-        if (logPermission && !Permissions.hasLogPermissions(context)) return false
+        if (logRequired && !Permissions.hasLogPermissions(context)) return false
 
-        if (contactPermission && !Permissions.hasContactPermissions(context)) return false
+        if (contactRequired && !Permissions.hasContactPermissions(context)) return false
 
         val repository = (context.applicationContext as App).repository
         return runBlocking(Dispatchers.Default) {

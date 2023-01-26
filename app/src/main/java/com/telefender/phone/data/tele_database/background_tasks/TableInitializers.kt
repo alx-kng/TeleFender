@@ -3,8 +3,6 @@ package com.telefender.phone.data.tele_database.background_tasks
 import android.annotation.SuppressLint
 import android.content.ContentResolver
 import android.content.Context
-import android.os.Build
-import androidx.annotation.RequiresApi
 import com.telefender.phone.App
 import com.telefender.phone.data.tele_database.ClientDatabase
 import com.telefender.phone.data.tele_database.entities.ChangeLog
@@ -44,7 +42,7 @@ object TableInitializers {
     suspend fun initContacts(context: Context, database: ClientDatabase, contentResolver: ContentResolver) {
         if (!TeleHelpers.hasValidStatus(context,
                 initializedRequired = true,
-                contactPermission = true
+                contactRequired = true
             )
         ) {
             Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: Invalid status in initContacts()")
@@ -62,7 +60,7 @@ object TableInitializers {
     suspend fun initCallDetails(context: Context) {
         if (!TeleHelpers.hasValidStatus(context,
                 initializedRequired = true,
-                logPermission = true,
+                logRequired = true,
             )
         ) {
             Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: Invalid status in initCallDetails()")

@@ -10,7 +10,6 @@ import android.database.ContentObserver
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.work.*
 import com.telefender.phone.App
@@ -40,7 +39,7 @@ object SyncScheduler{
     val syncCatchTag = "catchSyncWorker"
 
     fun initiateCatchSyncWorker(context : Context) : UUID? {
-        if (!TeleHelpers.hasValidStatus(context, logPermission = true)) {
+        if (!TeleHelpers.hasValidStatus(context, logRequired = true)) {
             Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: Invalid status in initiateCatchSyncWorker()")
             return null
         }
@@ -65,7 +64,7 @@ object SyncScheduler{
     }
 
     fun initiateOneTimeSyncWorker(context : Context) : UUID? {
-        if (!TeleHelpers.hasValidStatus(context, logPermission = true)) {
+        if (!TeleHelpers.hasValidStatus(context, logRequired = true)) {
             Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: Invalid status in initiateOneTimeSyncWorker()")
             return null
         }
@@ -89,7 +88,7 @@ object SyncScheduler{
     }
 
     fun initiatePeriodicSyncWorker(context : Context) : UUID? {
-        if (!TeleHelpers.hasValidStatus(context, logPermission = true)) {
+        if (!TeleHelpers.hasValidStatus(context, logRequired = true)) {
             Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: Invalid status in initiatePeriodicSyncWorker()")
             return null
         }
