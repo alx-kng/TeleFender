@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.telefender.phone.data.tele_database.entities.Parameters
+import com.telefender.phone.data.tele_database.entities.StoredMap
 import com.telefender.phone.helpers.TeleHelpers
 
 
@@ -14,8 +15,13 @@ interface ParametersDao : StoredMapDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertParametersQuery(vararg parameters: Parameters)
 
+    /**
+     * Initializes the only Parameters row with user's number. After first initialization,
+     * this function is basically locked to make sure there is ONLY ONE Parameters row.
+     * Make sure that you are passing in the right number!!!
+     */
     suspend fun initParameters(userNumber: String) : Boolean {
-        return if (getParametersQuery(userNumber) == null && userNumber != TeleHelpers.UNKNOWN_NUMBER) {
+        return if (getParameters() == null && userNumber != TeleHelpers.UNKNOWN_NUMBER) {
             // Initial parameter values.
             insertParametersQuery(
                 Parameters(
@@ -41,24 +47,13 @@ interface ParametersDao : StoredMapDao {
      */
 
     /**
-     * Retrieves parameters. If no Parameters available, then initialize values.
-     *
-     * NOTE: It's STRONGLY advised that you put a try-catch around any use cases of this,
-     * especially if you plan on non-null asserting the return, as there is a real possibility of
-     * an error (especially if the database isn't yet initialized).
+     * Retrieves parameters if it exists. Instead of using userNumber to query, we can just
+     * select one row from the Parameters table since there either be 1 or 0 rows.
      */
-    suspend fun getParameters() : Parameters? {
-        val userNumber = getUserNumber() ?: return null
-        initParameters(userNumber)
-        return getParametersQuery(userNumber)
-    }
-
-    @Query("SELECT * FROM parameters WHERE userNumber = :userNumber")
-    suspend fun getParametersQuery(userNumber: String) : Parameters?
+    @Query("SELECT * FROM parameters LIMIT 1")
+    suspend fun getParameters() : Parameters?
 
     /**
-     * TODO: init shouldn't be done here.
-     *
      * Returns whether or not the update was successful.
      */
     suspend fun updateParameters(
@@ -71,7 +66,9 @@ interface ParametersDao : StoredMapDao {
         outgoingGate: Int? = null
     ) : Boolean {
         val userNumber = getUserNumber() ?: return false
-        initParameters(userNumber)
+
+        // Can only update if the row already exists.
+        if (getParameters() == null) return false
 
         val result = updateParametersQuery(
             userNumber = userNumber,

@@ -7,7 +7,6 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.google.android.gms.common.config.GservicesValue.isInitialized
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.ktx.messaging
@@ -101,12 +100,6 @@ abstract class ClientDatabase : RoomDatabase() {
                     database.waitForSetup(context)
                     database.initFirebase()
 
-                    /*
-                     Unfortunately, doing setup before results in the waiter in getDatabase() to
-                     be lifted first, but rest of database should still be initialized during the
-                     time of the omega worker. Also, even if rest of database doesn't finish, it
-                     should be taken care of during sync.
-                     */
                     firstTimeAccess = false
                 }
             }
@@ -114,8 +107,6 @@ abstract class ClientDatabase : RoomDatabase() {
     }
 
     /**
-     * TODO: Finish initializing parameters!
-     *
      * Makes sure that most important part of database is initialized (particularly, the
      * instance and stored map tables). The instance table stores the foreign key to the contact
      * and contact number tables, so it's crucial that the instance table is created first. The
@@ -125,36 +116,25 @@ abstract class ClientDatabase : RoomDatabase() {
     protected suspend fun initCoreDatabase(context: Context) {
         initializationRunning = true
 
-        if (!Permissions.hasLogPermissions(context)) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: No log permissions in initCoreDatabase()")
-            return
-        }
-
         Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: initCoreDatabase()")
 
-        val instanceNumber = TeleHelpers.getUserNumberUncertain(context) ?: return
+        val userNumber = TeleHelpers.getUserNumberUncertain(context) ?: return
 
         // Makes sure that retrieved instanceNumber isn't invalid (due to errors or something).
-        if (instanceNumber != TeleHelpers.UNKNOWN_NUMBER) {
-            // Initializes stored map table with user number. Lock for extra safety.
+        if (userNumber != TeleHelpers.UNKNOWN_NUMBER) {
+
+            // Initializes StoredMap table with user number. Lock for extra safety.
             mutexLocks[MutexType.STORED_MAP]!!.withLock {
-                this.storedMapDao().initStoredMap(instanceNumber)
+                this.storedMapDao().initStoredMap(userNumber)
             }
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
-                "Initial StoredMap - ${this.storedMapDao().getStoredMap()?.userNumber}")
-
+            // Initializes Parameters table with user number. Lock for extra safety.
             mutexLocks[MutexType.PARAMETERS]!!.withLock {
-                this.parametersDao().initParameters(instanceNumber)
+                this.parametersDao().initParameters(userNumber)
             }
 
-            // Inserts the single user instance with changeAgentDao
-            TableInitializers.initInstance(context, this, instanceNumber)
-
-            // Set databaseInitialized status in StoredMap table if Instance successfully inserted.
-            if (this.instanceDao().hasInstance(instanceNumber)) {
-                this.storedMapDao().updateStoredMap(databaseInitialized = true)
-            }
+            // Inserts the single user instance with ChangeAgentDao
+            TableInitializers.initInstance(context, this, userNumber)
         }
 
         initializationRunning = false
@@ -245,10 +225,15 @@ abstract class ClientDatabase : RoomDatabase() {
     }
 
     /**
-     * Checks if database is initialized.
+     * Checks if database is initialized. Requires that the singleton StoredMap row exists (which
+     * contains the user's number), an Instance row with the user's number exists, and the
+     * singleton Parameters row exists.
      */
     private suspend fun isInitialized() : Boolean {
-        return this.storedMapDao().databaseInitialized()
+        val userNumber = this.storedMapDao().getStoredMap()?.userNumber
+        return userNumber != null
+            && this.instanceDao().hasInstance(userNumber)
+            && this.parametersDao().getParameters() != null
     }
 
     /**
@@ -284,10 +269,15 @@ abstract class ClientDatabase : RoomDatabase() {
 
     companion object {
 
-        // Used to stall Omega workers until initRestOfDatabase() finishes on first ever access.
+        /**
+         * Used to stall Omega workers until initRestOfDatabase() finishes on first ever access.
+         * Also, even if rest of database doesn't finish, it should be taken care of during sync.
+         */
         var firstTimeAccess = false
 
-        // true if initCoreDatabase() is running.
+        /**
+         * True if initCoreDatabase() is running.
+         */
         var initializationRunning = false
 
         // Singleton prevents multiple instances of database from opening at the same time.

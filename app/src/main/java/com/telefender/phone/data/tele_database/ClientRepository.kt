@@ -46,6 +46,19 @@ class ClientRepository(
         return changeLogDao.dummyQuery()
     }
 
+    /**
+     * Checks if database is initialized. Requires that the singleton StoredMap row exists (which
+     * contains the user's number), an Instance row with the user's number exists, and the
+     * singleton Parameters row exists.
+     */
+    @WorkerThread
+    suspend fun databaseInitialized(): Boolean {
+        val userNumber = storedMapDao.getUserNumber()
+        return userNumber != null
+            && instanceDao.hasInstance(userNumber)
+            && parametersDao.getParameters() != null
+    }
+
     /***********************************************************************************************
      * StoredMap Queries
      **********************************************************************************************/
@@ -63,11 +76,6 @@ class ClientRepository(
     @WorkerThread
     suspend fun hasClientKey() : Boolean {
         return getClientKey() != null
-    }
-
-    @WorkerThread
-    suspend fun databaseInitialized() : Boolean {
-        return storedMapDao.databaseInitialized()
     }
 
     @WorkerThread
@@ -98,7 +106,6 @@ class ClientRepository(
         sessionID: String? = null,
         clientKey: String? = null,
         firebaseToken: String? = null,
-        databaseInitialized: Boolean? = null,
         lastLogSyncTime: Long? = null,
         lastServerRowID: Long? = null
     ) : Boolean {
@@ -107,7 +114,6 @@ class ClientRepository(
                 sessionID = sessionID,
                 clientKey = clientKey,
                 firebaseToken = firebaseToken,
-                databaseInitialized = databaseInitialized,
                 lastLogSyncTime = lastLogSyncTime,
                 lastServerRowID = lastServerRowID
             )
@@ -115,7 +121,7 @@ class ClientRepository(
     }
 
     /***********************************************************************************************
-     * StoredMap Queries
+     * Parameters Queries
      **********************************************************************************************/
 
     /**

@@ -12,15 +12,14 @@ data class StoredMap(
     val sessionID: String? = null,
     val clientKey: String? = null, // UUID key to push and pull changes to / from server
     val firebaseToken: String? = null,
-    val databaseInitialized: Boolean = false,
     val lastLogSyncTime: Long = 0,
     val lastServerRowID: Long? = null,
 ) {
 
     override fun toString() : String {
         return "STORED MAP - number: $userNumber sessionID: $sessionID clientKey: $clientKey" +
-            " firebaseToken: $firebaseToken databaseInitialized: $databaseInitialized" +
-            " lastLogSyncTime: $lastLogSyncTime lastServerRowID: $lastServerRowID"
+            " firebaseToken: $firebaseToken lastLogSyncTime: $lastLogSyncTime" +
+            " lastServerRowID: $lastServerRowID"
     }
 }
 

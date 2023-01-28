@@ -28,8 +28,6 @@ enum class PermissionRequestType(val requestCode: Int) {
 object Permissions {
 
     /**
-     * TODO: READ_PHONE_NUMBERS isn't being granted to default dialer. SUMMARIZE SOLUTION.
-     *
      * READ_PHONE_STATE is used for SDK <= 29 and READ_PHONE_NUMBERS is used for SDK > 29. These
      * permissions are used to get stuff like the user's number.
      */

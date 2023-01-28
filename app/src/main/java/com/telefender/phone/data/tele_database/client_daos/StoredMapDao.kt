@@ -43,10 +43,6 @@ interface StoredMapDao {
         return getStoredMap()?.userNumber
     }
 
-    suspend fun databaseInitialized() : Boolean {
-        return getStoredMap()?.databaseInitialized == true
-    }
-
     /**
      * Returns whether or not the update was successful.
      */
@@ -54,7 +50,6 @@ interface StoredMapDao {
         sessionID: String? = null,
         clientKey: String? = null,
         firebaseToken: String? = null,
-        databaseInitialized: Boolean? = null,
         lastLogSyncTime: Long? = null,
         lastServerRowID: Long? = null
     ) : Boolean {
@@ -66,7 +61,6 @@ interface StoredMapDao {
             sessionID = sessionID,
             clientKey = clientKey,
             firebaseToken = firebaseToken,
-            databaseInitialized = databaseInitialized,
             lastLogSyncTime = lastLogSyncTime,
             lastServerRowID = lastServerRowID
         )
@@ -97,13 +91,7 @@ interface StoredMapDao {
                 WHEN :firebaseToken IS NOT NULL
                     THEN :firebaseToken
                 ELSE firebaseToken
-            END,
-        databaseInitialized =
-            CASE
-                WHEN :databaseInitialized IS NOT NULL
-                    THEN :databaseInitialized
-                ELSE databaseInitialized
-            END,            
+            END, 
         lastLogSyncTime = 
             CASE
                 WHEN :lastLogSyncTime IS NOT NULL
@@ -123,7 +111,6 @@ interface StoredMapDao {
         sessionID: String?,
         clientKey: String?,
         firebaseToken: String?,
-        databaseInitialized: Boolean?,
         lastLogSyncTime: Long?,
         lastServerRowID: Long?
     ) : Int?
