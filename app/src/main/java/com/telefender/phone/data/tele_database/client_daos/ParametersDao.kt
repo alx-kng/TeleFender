@@ -19,9 +19,12 @@ interface ParametersDao : StoredMapDao {
      * Initializes the only Parameters row with user's number. After first initialization,
      * this function is basically locked to make sure there is ONLY ONE Parameters row.
      * Make sure that you are passing in the right number!!!
+     *
+     * NOTE: Currently no need to return whether the Parameters insert was successful or not, as we
+     * check for initialization using a separate SELECT query in ClientDatabase / TeleHelpers.
      */
-    suspend fun initParameters(userNumber: String) : Boolean {
-        return if (getParameters() == null && userNumber != TeleHelpers.UNKNOWN_NUMBER) {
+    suspend fun initParameters(userNumber: String) {
+        if (getParameters() == null && userNumber != TeleHelpers.UNKNOWN_NUMBER) {
             // Initial parameter values.
             insertParametersQuery(
                 Parameters(
@@ -35,20 +38,12 @@ interface ParametersDao : StoredMapDao {
                     outgoingGate = 12
                 )
             )
-
-            true
-        } else {
-            false
         }
     }
 
     /**
-     * TODO: Finish including Parameters initialization as part of initialization process!
-     */
-
-    /**
      * Retrieves parameters if it exists. Instead of using userNumber to query, we can just
-     * select one row from the Parameters table since there either be 1 or 0 rows.
+     * select one row from the Parameters table since there can only be 1 or 0 rows.
      */
     @Query("SELECT * FROM parameters LIMIT 1")
     suspend fun getParameters() : Parameters?
@@ -65,6 +60,7 @@ interface ParametersDao : StoredMapDao {
         incomingGate: Int? = null,
         outgoingGate: Int? = null
     ) : Boolean {
+        // Retrieves user number if possible and returns false if not.
         val userNumber = getUserNumber() ?: return false
 
         // Can only update if the row already exists.
@@ -148,6 +144,8 @@ interface ParametersDao : StoredMapDao {
     /**
      * Returns a nullable Int that indicates whether the delete was successful. If 1 is returned,
      * then the delete was successful, otherwise the delete failed.
+     *
+     * NOTE: We assume there is only one Parameters row, so the query should return 1 if successful.
      */
     @Query("DELETE FROM parameters WHERE userNumber = :userNumber")
     suspend fun deleteParameters(userNumber: String) : Int?

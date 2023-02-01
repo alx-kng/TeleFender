@@ -122,6 +122,17 @@
             </intent-filter>
         </service>
 
+<!--        &lt;!&ndash; Set custom default icon. This is used when no icon is set for incoming notification messages.-->
+<!--        See README(https://goo.gl/l4GJaQ) for more. &ndash;&gt;-->
+<!--        <meta-data-->
+<!--            android:name="com.google.firebase.messaging.default_notification_icon"-->
+<!--            android:resource="@drawable/ic_alert_octagon_24" />-->
+<!--        &lt;!&ndash; Set color used with incoming notification messages. This is used when no color is set for the incoming-->
+<!--             notification message. See README(https://goo.gl/6BKBk7) for more. &ndash;&gt;-->
+<!--        <meta-data-->
+<!--            android:name="com.google.firebase.messaging.default_notification_color"-->
+<!--            android:resource="@color/colorAccent" />-->
+
         <!-- TODO: Use our own channel. -->
         <!-- Sets the notification channel that push notifications should go through. -->
         <meta-data

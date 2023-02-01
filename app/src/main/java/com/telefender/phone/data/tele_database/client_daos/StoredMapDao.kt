@@ -3,6 +3,7 @@ package com.telefender.phone.data.tele_database.client_daos
 import androidx.room.*
 import com.telefender.phone.data.tele_database.entities.StoredMap
 import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.helpers.TeleHelpers.getParameters
 
 @Dao
 interface StoredMapDao {
@@ -14,22 +15,17 @@ interface StoredMapDao {
     suspend fun insertStoredMapQuery(vararg storedMap : StoredMap)
 
     /**
-     * TODO: Maybe make StoredMap retrieval safer by following the method in ParametersDao. That
-     *  way, if the user's only StoredMap gets deleted SOMEHOW, then we can just re-create an
-     *  empty StoredMap and possibly redo setup process. Still iffy though.
-     *
      * Initializes StoredMap with user's number. After first initialization, this function is
      * basically locked to make sure there is ONLY ONE StoredMap (which contains the user's number).
      * Make sure that you are passing in the right number!!!
+     *
+     * NOTE: Currently no need to return whether the StoredMap insert was successful or not, as we
+     * check for initialization using a separate SELECT query in ClientDatabase / TeleHelpers.
      */
-    suspend fun initStoredMap(userNumber: String) : Boolean {
-        return if (getStoredMap() == null && userNumber != TeleHelpers.UNKNOWN_NUMBER) {
+    suspend fun initStoredMap(userNumber: String) {
+        if (getStoredMap() == null && userNumber != TeleHelpers.UNKNOWN_NUMBER) {
             // Initialize StoredMap with just userNumber.
             insertStoredMapQuery(StoredMap(userNumber = userNumber))
-
-            true
-        } else {
-            false
         }
     }
 
@@ -53,8 +49,11 @@ interface StoredMapDao {
         lastLogSyncTime: Long? = null,
         lastServerRowID: Long? = null
     ) : Boolean {
-        // Retrieves user number if possible and returns if not.
+        // Retrieves user number if possible and returns false if not.
         val userNumber = getUserNumber() ?: return false
+
+        // Can only update if the row already exists.
+        if (getStoredMap() == null) return false
 
         val result =  updateStoredMapQuery(
             userNumber = userNumber,
@@ -120,7 +119,7 @@ interface StoredMapDao {
      * delete). If a value >0 is returned, then the delete was at least partially successful,
      * otherwise the delete completely failed (if there were existing rows).
      *
-     * NOTE: Since we assume / enforce only one StoreMap row, the query should return 1 if successful.
+     * NOTE: We assume there is only one StoredMap row, the query should return 1 if successful.
      */
     @Query("DELETE FROM stored_map")
     suspend fun deleteStoredMap() : Int?

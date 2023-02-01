@@ -65,7 +65,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                 currDataType = dataType
 
                 /*
-                Error log is inserted preemptively, since if the execution function errors out,
+                Error log is created preemptively, since if the execution function errors out,
                 then the currErrorLog will not be reset to null. To prevent redundant object
                 creation, we first check that the qte and currErrorLog have different serverRowIDs
                 before creating a new ErrorLog (note that this scenario is practically nonexistent

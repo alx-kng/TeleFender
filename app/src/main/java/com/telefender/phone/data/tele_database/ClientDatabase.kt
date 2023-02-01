@@ -10,6 +10,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.ktx.messaging
+import com.telefender.phone.App
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.background_tasks.TableInitializers
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
@@ -98,7 +99,7 @@ abstract class ClientDatabase : RoomDatabase() {
 
                     // Firebase token retrieval and subsequent server upload requires user setup.
                     database.waitForSetup(context)
-                    database.initFirebase()
+                    database.initFirebase(context)
 
                     firstTimeAccess = false
                 }
@@ -162,9 +163,18 @@ abstract class ClientDatabase : RoomDatabase() {
      *  for SMS verification of incoming calls. If we don't have token, then just don't request
      *  SMS verification from server.
      *
-     * Retrieves Firebase token.
+     * TODO: Actually do upload. Put in better token insert flow to account for whether server
+     *  received it or not.
+     *
+     * Retrieves current Firebase token. The initial uploading of the token / any additional actions
+     * also happen here.
+     *
+     * NOTE: Firebase.messaging.token actually just retrieves the current registration token.
+     * It doesn't actually "request" a new token. New token requests are pretty much done
+     * automatically on app start without our control (unless we prefer the token to not
+     * autogenerate, which would require a few manifest changes). So, this pattern can be reused.
      */
-    protected fun initFirebase() {
+    protected suspend fun initFirebase(context: Context) {
         Firebase.messaging.token.addOnCompleteListener(OnCompleteListener { task ->
             if (!task.isSuccessful) {
                 Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
@@ -174,7 +184,11 @@ abstract class ClientDatabase : RoomDatabase() {
 
             // Get new FCM registration token
             val token = task.result
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: TOKEN: $token")
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: TOKEN: $token")
+
+            (context.applicationContext as App).applicationScope.launch {
+                this@ClientDatabase.storedMapDao().updateStoredMap(firebaseToken = token)
+            }
         })
     }
 
@@ -199,7 +213,6 @@ abstract class ClientDatabase : RoomDatabase() {
                 "HAS PHONE STATE PERMISSION: ${Permissions.hasPhoneStatePermissions(context)}")
         }
     }
-
 
     /**
      * Not only waits for core database initialization, but also restarts initialization if it not
@@ -345,7 +358,7 @@ abstract class ClientDatabase : RoomDatabase() {
                     }
 
                     if (!instanceTemp.hasFirebaseToken()) {
-                        instanceTemp.initFirebase()
+                        instanceTemp.initFirebase(context)
                     }
 
                     OmegaPeriodicScheduler.initiateOneTimeOmegaWorker(context)
