@@ -29,8 +29,7 @@ object TableInitializers {
                 changeTime = changeTime,
                 type = ChangeType.INSTANCE_INSERT,
                 instanceNumber = instanceNumber
-            ),
-            fromSync = false
+            )
         )
     }
 

@@ -59,6 +59,9 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
         return false
     }
 
+    /**
+     * TODO: Should we check if inserts and updates went through?
+     */
     @Transaction
     open suspend fun changeFromServerHelper(serverData: ServerData) : ErrorQueue? {
         val dataType = serverData.getGenericDataType()
@@ -203,7 +206,11 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
      * [bubbleError] is true so that the enclosing function can do a larger retry (for the
      * larger process) if it wants to.
      */
-    suspend fun changeFromClient(changeLog: ChangeLog, fromSync: Boolean, bubbleError: Boolean = false) {
+    suspend fun changeFromClient(
+        changeLog: ChangeLog,
+        fromSync: Boolean = false,
+        bubbleError: Boolean = false
+    ) {
         for (i in 1..retryAmount) {
             try {
                 changeFromClientHelper(changeLog, fromSync)
@@ -222,6 +229,9 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
         }
     }
 
+    /**
+     * TODO: Should we check if inserts and updates went through?
+     */
     @Transaction
     open suspend fun changeFromClientHelper(changeLog: ChangeLog, fromSync: Boolean) {
         with(changeLog) {

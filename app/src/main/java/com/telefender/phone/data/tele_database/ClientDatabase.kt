@@ -163,8 +163,8 @@ abstract class ClientDatabase : RoomDatabase() {
      *  LIMITATIONS.
      *
      * TODO: Note that the Firebase token isn't crucial to user-flow, as the token is mainly used
-     *  for SMS verification of incoming calls. If we don't have token, then just don't request
-     *  SMS verification from server.
+     *  for SMS_VERIFY verification of incoming calls. If we don't have token, then just don't request
+     *  SMS_VERIFY verification from server.
      *
      * TODO: Actually do upload. Put in better token insert flow to account for whether server
      *  received it or not.

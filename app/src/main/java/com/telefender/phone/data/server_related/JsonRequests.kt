@@ -188,6 +188,28 @@ class UploadErrorRequest(
     }
 }
 
+/**
+ * Inherits from KeyRequest, request class for SMS_VERIFY verification.
+ */
+@JsonClass(generateAdapter = true)
+class SMSVerifyRequest(
+    instanceNumber : String,
+    key : String,
+    val number : String
+) : KeyRequest(instanceNumber, key) {
+
+    override fun toJson() : String {
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(SMSVerifyRequest::class.java)
+
+        return adapter.serializeNulls().toJson(this)
+    }
+
+    override fun toString() : String {
+        return "${super.toString()} number: $number"
+    }
+}
+
 @JsonClass(generateAdapter = true)
 class TokenRequest(
     instanceNumber : String,

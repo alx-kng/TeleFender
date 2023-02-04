@@ -105,11 +105,7 @@ private fun uploadAnalyzedResponseHandler(
         } else {
             WorkStates.setState(WorkType.UPLOAD_ANALYZED_POST, WorkInfo.State.FAILED)
 
-            if (uploadResponse != null) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN UPLOAD_ANALYZED_POST: ${uploadResponse.error}")
-            } else {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN UPLOAD_ANALYZED_POST: RESPONSE IS NULL")
-            }
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN UPLOAD_ANALYZED_POST: ${uploadResponse?.error}")
         }
     }
 }

@@ -76,11 +76,7 @@ private fun initialPostResponseHandler(
         } else {
             WorkStates.setState(WorkType.SETUP, WorkInfo.State.FAILED)
 
-            if (sessionResponse != null) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN REQUEST INSTALLATION: %s", sessionResponse.error)
-            } else {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN REQUEST INSTALLATION: SESSION RESPONSE IS NULL")
-            }
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN REQUEST INSTALLATION: ${sessionResponse?.error}")
         }
     }
 }

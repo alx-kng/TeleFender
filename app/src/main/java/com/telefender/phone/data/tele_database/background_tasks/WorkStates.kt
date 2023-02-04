@@ -26,16 +26,17 @@ enum class WorkType {
     ONE_TIME_OMEGA,
     PERIODIC_OMEGA,
 
+    ONE_TIME_TOKEN,
+    PERIODIC_TOKEN,
+
     SETUP,
     DOWNLOAD_POST,
     UPLOAD_CHANGE_POST,
     UPLOAD_ANALYZED_POST,
     UPLOAD_LOG_POST,
     UPLOAD_ERROR_POST,
-
-    ONE_TIME_TOKEN,
-    PERIODIC_TOKEN,
-    UPLOAD_TOKEN
+    UPLOAD_TOKEN,
+    SMS_VERIFY_POST,
 }
 
 // TODO Maybe convert to promises or jobs OR MAYBE NOT.
@@ -52,68 +53,21 @@ object WorkStates {
         WorkInfo.State.SUCCEEDED
     )
 
-    private var oneTimeExecState : WorkInfo.State? = null
-    private var periodicExecState : WorkInfo.State? = null
+    /**
+     * Work states
+     */
+    private val states: Array<WorkInfo.State?> = Array(WorkType.values().size) {null}
 
-    private var oneTimeUploadState : WorkInfo.State? = null
-    private var periodicUploadState : WorkInfo.State? = null
-
-    private var oneTimeDownloadState : WorkInfo.State? = null
-    private var periodicDownloadState : WorkInfo.State? = null
-
-    private var oneTimeSyncState : WorkInfo.State? = null
-    private var periodicSyncState : WorkInfo.State? = null
-    private var catchSyncState : WorkInfo.State? = null
-
-    private var oneTimeOmegaState : WorkInfo.State? = null
-    private var periodicOmegaState : WorkInfo.State? = null
-
-    private var setupState : WorkInfo.State? = null
-    private var downloadPostState : WorkInfo.State? = null
-    private var uploadChangeState : WorkInfo.State? = null
-    private var uploadAnalyzedState : WorkInfo.State? = null
-    private var uploadLogState : WorkInfo.State? = null
-    private var uploadErrorState : WorkInfo.State? = null
-
-    private var oneTimeTokenState : WorkInfo.State? = null
-    private var periodicTokenState : WorkInfo.State? = null
-    private var uploadTokenState : WorkInfo.State? = null
+    /**
+     * Waiter counters used in workerWaiter() to decide what state to set upon finishing.
+     */
+    private val waiters: Array<Int> = Array(WorkType.values().size) {0}
 
     /**
      * For now, we'll stick to using one mutex, since only one worker should really be working at
      * a time.
      */
     private val mutex = Mutex()
-
-    /**
-     * Waiter counters used in workerWaiter() to decide what state to set upon finishing.
-     */
-    private var numOneTimeExecWaiters = 0
-    private var numPeriodicExecWaiters = 0
-
-    private var numOneTimeUploadWaiters = 0
-    private var numPeriodicUploadWaiters = 0
-
-    private var numOneTimeDownloadWaiters = 0
-    private var numPeriodicDownloadWaiters = 0
-
-    private var numOneTimeSyncWaiters = 0
-    private var numPeriodicSyncWaiters = 0
-    private var numSyncCatchWaiters = 0
-
-    private var numOneTimeOmegaWaiters = 0
-    private var numPeriodicOmegaWaiters = 0
-
-    private var numSetupWaiters = 0
-    private var numDownloadPostWaiters = 0
-    private var numUploadChangeWaiters = 0
-    private var numUploadAnalyzedWaiters = 0
-    private var numUploadLogWaiters = 0
-    private var numUploadErrorWaiters = 0
-
-    private var numOneTimeTokenWaiters = 0
-    private var numPeriodicTokenWaiters = 0
-    private var numUploadTokenWaiters = 0
 
     /***********************************************************************************************
      * TODO: Clean up edge cases. Ex) what if worker hasn't started yet before waiter???
@@ -177,34 +131,7 @@ object WorkStates {
             return
         }
 
-        when(workType) {
-            WorkType.ONE_TIME_EXEC -> oneTimeExecState = workState
-            WorkType.PERIODIC_EXEC -> periodicExecState = workState
-
-            WorkType.ONE_TIME_UPLOAD -> oneTimeUploadState = workState
-            WorkType.PERIODIC_UPLOAD -> periodicUploadState = workState
-
-            WorkType.ONE_TIME_DOWNLOAD -> oneTimeDownloadState = workState
-            WorkType.PERIODIC_DOWNLOAD -> periodicDownloadState = workState
-
-            WorkType.ONE_TIME_SYNC -> oneTimeSyncState = workState
-            WorkType.PERIODIC_SYNC -> periodicSyncState = workState
-            WorkType.CATCH_SYNC -> catchSyncState = workState
-
-            WorkType.ONE_TIME_OMEGA -> oneTimeOmegaState = workState
-            WorkType.PERIODIC_OMEGA -> periodicOmegaState = workState
-
-            WorkType.SETUP -> setupState = workState
-            WorkType.DOWNLOAD_POST -> downloadPostState = workState
-            WorkType.UPLOAD_CHANGE_POST -> uploadChangeState = workState
-            WorkType.UPLOAD_ANALYZED_POST -> uploadAnalyzedState = workState
-            WorkType.UPLOAD_LOG_POST -> uploadLogState = workState
-            WorkType.UPLOAD_ERROR_POST -> uploadErrorState = workState
-
-            WorkType.ONE_TIME_TOKEN -> oneTimeTokenState = workState
-            WorkType.PERIODIC_TOKEN -> periodicTokenState = workState
-            WorkType.UPLOAD_TOKEN -> uploadTokenState = workState
-        }
+        states[workType.ordinal] = workState
 
         /**
          * Notifies property listeners. oldValue is workState while newValue is workType since
@@ -226,95 +153,14 @@ object WorkStates {
     }
 
     fun getState(workType: WorkType) : WorkInfo.State? {
-        return when(workType) {
-            WorkType.ONE_TIME_EXEC -> oneTimeExecState
-            WorkType.PERIODIC_EXEC -> periodicExecState
-
-            WorkType.ONE_TIME_UPLOAD -> oneTimeUploadState
-            WorkType.PERIODIC_UPLOAD -> periodicUploadState
-
-            WorkType.ONE_TIME_DOWNLOAD -> oneTimeDownloadState
-            WorkType.PERIODIC_DOWNLOAD -> periodicDownloadState
-
-            WorkType.ONE_TIME_SYNC -> oneTimeSyncState
-            WorkType.PERIODIC_SYNC -> periodicSyncState
-            WorkType.CATCH_SYNC -> catchSyncState
-
-            WorkType.ONE_TIME_OMEGA -> oneTimeOmegaState
-            WorkType.PERIODIC_OMEGA -> periodicOmegaState
-
-            WorkType.SETUP -> setupState
-            WorkType.DOWNLOAD_POST -> downloadPostState
-            WorkType.UPLOAD_CHANGE_POST -> uploadChangeState
-            WorkType.UPLOAD_ANALYZED_POST -> uploadAnalyzedState
-            WorkType.UPLOAD_LOG_POST -> uploadLogState
-            WorkType.UPLOAD_ERROR_POST -> uploadErrorState
-
-            WorkType.ONE_TIME_TOKEN -> oneTimeTokenState
-            WorkType.PERIODIC_TOKEN -> periodicTokenState
-            WorkType.UPLOAD_TOKEN -> uploadTokenState
-        }
+        return states[workType.ordinal]
     }
 
     private fun changeNumWaiters(workType: WorkType, changeAmount: Int) {
-        when(workType) {
-            WorkType.ONE_TIME_EXEC -> numOneTimeExecWaiters += changeAmount
-            WorkType.PERIODIC_EXEC -> numPeriodicExecWaiters += changeAmount
-
-            WorkType.ONE_TIME_UPLOAD -> numOneTimeUploadWaiters += changeAmount
-            WorkType.PERIODIC_UPLOAD -> numPeriodicUploadWaiters += changeAmount
-
-            WorkType.ONE_TIME_DOWNLOAD -> numOneTimeDownloadWaiters += changeAmount
-            WorkType.PERIODIC_DOWNLOAD -> numPeriodicDownloadWaiters += changeAmount
-
-            WorkType.ONE_TIME_SYNC -> numOneTimeSyncWaiters += changeAmount
-            WorkType.PERIODIC_SYNC -> numPeriodicSyncWaiters += changeAmount
-            WorkType.CATCH_SYNC -> numSyncCatchWaiters += changeAmount
-
-            WorkType.ONE_TIME_OMEGA -> numOneTimeOmegaWaiters += changeAmount
-            WorkType.PERIODIC_OMEGA -> numPeriodicOmegaWaiters += changeAmount
-
-            WorkType.SETUP -> numSetupWaiters += changeAmount
-            WorkType.DOWNLOAD_POST -> numDownloadPostWaiters += changeAmount
-            WorkType.UPLOAD_CHANGE_POST -> numUploadChangeWaiters += changeAmount
-            WorkType.UPLOAD_ANALYZED_POST -> numUploadAnalyzedWaiters += changeAmount
-            WorkType.UPLOAD_LOG_POST -> numUploadLogWaiters += changeAmount
-            WorkType.UPLOAD_ERROR_POST -> numUploadErrorWaiters += changeAmount
-
-            WorkType.ONE_TIME_TOKEN -> numOneTimeTokenWaiters += changeAmount
-            WorkType.PERIODIC_TOKEN -> numPeriodicTokenWaiters += changeAmount
-            WorkType.UPLOAD_TOKEN -> numUploadTokenWaiters += changeAmount
-        }
+        waiters[workType.ordinal] += changeAmount
     }
 
     private fun getNumWaiters(workType: WorkType) : Int {
-        return when(workType) {
-            WorkType.ONE_TIME_EXEC -> numOneTimeExecWaiters
-            WorkType.PERIODIC_EXEC -> numPeriodicExecWaiters
-
-            WorkType.ONE_TIME_UPLOAD -> numOneTimeUploadWaiters
-            WorkType.PERIODIC_UPLOAD -> numPeriodicUploadWaiters
-
-            WorkType.ONE_TIME_DOWNLOAD -> numOneTimeDownloadWaiters
-            WorkType.PERIODIC_DOWNLOAD -> numPeriodicDownloadWaiters
-
-            WorkType.ONE_TIME_SYNC -> numOneTimeSyncWaiters
-            WorkType.PERIODIC_SYNC -> numPeriodicSyncWaiters
-            WorkType.CATCH_SYNC -> numSyncCatchWaiters
-
-            WorkType.ONE_TIME_OMEGA -> numOneTimeOmegaWaiters
-            WorkType.PERIODIC_OMEGA -> numPeriodicOmegaWaiters
-
-            WorkType.SETUP -> numSetupWaiters
-            WorkType.DOWNLOAD_POST -> numDownloadPostWaiters
-            WorkType.UPLOAD_CHANGE_POST -> numUploadChangeWaiters
-            WorkType.UPLOAD_ANALYZED_POST -> numUploadAnalyzedWaiters
-            WorkType.UPLOAD_LOG_POST -> numUploadLogWaiters
-            WorkType.UPLOAD_ERROR_POST -> numUploadErrorWaiters
-
-            WorkType.ONE_TIME_TOKEN -> numOneTimeTokenWaiters
-            WorkType.PERIODIC_TOKEN -> numPeriodicTokenWaiters
-            WorkType.UPLOAD_TOKEN -> numUploadTokenWaiters
-        }
+        return waiters[workType.ordinal]
     }
 }

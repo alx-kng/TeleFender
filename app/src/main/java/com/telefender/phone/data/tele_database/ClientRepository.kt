@@ -473,14 +473,15 @@ class ClientRepository(
     }
 
     /**
-     * TODO: Do we even need fromSync option in repository?
-     *  Do we even need to have changeFromClient() in the repository for that matter?
-     *
      * changeFromClient() should be called to handle changes that come from the client
      * See documentation for changeAgentDao.changeFromClient(). Locks handled at ExecuteAgent level.
      */
     @WorkerThread
-    suspend fun changeFromClient(changeLog: ChangeLog, fromSync: Boolean, bubbleError: Boolean = false) {
+    suspend fun changeFromClient(
+        changeLog: ChangeLog,
+        fromSync: Boolean = false,
+        bubbleError: Boolean = false
+    ) {
         changeAgentDao.changeFromClient(changeLog, fromSync, bubbleError)
     }
 }

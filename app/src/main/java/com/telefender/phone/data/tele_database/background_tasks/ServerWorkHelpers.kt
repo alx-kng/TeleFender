@@ -132,4 +132,28 @@ object ServerWorkHelpers {
             Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: INSIDE $workerName WORKER. PROBLEM WITH UPLOAD_ERROR.")
         }
     }
+
+    /**
+     * TODO: Maybe we shouldn't retry?
+     * TODO: Probably no need to put in worker since so short.
+     *
+     * Asks the server to SMS verify a number.
+     */
+    suspend fun smsVerify(
+        context: Context,
+        repository: ClientRepository,
+        scope: CoroutineScope,
+        workerName: String,
+        number: String
+    ) {
+        for (i in 1..retryAmount) {
+            WorkStates.setState(WorkType.SMS_VERIFY_POST, WorkInfo.State.RUNNING)
+            ServerInteractions.smsVerifyRequest(context, repository, scope, number)
+
+            val success = WorkStates.workWaiter(WorkType.SMS_VERIFY_POST, "SMS_VERIFY", stopOnFail = true, certainFinish = true)
+            if (success) break
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $workerName - SMS_VERIFY RETRYING")
+            delay(2000)
+        }
+    }
 }

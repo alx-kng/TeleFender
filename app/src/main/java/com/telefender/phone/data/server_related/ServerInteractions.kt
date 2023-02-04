@@ -26,7 +26,11 @@ object ServerInteractions {
     /**
      * TODO: Maybe we should put in error counter like the upload requests.
      */
-    suspend fun downloadDataRequest(context: Context, repository: ClientRepository, scope: CoroutineScope) {
+    suspend fun downloadDataRequest(
+        context: Context,
+        repository: ClientRepository,
+        scope: CoroutineScope
+    ) {
         val url = "https://dev.scribblychat.com/callbook/downloadChanges"
         val instanceNumber = TeleHelpers.getUserNumberStored(context)
         val key = repository.getClientKey()
@@ -251,6 +255,44 @@ object ServerInteractions {
             RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
         } catch (e: Exception) {
             Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ${e.message}")
+            e.printStackTrace()
+        }
+    }
+
+    suspend fun smsVerifyRequest(
+        context: Context,
+        repository: ClientRepository,
+        scope: CoroutineScope,
+        number: String
+    ) {
+        val url = "https://dev.scribblychat.com/callbook/reqNumberVerify"
+        val instanceNumber = TeleHelpers.getUserNumberStored(context)
+        val key = repository.getClientKey()
+
+        if (instanceNumber == null || key == null) {
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                "VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
+
+            WorkStates.setState(WorkType.SMS_VERIFY_POST, WorkInfo.State.FAILED)
+            return
+        }
+
+        val smsVerifyRequestJson = SMSVerifyRequest(instanceNumber, key, number).toJson()
+
+        try {
+            val stringRequest = SMSVerifyRequestGen.create(
+                method = Request.Method.POST,
+                url = url,
+                requestJson = smsVerifyRequestJson,
+                context = context,
+                repository = repository,
+                scope = scope,
+                number = number
+            )
+
+            // Adds entire string request to request queue
+            RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
+        } catch (e: JSONException) {
             e.printStackTrace()
         }
     }

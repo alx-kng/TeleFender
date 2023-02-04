@@ -59,11 +59,7 @@ private fun tokenResponseHandler(
         } else {
             WorkStates.setState(WorkType.UPLOAD_TOKEN, WorkInfo.State.FAILED)
 
-            if (defaultResponse != null) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN TOKEN UPLOAD_CHANGE: ${defaultResponse.error}")
-            } else {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN TOKEN UPLOAD_CHANGE: DEFAULT RESPONSE IS NULL")
-            }
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN TOKEN UPLOAD_TOKEN: ${defaultResponse?.error}")
         }
     }
 }

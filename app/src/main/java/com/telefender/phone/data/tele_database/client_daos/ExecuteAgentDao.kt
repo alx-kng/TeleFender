@@ -494,7 +494,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
      *  happen in 2 cases. You can directly double block on the NotifyList OR if you call
      *  from the NotifyList and block again from the after-call screen.
      *
-     * For updates to non-contact numbers (e.g., mark safe, default, blocked or SMS verify).
+     * For updates to non-contact numbers (e.g., mark safe, default, blocked or SMS_VERIFY verify).
      */
     @Transaction
     suspend fun nonContactUpdate(instanceNumber: String?, normalizedNumber: String?, safeAction: SafeAction?) {

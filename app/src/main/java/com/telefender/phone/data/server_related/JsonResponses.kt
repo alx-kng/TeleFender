@@ -86,8 +86,21 @@ class UploadResponse(
     }
 }
 
+@JsonClass(generateAdapter = true)
+class SMSVerifyResponse(
+    status : String,
+    error : String?,
+    val number : String,
+    val verified: Boolean
+) : DefaultResponse(status, error) {
+
+    override fun toString() : String {
+        return "${super.toString()} number: $number verified: $verified"
+    }
+}
+
 enum class ServerResponseType {
-    DEFAULT, SESSION, KEY, DOWNLOAD, UPLOAD
+    DEFAULT, SESSION, KEY, DOWNLOAD, UPLOAD, SMS_VERIFY
 }
 
 /**
@@ -101,6 +114,7 @@ fun String.toServerResponse(type: ServerResponseType) : DefaultResponse? {
             ServerResponseType.KEY -> KeyResponse::class.java
             ServerResponseType.DOWNLOAD -> DownloadResponse::class.java
             ServerResponseType.UPLOAD -> UploadResponse::class.java
+            ServerResponseType.SMS_VERIFY -> SMSVerifyResponse::class.java
         }
         val moshi = Moshi.Builder().build()
         val adapter = moshi.adapter(responseClass)

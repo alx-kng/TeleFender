@@ -169,7 +169,7 @@ data class Change(
 }
 
 enum class SafeAction(val serverString: String) {
-    SAFE("SAF"), DEFAULT("DEF"), BLOCKED("BLO"), SMS_VERIFY("SMS")
+    SAFE("SAF"), DEFAULT("DEF"), BLOCKED("BLO"), SMS_VERIFY("SMS_VERIFY")
 }
 
 /**

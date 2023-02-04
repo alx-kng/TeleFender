@@ -108,11 +108,7 @@ private fun downloadResponseHandler(
         } else {
             WorkStates.setState(WorkType.DOWNLOAD_POST, WorkInfo.State.FAILED)
 
-            if (downloadResponse != null) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN DOWNLOAD: ${downloadResponse.error}")
-            } else {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN DOWNLOAD: DOWNLOAD RESPONSE IS NULL")
-            }
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN DOWNLOAD: ${downloadResponse?.error}")
         }
     }
 }

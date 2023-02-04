@@ -73,11 +73,7 @@ private fun verifyPostResponseHandler(
         } else {
             WorkStates.setState(WorkType.SETUP, WorkInfo.State.FAILED)
 
-            if (keyResponse != null) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN VERIFY INSTALLATION: $keyResponse.error",)
-            } else {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN VERIFY INSTALLATION: SESSION RESPONSE IS NULL")
-            }
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN VERIFY INSTALLATION: ${keyResponse?.error}")
         }
     }
 }
