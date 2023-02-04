@@ -159,6 +159,9 @@ abstract class ClientDatabase : RoomDatabase() {
     }
 
     /**
+     * TODO: NOTE THAT WE WILL ACTUALLY NOT BE USING PUSH NOTIFICATIONS FOR NOW DUE TO ITS
+     *  LIMITATIONS.
+     *
      * TODO: Note that the Firebase token isn't crucial to user-flow, as the token is mainly used
      *  for SMS verification of incoming calls. If we don't have token, then just don't request
      *  SMS verification from server.
@@ -184,7 +187,7 @@ abstract class ClientDatabase : RoomDatabase() {
 
             // Get new FCM registration token
             val token = task.result
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: TOKEN: $token")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: TOKEN: $token")
 
             (context.applicationContext as App).applicationScope.launch {
                 this@ClientDatabase.storedMapDao().updateStoredMap(firebaseToken = token)

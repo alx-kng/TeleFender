@@ -388,6 +388,8 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
     }
 
     /**
+     * TODO: Should update Notify List here. Probably only if not already safe or blocked.
+     *
      * Inserts call into CallDetail table and updates AnalyzedNumber. Only updates
      * AnalyzedNumber if it is inserted.
      *

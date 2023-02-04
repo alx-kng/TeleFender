@@ -8,26 +8,23 @@ import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
-// TODO: Fix firebase
+/**
+ * TODO: We actually might not use push notifications due to the limitations of receiving a push
+ *  notification message in the background. However, we are keeping this stuff here in case we ever
+ *  do need it.
+ */
 class TeleFirebaseService : FirebaseMessagingService() {
 
+    /**
+     * Receives Firebase messages when the app is in the foreground.
+     *
+     * NOTE: Firebase messages received when the app is in the background are passed as extras in
+     * an Activity intent when the user clicks on the push notification (in the notification drawer).
+     */
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: Firebase message received - ${remoteMessage.data}")
 
         val data : Map<String, String> = remoteMessage.data
-
-        when {
-            data.containsKey("number") -> {
-                // TODO unblock number
-                val number = data["number"]
-            }
-            data.containsKey("tokenRefresh") -> {
-                //TODO send current token
-            }
-            else -> {
-                Timber.d("message %s has bad data", remoteMessage.messageId)
-            }
-        }
     }
 
     /**
@@ -50,15 +47,6 @@ class TeleFirebaseService : FirebaseMessagingService() {
     @SuppressLint("MissingPermission")
     override fun onNewToken(token: String) {
         Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: Refreshed Firebase token: $token")
-
-        /*
-        Since initFirebase() is called after user setup and database initialization, no need to
-        check here before inserting into database.
-         */
-//        (applicationContext as App).applicationScope.launch {
-//            val repository = (applicationContext as App).repository
-//            repository.updateStoredMap(firebaseToken = token)
-//        }
 
         // If you want to send messages to this application instance or
         // manage this apps subscriptions on the server side, send the
