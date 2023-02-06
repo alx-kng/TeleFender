@@ -144,7 +144,9 @@ class ClientRepository(
         verifiedSpamNotifyGate: Int? = null,
         superSpamNotifyGate: Int? = null,
         incomingGate: Int? = null,
-        outgoingGate: Int? = null
+        outgoingGate: Int? = null,
+        smsImmediateWaitTime: Long? = null,
+        smsDeferredWaitTime: Int? = null
     ) : Boolean {
         return mutexLocks[MutexType.PARAMETERS]!!.withLock {
             parametersDao.updateParameters(
@@ -154,7 +156,9 @@ class ClientRepository(
                 verifiedSpamNotifyGate = verifiedSpamNotifyGate,
                 superSpamNotifyGate = superSpamNotifyGate,
                 incomingGate = incomingGate,
-                outgoingGate = outgoingGate
+                outgoingGate = outgoingGate,
+                smsImmediateWaitTime = smsImmediateWaitTime,
+                smsDeferredWaitTime = smsDeferredWaitTime
             )
         }
     }

@@ -71,10 +71,10 @@ interface AnalyzedNumberDao : ParametersDao, StoredMapDao, UploadAnalyzedQueueDa
     suspend fun getAnalyzedNumQuery(normalizedNumber: String, instanceNumber: String) : AnalyzedNumber?
 
     /**
-     * TODO: Check if we're initializing the right values.
      * TODO: Confirm / find better control follow for adding to UploadAnalyzedQueue.
      * TODO: More error handling for AnalyzedQTU adding.
-     * TODO: OH SHIT, WE CAN'T PUT ANALYZED FROM NEW CHANGELOGS IN HERE, or can we?
+     *
+     * TODO: Check for insert success?
      *
      * Initializes AnalyzedNumber row for number (under the user's number) if it doesn't already
      * exist. Returns whether row was initialized. Additionally, if initialized, we also add an
@@ -153,6 +153,9 @@ interface AnalyzedNumberDao : ParametersDao, StoredMapDao, UploadAnalyzedQueueDa
                     analyzedJson = baseAnalyzed.toJson()
                 )
             )
+
+            // If linkedRowID < 0, then the insert query failed.
+            if (linkedRowID < 0) throw Exception("initAnalyzedNum() - insertAnalyzedNumQuery() failed!")
 
             mutexLocks[MutexType.UPLOAD_ANALYZED]!!.withLock {
                 val upLog = UploadAnalyzedQueue(linkedRowID = linkedRowID)

@@ -135,7 +135,14 @@ object DefaultContacts {
      *
      * NOTE: Make sure that calling function closes the cursor.
      */
-    fun getContactNumberCursor(contentResolver: ContentResolver): Cursor? {
+    fun getContactNumberCursor(context: Context, contentResolver: ContentResolver): Cursor? {
+        if (!TeleHelpers.hasValidStatus(context, contactRequired = true)) {
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                "No contact permissions in getContactNumberCursors()")
+
+            return null
+        }
+
         val projection = arrayOf(
             Phone.CONTACT_ID,
             Phone.NUMBER,

@@ -6,6 +6,7 @@ import android.content.Context
 import android.database.Cursor
 import android.provider.CallLog
 import com.telefender.phone.data.default_database.DefaultContacts
+import com.telefender.phone.data.default_database.DefaultContacts.getContactNumberCursor
 import com.telefender.phone.data.tele_database.ClientDatabase
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.MutexType
@@ -36,7 +37,6 @@ object TableSynchronizer {
      *
      * Also, we've confirmed that checkBackPeriod is necessary.
     */
-    
     suspend fun syncCallLogs(context: Context, repository: ClientRepository, contentResolver: ContentResolver) {
         for (i in 1..retryAmount) {
             try {
@@ -51,6 +51,11 @@ object TableSynchronizer {
 
     
     private suspend fun syncCallLogsHelper(context: Context, repository: ClientRepository, contentResolver: ContentResolver) {
+        // Check for permissions even though syncCallLogs() would catch the permission error.
+        if (!TeleHelpers.hasValidStatus(context, logRequired = true)) {
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: No log permissions in syncCallLogs()")
+            return
+        }
 
         val instanceNumber = TeleHelpers.getUserNumberStored(context)!!
         val lastLogSyncTime = repository.getLastLogSyncTime()!!
@@ -143,6 +148,10 @@ object TableSynchronizer {
     ***********************************************************************************************/
     
     suspend fun syncContacts(context: Context, database: ClientDatabase, contentResolver: ContentResolver) {
+        /*
+        No need to check for contact permissions here because getContactNumberCursor() is already
+        permission guarded.
+         */
         for (i in 1..retryAmount) {
             try {
                 syncContactsHelper(context, database, contentResolver)
@@ -178,7 +187,7 @@ object TableSynchronizer {
 
         val instanceNumber = TeleHelpers.getUserNumberStored(context)!!
         val mutexSync = mutexLocks[MutexType.SYNC]!!
-        val curs: Cursor? = DefaultContacts.getContactNumberCursor(contentResolver)
+        val curs: Cursor? = DefaultContacts.getContactNumberCursor(context, contentResolver)
 
         /**
          * We need to create a hash map of all the default database contact numbers (using the

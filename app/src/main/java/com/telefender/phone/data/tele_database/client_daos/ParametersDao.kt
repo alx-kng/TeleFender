@@ -35,7 +35,9 @@ interface ParametersDao : StoredMapDao {
                     verifiedSpamNotifyGate = 7,
                     superSpamNotifyGate = 14,
                     incomingGate = 40,
-                    outgoingGate = 12
+                    outgoingGate = 12,
+                    smsImmediateWaitTime = 2000,
+                    smsDeferredWaitTime = 60
                 )
             )
         }
@@ -58,7 +60,9 @@ interface ParametersDao : StoredMapDao {
         verifiedSpamNotifyGate: Int? = null,
         superSpamNotifyGate: Int? = null,
         incomingGate: Int? = null,
-        outgoingGate: Int? = null
+        outgoingGate: Int? = null,
+        smsImmediateWaitTime: Long? = null,
+        smsDeferredWaitTime: Int? = null
     ) : Boolean {
         // Retrieves user number if possible and returns false if not.
         val userNumber = getUserNumber() ?: return false
@@ -74,7 +78,9 @@ interface ParametersDao : StoredMapDao {
             verifiedSpamNotifyGate = verifiedSpamNotifyGate,
             superSpamNotifyGate = superSpamNotifyGate,
             incomingGate = incomingGate,
-            outgoingGate = outgoingGate
+            outgoingGate = outgoingGate,
+            smsImmediateWaitTime = smsImmediateWaitTime,
+            smsDeferredWaitTime = smsDeferredWaitTime
         )
 
         return result == 1
@@ -127,6 +133,18 @@ interface ParametersDao : StoredMapDao {
                 WHEN :outgoingGate IS NOT NULL
                     THEN :outgoingGate
                 ELSE outgoingGate
+            END,
+        smsImmediateWaitTime =
+            CASE
+                WHEN :smsImmediateWaitTime IS NOT NULL
+                    THEN :smsImmediateWaitTime
+                ELSE smsImmediateWaitTime
+            END,
+        smsDeferredWaitTime =
+            CASE
+                WHEN :smsDeferredWaitTime IS NOT NULL
+                    THEN :smsDeferredWaitTime
+                ELSE smsDeferredWaitTime
             END
         WHERE userNumber = :userNumber"""
     )
@@ -138,7 +156,9 @@ interface ParametersDao : StoredMapDao {
         verifiedSpamNotifyGate: Int?,
         superSpamNotifyGate: Int?,
         incomingGate: Int?,
-        outgoingGate: Int?
+        outgoingGate: Int?,
+        smsImmediateWaitTime: Long?,
+        smsDeferredWaitTime: Int?
     ) : Int?
 
     /**

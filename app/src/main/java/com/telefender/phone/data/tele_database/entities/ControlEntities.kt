@@ -33,5 +33,7 @@ data class Parameters(
     val verifiedSpamNotifyGate: Int,
     val superSpamNotifyGate: Int,
     val incomingGate: Int, // inclusive seconds in order to let through
-    val outgoingGate: Int // inclusive seconds in order to let through
+    val outgoingGate: Int, // inclusive seconds in order to let through
+    val smsImmediateWaitTime: Long, // milliseconds before force move on to allow / unallow
+    val smsDeferredWaitTime: Int, // seconds before sending another SMS request (if no earlier result)
 )

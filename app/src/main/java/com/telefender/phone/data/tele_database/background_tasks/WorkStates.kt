@@ -29,6 +29,8 @@ enum class WorkType {
     ONE_TIME_TOKEN,
     PERIODIC_TOKEN,
 
+    ONE_TIME_SMS_VERIFY,
+
     SETUP,
     DOWNLOAD_POST,
     UPLOAD_CHANGE_POST,

@@ -59,6 +59,9 @@ object TokenScheduler{
     }
 }
 
+/**
+ * TODO: When / If we do use this one day, don't forget to implement getForegroundInfo().
+ */
 class CoroutineTokenWorker(
     val context: Context,
     params: WorkerParameters

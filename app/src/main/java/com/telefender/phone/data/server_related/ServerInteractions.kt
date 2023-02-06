@@ -259,6 +259,9 @@ object ServerInteractions {
         }
     }
 
+    /**
+     * Post request to ask server for SMS verification of given number.
+     */
     suspend fun smsVerifyRequest(
         context: Context,
         repository: ClientRepository,

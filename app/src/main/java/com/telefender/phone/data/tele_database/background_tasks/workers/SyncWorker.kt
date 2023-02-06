@@ -30,6 +30,8 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 
 /**
+ * TODO: Enforce Application Context
+ *
  * All workers NEED TO USE application context, or else the context will probably be null.
  */
 object SyncScheduler{
@@ -136,7 +138,7 @@ class CoroutineCatchSyncWorker(
         try {
             setForeground(getForegroundInfo())
         } catch(e: Exception) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", e.message!!)
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", e.message)
         }
 
         val syncObserver = SyncWorkerObserver(context, scope, callLogObserverSync)
@@ -168,43 +170,20 @@ class CoroutineCatchSyncWorker(
         WorkStates.removePropertyChangeListener(syncObserver)
         applicationContext.contentResolver.unregisterContentObserver(callLogObserverSync)
 
-        WorkStates.setState(WorkType.CATCH_SYNC, null)
+        // TODO: We set state to state to null here at one point. Maybe there was a reason?
+        WorkStates.setState(WorkType.CATCH_SYNC, WorkInfo.State.SUCCEEDED)
         return Result.success()
     }
 
     override suspend fun getForegroundInfo() : ForegroundInfo {
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SYNC CATCHER OBSERVER WORKER FOREGROUND")
 
-        val pendingIntent: PendingIntent =
-            Intent(applicationContext, MainActivity::class.java).let { notificationIntent ->
-                PendingIntent.getActivity(
-                    applicationContext,
-                    0,
-                    notificationIntent,
-                    PendingIntent.FLAG_IMMUTABLE
-                )
-            }
-
-        val notification : Notification = NotificationCompat.Builder(applicationContext)
-            .setSmallIcon(android.R.mipmap.sym_def_app_icon)
-            .setContentTitle("TeleFender")
-            .setContentText("Syncing Calls...")
-            .setContentIntent(pendingIntent)
-            .setChannelId(CHANNEL_ID)
-            .build()
-
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ForegroundInfo(
-                NOTIFICATION_ID!!,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-            )
-        } else {
-            ForegroundInfo(
-                NOTIFICATION_ID!!,
-                notification
-            )
-        }
+        return ForegroundInfoCreator.createForegroundInfo(
+            applicationContext = applicationContext,
+            notificationID = NOTIFICATION_ID!!,
+            channelID = CHANNEL_ID,
+            contextText = "Syncing Calls..."
+        )
     }
 
     /**
@@ -315,35 +294,11 @@ class CoroutineSyncWorker(
     override suspend fun getForegroundInfo() : ForegroundInfo {
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SYNC WORKER FOREGROUND")
 
-        val pendingIntent: PendingIntent =
-            Intent(applicationContext, MainActivity::class.java).let { notificationIntent ->
-                PendingIntent.getActivity(
-                    applicationContext,
-                    0,
-                    notificationIntent,
-                    PendingIntent.FLAG_IMMUTABLE
-                )
-            }
-
-        val notification : Notification = NotificationCompat.Builder(applicationContext)
-            .setSmallIcon(android.R.mipmap.sym_def_app_icon)
-            .setContentTitle("TeleFender")
-            .setContentText("Syncing...")
-            .setContentIntent(pendingIntent)
-            .setChannelId(CHANNEL_ID)
-            .build()
-
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ForegroundInfo(
-                NOTIFICATION_ID!!,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-            )
-        } else {
-            ForegroundInfo(
-                NOTIFICATION_ID!!,
-                notification
-            )
-        }
+        return ForegroundInfoCreator.createForegroundInfo(
+            applicationContext = applicationContext,
+            notificationID = NOTIFICATION_ID!!,
+            channelID = CHANNEL_ID,
+            contextText = "Syncing..."
+        )
     }
 }

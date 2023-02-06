@@ -3,6 +3,7 @@ package com.telefender.phone.call_related
 import android.content.Context
 import com.telefender.phone.App
 import com.telefender.phone.data.tele_database.background_tasks.ServerWorkHelpers
+import com.telefender.phone.data.tele_database.background_tasks.workers.SMSVerifyScheduler
 import com.telefender.phone.data.tele_database.entities.Analyzed
 import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
 import com.telefender.phone.data.tele_database.entities.Parameters
@@ -73,17 +74,24 @@ object RuleChecker {
                 context = context,
                 repository = repository,
                 scope = applicationScope,
-                workerName = "NONE",
                 number = normalizedNumber
             )
         }
 
         // If there is no verify result within 2 seconds, then unallow number. Otherwise, allow.
         return runBlocking(Dispatchers.Default) {
-            delay(2000)
+            delay(parameters.smsImmediateWaitTime)
 
             val newAnalyzed = repository.getAnalyzedNum(normalizedNumber)?.getAnalyzed()
                 ?: return@runBlocking false
+
+            /*
+            If not verified, then send another SMS request to server after a around minute. This is
+            mostly for server load optimization.
+             */
+            if (!newAnalyzed.smsVerified) {
+                SMSVerifyScheduler.initiateSMSVerifyWorker(context, normalizedNumber)
+            }
 
             return@runBlocking newAnalyzed.smsVerified
         }

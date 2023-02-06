@@ -133,35 +133,11 @@ class CoroutineUploadWorker(
     override suspend fun getForegroundInfo() : ForegroundInfo {
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: UPLOAD_CHANGE WORKER FOREGROUND")
 
-        val pendingIntent: PendingIntent =
-            Intent(applicationContext, MainActivity::class.java).let { notificationIntent ->
-                PendingIntent.getActivity(
-                    applicationContext,
-                    0,
-                    notificationIntent,
-                    PendingIntent.FLAG_IMMUTABLE
-                )
-            }
-
-        val notification : Notification = NotificationCompat.Builder(applicationContext)
-            .setSmallIcon(android.R.mipmap.sym_def_app_icon)
-            .setContentTitle("TeleFender")
-            .setContentText("Uploading...")
-            .setContentIntent(pendingIntent)
-            .setChannelId(CHANNEL_ID)
-            .build()
-
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ForegroundInfo(
-                NOTIFICATION_ID!!,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-            )
-        } else {
-            ForegroundInfo(
-                NOTIFICATION_ID!!,
-                notification
-            )
-        }
+        return ForegroundInfoCreator.createForegroundInfo(
+            applicationContext = applicationContext,
+            notificationID = NOTIFICATION_ID!!,
+            channelID = CHANNEL_ID,
+            contextText = "Uploading..."
+        )
     }
 }

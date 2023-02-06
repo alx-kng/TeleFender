@@ -138,22 +138,17 @@ object ServerWorkHelpers {
      * TODO: Probably no need to put in worker since so short.
      *
      * Asks the server to SMS verify a number.
+     *
+     * NOTE: There is no need to retry here, as SMS requests are short and should be a one time
+     * check. Additionally, we currently don't setup a waiter here, as there is no need yet.
      */
     suspend fun smsVerify(
         context: Context,
         repository: ClientRepository,
         scope: CoroutineScope,
-        workerName: String,
         number: String
     ) {
-        for (i in 1..retryAmount) {
-            WorkStates.setState(WorkType.SMS_VERIFY_POST, WorkInfo.State.RUNNING)
-            ServerInteractions.smsVerifyRequest(context, repository, scope, number)
-
-            val success = WorkStates.workWaiter(WorkType.SMS_VERIFY_POST, "SMS_VERIFY", stopOnFail = true, certainFinish = true)
-            if (success) break
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $workerName - SMS_VERIFY RETRYING")
-            delay(2000)
-        }
+        WorkStates.setState(WorkType.SMS_VERIFY_POST, WorkInfo.State.RUNNING)
+        ServerInteractions.smsVerifyRequest(context, repository, scope, number)
     }
 }
