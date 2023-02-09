@@ -92,9 +92,7 @@ class MainActivity : AppCompatActivity() {
             Requesting the permission separately should grant the permission to the default dialer
             without bringing up a dialog to the user.
              */
-            if (!Permissions.hasPhoneStatePermissions(this)) {
-                Permissions.phoneStatePermissions(this)
-            }
+            Permissions.phoneStatePermissions(this)
         } else {
             Permissions.coreAltPermissions(this)
         }

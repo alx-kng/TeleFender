@@ -169,6 +169,9 @@ abstract class ClientDatabase : RoomDatabase() {
      * TODO: Actually do upload. Put in better token insert flow to account for whether server
      *  received it or not.
      *
+     * TODO: EASY TO FIX BUT HUGE BUG!!! IF the user gets a call in the middle of database first
+     *  callback, then firstTimeAccess is never set to false again.
+     *
      * Retrieves current Firebase token. The initial uploading of the token / any additional actions
      * also happen here.
      *

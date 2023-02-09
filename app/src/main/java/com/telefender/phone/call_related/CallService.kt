@@ -1,20 +1,28 @@
 package com.telefender.phone.call_related
 
 
-import android.os.Build
 import android.provider.CallLog
 import android.telecom.Call
 import android.telecom.InCallService
-import androidx.annotation.RequiresApi
 import com.telefender.phone.data.tele_database.TeleCallDetails
 import com.telefender.phone.data.tele_database.background_tasks.workers.SyncScheduler
 import com.telefender.phone.gui.InCallActivity
 import com.telefender.phone.gui.IncomingCallActivity
 import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.permissions.Permissions
 import timber.log.Timber
 
 
-// TODO: CHECK IF NO PERMISSION FOR SILENCE MODE
+/**
+ * TODO: CHECK IF NO PERMISSION FOR SILENCE MODE.
+ *
+ * TODO: IMPORTANT ERROR - During setup, even after database initialization supposedly finishes,
+ *  when unknown call comes, the IncomingActivity screen doesn't show. Moreover, logs were printing
+ *  "Waiting for rest of database!" even after the call. Actually, make sure that screens still
+ *  show if the setup hasn't finished. LOOK INTO THIS!!! --> Could be permission error.
+ *
+ * TODO: Maybe we need to require do not disturb permissions no matter what???
+ */
 class CallService : InCallService() {
 
     override fun onCreate() {
@@ -75,6 +83,14 @@ class CallService : InCallService() {
     }
 
     private fun safeCall() {
+        /*
+        Only need to set the ringer mode back to normal if changed in the first place. We know if
+        the ringer mode was changed in RuleChecker if the app has Do Not Disturb permissions.
+         */
+        if (Permissions.hasDoNotDisturbPermission(this)) {
+            AudioHelpers.setRingerMode(this, RingerMode.NORMAL)
+        }
+
         IncomingCallActivity.start(this, true)
     }
 
@@ -90,7 +106,7 @@ class CallService : InCallService() {
                 CallManager.hangup()
             }
             HandleMode.SILENCE_MODE -> {
-                AudioHelpers.ringerSilent(this, true)
+                AudioHelpers.setRingerMode(this, RingerMode.SILENT)
                 IncomingCallActivity.start(this, false)
             }
             HandleMode.ALLOW_MODE -> {

@@ -1,6 +1,5 @@
 package com.telefender.phone.gui
 
-import android.annotation.SuppressLint
 import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
@@ -10,7 +9,6 @@ import android.os.PowerManager
 import android.provider.CallLog
 import android.view.WindowManager
 import androidx.activity.OnBackPressedCallback
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 import com.telefender.phone.call_related.*
@@ -147,7 +145,7 @@ class IncomingCallActivity : AppCompatActivity() {
          * Using a runnable doesn't seem necessary.
          */
         _running = false
-        AudioHelpers.ringerSilent(this, false)
+        AudioHelpers.setRingerMode(this, RingerMode.SILENT)
 
         super.onDestroy()
     }

@@ -8,16 +8,30 @@ import androidx.lifecycle.MutableLiveData
 import com.telefender.phone.helpers.TeleHelpers
 import timber.log.Timber
 
+enum class RingerMode {
+    NORMAL, SILENT, VIBRATE
+}
+
 object AudioHelpers {
 
     val muteStatus : MutableLiveData<Boolean> = MutableLiveData(false)
     val speakerStatus: MutableLiveData<Boolean> = MutableLiveData(false)
 
-    fun ringerSilent(context: Context?, silent: Boolean) {
+    /**
+     * TODO: Check for if user is premium and has do not disturb permissions before using ringer
+     *  silent.
+     *
+     * Sets the ringer mode of the phone. Apparently, setting the ringer to ANY mode requires the
+     * Do Not Disturb permission.
+     */
+    fun setRingerMode(context: Context?, ringerMode: RingerMode) {
         val audioManager = context?.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
-        val mode = if (silent) AudioManager.RINGER_MODE_SILENT else AudioManager.RINGER_MODE_NORMAL
-        audioManager.ringerMode = mode
+        audioManager.ringerMode = when(ringerMode) {
+            RingerMode.NORMAL -> AudioManager.RINGER_MODE_NORMAL
+            RingerMode.SILENT -> AudioManager.RINGER_MODE_SILENT
+            RingerMode.VIBRATE -> AudioManager.RINGER_MODE_VIBRATE
+        }
     }
 
     fun setMute(context: Context?, setMute: Boolean) {

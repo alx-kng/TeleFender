@@ -82,6 +82,16 @@ object Permissions {
         } 
     }
 
+    fun hasLogPermissions(context: Context) : Boolean {
+        return isDefaultDialer(context)
+            || hasPermissions(context, arrayOf(READ_CALL_LOG))
+    }
+
+    fun hasContactPermissions(context: Context) : Boolean {
+        return isDefaultDialer(context)
+            || hasPermissions(context, arrayOf(READ_CONTACTS))
+    }
+
     fun phoneStatePermissions(activity: Activity) {
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: phoneStatePermissions() called")
 
@@ -104,26 +114,33 @@ object Permissions {
             && hasPermissions(context, arrayOf(phoneStatePermission))
     }
 
-    fun hasLogPermissions(context: Context) : Boolean {
-        return isDefaultDialer(context)
-            || hasPermissions(context, arrayOf(READ_CALL_LOG))
-    }
-
-    fun hasContactPermissions(context: Context) : Boolean {
-        return isDefaultDialer(context)
-            || hasPermissions(context, arrayOf(READ_CONTACTS))
-    }
-
     /**
      * Requests Do Not Disturb permissions. Technically not a normal permission request; however,
      * we still classify Do Not Disturb and its requestCode in PermissionType.
      */
     fun doNotDisturbPermission(activity: Activity) {
-        val notificationManager = activity.getSystemService(AppCompatActivity.NOTIFICATION_SERVICE) as NotificationManager
+        val notificationManager = activity
+            .getSystemService(AppCompatActivity.NOTIFICATION_SERVICE)
+            as NotificationManager
+
         if (!notificationManager.isNotificationPolicyAccessGranted) {
             val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
             activity.startActivityForResult(intent, PermissionRequestType.DO_NOT_DISTURB.requestCode)
         }
+    }
+
+    /**
+     * Checks if app has Do Not Disturb permission, which allows us to set the ringer mode to
+     * silent OR vibrate OR normal. Note that this permission is needed FOR ANY ringer mode change.
+     */
+    fun hasDoNotDisturbPermission(context: Context) : Boolean {
+        // Use applicationContext to access notification manager.
+        val notificationManager = context
+            .applicationContext
+            .getSystemService(AppCompatActivity.NOTIFICATION_SERVICE)
+            as NotificationManager
+
+        return notificationManager.isNotificationPolicyAccessGranted
     }
 
     /**
