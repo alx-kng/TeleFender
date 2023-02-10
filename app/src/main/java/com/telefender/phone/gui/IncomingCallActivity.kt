@@ -15,6 +15,7 @@ import com.telefender.phone.call_related.*
 import com.telefender.phone.data.tele_database.TeleCallDetails
 import com.telefender.phone.databinding.ActivityIncomingCallBinding
 import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.permissions.Permissions
 import kotlinx.coroutines.*
 import timber.log.Timber
 
@@ -145,7 +146,14 @@ class IncomingCallActivity : AppCompatActivity() {
          * Using a runnable doesn't seem necessary.
          */
         _running = false
-        AudioHelpers.setRingerMode(this, RingerMode.SILENT)
+
+        /*
+        Only need to set the ringer mode back to normal if changed in the first place. We know if
+        the ringer mode was changed in RuleChecker if the app has Do Not Disturb permissions.
+         */
+        if (Permissions.hasDoNotDisturbPermission(this)) {
+            AudioHelpers.setRingerMode(this, RingerMode.NORMAL)
+        }
 
         super.onDestroy()
     }

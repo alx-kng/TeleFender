@@ -52,7 +52,7 @@ object TableSynchronizer {
     
     private suspend fun syncCallLogsHelper(context: Context, repository: ClientRepository, contentResolver: ContentResolver) {
         // Check for permissions even though syncCallLogs() would catch the permission error.
-        if (!TeleHelpers.hasValidStatus(context, logRequired = true)) {
+        if (!TeleHelpers.hasValidStatus(context, setupRequired = false, logRequired = true)) {
             Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: No log permissions in syncCallLogs()")
             return
         }

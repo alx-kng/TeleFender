@@ -42,7 +42,7 @@ object TeleCallDetails {
      * calculated call duration is more accurate.
      */
     fun insertCallDetail(context: Context, call: Call, unallowed: Boolean, direction: Int) {
-        if (!TeleHelpers.hasValidStatus(context)) { return }
+        if (!TeleHelpers.hasValidStatus(context, setupRequired = false)) { return }
 
         val repository = (context.applicationContext as App).repository
 

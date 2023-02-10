@@ -3,6 +3,7 @@ package com.telefender.phone.data.tele_database
 import android.annotation.SuppressLint
 import android.content.ContentResolver
 import android.content.Context
+import android.icu.lang.UCharacter.GraphemeClusterBreak.T
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -88,17 +89,26 @@ abstract class ClientDatabase : RoomDatabase() {
 
                     database.waitForCorePermissions(context, "CALLBACK     ")
 
+//                    scope.launch {
+//                        while(firstTimeAccess) {
+//                            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: CALLBACK() - RUNNING")
+//                            delay(500)
+//                        }
+//                    }
+
                     database.initCoreDatabase(context)
                     database.waitForInitialization(context, scope)
 
-                    // User setup goes before rest of database, because that may take a long time.
+                    /*
+                    User setup goes before rest of database, because that may take a long time.
+                    Note that userSetup() uses a waiter, so everything after it should be setup.
+                     */
                     database.userSetup(context)
 
                     // Rest of database initialization only requires that the core is initialized.
                     database.initRestOfDatabase(context)
 
                     // Firebase token retrieval and subsequent server upload requires user setup.
-                    database.waitForSetup(context)
                     database.initFirebase(context)
 
                     firstTimeAccess = false
@@ -118,6 +128,12 @@ abstract class ClientDatabase : RoomDatabase() {
         initializationRunning = true
 
         Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: initCoreDatabase()")
+
+        // TODO: REMOVE THIS TEMP CODE
+        for (i in 1..20) {
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: initCoreDatabase() - Force Stall")
+            delay(500)
+        }
 
         val userNumber = TeleHelpers.getUserNumberUncertain(context) ?: return
 
@@ -292,12 +308,12 @@ abstract class ClientDatabase : RoomDatabase() {
          * Used to stall Omega workers until initRestOfDatabase() finishes on first ever access.
          * Also, even if rest of database doesn't finish, it should be taken care of during sync.
          */
-        var firstTimeAccess = false
+        private var firstTimeAccess = false
 
         /**
          * True if initCoreDatabase() is running.
          */
-        var initializationRunning = false
+        private var initializationRunning = false
 
         // Singleton prevents multiple instances of database from opening at the same time.
         @Volatile

@@ -4,6 +4,7 @@ package com.telefender.phone.call_related
 import android.provider.CallLog
 import android.telecom.Call
 import android.telecom.InCallService
+import com.telefender.phone.data.tele_database.ClientDatabase
 import com.telefender.phone.data.tele_database.TeleCallDetails
 import com.telefender.phone.data.tele_database.background_tasks.workers.SyncScheduler
 import com.telefender.phone.gui.InCallActivity
@@ -49,6 +50,13 @@ class CallService : InCallService() {
      */
     override fun onCallAdded(call: Call) {
         super.onCallAdded(call)
+
+        /*
+        If the user receives a call during setup, the first time database access callback is
+        actually stopped, meaning that certain stuff doesn't close correctly (can cause infinite
+        loop). Here, we manually make sure that the stuff closes.
+         */
+//        ClientDatabase.databaseCallbackInterrupt()
 
         CallManager.addCall(call)
 

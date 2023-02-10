@@ -210,19 +210,33 @@ class ClientRepository(
     @WorkerThread
     suspend fun getAnalyzedNum(number: String, instanceNumber: String? = null) : AnalyzedNumber? {
         return mutexLocks[MutexType.ANALYZED]!!.withLock {
-            analyzedNumberDao.getAnalyzedNum(number, instanceNumber)
+            analyzedNumberDao.getAnalyzedNum(
+                normalizedNumber = number,
+                instanceParam = instanceNumber
+            )
         }
     }
 
     /**
-     * Gets AnalyzedNumber given the rowID. Requires use of lock since it may initialize the
-     * AnalyzedNumber for the number if the row didn't previously exist.
+     * Gets AnalyzedNumber given the rowID. Doesn't auto-initialize.
      */
     @WorkerThread
     suspend fun getAnalyzedNum(rowID: Long) : AnalyzedNumber? {
-        return mutexLocks[MutexType.ANALYZED]!!.withLock {
-            analyzedNumberDao.getAnalyzedNum(rowID)
-        }
+        return analyzedNumberDao.getAnalyzedNum(rowID)
+
+    }
+
+    /**
+     * Gets AnalyzedNumber given a number. Doesn't auto-initialize.
+     *
+     * NOTE: if not specified, instanceNumber is assumed to be user's number.
+     */
+    @WorkerThread
+    suspend fun getAnalyzedNumForCheck(number: String, instanceNumber: String? = null) : AnalyzedNumber? {
+        return analyzedNumberDao.getAnalyzedNumForCheck(
+            normalizedNumber = number,
+            instanceParam = instanceNumber
+        )
     }
 
     @WorkerThread

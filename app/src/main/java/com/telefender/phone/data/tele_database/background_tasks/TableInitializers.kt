@@ -40,7 +40,7 @@ object TableInitializers {
     
     suspend fun initContacts(context: Context, database: ClientDatabase, contentResolver: ContentResolver) {
         if (!TeleHelpers.hasValidStatus(context,
-                initializedRequired = true,
+                setupRequired = false,
                 contactRequired = true
             )
         ) {
@@ -55,10 +55,9 @@ object TableInitializers {
      * Called once to initialize the CallDetail table during the database's first access. Uses
      * implementation of TableSynchronizer.syncCallLogs().
      */
-    
     suspend fun initCallDetails(context: Context) {
         if (!TeleHelpers.hasValidStatus(context,
-                initializedRequired = true,
+                setupRequired = false,
                 logRequired = true,
             )
         ) {

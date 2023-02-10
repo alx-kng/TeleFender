@@ -136,7 +136,7 @@ object DefaultContacts {
      * NOTE: Make sure that calling function closes the cursor.
      */
     fun getContactNumberCursor(context: Context, contentResolver: ContentResolver): Cursor? {
-        if (!TeleHelpers.hasValidStatus(context, contactRequired = true)) {
+        if (!TeleHelpers.hasValidStatus(context, setupRequired = false, contactRequired = true)) {
             Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
                 "No contact permissions in getContactNumberCursors()")
 

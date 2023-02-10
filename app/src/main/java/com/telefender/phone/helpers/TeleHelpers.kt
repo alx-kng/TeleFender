@@ -117,10 +117,10 @@ object TeleHelpers {
             }
     }
 
-    fun getAnalyzedNumber(context: Context, normalizedNumber: String) : AnalyzedNumber? {
+    fun getAnalyzedNumberForCheck(context: Context, normalizedNumber: String) : AnalyzedNumber? {
         val repository = (context.applicationContext as App).repository
         return runBlocking(Dispatchers.Default) {
-            repository.getAnalyzedNum(normalizedNumber)
+            repository.getAnalyzedNumForCheck(number = normalizedNumber)
         }
     }
 

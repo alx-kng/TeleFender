@@ -20,7 +20,7 @@ object RuleChecker {
     /**
      * TODO: Preliminary algo:
      *  - Double check (specifically smsVerified)
-     *  _
+     *  -
      *  - Put in stuff for (temp) NotifyList.
      *  -
      *  - Check if we should create new scope or use applicationScope here.
@@ -31,6 +31,8 @@ object RuleChecker {
      *    permissions, we will probably only be able to put the phone on vibrate. -> mostly fixed
      *  -
      *  - Double check allow mode stuff.
+     *  -
+     *  - Wait for first sync.
      *
      * Returns whether or not number should be allowed. Read "TeleFender - Algorithm Overview" for
      * more info.
@@ -50,7 +52,7 @@ object RuleChecker {
         val parameters: Parameters
 
         try {
-            analyzedNumber = TeleHelpers.getAnalyzedNumber(context, normalizedNumber)!!
+            analyzedNumber = TeleHelpers.getAnalyzedNumberForCheck(context, normalizedNumber)!!
             analyzed = analyzedNumber.getAnalyzed()
             parameters = TeleHelpers.getParameters(context)!!
         } catch (e: Exception) {
