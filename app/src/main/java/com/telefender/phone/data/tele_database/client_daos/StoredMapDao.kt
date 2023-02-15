@@ -3,7 +3,6 @@ package com.telefender.phone.data.tele_database.client_daos
 import androidx.room.*
 import com.telefender.phone.data.tele_database.entities.StoredMap
 import com.telefender.phone.helpers.TeleHelpers
-import com.telefender.phone.helpers.TeleHelpers.getParameters
 
 @Dao
 interface StoredMapDao {
@@ -47,6 +46,8 @@ interface StoredMapDao {
         clientKey: String? = null,
         firebaseToken: String? = null,
         lastLogSyncTime: Long? = null,
+        lastLogFullSyncTime: Long? = null,
+        lastContactFullSyncTime: Long? = null,
         lastServerRowID: Long? = null
     ) : Boolean {
         // Retrieves user number if possible and returns false if not.
@@ -61,6 +62,8 @@ interface StoredMapDao {
             clientKey = clientKey,
             firebaseToken = firebaseToken,
             lastLogSyncTime = lastLogSyncTime,
+            lastLogFullSyncTime = lastLogFullSyncTime,
+            lastContactFullSyncTime = lastContactFullSyncTime,
             lastServerRowID = lastServerRowID
         )
 
@@ -97,6 +100,18 @@ interface StoredMapDao {
                     THEN :lastLogSyncTime
                 ELSE lastLogSyncTime
             END,
+        lastLogFullSyncTime = 
+            CASE
+                WHEN :lastLogFullSyncTime IS NOT NULL
+                    THEN :lastLogFullSyncTime
+                ELSE lastLogFullSyncTime
+            END,
+        lastContactFullSyncTime = 
+            CASE
+                WHEN :lastContactFullSyncTime IS NOT NULL
+                    THEN :lastContactFullSyncTime
+                ELSE lastContactFullSyncTime
+            END,
         lastServerRowID = 
             CASE
                 WHEN :lastServerRowID IS NOT NULL
@@ -111,6 +126,8 @@ interface StoredMapDao {
         clientKey: String?,
         firebaseToken: String?,
         lastLogSyncTime: Long?,
+        lastLogFullSyncTime: Long?,
+        lastContactFullSyncTime: Long?,
         lastServerRowID: Long?
     ) : Int?
 

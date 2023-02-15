@@ -73,13 +73,23 @@ abstract class ClientDatabase : RoomDatabase() {
     ) : RoomDatabase.Callback() {
 
         /**
+         * TODO: Double check callback exit behavior. Particularly, check if there is some other
+         *  possible event that can cause the callback to preemptively exit, as we need to know
+         *  if firstTimeAccess can cause an infinite loop if not set back to false. For example,
+         *  if the callback ONLY exits when the app also closes, then we can assure that
+         *  firstTimeAccess is initialized back to false (due to being an object variable).
+         *
          * Note that onCreate() is only called the VERY FIRST time that the database is created
          * (basically, the first time the app is downloaded and opened). Additionally, if the user
-         * leaves during the middle of onCreate(), the rest of the code / database stuff will not
-         * continue. So, waitForInitialization(), waitForSetup(), waitForFirebase() are restarted
-         * inside getDatabase(), which is called everytime the app is freshly opened (no task).
+         * leaves (app closes) during the middle of onCreate(), the rest of the code / database
+         * stuff will not continue. So, waitForInitialization(), waitForSetup(), waitForFirebase()
+         * are restarted inside getDatabase(), which is called everytime the app is freshly opened
+         * (no task).
+         *
+         * NOTE: According to my current understanding, the callback is ONLY exited if the app is
+         * exited. This means that events like calls and the starting of other activities shouldn't
+         * affect the callback.
          */
-        
         override fun onCreate(db: SupportSQLiteDatabase) {
             super.onCreate(db)
             Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: INSIDE DATABASE CALLBACK")
@@ -88,13 +98,6 @@ abstract class ClientDatabase : RoomDatabase() {
                     firstTimeAccess = true
 
                     database.waitForCorePermissions(context, "CALLBACK     ")
-
-//                    scope.launch {
-//                        while(firstTimeAccess) {
-//                            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: CALLBACK() - RUNNING")
-//                            delay(500)
-//                        }
-//                    }
 
                     database.initCoreDatabase(context)
                     database.waitForInitialization(context, scope)
@@ -128,12 +131,6 @@ abstract class ClientDatabase : RoomDatabase() {
         initializationRunning = true
 
         Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: initCoreDatabase()")
-
-        // TODO: REMOVE THIS TEMP CODE
-        for (i in 1..20) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: initCoreDatabase() - Force Stall")
-            delay(500)
-        }
 
         val userNumber = TeleHelpers.getUserNumberUncertain(context) ?: return
 
@@ -184,9 +181,6 @@ abstract class ClientDatabase : RoomDatabase() {
      *
      * TODO: Actually do upload. Put in better token insert flow to account for whether server
      *  received it or not.
-     *
-     * TODO: EASY TO FIX BUT HUGE BUG!!! IF the user gets a call in the middle of database first
-     *  callback, then firstTimeAccess is never set to false again.
      *
      * Retrieves current Firebase token. The initial uploading of the token / any additional actions
      * also happen here.

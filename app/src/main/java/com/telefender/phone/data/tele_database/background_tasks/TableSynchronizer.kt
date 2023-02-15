@@ -116,6 +116,13 @@ object TableSynchronizer {
                 }
             }
             curs.close()
+
+            /*
+             Used to set the last time the logs were fully synced. That is, all the logs in
+             the default database were at least gone through. This allows us to decide
+             whether or not the database is up-to-date enough to be used for algorithm.
+             */
+            repository.updateStoredMap(lastLogFullSyncTime = Instant.now().toEpochMilli())
         }
     }
 
@@ -167,6 +174,13 @@ object TableSynchronizer {
     private suspend fun syncContactsHelper(context: Context, database: ClientDatabase, contentResolver: ContentResolver) {
         val defaultContactHashMap = checkForInserts(context, database, contentResolver)
         checkForUpdatesAndDeletes(context, database, defaultContactHashMap, contentResolver)
+
+        /*
+         Used to set the last time the contacts were fully synced. That is, all the contacts in
+         the default database were at least gone through. This allows us to decide
+         whether or not the database is up-to-date enough to be used for algorithm.
+         */
+        database.storedMapDao().updateStoredMap(lastContactFullSyncTime = Instant.now().toEpochMilli())
     }
 
     /**

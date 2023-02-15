@@ -72,7 +72,7 @@ class IncomingCallActivity : AppCompatActivity() {
          * If the call is unsafe and app is in silence mode, the call is declined after [silenceDelay]
          * if call isn't already disconnected or connected.
          */
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SAFE - ${intent.extras?.getBoolean("Safe")}")
+        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: SAFE - ${intent.extras?.getBoolean("Safe")}")
         val safe = intent.extras?.getBoolean("Safe") ?: true
         if (!safe && CallManager.currentMode == HandleMode.SILENCE_MODE) {
             scope.launch {

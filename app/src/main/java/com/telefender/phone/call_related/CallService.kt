@@ -17,10 +17,10 @@ import timber.log.Timber
 /**
  * TODO: CHECK IF NO PERMISSION FOR SILENCE MODE.
  *
- * TODO: IMPORTANT ERROR - During setup, even after database initialization supposedly finishes,
+ * TODO: POSSIBLE ERROR - During setup, even after database initialization supposedly finishes,
  *  when unknown call comes, the IncomingActivity screen doesn't show. Moreover, logs were printing
  *  "Waiting for rest of database!" even after the call. Actually, make sure that screens still
- *  show if the setup hasn't finished. LOOK INTO THIS!!! --> Could be permission error.
+ *  show if the setup hasn't finished. LOOK INTO THIS!!! --> Seems to be fixed, but double check.
  *
  * TODO: Maybe we need to require do not disturb permissions no matter what???
  */
@@ -50,13 +50,6 @@ class CallService : InCallService() {
      */
     override fun onCallAdded(call: Call) {
         super.onCallAdded(call)
-
-        /*
-        If the user receives a call during setup, the first time database access callback is
-        actually stopped, meaning that certain stuff doesn't close correctly (can cause infinite
-        loop). Here, we manually make sure that the stuff closes.
-         */
-//        ClientDatabase.databaseCallbackInterrupt()
 
         CallManager.addCall(call)
 

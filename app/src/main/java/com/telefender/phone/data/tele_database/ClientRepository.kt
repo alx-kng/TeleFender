@@ -94,8 +94,23 @@ class ClientRepository(
     }
 
     @WorkerThread
+    suspend fun getLastLogFullSyncTime() : Long? {
+        return storedMapDao.getStoredMap()?.lastLogFullSyncTime
+    }
+
+    @WorkerThread
+    suspend fun getLastContactFullSyncTime() : Long? {
+        return storedMapDao.getStoredMap()?.lastContactFullSyncTime
+    }
+
+    @WorkerThread
     suspend fun getLastServerRowID() : Long? {
         return storedMapDao.getStoredMap()?.lastServerRowID
+    }
+
+    @WorkerThread
+    suspend fun getStoredMap() : StoredMap? {
+        return storedMapDao.getStoredMap()
     }
 
     /**
@@ -107,6 +122,8 @@ class ClientRepository(
         clientKey: String? = null,
         firebaseToken: String? = null,
         lastLogSyncTime: Long? = null,
+        lastLogFullSyncTime: Long? = null,
+        lastContactFullSyncTime: Long? = null,
         lastServerRowID: Long? = null
     ) : Boolean {
         return mutexLocks[MutexType.STORED_MAP]!!.withLock {
@@ -115,6 +132,8 @@ class ClientRepository(
                 clientKey = clientKey,
                 firebaseToken = firebaseToken,
                 lastLogSyncTime = lastLogSyncTime,
+                lastLogFullSyncTime = lastLogFullSyncTime,
+                lastContactFullSyncTime = lastContactFullSyncTime,
                 lastServerRowID = lastServerRowID
             )
         }
@@ -224,19 +243,6 @@ class ClientRepository(
     suspend fun getAnalyzedNum(rowID: Long) : AnalyzedNumber? {
         return analyzedNumberDao.getAnalyzedNum(rowID)
 
-    }
-
-    /**
-     * Gets AnalyzedNumber given a number. Doesn't auto-initialize.
-     *
-     * NOTE: if not specified, instanceNumber is assumed to be user's number.
-     */
-    @WorkerThread
-    suspend fun getAnalyzedNumForCheck(number: String, instanceNumber: String? = null) : AnalyzedNumber? {
-        return analyzedNumberDao.getAnalyzedNumForCheck(
-            normalizedNumber = number,
-            instanceParam = instanceNumber
-        )
     }
 
     @WorkerThread

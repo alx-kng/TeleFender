@@ -38,19 +38,6 @@ interface AnalyzedNumberDao : ParametersDao, StoredMapDao, UploadAnalyzedQueueDa
     @Query("SELECT * FROM analyzed_number")
     suspend fun getAllAnalyzedNum() : List<AnalyzedNumber>
 
-    /**
-     * Same as getAnalyzedNum() but doesn't auto initialize. Should be used for RuleChecker.
-     */
-    suspend fun getAnalyzedNumForCheck(
-        normalizedNumber: String,
-        instanceParam: String? = null,
-    ) : AnalyzedNumber? {
-        val userNumber = getUserNumber()
-        val instanceNumber = instanceParam ?: userNumber ?: return null
-
-        return getAnalyzedNumQuery(normalizedNumber, instanceNumber)
-    }
-
     @Query("SELECT * FROM analyzed_number WHERE rowID = :rowID")
     suspend fun getAnalyzedNum(rowID: Long) : AnalyzedNumber?
 

@@ -7,6 +7,7 @@ import com.telefender.phone.data.tele_database.background_tasks.workers.SMSVerif
 import com.telefender.phone.data.tele_database.entities.Analyzed
 import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
 import com.telefender.phone.data.tele_database.entities.Parameters
+import com.telefender.phone.data.tele_database.entities.StoredMap
 import com.telefender.phone.helpers.TeleHelpers
 import com.telefender.phone.permissions.Permissions
 import kotlinx.coroutines.Dispatchers
@@ -32,36 +33,58 @@ object RuleChecker {
      *  -
      *  - Double check allow mode stuff.
      *  -
-     *  - Wait for first sync.
+     *  - Can make full sync test better maybe?
      *
      * Returns whether or not number should be allowed. Read "TeleFender - Algorithm Overview" for
      * more info.
      */
     fun isSafe(context: Context, number: String?): Boolean {
 
+        //Requires that app is initialized and setup before using algorithm.
+        if (!TeleHelpers.hasValidStatus(context)) {
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                "isSafe() - Doesn't have valid status to use algorithm!")
+
+            return true
+        }
+
+        val repository = (context.applicationContext as App).repository
+        val applicationScope = (context.applicationContext as App).applicationScope
+
         val normalizedNumber = TeleHelpers.normalizedNumber(number)
             ?: TeleHelpers.bareNumber(number)
 
         if (normalizedNumber == TeleHelpers.UNKNOWN_NUMBER) return false
 
-        val repository = (context.applicationContext as App).repository
-        val applicationScope = (context.applicationContext as App).applicationScope
-
         val analyzedNumber: AnalyzedNumber
         val analyzed: Analyzed
         val parameters: Parameters
+        val storedMap: StoredMap
 
         try {
-            analyzedNumber = TeleHelpers.getAnalyzedNumberForCheck(context, normalizedNumber)!!
+            analyzedNumber = TeleHelpers.getAnalyzedNumber(context, normalizedNumber)!!
             analyzed = analyzedNumber.getAnalyzed()
             parameters = TeleHelpers.getParameters(context)!!
+            storedMap = TeleHelpers.getStoredMap(context)!!
         } catch (e: Exception) {
             /*
             Allow number through if some huge internal error occurs so that the user isn't hard locked
             from receiving outside calls.
              */
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: isSafe() - MAYDAY MAYDAY! ${e.message}")
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: isSafe() - Core data problem! ${e.message}")
             e.printStackTrace()
+            return true
+        }
+
+        /*
+         Checking the last full sync time allows us to decide whether or not the database is
+         up-to-date enough to be used for algorithm. This is most useful for calls during the
+         initialization stage.
+         */
+        if (storedMap.lastLogFullSyncTime == 0L || storedMap.lastContactFullSyncTime == 0L) {
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                "isSafe() - Can't use algorithm since we haven't completed a full sync yet!")
+
             return true
         }
 

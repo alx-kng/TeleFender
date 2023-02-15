@@ -10,6 +10,7 @@ import com.google.i18n.phonenumbers.PhoneNumberUtil
 import com.telefender.phone.App
 import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
 import com.telefender.phone.data.tele_database.entities.Parameters
+import com.telefender.phone.data.tele_database.entities.StoredMap
 import com.telefender.phone.permissions.Permissions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -117,10 +118,10 @@ object TeleHelpers {
             }
     }
 
-    fun getAnalyzedNumberForCheck(context: Context, normalizedNumber: String) : AnalyzedNumber? {
+    fun getAnalyzedNumber(context: Context, normalizedNumber: String) : AnalyzedNumber? {
         val repository = (context.applicationContext as App).repository
         return runBlocking(Dispatchers.Default) {
-            repository.getAnalyzedNumForCheck(number = normalizedNumber)
+            repository.getAnalyzedNum(number = normalizedNumber)
         }
     }
 
@@ -128,6 +129,13 @@ object TeleHelpers {
         val repository = (context.applicationContext as App).repository
         return runBlocking(Dispatchers.Default) {
             repository.getParameters()
+        }
+    }
+
+    fun getStoredMap(context: Context) : StoredMap? {
+        val repository = (context.applicationContext as App).repository
+        return runBlocking(Dispatchers.Default) {
+            repository.getStoredMap()
         }
     }
 

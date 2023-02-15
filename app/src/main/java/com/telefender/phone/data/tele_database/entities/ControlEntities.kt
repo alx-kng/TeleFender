@@ -13,6 +13,8 @@ data class StoredMap(
     val clientKey: String? = null, // UUID key to push and pull changes to / from server
     val firebaseToken: String? = null,
     val lastLogSyncTime: Long = 0,
+    val lastLogFullSyncTime: Long = 0, // First time the log sync process fully completes.
+    val lastContactFullSyncTime: Long = 0, // First time the contact sync process fully completes.
     val lastServerRowID: Long? = null,
 ) {
 
