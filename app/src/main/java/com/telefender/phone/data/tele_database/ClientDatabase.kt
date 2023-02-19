@@ -3,7 +3,6 @@ package com.telefender.phone.data.tele_database
 import android.annotation.SuppressLint
 import android.content.ContentResolver
 import android.content.Context
-import android.icu.lang.UCharacter.GraphemeClusterBreak.T
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -16,7 +15,8 @@ import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.background_tasks.TableInitializers
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
-import com.telefender.phone.data.tele_database.background_tasks.workers.OmegaPeriodicScheduler
+import com.telefender.phone.data.tele_database.background_tasks.workers.DebugScheduler
+import com.telefender.phone.data.tele_database.background_tasks.workers.OmegaScheduler
 import com.telefender.phone.data.tele_database.background_tasks.workers.SetupScheduler
 import com.telefender.phone.data.tele_database.client_daos.*
 import com.telefender.phone.data.tele_database.entities.*
@@ -332,6 +332,8 @@ abstract class ClientDatabase : RoomDatabase() {
          * TODO: REDO IMPORTANT TRANSACTIONS THAT FAIL!!!! -> Think we've mostly covered everything,
          *  but double check.
          *
+         * TODO: PROBLEM WITH PERIODIC OMEGA WORKER STATE INFINITELY RUNNING!
+         *
          * Either creates new database instance if there is no initialized one available or returns
          * the initialized instance that already exists. Called everytime the app is freshly
          * opened (no task).
@@ -377,7 +379,7 @@ abstract class ClientDatabase : RoomDatabase() {
                         instanceTemp.initFirebase(context)
                     }
 
-                    OmegaPeriodicScheduler.initiateOneTimeOmegaWorker(context)
+                    OmegaScheduler.initiateOneTimeOmegaWorker(context)
                     WorkStates.workWaiter(WorkType.ONE_TIME_OMEGA)
 
                     val loggerJob = DatabaseLogger.omegaLogger(
@@ -399,8 +401,19 @@ abstract class ClientDatabase : RoomDatabase() {
                     loggerJob?.join()
 
                     // Initialize Omega Periodic Worker (sync, download, execute, upload)
-                    OmegaPeriodicScheduler.initiatePeriodicOmegaWorker(context)
+                    OmegaScheduler.initiatePeriodicOmegaWorker(context)
+                    WorkStates.workWaiter(WorkType.PERIODIC_OMEGA, "OMEGA PERIODIC WAIT")
 
+                    /*
+                    TODO: See if there's a need for a one time debug worker later on.
+
+                    Initialize One Time Debug Worker (currently for testing, as we want to be able
+                    to test debug without having to wait 15 min / reinstall app).
+                     */
+                    DebugScheduler.initiateOneTimeDebugWorker(context)
+
+                    // Initialize Periodic Debug Worker
+                    DebugScheduler.initiatePeriodicDebugWorker(context)
                 }
             }
 

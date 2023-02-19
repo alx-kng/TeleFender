@@ -1,20 +1,12 @@
 package com.telefender.phone.data.tele_database.background_tasks.workers
 
-import android.app.Notification
-import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
-import android.content.pm.ServiceInfo
-import android.os.Build
-import androidx.annotation.RequiresApi
-import androidx.core.app.NotificationCompat
 import androidx.work.*
 import com.telefender.phone.App
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
-import com.telefender.phone.data.tele_database.background_tasks.ServerWorkHelpers
-import com.telefender.phone.gui.MainActivity
+import com.telefender.phone.data.server_related.RequestWrappers
 import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -100,7 +92,7 @@ class CoroutineDownloadWorker(
          * Downloads changes from server
          */
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: DOWNLOAD WORKER STARTED")
-        ServerWorkHelpers.downloadData(context, repository, scope, "DOWNlOAD WORKER")
+        RequestWrappers.downloadData(context, repository, scope, "DOWNlOAD WORKER")
 
         when (stateVarString) {
             "oneTimeDownloadState" -> WorkStates.setState(WorkType.ONE_TIME_DOWNLOAD, WorkInfo.State.SUCCEEDED)

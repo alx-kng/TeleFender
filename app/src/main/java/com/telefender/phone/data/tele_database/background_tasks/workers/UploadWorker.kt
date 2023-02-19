@@ -1,20 +1,12 @@
 package com.telefender.phone.data.tele_database.background_tasks.workers
 
-import android.app.Notification
-import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
-import android.content.pm.ServiceInfo
-import android.os.Build
-import androidx.annotation.RequiresApi
-import androidx.core.app.NotificationCompat
 import androidx.work.*
 import com.telefender.phone.App
 import com.telefender.phone.data.tele_database.ClientRepository
-import com.telefender.phone.data.tele_database.background_tasks.ServerWorkHelpers
+import com.telefender.phone.data.server_related.RequestWrappers
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
-import com.telefender.phone.gui.MainActivity
 import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -101,7 +93,7 @@ class CoroutineUploadWorker(
          * doesn't return null (failure or retry).
          */
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_CHANGE STARTED")
-        ServerWorkHelpers.uploadChange(context, repository, scope, "UPLOAD WORKER")
+        RequestWrappers.uploadChange(context, repository, scope, "UPLOAD WORKER")
 
         /**
          * TODO: Confirm that we want to upload AnalyzedNumbers here. Or maybe, have some type
@@ -112,13 +104,13 @@ class CoroutineUploadWorker(
          * doesn't return null (failure or retry).
          */
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_ANALYZED_POST STARTED")
-        ServerWorkHelpers.uploadAnalyzed(context, repository, scope, "UPLOAD WORKER")
+        RequestWrappers.uploadAnalyzed(context, repository, scope, "UPLOAD WORKER")
 
         /**
          * Uploads error logs to server.
          */
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_ERROR STARTED")
-        ServerWorkHelpers.uploadError(context, repository, scope, "OMEGA")
+        RequestWrappers.uploadError(context, repository, scope, "OMEGA")
 
         when (stateVarString) {
             "oneTimeUploadState" ->  WorkStates.setState(WorkType.ONE_TIME_UPLOAD, WorkInfo.State.SUCCEEDED)

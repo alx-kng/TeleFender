@@ -1,9 +1,9 @@
 package com.telefender.phone.data.server_related
 
-import android.annotation.SuppressLint
 import android.content.Context
 import androidx.work.WorkInfo
 import com.android.volley.Request
+import com.telefender.phone.data.server_related.json_classes.*
 import com.telefender.phone.data.server_related.request_generators.*
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
@@ -18,8 +18,11 @@ import org.json.JSONException
 import timber.log.Timber
 
 
-// TODO: Put in upload call logs request (probably won't be used often, but just in case).
-object ServerInteractions {
+/**
+ * TODO: We can probably combine UploadAnalyzedRequestGen and UploadChangeRequestGen into one file
+ * TODO: Put in upload call logs request (probably won't be used often, but just in case).
+ */
+object DataRequests {
 
     private const val retryAmount = 5
 

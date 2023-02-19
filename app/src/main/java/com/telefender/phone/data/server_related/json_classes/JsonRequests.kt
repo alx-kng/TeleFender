@@ -1,4 +1,4 @@
-package com.telefender.phone.data.server_related
+package com.telefender.phone.data.server_related.json_classes
 
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
@@ -207,6 +207,28 @@ class SMSVerifyRequest(
 
     override fun toString() : String {
         return "${super.toString()} number: $number"
+    }
+}
+
+@JsonClass(generateAdapter = true)
+class DebugExchangeRequest(
+    instanceNumber : String,
+    key : String,
+    val remoteSessionID : String,
+    val data: List<String>,
+    val commandComplete: Boolean
+) : KeyRequest(instanceNumber, key) {
+
+    override fun toJson() : String {
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(DebugExchangeRequest::class.java)
+
+        return adapter.serializeNulls().toJson(this)
+    }
+
+    override fun toString() : String {
+        return "${super.toString()} remoteSessionID: $remoteSessionID data: $data " +
+            "commandComplete: $commandComplete"
     }
 }
 

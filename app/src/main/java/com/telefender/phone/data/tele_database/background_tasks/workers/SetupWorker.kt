@@ -1,20 +1,12 @@
 package com.telefender.phone.data.tele_database.background_tasks.workers
 
-import android.app.Notification
-import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
-import android.content.pm.ServiceInfo
-import android.os.Build
-import androidx.annotation.RequiresApi
-import androidx.core.app.NotificationCompat
 import androidx.work.*
 import com.telefender.phone.App
 import com.telefender.phone.data.server_related.UserSetup
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
-import com.telefender.phone.gui.MainActivity
 import com.telefender.phone.helpers.TeleHelpers
 import com.telefender.phone.permissions.Permissions
 import kotlinx.coroutines.CoroutineScope
@@ -34,7 +26,7 @@ object SetupScheduler {
 
         WorkStates.setState(WorkType.SETUP, WorkInfo.State.RUNNING)
 
-        val uploadRequest = OneTimeWorkRequestBuilder<CoroutineSetupWorker>()
+        val setupRequest = OneTimeWorkRequestBuilder<CoroutineSetupWorker>()
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             .setBackoffCriteria(
                 BackoffPolicy.LINEAR,
@@ -46,9 +38,9 @@ object SetupScheduler {
 
         WorkManager
             .getInstance(context)
-            .enqueueUniqueWork(setupTag, ExistingWorkPolicy.KEEP, uploadRequest)
+            .enqueueUniqueWork(setupTag, ExistingWorkPolicy.KEEP, setupRequest)
 
-        return uploadRequest.id
+        return setupRequest.id
     }
 }
 

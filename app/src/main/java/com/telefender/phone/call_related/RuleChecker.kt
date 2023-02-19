@@ -2,7 +2,7 @@ package com.telefender.phone.call_related
 
 import android.content.Context
 import com.telefender.phone.App
-import com.telefender.phone.data.tele_database.background_tasks.ServerWorkHelpers
+import com.telefender.phone.data.server_related.RequestWrappers
 import com.telefender.phone.data.tele_database.background_tasks.workers.SMSVerifyScheduler
 import com.telefender.phone.data.tele_database.entities.Analyzed
 import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
@@ -118,7 +118,7 @@ object RuleChecker {
         }
 
         applicationScope.launch {
-            ServerWorkHelpers.smsVerify(
+            RequestWrappers.smsVerify(
                 context = context,
                 repository = repository,
                 scope = applicationScope,

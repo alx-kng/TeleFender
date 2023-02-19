@@ -1,7 +1,7 @@
 package com.telefender.phone.data.tele_database
 
 import androidx.annotation.WorkerThread
-import com.telefender.phone.data.server_related.ServerData
+import com.telefender.phone.data.server_related.json_classes.ServerData
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.client_daos.*
 import com.telefender.phone.data.tele_database.entities.*

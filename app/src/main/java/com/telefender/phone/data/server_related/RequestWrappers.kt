@@ -1,16 +1,16 @@
-package com.telefender.phone.data.tele_database.background_tasks
+package com.telefender.phone.data.server_related
 
 import android.content.Context
-import androidx.work.ListenableWorker
 import androidx.work.WorkInfo
-import com.telefender.phone.data.server_related.ServerInteractions
 import com.telefender.phone.data.tele_database.ClientRepository
+import com.telefender.phone.data.tele_database.background_tasks.WorkStates
+import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import timber.log.Timber
 
-object ServerWorkHelpers {
+object RequestWrappers {
 
     private const val retryAmount = 5
 
@@ -25,9 +25,14 @@ object ServerWorkHelpers {
     ) {
         for (i in 1..retryAmount) {
             WorkStates.setState(WorkType.DOWNLOAD_POST, WorkInfo.State.RUNNING)
-            ServerInteractions.downloadDataRequest(context, repository, scope)
+            DataRequests.downloadDataRequest(context, repository, scope)
 
-            val success = WorkStates.workWaiter(WorkType.DOWNLOAD_POST, "DOWNLOAD", stopOnFail = true, certainFinish = true)
+            val success = WorkStates.workWaiter(
+                workType = WorkType.DOWNLOAD_POST,
+                runningMsg = "DOWNLOAD",
+                stopOnFail = true,
+                certainFinish = true
+            )
             if (success) break
             Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $workerName - DOWNLOAD RETRYING")
             delay(2000)
@@ -49,7 +54,7 @@ object ServerWorkHelpers {
 
         WorkStates.setState(WorkType.UPLOAD_CHANGE_POST, WorkInfo.State.RUNNING)
         if (repository.hasChangeQTU()) {
-            ServerInteractions.uploadChangeRequest(context, repository, scope, errorCount = 0)
+            DataRequests.uploadChangeRequest(context, repository, scope, errorCount = 0)
         } else {
             WorkStates.setState(WorkType.UPLOAD_CHANGE_POST, WorkInfo.State.SUCCEEDED)
         }
@@ -60,7 +65,13 @@ object ServerWorkHelpers {
         NOTE: failures have more to do with the request being faulty / the server having
         connection issues or execution problems.
          */
-        if (!WorkStates.workWaiter(WorkType.UPLOAD_CHANGE_POST, "UPLOAD_CHANGE", stopOnFail = true, certainFinish = true)) {
+        if (!WorkStates.workWaiter(
+                workType = WorkType.UPLOAD_CHANGE_POST,
+                runningMsg = "UPLOAD_CHANGE",
+                stopOnFail = true,
+                certainFinish = true
+            )
+        ) {
             Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: INSIDE $workerName WORKER. PROBLEM WITH UPLOAD_CHANGE.")
         }
     }
@@ -86,7 +97,7 @@ object ServerWorkHelpers {
 
         WorkStates.setState(WorkType.UPLOAD_ANALYZED_POST, WorkInfo.State.RUNNING)
         if (repository.hasAnalyzedQTU()) {
-            ServerInteractions.uploadAnalyzedRequest(context, repository, scope, errorCount = 0)
+            DataRequests.uploadAnalyzedRequest(context, repository, scope, errorCount = 0)
         } else {
             WorkStates.setState(WorkType.UPLOAD_ANALYZED_POST, WorkInfo.State.SUCCEEDED)
         }
@@ -97,7 +108,13 @@ object ServerWorkHelpers {
         NOTE: failures have more to do with the request being faulty / the server having
         connection issues or execution problems.
          */
-        if (!WorkStates.workWaiter(WorkType.UPLOAD_ANALYZED_POST, "UPLOAD_ANALYZED", stopOnFail = true, certainFinish = true)) {
+        if (!WorkStates.workWaiter(
+                workType = WorkType.UPLOAD_ANALYZED_POST,
+                runningMsg = "UPLOAD_ANALYZED",
+                stopOnFail = true,
+                certainFinish = true
+            )
+        ) {
             Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: INSIDE $workerName WORKER. PROBLEM WITH UPLOAD_ANALYZED.")
         }
     }
@@ -117,7 +134,7 @@ object ServerWorkHelpers {
 
         WorkStates.setState(WorkType.UPLOAD_ERROR_POST, WorkInfo.State.RUNNING)
         if (repository.hasErrorLog()) {
-            ServerInteractions.uploadErrorRequest(context, repository, scope, errorCount = 0)
+            DataRequests.uploadErrorRequest(context, repository, scope, errorCount = 0)
         } else {
             WorkStates.setState(WorkType.UPLOAD_ERROR_POST, WorkInfo.State.SUCCEEDED)
         }
@@ -128,7 +145,13 @@ object ServerWorkHelpers {
         NOTE: failures have more to do with the request being faulty / the server having
         connection issues or execution problems.
          */
-        if (!WorkStates.workWaiter(WorkType.UPLOAD_ERROR_POST, "UPLOAD_ERROR", stopOnFail = true, certainFinish = true)) {
+        if (!WorkStates.workWaiter(
+                workType = WorkType.UPLOAD_ERROR_POST,
+                runningMsg = "UPLOAD_ERROR",
+                stopOnFail = true,
+                certainFinish = true
+            )
+        ) {
             Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: INSIDE $workerName WORKER. PROBLEM WITH UPLOAD_ERROR.")
         }
     }
@@ -149,6 +172,81 @@ object ServerWorkHelpers {
         number: String
     ) {
         WorkStates.setState(WorkType.SMS_VERIFY_POST, WorkInfo.State.RUNNING)
-        ServerInteractions.smsVerifyRequest(context, repository, scope, number)
+        DataRequests.smsVerifyRequest(context, repository, scope, number)
+    }
+
+    /**
+     * Downloads ServerData from server. Retries the request here if something goes wrong.
+     */
+    suspend fun debugCheck(
+        context: Context,
+        repository: ClientRepository,
+        scope: CoroutineScope,
+        workerName: String
+    ) {
+        for (i in 1..retryAmount) {
+            WorkStates.setState(WorkType.DEBUG_CHECK_POST, WorkInfo.State.RUNNING)
+            RemoteDebug.debugCheckRequest(context, repository, scope)
+
+            val success = WorkStates.workWaiter(
+                workType = WorkType.DEBUG_CHECK_POST,
+                runningMsg = "DEBUG_CHECK",
+                stopOnFail = true,
+                certainFinish = true
+            )
+            if (success) break
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $workerName - DEBUG_CHECK RETRYING")
+            delay(2000)
+        }
+    }
+
+    /**
+     * Downloads ServerData from server. Retries the request here if something goes wrong.
+     */
+    suspend fun debugSession(
+        context: Context,
+        repository: ClientRepository,
+        scope: CoroutineScope,
+        workerName: String
+    ) {
+        for (i in 1..retryAmount) {
+            WorkStates.setState(WorkType.DEBUG_SESSION_POST, WorkInfo.State.RUNNING)
+            RemoteDebug.debugSessionRequest(context, repository, scope)
+
+            val success = WorkStates.workWaiter(
+                workType = WorkType.DEBUG_SESSION_POST,
+                runningMsg = "DEBUG_SESSION",
+                stopOnFail = true,
+                certainFinish = true
+            )
+            if (success) break
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $workerName - DEBUG_SESSION RETRYING")
+            delay(2000)
+        }
+    }
+
+    /**
+     * Downloads ServerData from server. Retries the request here if something goes wrong.
+     */
+    suspend fun debugExchange(
+        context: Context,
+        repository: ClientRepository,
+        scope: CoroutineScope,
+        workerName: String
+    ) {
+        for (i in 1..retryAmount) {
+            WorkStates.setState(WorkType.DEBUG_EXCHANGE_POST, WorkInfo.State.RUNNING)
+            RemoteDebug.debugExchangeRequest(context, repository, scope)
+
+            val success = WorkStates.workWaiter(
+                workType = WorkType.DEBUG_EXCHANGE_POST,
+                runningMsg = null,
+                stopOnFail = true,
+                certainFinish = true
+            )
+            if (success) break
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $workerName - DEBUG_EXCHANGE RETRYING")
+            delay(2000)
+        }
     }
 }

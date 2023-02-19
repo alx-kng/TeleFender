@@ -1,9 +1,10 @@
 package com.telefender.phone.data.server_related
 
-import android.annotation.SuppressLint
 import android.content.Context
 import androidx.work.WorkInfo
 import com.android.volley.Request
+import com.telefender.phone.data.server_related.json_classes.DefaultRequest
+import com.telefender.phone.data.server_related.json_classes.VerifyRequest
 import com.telefender.phone.data.server_related.request_generators.InitialRequestGen
 import com.telefender.phone.data.server_related.request_generators.VerifyRequestGen
 import com.telefender.phone.data.tele_database.ClientRepository
@@ -64,7 +65,7 @@ object UserSetup {
 
         if (instanceNumber == null || sessionID == null) {
             Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
-                "VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | SESSION ID = $sessionID")
+                "VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | SETUP_SESSION ID = $sessionID")
 
             WorkStates.setState(WorkType.SETUP, WorkInfo.State.FAILED)
             return

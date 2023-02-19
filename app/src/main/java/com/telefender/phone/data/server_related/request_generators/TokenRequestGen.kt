@@ -3,9 +3,9 @@ package com.telefender.phone.data.server_related.request_generators
 import android.content.Context
 import androidx.work.WorkInfo
 import com.android.volley.Response
-import com.telefender.phone.data.server_related.DefaultResponse
-import com.telefender.phone.data.server_related.ServerResponseType
-import com.telefender.phone.data.server_related.toServerResponse
+import com.telefender.phone.data.server_related.json_classes.DefaultResponse
+import com.telefender.phone.data.server_related.json_classes.ServerResponseType
+import com.telefender.phone.data.server_related.json_classes.toServerResponse
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType

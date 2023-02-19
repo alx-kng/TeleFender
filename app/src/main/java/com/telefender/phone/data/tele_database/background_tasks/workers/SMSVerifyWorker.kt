@@ -3,7 +3,7 @@ package com.telefender.phone.data.tele_database.background_tasks.workers
 import android.content.Context
 import androidx.work.*
 import com.telefender.phone.App
-import com.telefender.phone.data.tele_database.background_tasks.ServerWorkHelpers
+import com.telefender.phone.data.server_related.RequestWrappers
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.data.tele_database.background_tasks.workers.SyncScheduler.syncCatchTag
@@ -27,7 +27,7 @@ object SMSVerifyScheduler{
     fun initiateSMSVerifyWorker(context : Context, number: String) : UUID? {
         WorkStates.setState(WorkType.ONE_TIME_SMS_VERIFY, WorkInfo.State.RUNNING)
 
-        val smsVerifyRequest = OneTimeWorkRequestBuilder<CoroutineCatchSyncWorker>()
+        val smsVerifyRequest = OneTimeWorkRequestBuilder<CoroutineSMSVerifyWorker>()
             .setInputData(workDataOf("notificationID" to "7171", "number" to number))
             .setBackoffCriteria(
                 BackoffPolicy.LINEAR,
@@ -39,7 +39,7 @@ object SMSVerifyScheduler{
         // ExistingWorkPolicy set to REPLACE so that sync observing period starts fresh after call.
         WorkManager
             .getInstance(context)
-            .enqueueUniqueWork(syncCatchTag, ExistingWorkPolicy.REPLACE, smsVerifyRequest)
+            .enqueueUniqueWork(smsVerifyTag, ExistingWorkPolicy.REPLACE, smsVerifyRequest)
 
         return smsVerifyRequest.id
     }
@@ -76,7 +76,7 @@ class CoroutineSMSVerifyWorker(
         
         // Wait around a minute and send another SMS verify request (for server load optimization).
         delay(waitTime * 1000L)
-        ServerWorkHelpers.smsVerify(context, repository, scope, number!!)
+        RequestWrappers.smsVerify(context, repository, scope, number!!)
 
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SMS VERIFY WORKER ENDED")
 

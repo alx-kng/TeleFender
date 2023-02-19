@@ -1,6 +1,8 @@
 package com.telefender.phone.data.tele_database.background_tasks
 
+import android.content.Context
 import androidx.work.WorkInfo
+import com.telefender.phone.data.tele_database.background_tasks.workers.WorkManagerHelper
 import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
@@ -9,29 +11,35 @@ import timber.log.Timber
 import java.beans.PropertyChangeListener
 import java.beans.PropertyChangeSupport
 
-enum class WorkType {
-    ONE_TIME_EXEC,
-    PERIODIC_EXEC,
+enum class WorkType(val isWorker : Boolean = false) {
+    // Workers
+    ONE_TIME_EXEC(true),
+    PERIODIC_EXEC(true),
 
-    ONE_TIME_UPLOAD,
-    PERIODIC_UPLOAD,
+    ONE_TIME_UPLOAD(true),
+    PERIODIC_UPLOAD(true),
 
-    ONE_TIME_DOWNLOAD,
-    PERIODIC_DOWNLOAD,
+    ONE_TIME_DOWNLOAD(true),
+    PERIODIC_DOWNLOAD(true),
 
-    ONE_TIME_SYNC,
-    PERIODIC_SYNC,
-    CATCH_SYNC,
+    ONE_TIME_SYNC(true),
+    PERIODIC_SYNC(true),
+    CATCH_SYNC(true),
 
-    ONE_TIME_OMEGA,
-    PERIODIC_OMEGA,
+    ONE_TIME_OMEGA(true),
+    PERIODIC_OMEGA(true),
 
-    ONE_TIME_TOKEN,
-    PERIODIC_TOKEN,
+    ONE_TIME_TOKEN(true),
+    PERIODIC_TOKEN(true),
 
-    ONE_TIME_SMS_VERIFY,
+    ONE_TIME_SMS_VERIFY(true),
 
+    ONE_TIME_DEBUG(true),
+    PERIODIC_DEBUG(true),
+
+    // Post requests
     SETUP,
+
     DOWNLOAD_POST,
     UPLOAD_CHANGE_POST,
     UPLOAD_ANALYZED_POST,
@@ -39,9 +47,18 @@ enum class WorkType {
     UPLOAD_ERROR_POST,
     UPLOAD_TOKEN,
     SMS_VERIFY_POST,
+
+    DEBUG_CHECK_POST,
+    DEBUG_SESSION_POST,
+    DEBUG_EXCHANGE_POST
 }
 
-// TODO Maybe convert to promises or jobs OR MAYBE NOT.
+
+/**
+ * TODO: Maybe convert to promises or jobs OR MAYBE NOT.
+ *
+ * TODO: Fix this to use WorkManagerHelper
+ */
 object WorkStates {
 
     private val propertyChangeSupport = PropertyChangeSupport(this)
@@ -127,10 +144,31 @@ object WorkStates {
         return success
     }
 
-    fun setState(workType: WorkType, workState: WorkInfo.State?) {
+    fun setState(
+        workType: WorkType,
+        workState: WorkInfo.State?,
+        context: Context? = null,
+        tag: String? = null
+    ) {
         if (workState !in allowedStates && workState != null) {
             Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: setState() - invalid workState")
             return
+        }
+
+        /*
+        Safety measure to prevent setting WorkState to running if Worker is already running or
+        enqueued. Although it may seem redundant, it actually prevents waiters from waiting for
+        work that isn't technically running (e.g., periodic worker during repeat interval).
+         */
+        if (workType.isWorker
+            && workState == WorkInfo.State.RUNNING
+            && context != null
+            && tag != null
+        ) {
+            val state = WorkManagerHelper.getUniqueWorkerState(context, tag)
+            if (state == WorkInfo.State.RUNNING || state == WorkInfo.State.ENQUEUED) {
+                return
+            }
         }
 
         states[workType.ordinal] = workState

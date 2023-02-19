@@ -4,6 +4,10 @@ import android.content.Context
 import androidx.work.WorkInfo
 import com.android.volley.Response
 import com.telefender.phone.data.server_related.*
+import com.telefender.phone.data.server_related.json_classes.DefaultResponse
+import com.telefender.phone.data.server_related.json_classes.ServerResponseType
+import com.telefender.phone.data.server_related.json_classes.SetupSessionResponse
+import com.telefender.phone.data.server_related.json_classes.toServerResponse
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
@@ -53,20 +57,20 @@ private fun initialPostResponseHandler(
         Timber.i("VOLLEY: FIRST RESPONSE %s", response)
 
         /**
-         * Basically, if a normal session response is returned, then we will be
-         * able to convert JSON into SessionResponse. Otherwise, the response is
-         * probably an error JSON, in which we can convert to DefaultResponse.
+         * Basically, if a normal session response is returned, then we will be able to convert
+         * JSON into SetupSessionResponse. Otherwise, the response is probably an error JSON, in
+         * which we can convert to DefaultResponse.
          */
-        val sessionResponse : DefaultResponse? =
-            response.toServerResponse(ServerResponseType.SESSION) ?:
+        val setupSessionResponse : DefaultResponse? =
+            response.toServerResponse(ServerResponseType.SETUP_SESSION) ?:
             response.toServerResponse(ServerResponseType.DEFAULT)
 
-        if (sessionResponse != null && sessionResponse.status == "ok" && sessionResponse is SessionResponse) {
+        if (setupSessionResponse != null && setupSessionResponse.status == "ok" && setupSessionResponse is SetupSessionResponse) {
             /**
              * Create StoredMap row containing instance number and sessionID
              */
             scope.launch(Dispatchers.IO) {
-                repository.updateStoredMap(sessionID = sessionResponse.sessionID)
+                repository.updateStoredMap(sessionID = setupSessionResponse.sessionID)
 
                 val sessionID = repository.getSessionID()
                 Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: sessionID = $sessionID")
@@ -76,7 +80,7 @@ private fun initialPostResponseHandler(
         } else {
             WorkStates.setState(WorkType.SETUP, WorkInfo.State.FAILED)
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN REQUEST INSTALLATION: ${sessionResponse?.error}")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN REQUEST INSTALLATION: ${setupSessionResponse?.error}")
         }
     }
 }

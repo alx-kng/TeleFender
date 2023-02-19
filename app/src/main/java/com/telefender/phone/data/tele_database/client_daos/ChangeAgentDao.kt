@@ -2,7 +2,7 @@ package com.telefender.phone.data.tele_database.client_daos
 
 import androidx.room.Dao
 import androidx.room.Transaction
-import com.telefender.phone.data.server_related.ServerData
+import com.telefender.phone.data.server_related.json_classes.ServerData
 import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.entities.*

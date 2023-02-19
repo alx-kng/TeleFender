@@ -1,22 +1,14 @@
 package com.telefender.phone.data.tele_database.background_tasks.workers
 
-import android.app.Notification
-import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
-import android.content.pm.ServiceInfo
-import android.os.Build
-import androidx.annotation.RequiresApi
-import androidx.core.app.NotificationCompat
 import androidx.work.*
 import com.telefender.phone.App
 import com.telefender.phone.data.tele_database.ClientDatabase
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.TableSynchronizer
-import com.telefender.phone.data.tele_database.background_tasks.ServerWorkHelpers
+import com.telefender.phone.data.server_related.RequestWrappers
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
-import com.telefender.phone.gui.MainActivity
 import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,9 +16,19 @@ import timber.log.Timber
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-// TODO: Change delay and backoff time later for production / optimization.
-// TODO: Enforce Application Context
-object OmegaPeriodicScheduler {
+//
+//
+/**
+ * TODO: Change delay and backoff time later for production / optimization.
+ * TODO: Enforce Application Context
+ *
+ * TODO: DANGEROUS TO SET RUNNING STATE FOR PERIODIC WORKER OUTSIDE OF doWork() as RUNNING STATE
+ *  WILL BE SET, BUT THE ACTUAL work might not be, as there is a minimum repeat interval time,
+ *  during which initiatePeriodicOmegaWorker() won't actually launch worker.
+ *
+ * TODO: Change workers to use WorkManagerHelper functions (which actually check worker state).
+ */
+object OmegaScheduler {
 
     const val oneTimeOmegaWorkerTag = "oneTimeOmegaWorker"
     const val periodicOmegaWorkerTag = "periodicOmegaWorker"
@@ -34,7 +36,7 @@ object OmegaPeriodicScheduler {
     fun initiateOneTimeOmegaWorker(context : Context) : UUID {
         WorkStates.setState(WorkType.ONE_TIME_OMEGA, WorkInfo.State.RUNNING)
 
-        val uploadRequest = OneTimeWorkRequestBuilder<CoroutineOmegaWorker>()
+        val omegaRequest = OneTimeWorkRequestBuilder<CoroutineOmegaWorker>()
             .setInputData(workDataOf("variableName" to "oneTimeOmegaState", "notificationID" to "6565"))
             .setBackoffCriteria(
                 BackoffPolicy.LINEAR,
@@ -46,15 +48,20 @@ object OmegaPeriodicScheduler {
 
         WorkManager
             .getInstance(context)
-            .enqueueUniqueWork(oneTimeOmegaWorkerTag, ExistingWorkPolicy.KEEP, uploadRequest)
+            .enqueueUniqueWork(oneTimeOmegaWorkerTag, ExistingWorkPolicy.KEEP, omegaRequest)
 
-        return uploadRequest.id
+        return omegaRequest.id
     }
 
     fun initiatePeriodicOmegaWorker(context : Context) : UUID {
-        WorkStates.setState(WorkType.PERIODIC_OMEGA, WorkInfo.State.RUNNING)
+        WorkStates.setState(
+            workType = WorkType.PERIODIC_OMEGA,
+            workState = WorkInfo.State.RUNNING,
+            context = context,
+            tag = periodicOmegaWorkerTag
+        )
 
-        val uploadRequest = PeriodicWorkRequestBuilder<CoroutineOmegaWorker>(15, TimeUnit.MINUTES)
+        val omegaRequest = PeriodicWorkRequestBuilder<CoroutineOmegaWorker>(15, TimeUnit.MINUTES)
             .setInputData(workDataOf("variableName" to "periodicOmegaState", "notificationID" to "5656"))
             .setBackoffCriteria(
                 BackoffPolicy.LINEAR,
@@ -66,9 +73,9 @@ object OmegaPeriodicScheduler {
 
         WorkManager
             .getInstance(context)
-            .enqueueUniquePeriodicWork(periodicOmegaWorkerTag, ExistingPeriodicWorkPolicy.KEEP, uploadRequest)
+            .enqueueUniquePeriodicWork(periodicOmegaWorkerTag, ExistingPeriodicWorkPolicy.KEEP, omegaRequest)
 
-        return uploadRequest.id
+        return omegaRequest.id
     }
 
     fun cancelOneTimeOmegaWorker(context: Context) {
@@ -90,7 +97,6 @@ object OmegaPeriodicScheduler {
 
 /**
  * TODO: Test OmegaWorker more
- * TODO: Clean up / finish notification implementation in getForegroundInfo()
  */
 class CoroutineOmegaWorker(
     val context: Context,
@@ -120,9 +126,10 @@ class CoroutineOmegaWorker(
             }
             "periodicOmegaState" -> {
                 Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA PERIODIC STARTED")
+                WorkStates.setState(WorkType.PERIODIC_OMEGA, WorkInfo.State.RUNNING)
             }
             else -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA WORKER THREAD: Worker state variable name is wrong")
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA WORKER: Worker state variable name is wrong")
             }
         }
 
@@ -140,7 +147,7 @@ class CoroutineOmegaWorker(
          * Downloads changes from server
          */
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA DOWNLOAD STARTED")
-        ServerWorkHelpers.downloadData(context, repository, scope, "OMEGA")
+        RequestWrappers.downloadData(context, repository, scope, "OMEGA")
 
         /**
          * Executes logs in ExecuteQueue
@@ -152,7 +159,7 @@ class CoroutineOmegaWorker(
          * Uploads changes to server.
          */
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_CHANGE STARTED")
-        ServerWorkHelpers.uploadChange(context, repository, scope, "OMEGA")
+        RequestWrappers.uploadChange(context, repository, scope, "OMEGA")
 
         /**
          * TODO: Confirm that we want to upload AnalyzedNumbers here. Note that we already have a
@@ -162,22 +169,22 @@ class CoroutineOmegaWorker(
          * Uploads analyzedNumbers to server.
          */
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_ANALYZED STARTED")
-        ServerWorkHelpers.uploadAnalyzed(context, repository, scope, "OMEGA")
+        RequestWrappers.uploadAnalyzed(context, repository, scope, "OMEGA")
 
         /**
          * Uploads error logs to server.
          */
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_ERROR STARTED")
-        ServerWorkHelpers.uploadError(context, repository, scope, "OMEGA")
+        RequestWrappers.uploadError(context, repository, scope, "OMEGA")
 
         when (stateVarString) {
             "oneTimeOmegaState" -> {
-                WorkStates.setState(WorkType.ONE_TIME_OMEGA, WorkInfo.State.SUCCEEDED)
                 Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA ONE TIME ENDED")
+                WorkStates.setState(WorkType.ONE_TIME_OMEGA, WorkInfo.State.SUCCEEDED)
             }
             "periodicOmegaState" -> {
-                WorkStates.setState(WorkType.PERIODIC_OMEGA, WorkInfo.State.SUCCEEDED)
                 Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA PERIODIC ENDED")
+                WorkStates.setState(WorkType.PERIODIC_OMEGA, WorkInfo.State.SUCCEEDED)
             }
             else -> {
                 Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA WORKER THREAD: Worker state variable name is wrong")

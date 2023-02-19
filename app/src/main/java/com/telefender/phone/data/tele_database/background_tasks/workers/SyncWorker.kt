@@ -95,7 +95,7 @@ object SyncScheduler{
             return null
         }
 
-        WorkStates.setState(WorkType.PERIODIC_SYNC, WorkInfo.State.RUNNING)
+        WorkStates.setState(WorkType.PERIODIC_SYNC, WorkInfo.State.RUNNING, context, syncPeriodicTag)
 
         val syncRequest = PeriodicWorkRequestBuilder<CoroutineSyncWorker>(1, TimeUnit.HOURS)
             .setInputData(workDataOf("variableName" to "periodicSyncState", "notificationID" to "6666"))
