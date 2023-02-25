@@ -1,6 +1,7 @@
 package com.telefender.phone.data.tele_database
 
 import androidx.annotation.WorkerThread
+import androidx.sqlite.db.SimpleSQLiteQuery
 import com.telefender.phone.data.server_related.json_classes.ServerData
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.client_daos.*
@@ -18,9 +19,12 @@ class ClientRepository(
      *  retrieving the tree entities or safe logs used to let a new call through may need to be
      *  more immediate.
      */
+
+    private val rawDao : RawDao,
+
     private val executeAgentDao : ExecuteAgentDao,
     private val changeAgentDao : ChangeAgentDao,
-    private val uploadAgentDao: UploadAgentDao,
+    private val uploadAgentDao : UploadAgentDao,
 
     private val uploadChangeQueueDao : UploadChangeQueueDao,
     private val uploadAnalyzedQueueDao: UploadAnalyzedQueueDao,
@@ -507,5 +511,29 @@ class ClientRepository(
         bubbleError: Boolean = false
     ) {
         changeAgentDao.changeFromClient(changeLog, fromSync, bubbleError)
+    }
+
+    /***********************************************************************************************
+     * DebugEngine Queries
+     **********************************************************************************************/
+
+    @WorkerThread
+    suspend fun readData(queryString: String, tableType: TableType) : List<TableEntity> {
+        val query = SimpleSQLiteQuery(queryString)
+
+        return when (tableType) {
+            TableType.CHANGE -> rawDao.readDataChangeLog(query)
+            TableType.EXECUTE -> rawDao.readDataExecuteQueue(query)
+            TableType.UPLOAD_CHANGE -> rawDao.readDataUploadChangedQueue(query)
+            TableType.UPLOAD_ANALYZED -> rawDao.readDataUploadAnalyzedQueue(query)
+            TableType.ERROR -> rawDao.readDataErrorQueue(query)
+            TableType.STORED_MAP -> rawDao.readDataStoredMap(query)
+            TableType.PARAMETERS -> rawDao.readDataParameters(query)
+            TableType.CALL_DETAIL -> rawDao.readDataCallDetail(query)
+            TableType.INSTANCE -> rawDao.readDataInstance(query)
+            TableType.CONTACT -> rawDao.readDataContact(query)
+            TableType.CONTACT_NUMBER -> rawDao.readDataContactNumber(query)
+            TableType.ANALYZED -> rawDao.readDataAnalyzedNumber(query)
+        }
     }
 }

@@ -47,6 +47,8 @@ import timber.log.Timber
 ], version = 1, exportSchema = false)
 abstract class ClientDatabase : RoomDatabase() {
 
+    abstract fun rawDao() : RawDao
+
     abstract fun changeAgentDao() : ChangeAgentDao
     abstract fun uploadAgentDao() : UploadAgentDao
     abstract fun executeAgentDao() : ExecuteAgentDao

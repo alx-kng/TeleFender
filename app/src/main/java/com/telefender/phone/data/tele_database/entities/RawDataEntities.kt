@@ -41,9 +41,9 @@ data class CallDetail(
     val callDirection: Int,
     val instanceNumber: String,
     val unallowed: Boolean = false
-) : CallDetailItem {
+) : CallDetailItem, TableEntity() {
 
-    fun toJson() : String {
+    override fun toJson() : String {
         val moshi = Moshi.Builder().build()
         val adapter = moshi.adapter(CallDetail::class.java)
         return adapter.serializeNulls().toJson(this)
@@ -69,10 +69,17 @@ data class CallDetail(
     }
 }
 
+@JsonClass(generateAdapter = true)
 @Entity(tableName = "instance")
 data class Instance(
     @PrimaryKey val number: String
-) {
+) : TableEntity() {
+
+    override fun toJson(): String {
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(Instance::class.java)
+        return adapter.serializeNulls().toJson(this)
+    }
 
     override fun toString() : String {
         return "INSTANCE - number: " + this.number
@@ -80,6 +87,7 @@ data class Instance(
 }
 
 // TODO: Should we add defaultCID column to Contact table?
+@JsonClass(generateAdapter = true)
 @Entity(tableName = "contact",
     foreignKeys = [ForeignKey(
         entity = Instance::class,
@@ -99,13 +107,20 @@ data class Contact(
     val CID: String,
     val instanceNumber : String,
     val blocked: Boolean = false
-) {
+) : TableEntity() {
+
+    override fun toJson(): String {
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(Contact::class.java)
+        return adapter.serializeNulls().toJson(this)
+    }
 
     override fun toString() : String {
         return "CONTACT - instanceNumber: $instanceNumber CID: $CID blocked: $blocked"
     }
 }
 
+@JsonClass(generateAdapter = true)
 @Entity(tableName = "contact_number",
     foreignKeys = [
         ForeignKey(
@@ -138,7 +153,14 @@ data class ContactNumber(
     val instanceNumber: String,
     val versionNumber: Int = 0,
     val degree: Int
-) {
+) : TableEntity() {
+
+    override fun toJson(): String {
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(ContactNumber::class.java)
+        return adapter.serializeNulls().toJson(this)
+    }
+
     /**
      * Returns true if PK of two ContactNumbers are equal.
      */

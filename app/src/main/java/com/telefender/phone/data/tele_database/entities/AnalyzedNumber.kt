@@ -28,7 +28,7 @@ data class AnalyzedNumber(
     val instanceNumber: String,
     val numTotalCalls: Int, // includes any type of call
     val analyzedJson: String = "{}"
-) {
+) : TableEntity() {
 
     /**
      * Retrieves Analyzed object version of analyzedJson, but SHOULD ONLY BE USED for
@@ -39,7 +39,7 @@ data class AnalyzedNumber(
         return analyzedJson.toAnalyzed()!!
     }
 
-    fun toJson() : String {
+    override fun toJson() : String {
         val moshi = Moshi.Builder().build()
         val adapter = moshi.adapter(AnalyzedNumber::class.java)
         return adapter.serializeNulls().toJson(this)

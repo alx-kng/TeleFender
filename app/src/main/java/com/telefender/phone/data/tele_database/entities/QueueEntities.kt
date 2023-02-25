@@ -36,6 +36,7 @@ fun String.toGenericDataType() : GenericDataType? {
  * execution of a specific data type.
  **************************************************************************************************/
 
+@JsonClass(generateAdapter = true)
 @Entity(tableName = "execute_queue")
 data class ExecuteQueue(
     @PrimaryKey(autoGenerate = true)
@@ -44,7 +45,14 @@ data class ExecuteQueue(
     val genericDataType: String,
     val linkedRowID: Long, // rowID within corresponding data table.
     val errorCounter : Int = 0
-) {
+) : TableEntity() {
+
+    override fun toJson(): String {
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(ExecuteQueue::class.java)
+        return adapter.serializeNulls().toJson(this)
+    }
+
     override fun toString() : String {
         return "EXECUTE LOG: rowID: $rowID executeType: $genericDataType linkedRowID: $linkedRowID errorCounter: $errorCounter"
     }
@@ -80,6 +88,7 @@ data class ExecuteQueue(
  * separately and have the server easily request them separately.
  **************************************************************************************************/
 
+@JsonClass(generateAdapter = true)
 @Entity(tableName = "upload_change_queue",
     foreignKeys = [
         ForeignKey(
@@ -92,12 +101,20 @@ data class ExecuteQueue(
 data class UploadChangeQueue(
     @PrimaryKey val linkedRowID: Long,
     val errorCounter: Int = 0
-) {
+) : TableEntity() {
+
+    override fun toJson(): String {
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(UploadChangeQueue::class.java)
+        return adapter.serializeNulls().toJson(this)
+    }
+
     override fun toString() : String {
         return "UPLOAD_CHANGE LOG: linkedRowID: $linkedRowID errorCounter: $errorCounter"
     }
 }
 
+@JsonClass(generateAdapter = true)
 @Entity(tableName = "upload_analyzed_queue",
     foreignKeys = [
         ForeignKey(
@@ -110,7 +127,14 @@ data class UploadChangeQueue(
 data class UploadAnalyzedQueue(
     @PrimaryKey val linkedRowID: Long,
     val errorCounter: Int = 0
-) {
+) : TableEntity() {
+
+    override fun toJson(): String {
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(UploadAnalyzedQueue::class.java)
+        return adapter.serializeNulls().toJson(this)
+    }
+
     override fun toString() : String {
         return "UPLOAD_ANALYZED LOG: linkedRowID: $linkedRowID errorCounter: $errorCounter"
     }
@@ -136,7 +160,13 @@ data class ErrorQueue(
     val serverRowID: Long,
     val errorJson: String,
     val errorCounter : Int = 0
-) {
+) : TableEntity() {
+
+    override fun toJson(): String {
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(ErrorQueue::class.java)
+        return adapter.serializeNulls().toJson(this)
+    }
 
     override fun toString(): String {
         return "ERROR LOG: rowID: $rowID instanceNumber: $instanceNumber serverRowID: $serverRowID errorJson$errorJson"

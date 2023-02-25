@@ -1,7 +1,6 @@
 package com.telefender.phone.data.server_related.debug_engine
 
 import android.content.Context
-import android.os.Build.VERSION_CODES.P
 import androidx.work.WorkInfo
 import com.telefender.phone.data.server_related.RemoteDebug
 import com.telefender.phone.data.tele_database.ClientRepository
@@ -13,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import java.time.Instant
 
 object DebugEngine {
 
@@ -22,8 +22,29 @@ object DebugEngine {
         scope: CoroutineScope,
         commandString: String?
     ) {
+        val currentTime = Instant.now().toEpochMilli()
+
+        if (RemoteDebug.startTime == 0L) {
+            RemoteDebug.startTime = currentTime
+        }
+
         if (commandString != null) {
             RemoteDebug.commandRunning = true
+        }
+
+        /*
+        If the debug exchange has been running for [maxIdlePeriod] amount of time since the last
+        completed command, and there is no new command, then we end the debug exchange to prevent
+        infinite exchange.
+         */
+        val timeSinceCommandComplete = currentTime - (RemoteDebug.lastCommandTime ?: RemoteDebug.startTime)
+        if (!RemoteDebug.commandRunning && timeSinceCommandComplete > RemoteDebug.maxIdlePeriod) {
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                "REMOTE - Max idle period reached! Ending debug exchange!")
+
+            RemoteDebug.resetStates()
+            WorkStates.setState(WorkType.DEBUG_EXCHANGE_POST, WorkInfo.State.SUCCEEDED)
+            return
         }
 
         val command = parse(context, repository, scope, commandString)
@@ -32,14 +53,27 @@ object DebugEngine {
             command?.execute()
         }
 
+        /*
+        Only determines if command if shallowly incorrectly formatted. That is, if the command
+        doesn't have <command_type> at the front or has the wrong number of arguments. This doesn't
+        catch cases where the command is accepted by our parser but fails during execution. For
+        example, if the table name in a query command is incorrect, it will not be caught here
+        (and will instead be caught in the actual command class).
+         */
         if (commandString != null && command == null) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: Command formatted incorrectly! $command")
+            val errorString = "Command formatted incorrectly! (Shallow check) | $commandString"
+            RemoteDebug.error = errorString
+
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: $errorString")
         }
 
         // If not EndCommand keep sending exchange data requests.
         if (command !is EndCommand) {
             delay(1000)
             RemoteDebug.debugExchangeRequest(context, repository, scope)
+
+            // Reset error to null after we send it up to the server.
+            RemoteDebug.error = null
         } else {
             WorkStates.setState(WorkType.DEBUG_EXCHANGE_POST, WorkInfo.State.SUCCEEDED)
         }
@@ -54,18 +88,13 @@ object DebugEngine {
         if (commandString == null) return null
 
         val commandParts = commandString.split(" ", limit = 2)
-
-        val commandType = commandParts.firstOrNull()?.trim()
-        val commandValue = if (commandParts.size == 2) {
-            commandParts[1].trim()
-        } else {
-            null
-        }
+        val commandType = commandParts.getOrNull(0)?.trim()
+        val commandValue = commandParts.getOrNull(1)?.trim()
 
         return when (commandType) {
-            "<end>" -> EndCommand(context, repository, scope)
-            "<sql>" -> if (commandValue != null) QueryCommand(context, repository, scope, commandValue) else null
-            "<log>" -> LogCommand(context, repository, scope, commandValue ?: "")
+            "<end>" -> EndCommand.create(context, repository, scope)
+            "<log>" -> LogCommand.create(context, repository, scope, commandValue)
+            "<sql-read>" -> ReadQueryCommand.create(context, repository, scope, commandValue)
             else -> null
         }
     }

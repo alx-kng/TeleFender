@@ -3,9 +3,11 @@ package com.telefender.phone.data.tele_database.entities
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.squareup.moshi.JsonClass
+import com.squareup.moshi.Moshi
 
 
 // TODO: Probably store current block mode in StoredMap
+@JsonClass(generateAdapter = true)
 @Entity(tableName = "stored_map")
 data class StoredMap(
     @PrimaryKey val userNumber: String,
@@ -16,7 +18,13 @@ data class StoredMap(
     val lastLogFullSyncTime: Long = 0, // First time the log sync process fully completes.
     val lastContactFullSyncTime: Long = 0, // First time the contact sync process fully completes.
     val lastServerRowID: Long? = null,
-) {
+) : TableEntity() {
+
+    override fun toJson(): String {
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(StoredMap::class.java)
+        return adapter.serializeNulls().toJson(this)
+    }
 
     override fun toString() : String {
         return "STORED MAP - number: $userNumber sessionID: $sessionID clientKey: $clientKey" +
@@ -38,4 +46,11 @@ data class Parameters(
     val outgoingGate: Int, // inclusive seconds in order to let through
     val smsImmediateWaitTime: Long, // milliseconds before force move on to allow / unallow
     val smsDeferredWaitTime: Int, // seconds before sending another SMS request (if no earlier result)
-)
+) : TableEntity() {
+
+    override fun toJson(): String {
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(Parameters::class.java)
+        return adapter.serializeNulls().toJson(this)
+    }
+}

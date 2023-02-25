@@ -19,20 +19,49 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONException
 import timber.log.Timber
+import java.time.Instant
 
 object RemoteDebug {
 
+    // TODO: Change this to a more reasonable time.
+    const val maxIdlePeriod = 6000000L
+
     var isEnabled = false
-    var commandRunning = false
     var remoteSessionID: String? = null
+    var commandRunning = false
+    var startTime = 0L
+    var lastCommandTime: Long? = null
+    var error: String? = null
+
+    /**
+     * Queue of data to be sent up to server.
+     */
     private val dataQueue = mutableListOf<String>()
 
+    /**
+     * Add string data to [dataQueue] with lock.
+     */
     suspend fun enqueueData(data: String) {
         TeleLocks.mutexLocks[MutexType.DEBUG_DATA]!!.withLock {
             dataQueue.add(data)
         }
     }
 
+    /**
+     * Add string data list to [dataQueue] with lock.
+     */
+    suspend fun enqueueList(dataList: List<String>) {
+        TeleLocks.mutexLocks[MutexType.DEBUG_DATA]!!.withLock {
+            dataQueue.addAll(dataList)
+        }
+    }
+
+    /**
+     * TODO: Make this send up more data in each chunk if possible (dynamically). That way, we don't
+     *  have to send as many requests.
+     *
+     * Removes and returns a chunk of data from [dataQueue] to be sent up to the server.
+     */
     suspend fun dequeueChunk(chunkSize: Int = 70) : List<String> {
         val chunk = mutableListOf<String>()
 
@@ -49,8 +78,11 @@ object RemoteDebug {
 
     fun resetStates() {
         isEnabled = false
-        commandRunning = false
         remoteSessionID = null
+        commandRunning = false
+        startTime = 0L
+        lastCommandTime = null
+        error = null
         dataQueue.clear()
     }
 
@@ -179,8 +211,12 @@ object RemoteDebug {
             remoteSessionID = remoteSessionID!!,
             data = dequeueChunk(),
             // Means that data returned from command is all sent and command is no longer running.
-            commandComplete = dataQueue.size == 0 && !commandRunning
+            commandComplete = dataQueue.size == 0 && !commandRunning,
+            error = error
         ).toJson()
+
+//        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+//            "REMOTE: error = $error | commandComplete = ${dataQueue.size == 0 && !commandRunning}")
 
         try {
             val stringRequest = DebugExchangeRequestGen.create(

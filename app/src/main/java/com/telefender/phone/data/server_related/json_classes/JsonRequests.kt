@@ -216,7 +216,8 @@ class DebugExchangeRequest(
     key : String,
     val remoteSessionID : String,
     val data: List<String>,
-    val commandComplete: Boolean
+    val commandComplete: Boolean,
+    val error: String? = null
 ) : KeyRequest(instanceNumber, key) {
 
     override fun toJson() : String {

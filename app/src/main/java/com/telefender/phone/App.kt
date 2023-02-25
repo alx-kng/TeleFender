@@ -41,6 +41,8 @@ class App : Application() {
     // TODO: See if this repository application context works
     val repository by lazy {
         ClientRepository(
+            rawDao = database.rawDao(),
+
             executeAgentDao = database.executeAgentDao(),
             changeAgentDao = database.changeAgentDao(),
             uploadAgentDao = database.uploadAgentDao(),

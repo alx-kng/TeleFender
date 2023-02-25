@@ -167,6 +167,8 @@ object WorkStates {
         ) {
             val state = WorkManagerHelper.getUniqueWorkerState(context, tag)
             if (state == WorkInfo.State.RUNNING || state == WorkInfo.State.ENQUEUED) {
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                    "setState() - State not set! Worker already running / enqueued!")
                 return
             }
         }

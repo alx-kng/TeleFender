@@ -26,7 +26,7 @@ data class ChangeLog(
     val instanceNumber: String,
     val errorCounter : Int = 0,
     val changeJson: String = "{}"
-) {
+) : TableEntity() {
 
     /**
      * Returns [type] as a ChangeType if possible.
@@ -42,7 +42,7 @@ data class ChangeLog(
         return changeJson.toChange()
     }
 
-    fun toJson() : String {
+    override fun toJson() : String {
         val moshi = Moshi.Builder().build()
         val adapter = moshi.adapter(ChangeLog::class.java)
         return adapter.serializeNulls().toJson(this)
