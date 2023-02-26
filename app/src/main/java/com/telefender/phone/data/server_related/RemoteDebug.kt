@@ -215,8 +215,8 @@ object RemoteDebug {
             error = error
         ).toJson()
 
-//        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
-//            "REMOTE: error = $error | commandComplete = ${dataQueue.size == 0 && !commandRunning}")
+        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+            "REMOTE: error = $error | commandComplete = ${dataQueue.size == 0 && !commandRunning}")
 
         try {
             val stringRequest = DebugExchangeRequestGen.create(

@@ -63,6 +63,7 @@ object DebugEngine {
         if (commandString != null && command == null) {
             val errorString = "Command formatted incorrectly! (Shallow check) | $commandString"
             RemoteDebug.error = errorString
+            RemoteDebug.commandRunning = false
 
             Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: $errorString")
         }

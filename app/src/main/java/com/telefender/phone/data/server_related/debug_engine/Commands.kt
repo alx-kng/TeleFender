@@ -59,6 +59,8 @@ class LogCommand(
     override suspend fun execute() {
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: REMOTE LogCommand - $message")
 
+        // Echoes message to server.
+        RemoteDebug.enqueueData(message ?: "null")
 
         RemoteDebug.lastCommandTime = Instant.now().toEpochMilli()
         RemoteDebug.commandRunning = false
