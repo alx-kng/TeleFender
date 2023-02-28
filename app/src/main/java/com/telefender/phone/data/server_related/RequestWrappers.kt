@@ -6,6 +6,7 @@ import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.helpers.TeleHelpers.getParameters
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import timber.log.Timber
@@ -89,8 +90,8 @@ object RequestWrappers {
         workerName: String
     ) {
 
-        // Only upload AnalyzedNumbers if the Parameters specify so.
-        val parameters = repository.getParameters()
+        // Only upload AnalyzedNumbers if the ParametersWrapper specify so.
+        val parameters = repository.getParametersWrapper()?.getParameters()
         if (parameters?.shouldUploadAnalyzed != true) {
             return
         }

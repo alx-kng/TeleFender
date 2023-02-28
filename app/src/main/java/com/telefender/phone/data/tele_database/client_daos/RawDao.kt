@@ -3,7 +3,6 @@ package com.telefender.phone.data.tele_database.client_daos
 import androidx.room.Dao
 import androidx.room.RawQuery
 import androidx.room.Transaction
-import androidx.sqlite.db.SimpleSQLiteQuery
 import androidx.sqlite.db.SupportSQLiteQuery
 import com.telefender.phone.data.tele_database.entities.*
 
@@ -42,7 +41,7 @@ interface RawDao {
 
     @Transaction
     @RawQuery
-    suspend fun readDataParameters(query: SupportSQLiteQuery) : List<Parameters>
+    suspend fun readDataParameters(query: SupportSQLiteQuery) : List<ParametersWrapper>
 
     @Transaction
     @RawQuery
@@ -63,4 +62,8 @@ interface RawDao {
     @Transaction
     @RawQuery
     suspend fun readDataAnalyzedNumber(query: SupportSQLiteQuery) : List<AnalyzedNumber>
+
+    @Transaction
+    @RawQuery
+    suspend fun readDataNotifyItem(query: SupportSQLiteQuery) : List<NotifyItem>
 }

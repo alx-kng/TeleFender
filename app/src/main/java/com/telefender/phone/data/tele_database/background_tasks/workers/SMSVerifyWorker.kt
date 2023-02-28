@@ -6,7 +6,6 @@ import com.telefender.phone.App
 import com.telefender.phone.data.server_related.RequestWrappers
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
-import com.telefender.phone.data.tele_database.background_tasks.workers.SyncScheduler.syncCatchTag
 import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -46,7 +45,7 @@ object SMSVerifyScheduler{
 }
 
 /**
- * TODO: If Parameters is null, we are just falling back on 60 seconds. Should we do this or
+ * TODO: If ParametersWrapper is null, we are just falling back on 60 seconds. Should we do this or
  *  should we just fail out?
  */
 class CoroutineSMSVerifyWorker(
@@ -72,7 +71,7 @@ class CoroutineSMSVerifyWorker(
 
         val repository = (applicationContext as App).repository
         val number = inputData.getString("number")
-        val waitTime = repository.getParameters()?.smsDeferredWaitTime ?: 60
+        val waitTime = repository.getParametersWrapper()?.getParameters()?.smsDeferredWaitTime ?: 60
         
         // Wait around a minute and send another SMS verify request (for server load optimization).
         delay(waitTime * 1000L)

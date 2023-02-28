@@ -1,19 +1,25 @@
 package com.telefender.phone.data.tele_database.client_daos
 
+import android.content.ClipData
 import android.provider.CallLog
 import androidx.room.Dao
 import androidx.room.Transaction
+import com.telefender.phone.data.default_database.DefaultContacts.insertContact
 import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.entities.*
 import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.helpers.daysToMilli
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.lang.Long.max
+import java.time.Instant
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.milliseconds
 
 
 /**
@@ -25,8 +31,8 @@ import kotlin.math.roundToInt
  */
 @Dao
 interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetailDao,
-    AnalyzedNumberDao, ChangeLogDao, ExecuteQueueDao, UploadChangeQueueDao, StoredMapDao,
-    ParametersDao, ErrorQueueDao {
+    AnalyzedNumberDao, NotifyItemDao, ChangeLogDao, ExecuteQueueDao, UploadChangeQueueDao,
+    ErrorQueueDao, StoredMapDao, ParametersDao {
 
     companion object {
         private const val retryAmount = 5
@@ -301,17 +307,20 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
         val mutexContact = mutexLocks[MutexType.CONTACT]!!
         val mutexContactNumber = mutexLocks[MutexType.CONTACT_NUMBER]!!
         val mutexAnalyzed = mutexLocks[MutexType.ANALYZED]!!
+        val mutexNotifyItem = mutexLocks[MutexType.NOTIFY_ITEM]!!
 
         val change = changeLog.getChange()
 
         with(changeLog) {
             when (this.getChangeType()) {
-                ChangeType.NON_CONTACT_UPDATE -> mutexAnalyzed.withLock {
-                    nonContactUpdate(
-                        instanceNumber = instanceNumber,
-                        normalizedNumber = change?.normalizedNumber,
-                        safeAction = change?.getSafeAction()
-                    )
+                ChangeType.NON_CONTACT_UPDATE -> mutexNotifyItem.withLock {
+                    mutexAnalyzed.withLock {
+                        nonContactUpdate(
+                            instanceNumber = instanceNumber,
+                            normalizedNumber = change?.normalizedNumber,
+                            safeAction = change?.getSafeAction()
+                        )
+                    }
                 }
                 ChangeType.CONTACT_INSERT -> mutexContact.withLock {
                     cInsert(
@@ -388,7 +397,9 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
     }
 
     /**
+     * TODO: Finish implementing NotifyItem!!!
      * TODO: Should update Notify List here. Probably only if not already safe or blocked.
+     * TODO: Make sure this scenario doesn't happen: user sees new log before notify list updated?
      *
      * Inserts call into CallDetail table and updates AnalyzedNumber. Only updates
      * AnalyzedNumber if it is inserted.
@@ -404,6 +415,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
 
         if (inserted) {
             with(callDetail) {
+                val parameters = getParametersWrapper()?.getParameters()!!
                 val analyzedNumber = getAnalyzedNum(normalizedNumber)!!
                 val oldAnalyzed = analyzedNumber.getAnalyzed()
 
@@ -414,13 +426,103 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                 val isRejected = callDirection == CallLog.Calls.REJECTED_TYPE
                 val isBlocked = callDirection == CallLog.Calls.BLOCKED_TYPE
 
+                // Updated notify window with old call times kicked out and new call time added in.
+                var newNotifyWindow = TeleHelpers.updateNotifyWindow(
+                    oldAnalyzed.notifyWindow,
+                    parameters.notifyWindowSize,
+                    callEpochDate
+                )
+
+                var oldNotifyItem = getNotifyItem(normalizedNumber)
+
+                /*
+                If [callDirection] is incoming or outgoing, then call is considered to be user
+                interaction with the notify item. So, notify window is cleared and notify item is
+                removed from notify list (if it exists).
+                 */
+                if (isIncoming || isOutgoing) {
+                    newNotifyWindow = listOf()
+
+                    if (oldNotifyItem != null) {
+                        val result = deleteNotifyItem(normalizedNumber)
+
+                        // deleteNotifyItem() returns 1 if success and something else if failure.
+                        if (result != 1) throw Exception("localLogInsert() - deleteNotifyItem() failed!")
+
+                        // Set to null so that newNotifyItem isn't created / computed.
+                        oldNotifyItem = null
+                    }
+                }
+
+                // Whether the number qualifies / re-qualifies for the notify list.
+                val qualifies = newNotifyWindow.size >= oldAnalyzed.notifyGate
+
+                /*
+                Updated NotifyItem (if old NotifyItem exists a.k.a. already on notify list)
+                NOTE: nextDropWindow is updated during nonContactUpdate()'s SEEN action.
+                 */
+                val newNotifyItem = oldNotifyItem?.copy(
+                    lastCallTime = callEpochDate,
+
+                    // If number re-qualifies for notify list, then update lastQualifiedTime
+                    lastQualifiedTime = if (qualifies) {
+                        callEpochDate
+                    } else {
+                        oldNotifyItem.lastQualifiedTime
+                    },
+
+                    notifyWindow = newNotifyWindow,
+
+                    // Remember, last call's nextDropWindow becomes this call's currDropWindow
+                    currDropWindow = oldNotifyItem.nextDropWindow,
+
+                    // Resets since item is obviously not seen yet after new call.
+                    seenSinceLastCall = false
+                )
+
+                if (qualifies && newNotifyItem == null) {
+                    // Number qualifies for notify list and isn't already in notify list.
+
+                    val result = insertNotifyItem(
+                        NotifyItem(
+                            normalizedNumber = normalizedNumber,
+                            instanceNumber = getUserNumber()!!,
+                            lastCallTime = callEpochDate,
+                            lastQualifiedTime = callEpochDate,
+                            notifyWindow = newNotifyWindow,
+                            currDropWindow = parameters.initialLastCallDropWindow,
+                            nextDropWindow = parameters.initialLastCallDropWindow
+                        )
+                    )
+
+                    // insertNotifyItem() usually returns -1 if row wasn't inserted.
+                    if (result < 0) throw Exception("localLogInsert() - insertNotifyItem() failed!")
+
+                } else if (newNotifyItem != null) {
+                    /*
+                    If the notify list item exists and should be removed, then remove it. Otherwise,
+                    just update the NotifyItem. Note that we don't clear the notify window if the
+                    notify item is removed because the removal here wasn't due to user interaction.
+                     */
+                    if (TeleHelpers.shouldRemoveNotifyItem(newNotifyItem, parameters)) {
+                        val result = deleteNotifyItem(normalizedNumber)
+
+                        // deleteNotifyItem() returns 1 if success and something else if failure.
+                        if (result != 1) throw Exception("localLogInsert() - deleteNotifyItem() failed!")
+                    } else {
+                        val success = updateNotifyItem(newNotifyItem)
+                        TeleHelpers.assert(success, "localLogInsert() - updateNotifyItem() failed!")
+                    }
+                }
+
                 with(oldAnalyzed) {
 
                     val success = updateAnalyzedNum(
                         normalizedNumber = normalizedNumber,
                         numTotalCalls = analyzedNumber.numTotalCalls + 1,
                         analyzed = oldAnalyzed.copy(
-                            notifyCounter = notifyCounter + 1,
+                            // NOTE: notifyGate is updated during nonContactUpdate()'s SEEN action.
+                            notifyWindow = newNotifyWindow,
 
                             // General type
                             lastCallTime = callEpochDate,
@@ -491,10 +593,11 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
 
     /**
      * TODO: The case for double blocking (where notifyGate goes to superSpamAmount) can only
-     *  happen in 2 cases. You can directly double block on the NotifyList OR if you call
-     *  from the NotifyList and block again from the after-call screen.
+     *  happen in 2 cases. You can directly double block on the NotifyItem OR if you call
+     *  from the NotifyItem and block again from the after-call screen.
      *
-     * For updates to non-contact numbers (e.g., mark safe, default, blocked or SMS_VERIFY verify).
+     * For updates to non-contact numbers (e.g., mark safe, default, blocked, sms verify).
+     * Note that blocking contacts is handled in cUpdate().
      */
     @Transaction
     suspend fun nonContactUpdate(instanceNumber: String?, normalizedNumber: String?, safeAction: SafeAction?) {
@@ -507,7 +610,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                 val oldAnalyzed = analyzedNumber.getAnalyzed()
                 with(oldAnalyzed) {
 
-                    val parameters = getParameters()!!
+                    val parameters = getParametersWrapper()?.getParameters()!!
 
                     val newNotifyGate: Int
                     val newIsBlocked: Boolean
@@ -537,14 +640,14 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                             newMarkedSafe = false
                             newIsBlocked = true
                         }
-                        /**
-                         * TODO: Change notifyGate protocol if necessary later.
-                         *
-                         * Basically, sms verification only really affects numbers in the default
-                         * status (markedSafe = false and isBlocked = false) because if the number
-                         * is already markedSafe, then sms has not much effect, and the number is
-                         * blocked, then we don't want sms to override the user's action. However,
-                         * we would like to reset notifyGate to give credit to number.
+                        /*
+                        TODO: Change notifyGate protocol if necessary later.
+
+                        Basically, sms verification only really affects numbers in the default
+                        status (markedSafe = false and isBlocked = false) because if the number
+                        is already markedSafe, then sms has not much effect, and the number is
+                        blocked, then we don't want sms to override the user's action. However,
+                        we would like to reset notifyGate to give credit to number.
                          */
                         SafeAction.SMS_VERIFY -> {
                             val success = updateAnalyzedNum(
@@ -555,6 +658,38 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                                 )
                             )
                             TeleHelpers.assert(success, "updateAnalyzedNum()")
+
+                            return
+                        }
+                        SafeAction.SEEN -> {
+                            // SEEN events should only happen for numbers on the notify list.
+                            val oldNotifyItem = getNotifyItem(normalizedNumber)!!
+                            val currentTime = Instant.now().toEpochMilli()
+
+                            /*
+                            Don't update the AnalyzedNumber and NotifyItem if a SEEN event for the
+                            number has already been handled since the last call. Although, the
+                            SEEN event generator should already take this into account (so that the
+                            ChangeLogs aren't flooded with SEEN logs).
+                             */
+                            if (oldNotifyItem.seenSinceLastCall) return
+
+                            val updateAnalyzedSuccess = updateAnalyzedNum(
+                                normalizedNumber = normalizedNumber,
+                                analyzed = oldAnalyzed.copy(
+                                    notifyGate = notifyGate + parameters.seenGateIncrease,
+                                )
+                            )
+                            TeleHelpers.assert(updateAnalyzedSuccess, "nonContactUpdate() - updateAnalyzedNum()")
+
+                            val updateNotifySuccess = updateNotifyItem(
+                                oldNotifyItem.copy(
+                                    veryFirstSeenTime = oldNotifyItem.veryFirstSeenTime ?: currentTime,
+                                    seenSinceLastCall = true,
+                                    nextDropWindow = oldNotifyItem.nextDropWindow - parameters.seenWindowDecrease
+                                )
+                            )
+                            TeleHelpers.assert(updateNotifySuccess, "nonContactUpdate() - updateNotifyItem()")
 
                             return
                         }
@@ -748,7 +883,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
             val oldAnalyzed = analyzedNumber.getAnalyzed()
             with(oldAnalyzed) {
                 val newDegreeString = changeDegreeString(degreeString, degree, false)
-                val parameters = getParameters()!!
+                val parameters = getParametersWrapper()?.getParameters()!!
 
                 if (instanceNumber == getUserNumber()!!) {
                     val success = updateAnalyzedNum(

@@ -4,10 +4,7 @@ import android.content.Context
 import com.telefender.phone.App
 import com.telefender.phone.data.server_related.RequestWrappers
 import com.telefender.phone.data.tele_database.background_tasks.workers.SMSVerifyScheduler
-import com.telefender.phone.data.tele_database.entities.Analyzed
-import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
-import com.telefender.phone.data.tele_database.entities.Parameters
-import com.telefender.phone.data.tele_database.entities.StoredMap
+import com.telefender.phone.data.tele_database.entities.*
 import com.telefender.phone.helpers.TeleHelpers
 import com.telefender.phone.permissions.Permissions
 import kotlinx.coroutines.Dispatchers
@@ -22,7 +19,7 @@ object RuleChecker {
      * TODO: Preliminary algo:
      *  - Double check (specifically smsVerified)
      *  -
-     *  - Put in stuff for (temp) NotifyList.
+     *  - Put in stuff for (temp) NotifyItem.
      *  -
      *  - Check if we should create new scope or use applicationScope here.
      *  -
@@ -108,7 +105,7 @@ object RuleChecker {
          */
         if (CallManager.currentMode == HandleMode.ALLOW_MODE) return false
 
-        // TODO: Check here if in temp NotifyList and if satisfies max request time constraint.
+        // TODO: Check here if in temp NotifyItem and if satisfies max request time constraint.
 
         val premiumMode = true
 

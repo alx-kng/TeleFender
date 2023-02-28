@@ -85,12 +85,12 @@ interface AnalyzedNumberDao : ParametersDao, StoredMapDao, UploadAnalyzedQueueDa
     suspend fun initAnalyzedNum(normalizedNumber: String, instanceNumber: String) : Boolean {
         if (getAnalyzedNumQuery(normalizedNumber, instanceNumber) == null) {
             // We assume that StoredMap is initialized by now due to being core.
-            val parameters = getParameters() ?: return false
+            val parameters = getParametersWrapper()?.getParameters() ?: return false
 
             val baseAnalyzed =
                 Analyzed(
                     notifyGate = parameters.initialNotifyGate,
-                    notifyCounter = 0,
+                    notifyWindow = listOf(),
 
                     // Important actions
                     smsVerified = false,

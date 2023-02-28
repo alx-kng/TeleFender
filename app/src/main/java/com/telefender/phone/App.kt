@@ -60,7 +60,9 @@ class App : Application() {
             instanceDao = database.instanceDao(),
             contactDao = database.contactDao(),
             contactNumberDao = database.contactNumberDao(),
-            analyzedNumberDao = database.analyzedNumberDao()
+
+            analyzedNumberDao = database.analyzedNumberDao(),
+            notifyItemDao = database.notifyItemDao()
         )
     }
 

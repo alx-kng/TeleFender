@@ -8,13 +8,12 @@ import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
 import com.google.i18n.phonenumbers.PhoneNumberUtil
 import com.telefender.phone.App
-import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
-import com.telefender.phone.data.tele_database.entities.Parameters
-import com.telefender.phone.data.tele_database.entities.StoredMap
+import com.telefender.phone.data.tele_database.entities.*
 import com.telefender.phone.permissions.Permissions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import timber.log.Timber
+import java.time.Instant
 
 
 /*
@@ -26,7 +25,7 @@ object TeleHelpers {
     const val UNKNOWN_NUMBER = "UNKNOWN NUMBER"
 
     /**
-     * Just our simple custom assert function.
+     * Just our simple custom assert function. If success if false, then
      */
     fun assert(success: Boolean, from: String? = null) {
         if (!success) throw Exception("assert() FAILURE from $from")
@@ -128,7 +127,7 @@ object TeleHelpers {
     fun getParameters(context: Context) : Parameters? {
         val repository = (context.applicationContext as App).repository
         return runBlocking(Dispatchers.Default) {
-            repository.getParameters()
+            repository.getParametersWrapper()?.getParameters()
         }
     }
 
@@ -136,6 +135,40 @@ object TeleHelpers {
         val repository = (context.applicationContext as App).repository
         return runBlocking(Dispatchers.Default) {
             repository.getStoredMap()
+        }
+    }
+
+    /**
+     * Returns new notify window (list of call times from last [windowSize] days). Adds in
+     * [newCallTime] to window if given.
+     *
+     * [callDirection] is not incoming or outgoing.
+     */
+    fun updateNotifyWindow(
+        notifyWindow: List<Long>,
+        windowSize: Int,
+        newCallTime: Long? = null,
+    ) : List<Long> {
+        val currentTime = Instant.now().toEpochMilli()
+        val mutableNotifyWindow = notifyWindow.toMutableList()
+
+        if (newCallTime != null) {
+            mutableNotifyWindow.add(newCallTime)
+        }
+
+        return mutableNotifyWindow.filter { currentTime - it < windowSize.daysToMilli() }
+    }
+
+    /**
+     * Returns true if [notifyItem] should be removed from notify list.
+     */
+    fun shouldRemoveNotifyItem(notifyItem: NotifyItem, parameters: Parameters) : Boolean {
+        val currentTime = Instant.now().toEpochMilli()
+        with(notifyItem) {
+            return currentTime - lastCallTime > currDropWindow.daysToMilli()
+                && currentTime - lastQualifiedTime > parameters.qualifiedDropWindow.daysToMilli()
+                && veryFirstSeenTime != null
+                && currentTime - veryFirstSeenTime > parameters.seenDropWindow.daysToMilli()
         }
     }
 

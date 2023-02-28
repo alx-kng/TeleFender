@@ -38,12 +38,13 @@ import timber.log.Timber
     UploadAnalyzedQueue::class,
     ErrorQueue::class,
     StoredMap::class,
-    Parameters::class,
+    ParametersWrapper::class,
     CallDetail::class,
     Instance::class,
     Contact::class,
     ContactNumber::class,
-    AnalyzedNumber::class
+    AnalyzedNumber::class,
+    NotifyItem::class
 ], version = 1, exportSchema = false)
 abstract class ClientDatabase : RoomDatabase() {
 
@@ -66,7 +67,9 @@ abstract class ClientDatabase : RoomDatabase() {
     abstract fun instanceDao() : InstanceDao
     abstract fun contactDao() : ContactDao
     abstract fun contactNumberDao() : ContactNumberDao
+
     abstract fun analyzedNumberDao() : AnalyzedNumberDao
+    abstract fun notifyItemDao() : NotifyItemDao
 
     private class ClientDatabaseCallback(
         private val scope: CoroutineScope,
@@ -144,7 +147,7 @@ abstract class ClientDatabase : RoomDatabase() {
                 this.storedMapDao().initStoredMap(userNumber)
             }
 
-            // Initializes Parameters table with user number. Lock for extra safety.
+            // Initializes ParametersWrapper table with user number. Lock for extra safety.
             mutexLocks[MutexType.PARAMETERS]!!.withLock {
                 this.parametersDao().initParameters(userNumber)
             }
@@ -258,13 +261,13 @@ abstract class ClientDatabase : RoomDatabase() {
     /**
      * Checks if database is initialized. Requires that the singleton StoredMap row exists (which
      * contains the user's number), an Instance row with the user's number exists, and the
-     * singleton Parameters row exists.
+     * singleton ParametersWrapper row exists.
      */
     private suspend fun isInitialized() : Boolean {
         val userNumber = this.storedMapDao().getStoredMap()?.userNumber
         return userNumber != null
             && this.instanceDao().hasInstance(userNumber)
-            && this.parametersDao().getParameters() != null
+            && this.parametersDao().getParametersWrapper()?.getParameters() != null
     }
 
     /**

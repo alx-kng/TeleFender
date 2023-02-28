@@ -6,7 +6,7 @@ import kotlinx.coroutines.sync.Mutex
 
 enum class MutexType {
     UPLOAD_CHANGE, UPLOAD_ANALYZED, UPLOAD_LOG, ERROR_LOG, EXECUTE, CHANGE, STORED_MAP, PARAMETERS,
-    INSTANCE, CONTACT, CONTACT_NUMBER, CALL_DETAIL, ANALYZED, SYNC, DEBUG_DATA,
+    INSTANCE, CONTACT, CONTACT_NUMBER, CALL_DETAIL, ANALYZED, NOTIFY_ITEM, SYNC, DEBUG_DATA,
 }
 
 /**
@@ -29,7 +29,9 @@ object TeleLocks {
     private val mutexInstance = Mutex()
     private val mutexContact = Mutex()
     private val mutexContactNumber = Mutex()
+
     private val mutexAnalyzed = Mutex()
+    private val mutexNotifyItem = Mutex()
 
     private val mutexSync = Mutex()
 
@@ -51,7 +53,9 @@ object TeleLocks {
         MutexType.INSTANCE to mutexInstance,
         MutexType.CONTACT to mutexContact,
         MutexType.CONTACT_NUMBER to mutexContactNumber,
+
         MutexType.ANALYZED to mutexAnalyzed,
+        MutexType.NOTIFY_ITEM to mutexNotifyItem,
 
         MutexType.SYNC to mutexSync,
 

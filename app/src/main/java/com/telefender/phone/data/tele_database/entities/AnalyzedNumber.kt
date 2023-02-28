@@ -53,12 +53,12 @@ data class AnalyzedNumber(
 }
 
 /**
- * TODO: GENERAL ISSUE TO SOLVE - Stop spam numbers from overcrowding notifyList
+ * TODO: GENERAL ISSUE TO SOLVE - Stop spam numbers from overcrowding notifyList --> look at doc
  *
  * TODO: A good idea might be to increase the notify gate for numbers that are less safe. For
  *  example, if a person calls multiple times but doesn't leave a voicemail, then we have more
  *  reason to suspect that they might be spam. As a result, increasing the notify gate to
- *  something like 3 or 4 might be beneficial in not overcrowding the NotifyList.
+ *  something like 3 or 4 might be beneficial in not overcrowding the NotifyItem. --> look at doc.
  *
  * TODO: Add another field for if number also has TeleFender app downloaded -> maybe not.
  *
@@ -69,7 +69,7 @@ data class AnalyzedNumber(
 data class Analyzed(
     val algoAllowed: Boolean? = null, // currently not using this value.
     val notifyGate: Int,
-    val notifyCounter: Int,
+    val notifyWindow: List<Long>,
 
     // Important actions
     val smsVerified: Boolean,
@@ -132,7 +132,7 @@ data class Analyzed(
     }
 
     override fun toString() : String {
-        return "algoAllowed: $algoAllowed notifyGate: $notifyGate" +
+        return "algoAllowed: $algoAllowed notifyGate: $notifyGate notifyWindow: $notifyWindow" +
             " lastCallTime: $lastCallTime numIncoming: $numIncoming numOutgoing: $numOutgoing" +
             " maxDuration: $maxDuration avgDuration: $avgDuration smsVerified: $smsVerified" +
             " markedSafe: $markedSafe isBlocked: $isBlocked numMarkedBlocked: $numMarkedBlocked" +

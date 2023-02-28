@@ -16,7 +16,8 @@ enum class TableType(val serverString: String) {
     INSTANCE("instance"),
     CONTACT("contact"),
     CONTACT_NUMBER("contact_number"),
-    ANALYZED("analyzed")
+    ANALYZED("analyzed"),
+    NOTIFY_ITEM("notify_item")
 }
 
 /**

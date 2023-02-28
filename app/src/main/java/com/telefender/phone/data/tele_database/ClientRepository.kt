@@ -13,13 +13,6 @@ import kotlinx.coroutines.sync.withLock
 
 
 class ClientRepository(
-
-    /**
-     * TODO: Maybe we shouldn't require some queries to run on a worker thread. For example,
-     *  retrieving the tree entities or safe logs used to let a new call through may need to be
-     *  more immediate.
-     */
-
     private val rawDao : RawDao,
 
     private val executeAgentDao : ExecuteAgentDao,
@@ -39,7 +32,9 @@ class ClientRepository(
     private val instanceDao : InstanceDao,
     private val contactDao : ContactDao,
     private val contactNumberDao : ContactNumberDao,
-    private val analyzedNumberDao : AnalyzedNumberDao
+
+    private val analyzedNumberDao : AnalyzedNumberDao,
+    private val notifyItemDao : NotifyItemDao
     ) {
 
     /**
@@ -53,14 +48,14 @@ class ClientRepository(
     /**
      * Checks if database is initialized. Requires that the singleton StoredMap row exists (which
      * contains the user's number), an Instance row with the user's number exists, and the
-     * singleton Parameters row exists.
+     * singleton ParametersWrapper row exists.
      */
     @WorkerThread
     suspend fun databaseInitialized(): Boolean {
         val userNumber = storedMapDao.getUserNumber()
         return userNumber != null
             && instanceDao.hasInstance(userNumber)
-            && parametersDao.getParameters() != null
+            && parametersDao.getParametersWrapper() != null
     }
 
     /***********************************************************************************************
@@ -148,41 +143,23 @@ class ClientRepository(
      **********************************************************************************************/
 
     /**
-     * Gets Parameters associated with user.
+     * Gets ParametersWrapper associated with user.
      *
      * NOTE: It's STRONGLY advised that you put a try-catch around any use cases of this,
      * especially if you plan on non-null asserting the return, as there is a real possibility of
      * an error (especially if the database isn't yet initialized).
      */
     @WorkerThread
-    suspend fun getParameters() : Parameters? {
-        return parametersDao.getParameters()
+    suspend fun getParametersWrapper() : ParametersWrapper? {
+        return parametersDao.getParametersWrapper()
     }
 
     @WorkerThread
     suspend fun updateParameters(
-        shouldUploadAnalyzed: Boolean? = null,
-        shouldUploadLogs: Boolean? = null,
-        initialNotifyGate: Int? = null,
-        verifiedSpamNotifyGate: Int? = null,
-        superSpamNotifyGate: Int? = null,
-        incomingGate: Int? = null,
-        outgoingGate: Int? = null,
-        smsImmediateWaitTime: Long? = null,
-        smsDeferredWaitTime: Int? = null
+        parameters: Parameters
     ) : Boolean {
         return mutexLocks[MutexType.PARAMETERS]!!.withLock {
-            parametersDao.updateParameters(
-                shouldUploadAnalyzed = shouldUploadAnalyzed,
-                shouldUploadLogs = shouldUploadLogs,
-                initialNotifyGate = initialNotifyGate,
-                verifiedSpamNotifyGate = verifiedSpamNotifyGate,
-                superSpamNotifyGate = superSpamNotifyGate,
-                incomingGate = incomingGate,
-                outgoingGate = outgoingGate,
-                smsImmediateWaitTime = smsImmediateWaitTime,
-                smsDeferredWaitTime = smsDeferredWaitTime
-            )
+            parametersDao.updateParameters(parameters = parameters)
         }
     }
 
@@ -249,10 +226,71 @@ class ClientRepository(
 
     }
 
+    // TODO: Why did we put a lock here before?
     @WorkerThread
     suspend fun getAllAnalyzedNum() : List<AnalyzedNumber> {
-        return mutexLocks[MutexType.ANALYZED]!!.withLock {
-            analyzedNumberDao.getAllAnalyzedNum()
+        return analyzedNumberDao.getAllAnalyzedNum()
+    }
+
+    /***********************************************************************************************
+     * Instance Queries
+     **********************************************************************************************/
+
+    /**
+     * Gets NotifyItem given the rowID.
+     */
+    @WorkerThread
+    suspend fun getNotifyItem(rowID: Long) : NotifyItem? {
+        return notifyItemDao.getNotifyItem(rowID)
+
+    }
+
+    /**
+     * Gets NotifyItem given the normalizedNumber.
+     */
+    @WorkerThread
+    suspend fun getNotifyItem(normalizedNumber: String) : NotifyItem? {
+        return notifyItemDao.getNotifyItem(normalizedNumber)
+
+    }
+
+    /**
+     * Gets all NotifyItems.
+     */
+    @WorkerThread
+    suspend fun getAllNotifyItem() : List<NotifyItem> {
+        return notifyItemDao.getAllNotifyItem()
+    }
+
+    @WorkerThread
+    suspend fun updateNotifyItem(notifyItem: NotifyItem) : Boolean {
+        return mutexLocks[MutexType.NOTIFY_ITEM]!!.withLock {
+            notifyItemDao.updateNotifyItem(notifyItem)
+        }
+    }
+
+    @WorkerThread
+    suspend fun updateNotifyItem(
+        normalizedNumber: String,
+        lastCallTime: Long? = null,
+        lastQualifiedTime: Long? = null,
+        veryFirstSeenTime: Long? = null,
+        seenSinceLastCall: Boolean? = null,
+        notifyWindow: List<Long>? = null,
+        currDropWindow: Int? = null,
+        nextDropWindow: Int? = null
+    ) : Boolean {
+        return mutexLocks[MutexType.NOTIFY_ITEM]!!.withLock {
+            notifyItemDao.updateNotifyItem(
+                normalizedNumber = normalizedNumber,
+                lastCallTime = lastCallTime,
+                lastQualifiedTime = lastQualifiedTime,
+                veryFirstSeenTime = veryFirstSeenTime,
+                seenSinceLastCall = seenSinceLastCall,
+                notifyWindow = notifyWindow,
+                currDropWindow = currDropWindow,
+                nextDropWindow = nextDropWindow
+            )
         }
     }
 
@@ -534,6 +572,7 @@ class ClientRepository(
             TableType.CONTACT -> rawDao.readDataContact(query)
             TableType.CONTACT_NUMBER -> rawDao.readDataContactNumber(query)
             TableType.ANALYZED -> rawDao.readDataAnalyzedNumber(query)
+            TableType.NOTIFY_ITEM -> rawDao.readDataNotifyItem(query)
         }
     }
 }

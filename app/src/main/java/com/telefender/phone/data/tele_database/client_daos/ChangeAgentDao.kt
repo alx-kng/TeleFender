@@ -174,9 +174,11 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
     @Transaction
     open suspend fun callFromClient(callDetail: CallDetail) : Boolean {
         val inserted: Boolean
-        mutexLocks[MutexType.ANALYZED]!!.withLock {
-            mutexLocks[MutexType.CALL_DETAIL]!!.withLock {
-                inserted = localLogInsert(callDetail)
+        mutexLocks[MutexType.NOTIFY_ITEM]!!.withLock {
+            mutexLocks[MutexType.ANALYZED]!!.withLock {
+                mutexLocks[MutexType.CALL_DETAIL]!!.withLock {
+                    inserted = localLogInsert(callDetail)
+                }
             }
         }
 
