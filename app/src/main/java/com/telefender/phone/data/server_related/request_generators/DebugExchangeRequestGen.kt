@@ -3,14 +3,20 @@ package com.telefender.phone.data.server_related.request_generators
 import android.content.Context
 import androidx.work.WorkInfo
 import com.android.volley.Response
+import com.telefender.phone.data.server_related.RemoteDebug
+import com.telefender.phone.data.server_related.RequestWrappers
 import com.telefender.phone.data.server_related.debug_engine.DebugEngine
-import com.telefender.phone.data.server_related.json_classes.*
+import com.telefender.phone.data.server_related.json_classes.DebugExchangeResponse
+import com.telefender.phone.data.server_related.json_classes.DefaultResponse
+import com.telefender.phone.data.server_related.json_classes.ServerResponseType
+import com.telefender.phone.data.server_related.json_classes.toServerResponse
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
@@ -30,24 +36,27 @@ class DebugExchangeRequestGen(
             requestJson: String?,
             context: Context,
             repository: ClientRepository,
-            scope: CoroutineScope
+            scope: CoroutineScope,
+            workerName: String
         ) : DebugExchangeRequestGen {
 
             return DebugExchangeRequestGen(
                 method = method,
                 url = url,
-                listener = debugExchangeResponseHandler(context, repository, scope),
+                listener = debugExchangeResponseHandler(context, repository, scope, workerName),
                 errorListener = debugExchangeErrorHandler,
-                requestJson = requestJson
+                requestJson = requestJson,
             )
         }
     }
 }
 
+// TODO: Check handling of InvToken error and see if infinite loop is possible.
 private fun debugExchangeResponseHandler(
     context: Context,
     repository: ClientRepository,
-    scope: CoroutineScope
+    scope: CoroutineScope,
+    workerName: String
 ) : Response.Listener<String> {
 
     return Response.Listener<String> { response : String->
@@ -66,17 +75,47 @@ private fun debugExchangeResponseHandler(
             DEBUG_EXCHANGE_POST if it detects a debug END command.
              */
             scope.launch(Dispatchers.IO) {
+                // Resets error counter. Success means that you get retryAmount more tries.
+                RemoteDebug.resetExchangeCounters()
+
                 DebugEngine.execute(
                     context = context,
                     repository = repository,
                     scope = scope,
-                    commandString = debugExchangeResponse.command
+                    commandString = debugExchangeResponse.command,
+                    workerName = workerName
                 )
+            }
+        } else if (debugExchangeResponse != null && debugExchangeResponse.error == "InvToken"){
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: DEBUG EXCHANGE - NEED NEW TOKEN: ${debugExchangeResponse.error}")
+
+            scope.launch(Dispatchers.IO) {
+                if (RemoteDebug.invTokenCounter >= RemoteDebug.retryAmount) {
+                    Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s",
+                        "VOLLEY: DEBUG EXCHANGE - STOPPING - TOO MANY INV TOKEN ERRORS!")
+
+                    WorkStates.setState(WorkType.DEBUG_EXCHANGE_POST, WorkInfo.State.FAILED)
+                    return@launch
+                }
+
+                RemoteDebug.incrementInvTokenCounter()
+
+                // Wait a little before retrying to give server a little time to get back online.
+                delay(RequestWrappers.retryDelayTime)
+
+                RequestWrappers.debugSession(
+                    context = context,
+                    repository = repository,
+                    scope = scope,
+                    workerName = "$workerName - debugExchangeResponse"
+                )
+
+                RemoteDebug.debugExchangeRequest(context, repository, scope, workerName)
             }
         } else {
             WorkStates.setState(WorkType.DEBUG_EXCHANGE_POST, WorkInfo.State.FAILED)
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN DEBUG EXCHANGE: ${debugExchangeResponse?.error}")
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: DEBUG EXCHANGE - ERROR: ${debugExchangeResponse?.error}")
         }
     }
 }

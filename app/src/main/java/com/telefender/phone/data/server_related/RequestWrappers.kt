@@ -2,18 +2,22 @@ package com.telefender.phone.data.server_related
 
 import android.content.Context
 import androidx.work.WorkInfo
+import com.telefender.phone.data.server_related.RemoteDebug.incrementExchangeErrorCounter
+import com.telefender.phone.data.server_related.RemoteDebug.resetExchangeCounters
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.helpers.TeleHelpers
-import com.telefender.phone.helpers.TeleHelpers.getParameters
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 
 object RequestWrappers {
 
     private const val retryAmount = 5
+    const val retryDelayTime = 5000L // In milliseconds
 
     /**
      * Downloads ServerData from server. Retries the request here if something goes wrong.
@@ -36,7 +40,7 @@ object RequestWrappers {
             )
             if (success) break
             Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $workerName - DOWNLOAD RETRYING")
-            delay(2000)
+            delay(retryDelayTime)
         }
     }
 
@@ -124,7 +128,7 @@ object RequestWrappers {
      * TODO: Double check retry strategy.
      *
      * Uploads changes to server. If a big error occurs, like a 404, the upload doesn't continue.
-     * Returns whether the worker should continue, retry, or fail.
+     * Returns whether the worker should continue, retry, or fail (not anymore).
      */
     suspend fun uploadError(
         context: Context,
@@ -197,11 +201,13 @@ object RequestWrappers {
             )
             if (success) break
             Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $workerName - DEBUG_CHECK RETRYING")
-            delay(2000)
+            delay(retryDelayTime)
         }
     }
 
     /**
+     * TODO: Double check this. Can't tell if I saw something fishy at one point.
+     *
      * Downloads ServerData from server. Retries the request here if something goes wrong.
      */
     suspend fun debugSession(
@@ -222,7 +228,7 @@ object RequestWrappers {
             )
             if (success) break
             Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $workerName - DEBUG_SESSION RETRYING")
-            delay(2000)
+            delay(retryDelayTime)
         }
     }
 
@@ -235,9 +241,13 @@ object RequestWrappers {
         scope: CoroutineScope,
         workerName: String
     ) {
-        for (i in 1..retryAmount) {
+        resetExchangeCounters()
+
+        while (RemoteDebug.exchangeErrorCounter < retryAmount
+            && RemoteDebug.invTokenCounter < retryAmount
+        ) {
             WorkStates.setState(WorkType.DEBUG_EXCHANGE_POST, WorkInfo.State.RUNNING)
-            RemoteDebug.debugExchangeRequest(context, repository, scope)
+            RemoteDebug.debugExchangeRequest(context, repository, scope, workerName)
 
             val success = WorkStates.workWaiter(
                 workType = WorkType.DEBUG_EXCHANGE_POST,
@@ -246,8 +256,12 @@ object RequestWrappers {
                 certainFinish = true
             )
             if (success) break
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $workerName - DEBUG_EXCHANGE RETRYING")
-            delay(2000)
+
+            if (RemoteDebug.invTokenCounter < retryAmount) {
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $workerName - DEBUG_EXCHANGE RETRYING")
+                delay(retryDelayTime)
+                incrementExchangeErrorCounter()
+            }
         }
     }
 }

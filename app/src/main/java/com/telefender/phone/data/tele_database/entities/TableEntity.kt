@@ -5,18 +5,18 @@ abstract class TableEntity {
 }
 
 enum class TableType(val serverString: String) {
-    CHANGE("change"),
-    EXECUTE("execute"),
-    UPLOAD_CHANGE("upload_change"),
-    UPLOAD_ANALYZED("upload_analyzed"),
-    ERROR("error"),
+    CHANGE("change_log"),
+    EXECUTE("execute_queue"),
+    UPLOAD_CHANGE("upload_change_queue"),
+    UPLOAD_ANALYZED("upload_analyzed_queue"),
+    ERROR("error_queue"),
     STORED_MAP("stored_map"),
     PARAMETERS("parameters"),
     CALL_DETAIL("call_detail"),
     INSTANCE("instance"),
     CONTACT("contact"),
     CONTACT_NUMBER("contact_number"),
-    ANALYZED("analyzed"),
+    ANALYZED("analyzed_number"),
     NOTIFY_ITEM("notify_item")
 }
 

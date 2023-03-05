@@ -90,7 +90,7 @@ private fun uploadErrorResponseHandler(
                         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: PARTIALLY UPLOADED ERROR LOGS WITH ERROR: ${uploadResponse.error}")
                         repository.deleteErrorLogExclusive(uploadResponse.lastUploadedRowID)
                         nextErrorCount++
-                        delay(2000)
+                        delay(RequestWrappers.retryDelayTime)
                     }
 
                 }

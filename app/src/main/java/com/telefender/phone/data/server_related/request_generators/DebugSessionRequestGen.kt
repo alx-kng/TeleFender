@@ -56,8 +56,9 @@ private fun debugSessionResponseHandler(
             response.toServerResponse(ServerResponseType.DEFAULT)
 
         if (debugSessionResponse != null && debugSessionResponse.status == "ok" && debugSessionResponse is DebugSessionResponse) {
-            // Set RemoteDebug remoteSessionID, which is used in debugExchangeRequest()
+            // Set RemoteDebug remoteSessionID and remoteSessionToken (used in debugExchangeRequest())
             RemoteDebug.remoteSessionID = debugSessionResponse.remoteSessionID
+            RemoteDebug.remoteSessionToken = debugSessionResponse.remoteSessionToken
 
             WorkStates.setState(WorkType.DEBUG_SESSION_POST, WorkInfo.State.SUCCEEDED)
         } else {

@@ -167,11 +167,11 @@ interface CallDetailDao: StoredMapDao {
 
     private suspend fun callSynced(callEpochDate: Long) : Boolean {
         val instanceNumber = getUserNumber()!!
-        return callSyncedQuery(callEpochDate, instanceNumber)
+        return callSyncedQuery(callEpochDate, instanceNumber) != null
     }
 
-    @Query("SELECT EXISTS (SELECT callType FROM call_detail WHERE callEpochDate = :callEpochDate AND instanceNumber = :instanceNumber)")
-    suspend fun callSyncedQuery(callEpochDate: Long, instanceNumber: String) : Boolean
+    @Query("SELECT callType FROM call_detail WHERE callEpochDate = :callEpochDate AND instanceNumber = :instanceNumber")
+    suspend fun callSyncedQuery(callEpochDate: Long, instanceNumber: String) : String?
 
     /**********************************************************************************************
      * Retrieves all CallDetails associated with the given instanceNumber. If nothing is passed in,

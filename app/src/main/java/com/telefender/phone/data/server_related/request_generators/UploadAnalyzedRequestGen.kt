@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.WorkInfo
 import com.android.volley.Response
 import com.telefender.phone.data.server_related.DataRequests.uploadAnalyzedRequest
+import com.telefender.phone.data.server_related.RequestWrappers
 import com.telefender.phone.data.server_related.json_classes.DefaultResponse
 import com.telefender.phone.data.server_related.json_classes.ServerResponseType
 import com.telefender.phone.data.server_related.json_classes.UploadResponse
@@ -87,7 +88,7 @@ private fun uploadAnalyzedResponseHandler(
                         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: PARTIALLY UPLOADED ANALYZED WITH ERROR: ${uploadResponse.error}")
                         repository.deleteAnalyzedQTUExclusive(uploadResponse.lastUploadedRowID)
                         nextErrorCount++
-                        delay(2000)
+                        delay(RequestWrappers.retryDelayTime)
                     }
 
                 }

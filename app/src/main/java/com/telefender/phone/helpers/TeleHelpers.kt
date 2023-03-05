@@ -141,8 +141,6 @@ object TeleHelpers {
     /**
      * Returns new notify window (list of call times from last [windowSize] days). Adds in
      * [newCallTime] to window if given.
-     *
-     * [callDirection] is not incoming or outgoing.
      */
     fun updateNotifyWindow(
         notifyWindow: List<Long>,

@@ -14,9 +14,9 @@ data class StoredMap(
     val sessionID: String? = null,
     val clientKey: String? = null, // UUID key to push and pull changes to / from server
     val firebaseToken: String? = null,
-    val lastLogSyncTime: Long = 0,
-    val lastLogFullSyncTime: Long = 0, // First time the log sync process fully completes.
-    val lastContactFullSyncTime: Long = 0, // First time the contact sync process fully completes.
+    val lastLogSyncTime: Long = 0, // Last INDIVIDUAL call log sync time (changes after each call)
+    val lastLogFullSyncTime: Long = 0, // First time the log sync PROCESS fully completes.
+    val lastContactFullSyncTime: Long = 0, // First time the contact sync PROCESS fully completes.
     val lastServerRowID: Long? = null,
 ) : TableEntity() {
 
@@ -69,11 +69,12 @@ data class Parameters(
     val superSpamNotifyGate: Int,
     val seenGateIncrease: Int, // How much the notify gate increases by when user sees notify item.
 
+    // Simplified explanations. Go look at algo doc.
     val notifyWindowSize: Int, // Size of notify window in days (controls notify list qualification).
     val initialLastCallDropWindow: Int, // Initial # of days after last call to auto-remove notify item.
     val seenWindowDecrease: Int, // How much lastCallDropWindow decreases each time the item is seen.
-    val qualifiedDropWindow: Int,
-    val seenDropWindow: Int,
+    val qualifiedDropWindow: Int,  // Days from lastQualifiedTime after which we auto-remove notify item.
+    val seenDropWindow: Int, // Days from veryFirstSeenTime after which we auto-remove notify item.
 
     val incomingGate: Int, // inclusive seconds in order to let through
     val outgoingGate: Int, // inclusive seconds in order to let through

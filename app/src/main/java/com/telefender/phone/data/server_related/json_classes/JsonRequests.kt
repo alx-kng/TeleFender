@@ -215,6 +215,8 @@ class DebugExchangeRequest(
     instanceNumber : String,
     key : String,
     val remoteSessionID : String,
+    @Json(name = "rjsToken")
+    val remoteSessionToken: String,
     val data: List<String>,
     val commandComplete: Boolean,
     val error: String? = null
@@ -228,8 +230,8 @@ class DebugExchangeRequest(
     }
 
     override fun toString() : String {
-        return "${super.toString()} remoteSessionID: $remoteSessionID data: $data " +
-            "commandComplete: $commandComplete"
+        return "${super.toString()} remoteSessionID: $remoteSessionID " +
+            "remoteSessionToken: $remoteSessionToken data: $data commandComplete: $commandComplete"
     }
 }
 

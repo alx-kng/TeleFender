@@ -20,7 +20,8 @@ object DebugEngine {
         context: Context,
         repository: ClientRepository,
         scope: CoroutineScope,
-        commandString: String?
+        commandString: String?,
+        workerName: String
     ) {
         val currentTime = Instant.now().toEpochMilli()
 
@@ -61,7 +62,11 @@ object DebugEngine {
         (and will instead be caught in the actual command class).
          */
         if (commandString != null && command == null) {
-            val errorString = "Command formatted incorrectly! (Shallow check) | $commandString"
+            val errorString = """
+                Command formatted incorrectly! (Shallow check) | $commandString
+                Type <help> for helpful info.
+            """.trimIndent()
+
             RemoteDebug.error = errorString
             RemoteDebug.commandRunning = false
 
@@ -71,7 +76,7 @@ object DebugEngine {
         // If not EndCommand keep sending exchange data requests.
         if (command !is EndCommand) {
             delay(1000)
-            RemoteDebug.debugExchangeRequest(context, repository, scope)
+            RemoteDebug.debugExchangeRequest(context, repository, scope, workerName)
 
             // Reset error to null after we send it up to the server.
             RemoteDebug.error = null
@@ -95,6 +100,7 @@ object DebugEngine {
         return when (commandType) {
             "<end>" -> EndCommand.create(context, repository, scope)
             "<log>" -> LogCommand.create(context, repository, scope, commandValue)
+            "<help>" -> HelpCommand.create(context, repository, scope)
             "<sql-read>" -> ReadQueryCommand.create(context, repository, scope, commandValue)
             else -> null
         }

@@ -134,7 +134,8 @@ data class Change(
     }
 
     override fun toString(): String {
-        return "CID: $CID normalizedNumber: $normalizedNumber blocked: $blocked"
+        return "CID: $CID normalizedNumber: $normalizedNumber blocked: $blocked " +
+            "safeAction: $safeAction"
     }
 
     companion object {

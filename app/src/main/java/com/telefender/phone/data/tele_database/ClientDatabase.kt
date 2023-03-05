@@ -6,6 +6,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.firebase.ktx.Firebase
@@ -19,6 +20,7 @@ import com.telefender.phone.data.tele_database.background_tasks.workers.DebugSch
 import com.telefender.phone.data.tele_database.background_tasks.workers.OmegaScheduler
 import com.telefender.phone.data.tele_database.background_tasks.workers.SetupScheduler
 import com.telefender.phone.data.tele_database.client_daos.*
+import com.telefender.phone.data.tele_database.converters.Converters
 import com.telefender.phone.data.tele_database.entities.*
 import com.telefender.phone.helpers.DatabaseLogger
 import com.telefender.phone.helpers.PrintTypes
@@ -46,6 +48,7 @@ import timber.log.Timber
     AnalyzedNumber::class,
     NotifyItem::class
 ], version = 1, exportSchema = false)
+@TypeConverters(Converters::class)
 abstract class ClientDatabase : RoomDatabase() {
 
     abstract fun rawDao() : RawDao

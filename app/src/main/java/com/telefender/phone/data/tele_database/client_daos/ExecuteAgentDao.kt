@@ -1,15 +1,14 @@
 package com.telefender.phone.data.tele_database.client_daos
 
-import android.content.ClipData
 import android.provider.CallLog
 import androidx.room.Dao
 import androidx.room.Transaction
+import com.telefender.phone.data.default_database.DefaultContacts.deleteContact
 import com.telefender.phone.data.default_database.DefaultContacts.insertContact
 import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.entities.*
 import com.telefender.phone.helpers.TeleHelpers
-import com.telefender.phone.helpers.daysToMilli
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.withLock
@@ -18,8 +17,6 @@ import timber.log.Timber
 import java.lang.Long.max
 import java.time.Instant
 import kotlin.math.roundToInt
-import kotlin.time.Duration.Companion.days
-import kotlin.time.Duration.Companion.milliseconds
 
 
 /**
@@ -383,7 +380,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                     insInsert(instanceNumber = instanceNumber)
                 }
                 else -> {
-                    Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: executeAgentNORM() - wrong type $type")
+                    Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: executeAgentNORM() - Wrong Type: $type")
                 }
             }
 
@@ -397,9 +394,8 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
     }
 
     /**
-     * TODO: Finish implementing NotifyItem!!!
-     * TODO: Should update Notify List here. Probably only if not already safe or blocked.
-     * TODO: Make sure this scenario doesn't happen: user sees new log before notify list updated?
+     * TODO: Double check NotifyItem handling.
+     * TODO: Make sure this scenario isn't bad: user sees new log before notify list updated?
      *
      * Inserts call into CallDetail table and updates AnalyzedNumber. Only updates
      * AnalyzedNumber if it is inserted.
@@ -443,19 +439,46 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                 if (isIncoming || isOutgoing) {
                     newNotifyWindow = listOf()
 
-                    if (oldNotifyItem != null) {
-                        val result = deleteNotifyItem(normalizedNumber)
+                    // Remove number from notify list if it is currently on it.
+                    deleteNotifyItemIfExists(normalizedNumber, "localLogInsert()")
 
-                        // deleteNotifyItem() returns 1 if success and something else if failure.
-                        if (result != 1) throw Exception("localLogInsert() - deleteNotifyItem() failed!")
-
-                        // Set to null so that newNotifyItem isn't created / computed.
-                        oldNotifyItem = null
-                    }
+                    // Set to null so that newNotifyItem isn't created / computed.
+                    oldNotifyItem = null
                 }
 
-                // Whether the number qualifies / re-qualifies for the notify list.
-                val qualifies = newNotifyWindow.size >= oldAnalyzed.notifyGate
+                // Determines whether number is eligible for notify list.
+                var eligible = normalizedNumber != TeleHelpers.UNKNOWN_NUMBER
+
+                if (oldAnalyzed.numSharedContacts > 0) {
+                    /*
+                     Is contact (Note that blocked contacts is the user's decision and thus
+                     shouldn't be notified)
+                     */
+                    eligible = false
+                } else if (!oldAnalyzed.isBlocked) {
+                    // Is not contact and not blocked
+
+                    if (oldAnalyzed.numTreeContacts > 0
+                        || oldAnalyzed.markedSafe
+                        || oldAnalyzed.maxIncomingDuration >= parameters.incomingGate
+                        || oldAnalyzed.maxOutgoingDuration >= parameters.outgoingGate
+                    ) {
+                        /*
+                        Anything (except for SMS) that would've been allowed should not go on
+                        the notify list.
+                         */
+                        eligible = false
+                    }
+                } else {
+                    // Is not a contact and is blocked
+                    // Should be eligible
+                }
+
+                /*
+                Whether the number qualifies / re-qualifies for the notify list. Requires that
+                number is eligible and number of calls in notify window >= notify gate.
+                 */
+                val qualifies = eligible && newNotifyWindow.size >= oldAnalyzed.notifyGate
 
                 /*
                 Updated NotifyItem (if old NotifyItem exists a.k.a. already on notify list)
@@ -483,6 +506,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                 if (qualifies && newNotifyItem == null) {
                     // Number qualifies for notify list and isn't already in notify list.
 
+                    // Just add new Notify Item
                     val result = insertNotifyItem(
                         NotifyItem(
                             normalizedNumber = normalizedNumber,
@@ -498,11 +522,25 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                     // insertNotifyItem() usually returns -1 if row wasn't inserted.
                     if (result < 0) throw Exception("localLogInsert() - insertNotifyItem() failed!")
 
-                } else if (newNotifyItem != null) {
+                } else if (qualifies && newNotifyItem != null){
+                    // Number qualifies for notify list and is already in notify list.
+
+                    // Just update existing Notify Item
+                    val success = updateNotifyItem(newNotifyItem)
+                    TeleHelpers.assert(success, "localLogInsert() - updateNotifyItem() failed!")
+
+                } else if (!qualifies && newNotifyItem != null) {
+                    // Number doesn't qualify for notify list and is already on notify list.
+
                     /*
-                    If the notify list item exists and should be removed, then remove it. Otherwise,
-                    just update the NotifyItem. Note that we don't clear the notify window if the
-                    notify item is removed because the removal here wasn't due to user interaction.
+                    If the notify list item should be removed, then remove it. Otherwise, just
+                    update the NotifyItem.
+
+                    Note: We don't clear the notify window if the notify item is removed because
+                    the removal here wasn't due to user interaction.
+
+                    Note: Numbers that reach this point must be eligible, since if it wasn't
+                    eligible, it would've been removed prior inside a ExecuteAgent function.
                      */
                     if (TeleHelpers.shouldRemoveNotifyItem(newNotifyItem, parameters)) {
                         val result = deleteNotifyItem(normalizedNumber)
@@ -621,6 +659,9 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                             newNotifyGate = parameters.initialNotifyGate
                             newMarkedSafe = true
                             newIsBlocked = false
+
+                            // Remove number from notify list if it is currently on it.
+                            deleteNotifyItemIfExists(normalizedNumber, "nonContactUpdate()")
                         }
                         SafeAction.DEFAULT -> {
                             newNotifyGate = parameters.initialNotifyGate
@@ -639,6 +680,9 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                             }
                             newMarkedSafe = false
                             newIsBlocked = true
+
+                            // Remove number from notify list if it is currently on it.
+                            deleteNotifyItemIfExists(normalizedNumber, "nonContactUpdate()")
                         }
                         /*
                         TODO: Change notifyGate protocol if necessary later.
@@ -897,6 +941,9 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                         )
                     )
                     TeleHelpers.assert(success, "updateAnalyzedNum()")
+
+                    // Remove number from notify list if it is currently on it.
+                    deleteNotifyItemIfExists(normalizedNumber, "cnInsert()")
                 } else {
                     val success = updateAnalyzedNum(
                         normalizedNumber = normalizedNumber,
@@ -1084,6 +1131,19 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
 
         // qteRowsAffected should be 1 if success and anything else if failure.
         if (qteRowsAffected != 1) throw Exception("finalDelete() - deleteQTE() failed!")
+    }
+
+    /**
+     * Deletes the corresponding NotifyItem for [normalizedNumber] if it exists. Throws exception
+     * if the possible delete doesn't go through. Make sure to catch that!!
+     */
+    suspend fun deleteNotifyItemIfExists(normalizedNumber: String, location: String) {
+        if (getNotifyItem(normalizedNumber) != null) {
+            val result = deleteNotifyItem(normalizedNumber)
+
+            // deleteNotifyItem() returns 1 if success and something else if failure.
+            if (result != 1) throw Exception("$location - deleteNotifyItem() failed!")
+        }
     }
 
     suspend fun changeDegreeString(degreeString: String, degree: Int, remove: Boolean) : String {

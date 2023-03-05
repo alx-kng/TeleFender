@@ -1,7 +1,6 @@
 package com.telefender.phone.data.server_related
 
 import android.content.Context
-import android.icu.lang.UCharacter.GraphemeClusterBreak.T
 import androidx.work.WorkInfo
 import com.android.volley.Request
 import com.telefender.phone.data.server_related.json_classes.DebugExchangeRequest
@@ -16,22 +15,61 @@ import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONException
 import timber.log.Timber
-import java.time.Instant
 
 object RemoteDebug {
 
     // TODO: Change this to a more reasonable time.
     const val maxIdlePeriod = 6000000L
+    const val retryAmount = 5
 
     var isEnabled = false
     var remoteSessionID: String? = null
-    var commandRunning = false
+    var remoteSessionToken: String? = null
+
     var startTime = 0L
+    var commandRunning = false
     var lastCommandTime: Long? = null
     var error: String? = null
+
+    var invTokenCounter = 0
+    var exchangeErrorCounter = 0
+
+    private val exchangeMutex = Mutex()
+
+    /**
+     * Resets [exchangeErrorCounter] and [invTokenCounter]to 0. Should be used when exchange
+     * request returns success. Uses lock for safety.
+     */
+    suspend fun resetExchangeCounters() {
+        exchangeMutex.withLock {
+            exchangeErrorCounter = 0
+            invTokenCounter = 0
+        }
+    }
+
+    /**
+     * Increments [exchangeErrorCounter]. Should be used when exchange request fails (not including
+     * InvToken error). Uses lock for safety.
+     */
+    suspend fun incrementExchangeErrorCounter() {
+        exchangeMutex.withLock {
+            exchangeErrorCounter++
+        }
+    }
+
+    /**
+     * Increments [invTokenCounter]. Should be used when exchange request receives InvToken error.
+     * Uses lock for safety.
+     */
+    suspend fun incrementInvTokenCounter() {
+        exchangeMutex.withLock {
+            invTokenCounter++
+        }
+    }
 
     /**
      * Queue of data to be sent up to server.
@@ -79,10 +117,13 @@ object RemoteDebug {
     fun resetStates() {
         isEnabled = false
         remoteSessionID = null
-        commandRunning = false
+        remoteSessionToken = null
+
         startTime = 0L
+        commandRunning = false
         lastCommandTime = null
         error = null
+
         dataQueue.clear()
     }
 
@@ -148,7 +189,7 @@ object RemoteDebug {
             return
         }
 
-        val url = "https://dev.scribblychat.com/callbook/rjs/getid"
+        val url = "https://dev.scribblychat.com/callbook/rjs/getid1"
         val instanceNumber = TeleHelpers.getUserNumberStored(context)
         val key = repository.getClientKey()
 
@@ -186,14 +227,16 @@ object RemoteDebug {
         context: Context,
         repository: ClientRepository,
         scope: CoroutineScope,
+        workerName: String
     ) {
-        if (remoteSessionID == null) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: debugExchangeRequest() - No remoteSessionID")
+        if (remoteSessionID == null || remoteSessionToken == null) {
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s",
+                "debugExchangeRequest() - No remoteSessionID or remoteSessionToken")
             WorkStates.setState(WorkType.DEBUG_EXCHANGE_POST, WorkInfo.State.SUCCEEDED)
             return
         }
 
-        val url = "https://dev.scribblychat.com/callbook/rjs/exchangeData"
+        val url = "https://dev.scribblychat.com/callbook/rjs/exchangeData1"
         val instanceNumber = TeleHelpers.getUserNumberStored(context)
         val key = repository.getClientKey()
 
@@ -209,6 +252,7 @@ object RemoteDebug {
             instanceNumber = instanceNumber,
             key = key,
             remoteSessionID = remoteSessionID!!,
+            remoteSessionToken = remoteSessionToken!!,
             data = dequeueChunk(),
             // Means that data returned from command is all sent and command is no longer running.
             commandComplete = dataQueue.size == 0 && !commandRunning,
@@ -226,6 +270,7 @@ object RemoteDebug {
                 context = context,
                 repository = repository,
                 scope = scope,
+                workerName = workerName
             )
 
             // Adds entire string request to request queue

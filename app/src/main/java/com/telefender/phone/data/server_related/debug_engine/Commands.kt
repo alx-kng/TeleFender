@@ -13,7 +13,7 @@ import timber.log.Timber
 import java.time.Instant
 
 
-abstract class Command(
+sealed class Command(
     val context: Context,
     val repository: ClientRepository,
     val scope: CoroutineScope,
@@ -83,6 +83,75 @@ class LogCommand(
     }
 }
 
+class HelpCommand(
+    context: Context,
+    repository: ClientRepository,
+    scope: CoroutineScope,
+) : Command(context, repository, scope) {
+
+    override suspend fun execute() {
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: REMOTE HelpCommand")
+
+        val helpString = """
+            Possible commands:
+            
+            <end> 
+                | use = "<end>" 
+                | Ends debug connection with device.
+                
+            <log> 
+                | use = "<log> {message}" 
+                | Echoes {message} back to the server.
+                
+            <help> 
+                | use = "<help>" | Lists helpful commands / info.
+                
+            <sql-read> 
+                | use = "<sql-read> {table_name} {query_string}"
+                | Executes {query_string} (MUST BE READ) with return type {table_name} and 
+                | returns data to server.
+                  
+            Helpful info:
+            
+            Table types
+                | change_log
+                | execute_queue
+                | upload_change_queue
+                | upload_analyzed_queue
+                | error_queue
+                | stored_map
+                | parameters
+                | call_detail
+                | contact
+                | contact_number
+                | analyzed_number
+                | notify_item
+                
+        """.trimIndent()
+
+        // Sends helpString to server.
+        RemoteDebug.enqueueData(helpString)
+
+        RemoteDebug.lastCommandTime = Instant.now().toEpochMilli()
+        RemoteDebug.commandRunning = false
+    }
+
+    override fun toString(): String {
+        return "HELP COMMAND"
+    }
+
+    companion object {
+        fun create(
+            context: Context,
+            repository: ClientRepository,
+            scope: CoroutineScope,
+        ) : HelpCommand {
+
+            return HelpCommand(context, repository, scope)
+        }
+    }
+}
+
 class ReadQueryCommand(
     context: Context,
     repository: ClientRepository,
@@ -109,7 +178,7 @@ class ReadQueryCommand(
 
                 // On last retry, set the debug exchange error message (so server can see it).
                 if (i == retryAmount) {
-                    RemoteDebug.error = e.message
+                    RemoteDebug.error = "${e.message}\nType <help> for helpful info."
                 }
             }
         }

@@ -23,9 +23,10 @@ import java.util.concurrent.TimeUnit
  * TODO: Find better way to make sure that only one of the one-time debug or periodic debug is
  *  working at one time. ACTUALLY WE CAN GET RID OF ONE-TIME DEBUG LATER. THIS IS ONLY FOR TESTING
  *  RIGHT NOW. PLUS I'M PRETTY SURE ONE-TIME WORK CAN ONLY LAST SO LONG.
+ *  --> Maybe we can make a switch for debugging.
  *
  * TODO: Should probably automatically close debug after like 5 min of inactivity to prevent
- *  infinite loop.
+ *  infinite loop. -> pretty sure this is done
  */
 object DebugScheduler {
 

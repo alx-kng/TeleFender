@@ -118,11 +118,13 @@ class DebugCheckResponse(
 class DebugSessionResponse(
     status : String?,
     error : String?,
-    val remoteSessionID : String
+    val remoteSessionID : String,
+    @Json(name = "rjsToken")
+    val remoteSessionToken: String
 ) : DefaultResponse(status, error) {
 
     override fun toString() : String {
-        return "${super.toString()} remoteSessionID: $remoteSessionID"
+        return "${super.toString()} remoteSessionID: $remoteSessionID rjsToken = $remoteSessionToken"
     }
 }
 
