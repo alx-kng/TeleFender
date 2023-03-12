@@ -3,9 +3,11 @@ package com.telefender.phone.call_related
 import android.content.Context
 import android.media.AudioManager
 import android.os.Build
+import android.os.Build.VERSION_CODES.P
 import android.telecom.CallAudioState
 import androidx.lifecycle.MutableLiveData
 import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.permissions.Permissions
 import timber.log.Timber
 
 enum class RingerMode {
@@ -18,14 +20,18 @@ object AudioHelpers {
     val speakerStatus: MutableLiveData<Boolean> = MutableLiveData(false)
 
     /**
-     * TODO: Check for if user is premium and has do not disturb permissions before using ringer
-     *  silent.
+     * TODO: Check for premium mode.
      *
-     * Sets the ringer mode of the phone. Apparently, setting the ringer to ANY mode requires the
-     * Do Not Disturb permission.
+     * Sets the ringer mode of the phone. Requires Do Not Disturb permissions, as setting the
+     * ringer to ANY mode seems to need the Do Not Disturb permission.
      */
-    fun setRingerMode(context: Context?, ringerMode: RingerMode) {
-        val audioManager = context?.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    fun setRingerMode(context: Context, ringerMode: RingerMode) {
+        if (!Permissions.hasDoNotDisturbPermission(context)) {
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: setRingerMode() - No permissions!")
+            return
+        }
+
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
         audioManager.ringerMode = when(ringerMode) {
             RingerMode.NORMAL -> AudioManager.RINGER_MODE_NORMAL

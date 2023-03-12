@@ -31,6 +31,11 @@ object RuleChecker {
      *  - Double check allow mode stuff.
      *  -
      *  - Can make full sync test better maybe?
+     *  -
+     *  - Probably need Do Not Disturb for premium users, otherwise the silence mode and block
+     *    mode will always have two seconds of ringing before block / silence.
+     *  -
+     *  - Check for premium mode?
      *
      * Returns whether or not number should be allowed. Read "TeleFender - Algorithm Overview" for
      * more info.
@@ -105,14 +110,10 @@ object RuleChecker {
          */
         if (CallManager.currentMode == HandleMode.ALLOW_MODE) return false
 
-        // TODO: Check here if in temp NotifyItem and if satisfies max request time constraint.
-
-        val premiumMode = true
+        // TODO: Check here if in temp NotifyItem and if satisfies max request time constraint.`
 
         // Used to silence the ringer during the wait time for the SMS verify result.
-        if (Permissions.hasDoNotDisturbPermission(context) && premiumMode) {
-            AudioHelpers.setRingerMode(context, RingerMode.SILENT)
-        }
+        AudioHelpers.setRingerMode(context, RingerMode.SILENT)
 
         applicationScope.launch {
             RequestWrappers.smsVerify(

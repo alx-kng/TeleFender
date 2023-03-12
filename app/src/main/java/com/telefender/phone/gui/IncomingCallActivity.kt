@@ -72,7 +72,6 @@ class IncomingCallActivity : AppCompatActivity() {
          * If the call is unsafe and app is in silence mode, the call is declined after [silenceDelay]
          * if call isn't already disconnected or connected.
          */
-        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: SAFE - ${intent.extras?.getBoolean("Safe")}")
         val safe = intent.extras?.getBoolean("Safe") ?: true
         if (!safe && CallManager.currentMode == HandleMode.SILENCE_MODE) {
             scope.launch {
@@ -95,8 +94,8 @@ class IncomingCallActivity : AppCompatActivity() {
 
         binding.answerIncoming.setOnClickListener {
             if (!safe) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
-                    "Silence Block Action: No block action taken because call was answered by user.")
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s",
+                    "SILENCE_MODE Action: No block action taken because call was answered by user.")
             }
 
             CallManager.lastAnsweredCall = CallManager.focusedCall
@@ -148,12 +147,10 @@ class IncomingCallActivity : AppCompatActivity() {
         _running = false
 
         /*
-        Only need to set the ringer mode back to normal if changed in the first place. We know if
-        the ringer mode was changed in RuleChecker if the app has Do Not Disturb permissions.
+        Only need to set the ringer mode back to normal if changed in the first place. Ringer mode
+        could have only been changed if app has Do Not Disturb permissions.
          */
-        if (Permissions.hasDoNotDisturbPermission(this)) {
-            AudioHelpers.setRingerMode(this, RingerMode.NORMAL)
-        }
+        AudioHelpers.setRingerMode(this, RingerMode.NORMAL)
 
         super.onDestroy()
     }
@@ -177,7 +174,7 @@ class IncomingCallActivity : AppCompatActivity() {
         }
 
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s",
-            "Silence Block Action: Block action was taken because call was not answered or disconnected by user.")
+            "SILENCE_MODE ACTION: Block action was taken because call was not answered or disconnected by user.")
 
         unallowed = true
         CallManager.hangup()

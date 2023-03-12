@@ -1,6 +1,7 @@
 package com.telefender.phone.call_related
 
 
+import android.os.Build.VERSION_CODES.P
 import android.provider.CallLog
 import android.telecom.Call
 import android.telecom.InCallService
@@ -22,7 +23,7 @@ import timber.log.Timber
  *  "Waiting for rest of database!" even after the call. Actually, make sure that screens still
  *  show if the setup hasn't finished. LOOK INTO THIS!!! --> Seems to be fixed, but double check.
  *
- * TODO: Maybe we need to require do not disturb permissions no matter what???
+ * TODO: Maybe we need do not disturb permissions (for premium) no matter what??? --> Seconded
  */
 class CallService : InCallService() {
 
@@ -58,7 +59,10 @@ class CallService : InCallService() {
          * directly started. Also, safe calls and unsafe calls are handled separately.
          */
         if (call.getStateCompat() == Call.STATE_RINGING) {
-            if (RuleChecker.isSafe(this, call.number())) {
+            val isSafe = RuleChecker.isSafe(this, call.number())
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: CallService - SAFE = $isSafe")
+
+            if (isSafe) {
                 safeCall()
             } else {
                 unsafeCall(call)
@@ -88,9 +92,7 @@ class CallService : InCallService() {
         Only need to set the ringer mode back to normal if changed in the first place. We know if
         the ringer mode was changed in RuleChecker if the app has Do Not Disturb permissions.
          */
-        if (Permissions.hasDoNotDisturbPermission(this)) {
-            AudioHelpers.setRingerMode(this, RingerMode.NORMAL)
-        }
+        AudioHelpers.setRingerMode(this, RingerMode.NORMAL)
 
         IncomingCallActivity.start(this, true)
     }
@@ -103,14 +105,17 @@ class CallService : InCallService() {
     private fun unsafeCall(call: Call) {
         when(CallManager.currentMode) {
             HandleMode.BLOCK_MODE -> {
+                Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: BLOCK_MODE Action: Unsafe call blocked!")
                 TeleCallDetails.insertCallDetail(this, call, true, CallLog.Calls.BLOCKED_TYPE)
                 CallManager.hangup()
             }
             HandleMode.SILENCE_MODE -> {
+                // Silences ringer if app has permissions.
                 AudioHelpers.setRingerMode(this, RingerMode.SILENT)
                 IncomingCallActivity.start(this, false)
             }
             HandleMode.ALLOW_MODE -> {
+                Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: ALLOW_MODE Action: Unsafe call allowed!")
                 IncomingCallActivity.start(this, true)
             }
         }
