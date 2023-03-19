@@ -7,7 +7,12 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import com.telefender.phone.call_related.CallManager.connections
 import com.telefender.phone.helpers.TeleHelpers
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import timber.log.Timber
+import kotlin.coroutines.coroutineContext
 
 
 /**
@@ -410,8 +415,9 @@ object CallManager {
         return (hasConferenceable || conferenceCapability)
     }
 
-    // TODO: PUT THIS IN CALL.
     fun keypad(c: Char) {
+        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: KEYPAD $c PRESSED!")
+
         focusedConnection.value?.call?.playDtmfTone(c)
         focusedConnection.value?.call?.stopDtmfTone()
     }
