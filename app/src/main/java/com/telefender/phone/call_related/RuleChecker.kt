@@ -27,7 +27,9 @@ object RuleChecker {
      *  - Can make full sync test better maybe?
      *  -
      *  - Probably need Do Not Disturb for premium users, otherwise the silence mode and block
-     *    mode will always have two seconds of ringing before block / silence.
+     *    mode will always have two seconds of ringing before block / silence. --> Maybe we even
+     *    need to check that app has Do Not Disturb permissions before sending SMS request,
+     *    otherwise the user would see unexpected behavior.
      *  -
      *  - Check for premium mode?
      *
@@ -92,11 +94,11 @@ object RuleChecker {
 
         if (analyzed.markedSafe) return true
 
-        if (analyzed.smsVerified) return true
-
         if (analyzed.maxIncomingDuration >= parameters.incomingGate) return true
 
         if (analyzed.maxOutgoingDuration >= parameters.outgoingGate) return true
+
+        if (analyzed.smsVerified) return true
 
         /*
         If the checks reach here, and the current call mode is ALLOW_MODE, then we deem the number
@@ -144,36 +146,51 @@ object RuleChecker {
         analyzed: Analyzed,
         parameters: Parameters
     ) : Boolean {
+        // We treat the current time as the informal callEpochTime for this current call.
         val currentTime = Instant.now().toEpochMilli()
 
         // Updated server sent window with old sent times kicked out.
         val newServerSentWindow = TeleHelpers.updatedTimesWindow(
             window = analyzed.serverSentWindow,
-            windowSize = parameters.serverSentWindowSize.hoursToMilli(),
-            newTime = currentTime
+            windowSize = parameters.serverSentWindowSize.hoursToMilli()
         )
 
-        // Updated notify window with old call times kicked out.
+        // Updated notify window with old call times kicked out and new call time added in..
         val newNotifyWindow = TeleHelpers.updatedTimesWindow(
             window = analyzed.notifyWindow,
             windowSize = parameters.notifyWindowSize.daysToMilli(),
             newTime = currentTime
         )
 
-        val notifyItem = TeleHelpers.getNotifyItem(context, normalizedNumber)
+        // Means that this number would qualify for the notify list IF this current call was added.
+        val qualifies = newNotifyWindow.size >= analyzed.notifyGate
 
-        // Ensures that number qualifies for notify list or is on notify list before sending SMS request.
-        if (newNotifyWindow.size < analyzed.notifyGate && notifyItem == null) return false
+        // Updated NotifyItem for shouldRemoveNotifyItem() check. Conforms with ExecuteAgent.
+        val newNotifyItem = TeleHelpers.updatedNotifyItem(
+            oldNotifyItem = TeleHelpers.getNotifyItem(context, normalizedNumber),
+            callEpochDate = currentTime,
+            newNotifyWindow = newNotifyWindow,
+            qualifies = qualifies
+        )
 
-        // If number is on notify list but should be removed, then also don't send SMS request.
-        if (notifyItem != null && TeleHelpers.shouldRemoveNotifyItem(notifyItem, parameters)) return false
+        if (!qualifies) {
+            // Ensures that number qualifies for notify list or is on notify list before sending SMS request.
+            if (newNotifyItem == null) return false
 
+            // If number doesn't qualify and is on notify list but should be removed, then also don't send SMS request.
+            if (TeleHelpers.shouldRemoveNotifyItem(newNotifyItem, parameters)) return false
+        }
+
+        // E.g., If server only sent 1 SMS in last 24 hours (where max sent is 2 in 24 hours).
         if (analyzed.serverSentWindow.size < parameters.maxServerSent) return true
 
         // If serverSent == maxServerSent but call is within expire period, then send SMS request.
         if (currentTime - newServerSentWindow.last() <= parameters.smsLinkExpirePeriod.minutesToMilli()) return true
 
-        // If call is after expire but client hasn't sent an after-expire request yet, then send SMS request.
+        /*
+        If call is after expire but client hasn't sent an after-expire request yet, then send SMS request.
+        Note that the clientSentAfterExpire is changed in SMSVerifyRequestGen (HTTP response).
+         */
         if (!analyzed.clientSentAfterExpire) return true
 
         // Otherwise, don't send SMS request.

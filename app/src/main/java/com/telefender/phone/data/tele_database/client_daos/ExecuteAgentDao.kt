@@ -486,23 +486,11 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                 Updated NotifyItem (if old NotifyItem exists a.k.a. already on notify list)
                 NOTE: nextDropWindow is updated during nonContactUpdate()'s SEEN action.
                  */
-                val newNotifyItem = oldNotifyItem?.copy(
-                    lastCallTime = callEpochDate,
-
-                    // If number re-qualifies for notify list, then update lastQualifiedTime
-                    lastQualifiedTime = if (qualifies) {
-                        callEpochDate
-                    } else {
-                        oldNotifyItem.lastQualifiedTime
-                    },
-
-                    notifyWindow = newNotifyWindow,
-
-                    // Remember, last call's nextDropWindow becomes this call's currDropWindow
-                    currDropWindow = oldNotifyItem.nextDropWindow,
-
-                    // Resets since item is obviously not seen yet after new call.
-                    seenSinceLastCall = false
+                val newNotifyItem = TeleHelpers.updatedNotifyItem(
+                    oldNotifyItem = oldNotifyItem,
+                    callEpochDate = callEpochDate,
+                    newNotifyWindow = newNotifyWindow,
+                    qualifies = qualifies
                 )
 
                 if (qualifies && newNotifyItem == null) {

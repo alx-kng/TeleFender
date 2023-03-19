@@ -165,6 +165,35 @@ object TeleHelpers {
     }
 
     /**
+     * Returns updated NotifyItem if [oldNotifyItem] is not null.
+     */
+    fun updatedNotifyItem(
+        oldNotifyItem: NotifyItem?,
+        callEpochDate: Long,
+        newNotifyWindow: List<Long>,
+        qualifies: Boolean
+    ) : NotifyItem? {
+        return oldNotifyItem?.copy(
+            lastCallTime = callEpochDate,
+
+            // If number re-qualifies for notify list, then update lastQualifiedTime
+            lastQualifiedTime = if (qualifies) {
+                callEpochDate
+            } else {
+                oldNotifyItem.lastQualifiedTime
+            },
+
+            notifyWindow = newNotifyWindow,
+
+            // Remember, last call's nextDropWindow becomes this call's currDropWindow
+            currDropWindow = oldNotifyItem.nextDropWindow,
+
+            // Resets since item is obviously not seen yet after new call.
+            seenSinceLastCall = false
+        )
+    }
+
+    /**
      * Returns true if [notifyItem] should be removed from notify list.
      */
     fun shouldRemoveNotifyItem(notifyItem: NotifyItem, parameters: Parameters) : Boolean {
