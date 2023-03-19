@@ -3,12 +3,13 @@ package com.telefender.phone.data.tele_database.client_daos
 import android.provider.CallLog
 import androidx.room.Dao
 import androidx.room.Transaction
-import com.telefender.phone.data.default_database.DefaultContacts.deleteContact
-import com.telefender.phone.data.default_database.DefaultContacts.insertContact
 import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.entities.*
 import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.helpers.daysToMilli
+import com.telefender.phone.helpers.hoursToMilli
+import com.telefender.phone.helpers.minutesToMilli
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.withLock
@@ -315,6 +316,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                         nonContactUpdate(
                             instanceNumber = instanceNumber,
                             normalizedNumber = change?.normalizedNumber,
+                            changeTime = changeTime,
                             safeAction = change?.getSafeAction()
                         )
                     }
@@ -411,7 +413,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
 
         if (inserted) {
             with(callDetail) {
-                val parameters = getParametersWrapper()?.getParameters()!!
+                val parameters = getParameters()!!
                 val analyzedNumber = getAnalyzedNum(normalizedNumber)!!
                 val oldAnalyzed = analyzedNumber.getAnalyzed()
 
@@ -423,10 +425,10 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                 val isBlocked = callDirection == CallLog.Calls.BLOCKED_TYPE
 
                 // Updated notify window with old call times kicked out and new call time added in.
-                var newNotifyWindow = TeleHelpers.updateNotifyWindow(
-                    oldAnalyzed.notifyWindow,
-                    parameters.notifyWindowSize,
-                    callEpochDate
+                var newNotifyWindow = TeleHelpers.updatedTimesWindow(
+                    window = oldAnalyzed.notifyWindow,
+                    windowSize = parameters.notifyWindowSize.daysToMilli(),
+                    newTime = callEpochDate
                 )
 
                 var oldNotifyItem = getNotifyItem(normalizedNumber)
@@ -638,23 +640,27 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
      * Note that blocking contacts is handled in cUpdate().
      */
     @Transaction
-    suspend fun nonContactUpdate(instanceNumber: String?, normalizedNumber: String?, safeAction: SafeAction?) {
-        if (null in listOf(instanceNumber, normalizedNumber, safeAction)) {
-            throw NullPointerException("instanceNumber || normalizedNumber || safeAction was null for nonContactUpdate")
+    suspend fun nonContactUpdate(
+        instanceNumber: String,
+        normalizedNumber: String?,
+        changeTime: Long,
+        safeAction: SafeAction?,
+    ) {
+        if (normalizedNumber == null || safeAction == null) {
+            throw NullPointerException("normalizedNumber || safeAction was null for nonContactUpdate")
         } else {
             // Only update AnalyzedNumbers if change is from user's number (local client change).
-            if (instanceNumber!! == getUserNumber()!!) {
-                val analyzedNumber = getAnalyzedNum(normalizedNumber!!)!!
+            if (instanceNumber == getUserNumber()!!) {
+                val analyzedNumber = getAnalyzedNum(normalizedNumber)!!
                 val oldAnalyzed = analyzedNumber.getAnalyzed()
                 with(oldAnalyzed) {
-
-                    val parameters = getParametersWrapper()?.getParameters()!!
+                    val parameters = getParameters()!!
 
                     val newNotifyGate: Int
                     val newIsBlocked: Boolean
                     val newMarkedSafe: Boolean
 
-                    when (safeAction!!) {
+                    when (safeAction) {
                         SafeAction.SAFE -> {
                             newNotifyGate = parameters.initialNotifyGate
                             newMarkedSafe = true
@@ -684,16 +690,16 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                             // Remove number from notify list if it is currently on it.
                             deleteNotifyItemIfExists(normalizedNumber, "nonContactUpdate()")
                         }
-                        /*
-                        TODO: Change notifyGate protocol if necessary later.
-
-                        Basically, sms verification only really affects numbers in the default
-                        status (markedSafe = false and isBlocked = false) because if the number
-                        is already markedSafe, then sms has not much effect, and the number is
-                        blocked, then we don't want sms to override the user's action. However,
-                        we would like to reset notifyGate to give credit to number.
-                         */
                         SafeAction.SMS_VERIFY -> {
+                            /*
+                            TODO: Change notifyGate protocol if necessary later.
+
+                            Basically, sms verification only really affects numbers in the default
+                            status (markedSafe = false and isBlocked = false) because if the number
+                            is already markedSafe, then sms has not much effect, and the number is
+                            blocked, then we don't want sms to override the user's action. However,
+                            we would like to reset notifyGate to give credit to number.
+                             */
                             val success = updateAnalyzedNum(
                                 normalizedNumber = normalizedNumber,
                                 analyzed = oldAnalyzed.copy(
@@ -703,6 +709,59 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                             )
                             TeleHelpers.assert(success, "updateAnalyzedNum()")
 
+                            // Return because we're not updating the analyzed with the bottom code.
+                            return
+                        }
+                        SafeAction.SMS_SENT -> {
+                            val newServerSentWindow = TeleHelpers.updatedTimesWindow(
+                                window = oldAnalyzed.serverSentWindow,
+                                windowSize = parameters.serverSentWindowSize.hoursToMilli(),
+                                newTime = changeTime
+                            )
+
+                            val success = updateAnalyzedNum(
+                                normalizedNumber = normalizedNumber,
+                                analyzed = oldAnalyzed.copy(
+                                    serverSentWindow = newServerSentWindow,
+                                    clientSentAfterExpire = false
+                                )
+                            )
+                            TeleHelpers.assert(success, "updateAnalyzedNum()")
+
+                            // Return because we're not updating the analyzed with the bottom code.
+                            return
+                        }
+                        SafeAction.SMS_REQUEST -> {
+                            val newServerSentWindow = TeleHelpers.updatedTimesWindow(
+                                window = oldAnalyzed.serverSentWindow,
+                                windowSize = parameters.serverSentWindowSize.hoursToMilli(),
+                            )
+
+                            /*
+                            Technically, SMS_REQUEST should only happen after an SMS_SENT event,
+                            that is, there should be a last sent time in the sent window. However,
+                            we do extra checks for safety.
+                             */
+                            val lastSentTime = newServerSentWindow.lastOrNull()
+
+                            // True if this SMS_REQUEST event happens after sms link expires.
+                            val clientSentAfterExpire = if (lastSentTime != null) {
+                                // Request time is assumed to be changeTime
+                                changeTime - lastSentTime > parameters.smsLinkExpirePeriod.minutesToMilli()
+                            } else {
+                                false
+                            }
+
+                            val success = updateAnalyzedNum(
+                                normalizedNumber = normalizedNumber,
+                                analyzed = oldAnalyzed.copy(
+                                    serverSentWindow = newServerSentWindow,
+                                    clientSentAfterExpire = clientSentAfterExpire
+                                )
+                            )
+                            TeleHelpers.assert(success, "updateAnalyzedNum()")
+
+                            // Return because we're not updating the analyzed with the bottom code.
                             return
                         }
                         SafeAction.SEEN -> {
@@ -735,6 +794,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                             )
                             TeleHelpers.assert(updateNotifySuccess, "nonContactUpdate() - updateNotifyItem()")
 
+                            // Return because we're not updating the analyzed with the bottom code.
                             return
                         }
                     }
@@ -759,15 +819,15 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
      * Inserts contact given CID and instanceNumber.
      */
     @Transaction
-    suspend fun cInsert(CID: String?, instanceNumber: String?) {
-        if (null in listOf(CID, instanceNumber)) {
-            throw NullPointerException("CID || instanceNumber was null for cInsert")
+    suspend fun cInsert(CID: String?, instanceNumber: String) {
+        if (CID == null) {
+            throw NullPointerException("CID was null for cInsert")
         } else {
             /*
             Prevents double insertion by checking if contact exists first.
             Especially required since the section below will fail out for duplicate inserts.
              */
-            val numberExists = getContactRow(CID!!) != null
+            val numberExists = getContactRow(CID) != null
             if (numberExists) {
                 Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
                     "Duplicate cInsert() for CID = $CID | instanceNumber = $instanceNumber")
@@ -775,7 +835,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
             }
 
             val result = insertContact(
-                Contact(CID = CID, instanceNumber = instanceNumber!!)
+                Contact(CID = CID, instanceNumber = instanceNumber)
             )
 
             // insertContact() usually returns -1 if row wasn't inserted.
@@ -788,9 +848,9 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
      * blocked status.
      */
     @Transaction
-    suspend fun cUpdate(CID: String?, instanceNumber: String?, blocked: Boolean?) {
-        if (null in listOf(CID, instanceNumber, blocked)) {
-            throw NullPointerException("CID || instanceNumber || blocked was null for cUpdate")
+    suspend fun cUpdate(CID: String?, instanceNumber: String, blocked: Boolean?) {
+        if (CID == null || blocked == null) {
+            throw NullPointerException("CID || blocked was null for cUpdate")
         } else {
             /*
             Ensures current blocked status is different from the passed in blocked value
@@ -798,8 +858,8 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
             Especially required since the section below will fail out for duplicate updates.
             Also, we just check if contact exists for safety.
              */
-            val currBlockedStatus = contactBlocked(CID!!)
-            if (currBlockedStatus == null || currBlockedStatus == blocked!!) {
+            val currBlockedStatus = contactBlocked(CID)
+            if (currBlockedStatus == null || currBlockedStatus == blocked) {
                 Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
                     "Duplicate cUpdate() for CID = $CID | instanceNumber = $instanceNumber | blocked = $blocked")
                 return
@@ -814,7 +874,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
             Only update AnalyzedNumbers for child ContactNumbers if the Contact's instance number
             is the same as user number (contact is direct contact).
              */
-            if (instanceNumber!! == getUserNumber()!!) {
+            if (instanceNumber == getUserNumber()!!) {
                 val contactNumberChildren : List<ContactNumber> = getContactNumbersByCID(CID)
                 for (contactNumber in contactNumberChildren) {
                     val normalizedNumber = contactNumber.normalizedNumber
@@ -927,7 +987,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
             val oldAnalyzed = analyzedNumber.getAnalyzed()
             with(oldAnalyzed) {
                 val newDegreeString = changeDegreeString(degreeString, degree, false)
-                val parameters = getParametersWrapper()?.getParameters()!!
+                val parameters = getParameters()!!
 
                 if (instanceNumber == getUserNumber()!!) {
                     val success = updateAnalyzedNum(
@@ -997,9 +1057,9 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
      * detailed NullPointerException.
      */
     @Transaction
-    suspend fun cnDelete(CID: String?, normalizedNumber: String?, instanceNumber: String?, degree: Int?) {
-        if (null in listOf(CID, normalizedNumber, instanceNumber, degree)) {
-            throw NullPointerException("CID || number || instanceNumber || degree was null for cnDelete")
+    suspend fun cnDelete(CID: String?, normalizedNumber: String?, instanceNumber: String, degree: Int?) {
+        if (null in listOf(CID, normalizedNumber, degree)) {
+            throw NullPointerException("CID || number || degree was null for cnDelete")
         } else {
             /*
             Prevents double deletion by checking if number is already deleted. Also necessary to
@@ -1081,36 +1141,32 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
      * instance delete fails midway, then the execute log won't be deleted, meaning the instance
      * delete will continue where it left off in the next execution cycle.
      */
-    suspend fun insDelete(changeLog: ChangeLog, instanceNumber: String?, qteRowID: Long) {
-        if (instanceNumber == null) {
-            throw NullPointerException("instanceNumber was null for insDelete")
-        } else {
-            val mutexInstance = mutexLocks[MutexType.INSTANCE]!!
-            val mutexExecute = mutexLocks[MutexType.EXECUTE]!!
-            val mutexContact = mutexLocks[MutexType.CONTACT]!!
-            val mutexContactNumber = mutexLocks[MutexType.CONTACT_NUMBER]!!
-            val mutexAnalyzed = mutexLocks[MutexType.ANALYZED]!!
+    suspend fun insDelete(changeLog: ChangeLog, instanceNumber: String, qteRowID: Long) {
+        val mutexInstance = mutexLocks[MutexType.INSTANCE]!!
+        val mutexExecute = mutexLocks[MutexType.EXECUTE]!!
+        val mutexContact = mutexLocks[MutexType.CONTACT]!!
+        val mutexContactNumber = mutexLocks[MutexType.CONTACT_NUMBER]!!
+        val mutexAnalyzed = mutexLocks[MutexType.ANALYZED]!!
 
-            /*
-            Gets all contacts associated with instance number and calls cDelete() on each one,
-            which takes care of corresponding contact numbers and trusted numbers
-             */
-            val contactChildren : List<Contact> = getContactsByInstance(instanceNumber)
-            for (contact in contactChildren) {
-                mutexAnalyzed.withLock {
-                    mutexContact.withLock {
-                        mutexContactNumber.withLock {
-                            cDelete(contact.CID)
-                        }
+        /*
+        Gets all contacts associated with instance number and calls cDelete() on each one,
+        which takes care of corresponding contact numbers and trusted numbers
+         */
+        val contactChildren : List<Contact> = getContactsByInstance(instanceNumber)
+        for (contact in contactChildren) {
+            mutexAnalyzed.withLock {
+                mutexContact.withLock {
+                    mutexContactNumber.withLock {
+                        cDelete(contact.CID)
                     }
                 }
-
             }
 
-            mutexInstance.withLock {
-                mutexExecute.withLock {
-                    finalDelete(changeLog, Instance(instanceNumber), qteRowID)
-                }
+        }
+
+        mutexInstance.withLock {
+            mutexExecute.withLock {
+                finalDelete(changeLog, Instance(instanceNumber), qteRowID)
             }
         }
     }

@@ -81,6 +81,9 @@ data class Parameters(
 
     val smsImmediateWaitTime: Long, // milliseconds before force move on to allow / unallow
     val smsDeferredWaitTime: Int, // seconds before sending another SMS request (if no earlier result)
+    val serverSentWindowSize: Int, // Period in which # times server sent SMS messages are counted (in hours)
+    val maxServerSent: Int, // Max number of server sent SMS messages to specific number.
+    val smsLinkExpirePeriod: Int // Period for which SMS link sent is usable to verify (in minutes)
 ) {
 
     fun toJson() : String {

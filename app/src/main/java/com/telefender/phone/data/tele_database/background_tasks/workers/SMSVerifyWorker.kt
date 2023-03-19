@@ -70,12 +70,18 @@ class CoroutineSMSVerifyWorker(
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SMS VERIFY WORKER STARTED")
 
         val repository = (applicationContext as App).repository
-        val number = inputData.getString("number")
-        val waitTime = repository.getParametersWrapper()?.getParameters()?.smsDeferredWaitTime ?: 60
-        
-        // Wait around a minute and send another SMS verify request (for server load optimization).
+        val number = inputData.getString("number")!!
+        val analyzed = repository.getAnalyzedNum(number)?.getAnalyzed()
+        val waitTime = repository.getParameters()?.smsDeferredWaitTime ?: 60
+
+        /*
+        Wait around a minute and send another SMS verify request if the number isn't already
+        verified by then (for server load optimization).
+         */
         delay(waitTime * 1000L)
-        RequestWrappers.smsVerify(context, repository, scope, number!!)
+        if (analyzed?.smsVerified == false) {
+            RequestWrappers.smsVerify(context, repository, scope, number)
+        }
 
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SMS VERIFY WORKER ENDED")
 

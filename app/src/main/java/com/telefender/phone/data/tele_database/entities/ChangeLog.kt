@@ -173,7 +173,9 @@ enum class SafeAction(val serverString: String) {
     SAFE("SAFE"),
     DEFAULT("DEFAULT"),
     BLOCKED("BLOCKED"),
-    SMS_VERIFY("SMS"),
+    SMS_VERIFY("SMS_VERIFY"),
+    SMS_SENT("SMS_SENT"),
+    SMS_REQUEST("SMS_REQUEST"),
     SEEN("SEEN")
 }
 

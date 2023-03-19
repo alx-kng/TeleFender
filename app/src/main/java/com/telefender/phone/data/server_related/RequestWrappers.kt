@@ -95,7 +95,7 @@ object RequestWrappers {
     ) {
 
         // Only upload AnalyzedNumbers if the ParametersWrapper specify so.
-        val parameters = repository.getParametersWrapper()?.getParameters()
+        val parameters = repository.getParameters()
         if (parameters?.shouldUploadAnalyzed != true) {
             return
         }
@@ -163,7 +163,6 @@ object RequestWrappers {
 
     /**
      * TODO: Maybe we shouldn't retry?
-     * TODO: Probably no need to put in worker since so short.
      *
      * Asks the server to SMS verify a number.
      *

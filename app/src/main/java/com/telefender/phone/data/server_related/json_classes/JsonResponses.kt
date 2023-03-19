@@ -94,7 +94,8 @@ class SMSVerifyResponse(
     status : String?,
     error : String?,
     val number : String,
-    val verified: Boolean
+    val verified: Boolean,
+    val smsSent: Boolean
 ) : DefaultResponse(status, error) {
 
     override fun toString() : String {

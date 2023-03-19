@@ -143,6 +143,18 @@ class ClientRepository(
      **********************************************************************************************/
 
     /**
+     * Gets Parameters associated with user.
+     *
+     * NOTE: It's STRONGLY advised that you put a try-catch around any use cases of this,
+     * especially if you plan on non-null asserting the return, as there is a real possibility of
+     * an error (especially if the database isn't yet initialized).
+     */
+    @WorkerThread
+    suspend fun getParameters() : Parameters? {
+        return parametersDao.getParameters()
+    }
+
+    /**
      * Gets ParametersWrapper associated with user.
      *
      * NOTE: It's STRONGLY advised that you put a try-catch around any use cases of this,
@@ -223,7 +235,6 @@ class ClientRepository(
     @WorkerThread
     suspend fun getAnalyzedNum(rowID: Long) : AnalyzedNumber? {
         return analyzedNumberDao.getAnalyzedNum(rowID)
-
     }
 
     // TODO: Why did we put a lock here before?
@@ -233,7 +244,7 @@ class ClientRepository(
     }
 
     /***********************************************************************************************
-     * Instance Queries
+     * NotifyItem Queries
      **********************************************************************************************/
 
     /**

@@ -127,7 +127,7 @@ object TeleHelpers {
     fun getParameters(context: Context) : Parameters? {
         val repository = (context.applicationContext as App).repository
         return runBlocking(Dispatchers.Default) {
-            repository.getParametersWrapper()?.getParameters()
+            repository.getParameters()
         }
     }
 
@@ -138,23 +138,30 @@ object TeleHelpers {
         }
     }
 
-    /**
-     * Returns new notify window (list of call times from last [windowSize] days). Adds in
-     * [newCallTime] to window if given.
-     */
-    fun updateNotifyWindow(
-        notifyWindow: List<Long>,
-        windowSize: Int,
-        newCallTime: Long? = null,
-    ) : List<Long> {
-        val currentTime = Instant.now().toEpochMilli()
-        val mutableNotifyWindow = notifyWindow.toMutableList()
+    fun getNotifyItem(context: Context, normalizedNumber: String) : NotifyItem? {
+        val repository = (context.applicationContext as App).repository
+        return runBlocking(Dispatchers.Default) {
+            repository.getNotifyItem(normalizedNumber)
+        }
+    }
 
-        if (newCallTime != null) {
-            mutableNotifyWindow.add(newCallTime)
+    /**
+     * Returns new times window (list of epoch milli times in last [windowSize] milliseconds). Adds
+     * in [newTime] to window if given.
+     */
+    fun updatedTimesWindow(
+        window: List<Long>,
+        windowSize: Long,
+        newTime: Long? = null,
+        ) : List<Long> {
+        val currentTime = Instant.now().toEpochMilli()
+        val mutableWindow = window.toMutableList()
+
+        if (newTime != null) {
+            mutableWindow.add(newTime)
         }
 
-        return mutableNotifyWindow.filter { currentTime - it < windowSize.daysToMilli() }
+        return mutableWindow.filter { currentTime - it < windowSize }
     }
 
     /**

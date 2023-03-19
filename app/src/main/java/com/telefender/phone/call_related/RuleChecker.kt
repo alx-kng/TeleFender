@@ -6,27 +6,21 @@ import com.telefender.phone.data.server_related.RequestWrappers
 import com.telefender.phone.data.tele_database.background_tasks.workers.SMSVerifyScheduler
 import com.telefender.phone.data.tele_database.entities.*
 import com.telefender.phone.helpers.TeleHelpers
-import com.telefender.phone.permissions.Permissions
+import com.telefender.phone.helpers.daysToMilli
+import com.telefender.phone.helpers.hoursToMilli
+import com.telefender.phone.helpers.minutesToMilli
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import timber.log.Timber
+import java.time.Instant
 
 object RuleChecker {
 
     /**
      * TODO: Preliminary algo:
-     *  - Double check (specifically smsVerified)
-     *  -
-     *  - Put in stuff for (temp) NotifyItem.
-     *  -
      *  - Check if we should create new scope or use applicationScope here.
-     *  -
-     *  - In the smsImmediateWaitTime, when there's no allow / unallow decision yet, the ringer
-     *    still rings on silence / block mode. We should probably preemptively put the phone on
-     *    silent during those two seconds, although for most users without the Do not disturb
-     *    permissions, we will probably only be able to put the phone on vibrate. -> mostly fixed
      *  -
      *  - Double check allow mode stuff.
      *  -
@@ -110,10 +104,11 @@ object RuleChecker {
          */
         if (CallManager.currentMode == HandleMode.ALLOW_MODE) return false
 
-        // TODO: Check here if in temp NotifyItem and if satisfies max request time constraint.`
-
         // Used to silence the ringer during the wait time for the SMS verify result.
         AudioHelpers.setRingerMode(context, RingerMode.SILENT)
+
+        // If should send sms request, then continue, otherwise just deem number unsafe.
+        if (!shouldSendSMSRequest(context, normalizedNumber, analyzed, parameters)) return false
 
         applicationScope.launch {
             RequestWrappers.smsVerify(
@@ -141,5 +136,47 @@ object RuleChecker {
 
             return@runBlocking newAnalyzed.smsVerified
         }
+    }
+
+    private fun shouldSendSMSRequest(
+        context: Context,
+        normalizedNumber: String,
+        analyzed: Analyzed,
+        parameters: Parameters
+    ) : Boolean {
+        val currentTime = Instant.now().toEpochMilli()
+
+        // Updated server sent window with old sent times kicked out.
+        val newServerSentWindow = TeleHelpers.updatedTimesWindow(
+            window = analyzed.serverSentWindow,
+            windowSize = parameters.serverSentWindowSize.hoursToMilli(),
+            newTime = currentTime
+        )
+
+        // Updated notify window with old call times kicked out.
+        val newNotifyWindow = TeleHelpers.updatedTimesWindow(
+            window = analyzed.notifyWindow,
+            windowSize = parameters.notifyWindowSize.daysToMilli(),
+            newTime = currentTime
+        )
+
+        val notifyItem = TeleHelpers.getNotifyItem(context, normalizedNumber)
+
+        // Ensures that number qualifies for notify list or is on notify list before sending SMS request.
+        if (newNotifyWindow.size < analyzed.notifyGate && notifyItem == null) return false
+
+        // If number is on notify list but should be removed, then also don't send SMS request.
+        if (notifyItem != null && TeleHelpers.shouldRemoveNotifyItem(notifyItem, parameters)) return false
+
+        if (analyzed.serverSentWindow.size < parameters.maxServerSent) return true
+
+        // If serverSent == maxServerSent but call is within expire period, then send SMS request.
+        if (currentTime - newServerSentWindow.last() <= parameters.smsLinkExpirePeriod.minutesToMilli()) return true
+
+        // If call is after expire but client hasn't sent an after-expire request yet, then send SMS request.
+        if (!analyzed.clientSentAfterExpire) return true
+
+        // Otherwise, don't send SMS request.
+        return false
     }
 }

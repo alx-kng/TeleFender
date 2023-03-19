@@ -47,7 +47,10 @@ interface ParametersDao : StoredMapDao {
                     outgoingGate = 12,
 
                     smsImmediateWaitTime = 2000,
-                    smsDeferredWaitTime = 60
+                    smsDeferredWaitTime = 60,
+                    serverSentWindowSize = 24,
+                    maxServerSent = 2,
+                    smsLinkExpirePeriod = 30
                 )
 
             insertParametersWrapper(
@@ -60,7 +63,14 @@ interface ParametersDao : StoredMapDao {
     }
 
     /**
-     * Retrieves parameters if it exists. Instead of using userNumber to query, we can just
+     * Directly retrieves parameters if it exists. Underlying code uses getParametersWrapper().
+     */
+    suspend fun getParameters(): Parameters? {
+        return getParametersWrapper()?.getParameters()
+    }
+
+    /**
+     * Retrieves ParametersWrapper if it exists. Instead of using userNumber to query, we can just
      * select one row from the ParametersWrapper table since there can only be 1 or 0 rows.
      */
     @Query("SELECT * FROM parameters LIMIT 1")

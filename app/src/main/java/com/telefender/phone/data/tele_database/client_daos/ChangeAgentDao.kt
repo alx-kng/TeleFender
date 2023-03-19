@@ -60,7 +60,8 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
     }
 
     /**
-     * TODO: Should we check if inserts and updates went through?
+     * TODO: Should we put an extra check to prevent NON_CONTACT_UPDATE changes from server being
+     *  stored / executed.
      */
     @Transaction
     open suspend fun changeFromServerHelper(serverData: ServerData) : ErrorQueue? {
@@ -82,6 +83,11 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
         when(dataType) {
             GenericDataType.CHANGE_DATA -> mutexLocks[MutexType.CHANGE]!!.withLock {
                 with(serverData.changeLog!!) {
+                    /**
+                     * We don't check if ChangeLog should be stored in database for changes that
+                     * come from the server, as server changes are executed through the execute
+                     * queue, which requires the ChangeLog to be stored in database.
+                     */
                     this.rowID = 0
                     linkedRowID = insertChangeLog(this)
 
@@ -186,6 +192,10 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
     }
 
     /**
+     * TODO: Maybe rename this to immediateChange(), as some changes initiated from server may be
+     *  executed here. The main thing is that the change is executed directly rather than going
+     *  through execute queue first.
+     *
      * TODO: Debating whether or not we should handle default database changes here to. But on
      *  second thought, since this a DAO, we shouldn't mix between our database and the default
      *  database. Perhaps we should make an enveloping function in the repository or something
@@ -253,6 +263,12 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
                 }
             }
 
+            /**
+             * Checks if ChangeLog should be stored in database. Any ChangeLogs that pass this point
+             * should be stored in database.
+             */
+            if (!shouldStore(changeLog)) return
+
             // rowID of data in respective table. Used in upload queues for referencing a row.
             val linkedRowID: Long
 
@@ -269,5 +285,21 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
                 }
             }
         }
+    }
+
+    /**
+     * Returns whether or not ChangeLog should be stored in database or not. This is mainly for
+     * NON_CONTACT_UPDATES, where certain SAFE_ACTIONS are not crucial to store (e.g., SEEN or
+     * SMS_SENT), as we don't want unimportant ChangeLogs to flood the database.
+     */
+    private fun shouldStore(changeLog: ChangeLog) : Boolean {
+        if (changeLog.getChangeType() != ChangeType.NON_CONTACT_UPDATE) {
+            return true
+        }
+
+        val safeAction = changeLog.getChange()?.getSafeAction()
+        return safeAction != SafeAction.SEEN
+            && safeAction != SafeAction.SMS_SENT
+            && safeAction != SafeAction.SMS_REQUEST
     }
 }

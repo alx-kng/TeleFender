@@ -270,7 +270,7 @@ abstract class ClientDatabase : RoomDatabase() {
         val userNumber = this.storedMapDao().getStoredMap()?.userNumber
         return userNumber != null
             && this.instanceDao().hasInstance(userNumber)
-            && this.parametersDao().getParametersWrapper()?.getParameters() != null
+            && this.parametersDao().getParameters() != null
     }
 
     /**

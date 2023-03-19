@@ -71,6 +71,9 @@ data class Analyzed(
     val notifyGate: Int,
     val notifyWindow: List<Long>,
 
+    val serverSentWindow: List<Long>, // List of times when server sent SMS verify messages.
+    val clientSentAfterExpire: Boolean, // True if already sent SMS request to server after link expires.
+
     // Important actions
     val smsVerified: Boolean,
     val markedSafe: Boolean,
