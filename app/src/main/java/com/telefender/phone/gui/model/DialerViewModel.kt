@@ -6,6 +6,8 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.ViewModel
+import com.telefender.phone.helpers.TeleHelpers
+import timber.log.Timber
 
 class DialerViewModel : ViewModel() {
 
@@ -25,7 +27,8 @@ class DialerViewModel : ViewModel() {
 
     fun typeDigit(digit: Int) {
         if (digit > 9 || digit < 0 || _dialNumber.value?.length!! >= 15) {
-            Log.i("DialerViewModel", "typeDigit() received digit not between 0 and 9 " +
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: DialerViewModel - %s%s",
+                "typeDigit() received digit not between 0 and 9 ",
                     "or the typed number has reached maximum of 15 digits!")
             return
         }
@@ -35,11 +38,11 @@ class DialerViewModel : ViewModel() {
 
     fun typeSymbol(symbol: Char) {
         if (symbol != asterisk && symbol != poundSign || _dialNumber.value?.length!! >= 15) {
-            Log.i("DialerViewModel", "typeSymbol() received symbol not * or # " +
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: DialerViewModel - %s%s",
+                "typeSymbol() received symbol not * or # ",
                     "or the typed number has reached maximum of 15 digits! Received $symbol")
             return
         }
-
 
         _dialNumber.value = _dialNumber.value + symbol.toString()
     }

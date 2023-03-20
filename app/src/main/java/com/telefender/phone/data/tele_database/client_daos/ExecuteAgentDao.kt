@@ -558,7 +558,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                             lastCallDuration = callDuration,
                             maxDuration = max(maxDuration, if(!isVoicemail) callDuration else 0),
                             avgDuration = if (isIncoming || isOutgoing) {
-                                getNewAvg(avgDuration, numIncoming + numOutgoing + 1, callDuration)
+                                getNewAvg(avgDuration, numIncoming + numOutgoing, callDuration)
                             } else {
                                 avgDuration
                             },
