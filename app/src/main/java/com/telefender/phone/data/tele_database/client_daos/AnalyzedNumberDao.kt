@@ -117,6 +117,7 @@ interface AnalyzedNumberDao : ParametersDao, StoredMapDao, UploadAnalyzedQueueDa
                     // Outgoing subtype
                     numOutgoing = 0,
                     lastOutgoingTime = null,
+                    lastFreshOutgoingTime = null,
                     lastOutgoingDuration = null,
                     maxOutgoingDuration = 0,
                     avgOutgoingDuration = 0.0,

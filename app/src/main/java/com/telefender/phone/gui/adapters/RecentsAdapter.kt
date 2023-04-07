@@ -159,7 +159,7 @@ class RecentsAdapter(
     }
 
     private fun getDirectionIcon(direction: Int, rawNumber: String): Int {
-        val trueDirection = TeleHelpers.getTrueDirection(direction, rawNumber)
+        val trueDirection = TeleHelpers.getTrueDirection(context, direction, rawNumber)
 
         val icon = when (trueDirection) {
             CallLog.Calls.INCOMING_TYPE -> R.drawable.ic_baseline_call_received_24

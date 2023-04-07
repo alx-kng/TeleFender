@@ -372,6 +372,8 @@ abstract class ClientDatabase : RoomDatabase() {
                 scope.launch {
                     instanceTemp.waitForCorePermissions(context, "getDatabase()")
 
+                    Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: SIM CARRIER = '${TeleHelpers.getSimCarrier(context)}'")
+
                     // TODO: Probably need to restart firebase initialization process too.
                     // Waits for / restarts core database initialization and user setup.
                     instanceTemp.waitForInitialization(context, scope)

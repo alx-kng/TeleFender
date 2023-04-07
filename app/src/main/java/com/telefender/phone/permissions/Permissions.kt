@@ -11,7 +11,6 @@ import android.provider.Settings
 import android.telecom.TelecomManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.core.app.ActivityCompat.startActivityForResult
 import com.telefender.phone.helpers.TeleHelpers
 import timber.log.Timber
 
@@ -60,6 +59,10 @@ object Permissions {
     }
 
     /**
+     * TODO: Currently do two sets of permissions for core-alt in the case of Android 9. Try to
+     *  find a better solution (for more info look at comment on requestDefaultDialer() in
+     *  MainActivity).
+     *
      * Requests core permissions (e.g., READ_CONTACTS, READ_CALL_LOG, READ_PHONE_STATE). Used when
      * the default dialer permissions aren't granted. Request code is used in
      * onRequestPermissionsResult() so that you know which permission the result is for.
@@ -67,11 +70,22 @@ object Permissions {
     fun coreAltPermissions(activity: Activity) {
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: coreAltPermissions() called")
 
-        val permissions = arrayOf(
-            phoneStatePermission,
-            READ_CALL_LOG,
-            READ_CONTACTS,
-        )
+        val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            arrayOf(
+                phoneStatePermission,
+                READ_CALL_LOG,
+                READ_CONTACTS,
+            )
+        }  else {
+            arrayOf(
+                phoneStatePermission,
+                READ_CALL_LOG,
+                READ_CONTACTS,
+                WRITE_CONTACTS,
+                READ_PHONE_NUMBERS,
+                CALL_PHONE
+            )
+        }
 
         if (!hasPermissions(activity, permissions)) {
             ActivityCompat.requestPermissions(

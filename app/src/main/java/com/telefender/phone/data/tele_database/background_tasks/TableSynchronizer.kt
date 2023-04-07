@@ -52,7 +52,13 @@ object TableSynchronizer {
     
     private suspend fun syncCallLogsHelper(context: Context, repository: ClientRepository, contentResolver: ContentResolver) {
         // Check for permissions even though syncCallLogs() would catch the permission error.
-        if (!TeleHelpers.hasValidStatus(context, setupRequired = false, logRequired = true)) {
+        if (!TeleHelpers.hasValidStatus(
+                context,
+                setupRequired = false,
+                logRequired = true,
+                phoneStateRequired = true
+            )
+        ) {
             Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: No log permissions in syncCallLogs()")
             return
         }
@@ -95,7 +101,7 @@ object TableSynchronizer {
                 val date = curs.getString(2).toLong()
                 val duration = curs.getString(3).toLong()
                 val location = curs.getString(4)
-                val dir = TeleHelpers.getTrueDirection(typeInt, rawNumber)
+                val dir = TeleHelpers.getTrueDirection(context, typeInt, rawNumber)
 
                 val callDetail = CallDetail(
                     rawNumber = rawNumber,

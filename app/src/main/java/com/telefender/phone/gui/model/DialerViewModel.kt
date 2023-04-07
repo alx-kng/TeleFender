@@ -2,10 +2,7 @@ package com.telefender.phone.gui.model
 
 import android.util.Log
 import android.view.View
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Transformations
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.*
 import com.telefender.phone.helpers.TeleHelpers
 import timber.log.Timber
 
@@ -17,7 +14,7 @@ class DialerViewModel : ViewModel() {
     val asterisk = '✱'
     val poundSign = '#'
 
-    val deleteVisibility: LiveData<Int> = Transformations.map(dialNumber) {
+    val deleteVisibility: LiveData<Int> = dialNumber.map {
         if (it == "") {
             View.GONE
         } else {

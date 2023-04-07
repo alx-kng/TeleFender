@@ -17,12 +17,12 @@ class InCallViewModel : ViewModel() {
     var singleMode = true
 
     private val _firstDuration = MutableLiveData(0)
-    val firstDuration : LiveData<String> = Transformations.map(_firstDuration) { seconds ->
+    val firstDuration : LiveData<String> = _firstDuration.map { seconds ->
         secondsToTime(seconds)
     }
 
     private val _secondDuration = MutableLiveData(0)
-    val secondDuration : LiveData<String> = Transformations.map(_secondDuration) { seconds ->
+    val secondDuration : LiveData<String> = _secondDuration.map { seconds ->
         secondsToTime(seconds)
     }
 

@@ -36,7 +36,7 @@ object SMSVerifyScheduler{
             .setInputData(workDataOf("notificationID" to "7171", "number" to number))
             .setBackoffCriteria(
                 BackoffPolicy.LINEAR,
-                OneTimeWorkRequest.MIN_BACKOFF_MILLIS,
+                WorkRequest.MIN_BACKOFF_MILLIS,
                 TimeUnit.MILLISECONDS)
             .addTag(smsVerifyTag)
             .build()

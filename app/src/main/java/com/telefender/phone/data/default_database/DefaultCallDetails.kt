@@ -63,7 +63,7 @@ object DefaultCallDetails{
                     val date = curs.getString(2).toLong()
                     val duration = curs.getString(3).toLong()
                     val location = curs.getString(4)
-                    val dir = TeleHelpers.getTrueDirection(typeInt, rawNumber)
+                    val dir = TeleHelpers.getTrueDirection(context, typeInt, rawNumber)
 
                     val callDetail = CallDetail(
                         rawNumber = rawNumber,

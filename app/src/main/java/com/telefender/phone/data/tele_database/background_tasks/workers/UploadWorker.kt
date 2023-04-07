@@ -31,7 +31,7 @@ object UploadScheduler {
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             .setBackoffCriteria(
                 BackoffPolicy.LINEAR,
-                OneTimeWorkRequest.MIN_BACKOFF_MILLIS,
+                WorkRequest.MIN_BACKOFF_MILLIS,
                 TimeUnit.MILLISECONDS)
             .addTag(uploadOneTag)
             .build()
@@ -55,7 +55,7 @@ object UploadScheduler {
             .setInputData(workDataOf("variableName" to "periodicUploadState", "notificationID" to "4444"))
             .setBackoffCriteria(
                 BackoffPolicy.LINEAR,
-                PeriodicWorkRequest.MIN_BACKOFF_MILLIS,
+                WorkRequest.MIN_BACKOFF_MILLIS,
                 TimeUnit.MILLISECONDS)
             .addTag(uploadPeriodTag)
             .build()

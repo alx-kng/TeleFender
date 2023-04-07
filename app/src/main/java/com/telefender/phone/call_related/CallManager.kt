@@ -4,15 +4,10 @@ import android.telecom.Call
 import android.telecom.VideoProfile
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Transformations
+import androidx.lifecycle.map
 import com.telefender.phone.call_related.CallManager.connections
 import com.telefender.phone.helpers.TeleHelpers
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import timber.log.Timber
-import kotlin.coroutines.coroutineContext
 
 
 /**
@@ -137,7 +132,7 @@ object CallManager {
     /**
      * Used to decide whether the incoming call screen should still show.
      */
-    val incomingCallLiveData : LiveData<Boolean> = Transformations.map(_focusedConnection) {
+    val incomingCallLiveData : LiveData<Boolean> = _focusedConnection.map {
         it?.state == Call.STATE_RINGING || it?.state == Call.STATE_NEW
     }
 

@@ -1,17 +1,14 @@
 package com.telefender.phone.call_related
 
 
-import android.os.Build.VERSION_CODES.P
 import android.provider.CallLog
 import android.telecom.Call
 import android.telecom.InCallService
-import com.telefender.phone.data.tele_database.ClientDatabase
 import com.telefender.phone.data.tele_database.TeleCallDetails
 import com.telefender.phone.data.tele_database.background_tasks.workers.SyncScheduler
 import com.telefender.phone.gui.InCallActivity
 import com.telefender.phone.gui.IncomingCallActivity
 import com.telefender.phone.helpers.TeleHelpers
-import com.telefender.phone.permissions.Permissions
 import timber.log.Timber
 
 

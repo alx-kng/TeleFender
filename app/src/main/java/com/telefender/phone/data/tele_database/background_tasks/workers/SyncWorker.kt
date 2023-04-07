@@ -58,7 +58,7 @@ object SyncScheduler{
             .setInputData(workDataOf("notificationID" to "5556"))
             .setBackoffCriteria(
                 BackoffPolicy.LINEAR,
-                OneTimeWorkRequest.MIN_BACKOFF_MILLIS,
+WorkRequest.MIN_BACKOFF_MILLIS,
                 TimeUnit.MILLISECONDS)
             .addTag(syncCatchTag)
             .build()
@@ -88,7 +88,7 @@ object SyncScheduler{
             .setInputData(workDataOf("variableName" to "oneTimeSyncState", "notificationID" to "5555"))
             .setBackoffCriteria(
                 BackoffPolicy.LINEAR,
-                OneTimeWorkRequest.MIN_BACKOFF_MILLIS,
+                WorkRequest.MIN_BACKOFF_MILLIS,
                 TimeUnit.MILLISECONDS)
             .addTag(syncOneTag)
             .build()
@@ -117,7 +117,7 @@ object SyncScheduler{
             .setInputData(workDataOf("variableName" to "periodicSyncState", "notificationID" to "6666"))
             .setBackoffCriteria(
                 BackoffPolicy.LINEAR,
-                PeriodicWorkRequest.MIN_BACKOFF_MILLIS,
+WorkRequest.MIN_BACKOFF_MILLIS,
                 TimeUnit.MILLISECONDS)
             .setInitialDelay(10, TimeUnit.SECONDS)
             .addTag(syncPeriodicTag)

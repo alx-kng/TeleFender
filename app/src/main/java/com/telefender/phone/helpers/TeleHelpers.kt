@@ -8,6 +8,7 @@ import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
 import com.google.i18n.phonenumbers.PhoneNumberUtil
 import com.telefender.phone.App
+import com.telefender.phone.call_related.SimCarrier
 import com.telefender.phone.data.tele_database.entities.*
 import com.telefender.phone.permissions.Permissions
 import kotlinx.coroutines.Dispatchers
@@ -243,24 +244,73 @@ object TeleHelpers {
     }
 
     /**
-     * Gets direction as normal. However, voicemail direction is also accurately returned.
-     * NOTE: Requires non-normalized raw number.
+     * TODO: See if this works in the general case.
+     *
+     * Returns the SIM carrier of the phone if possible.
+     *
+     * NOTE: Requires phone state permissions.
      */
-    fun getTrueDirection(direction: Int, rawNumber: String) : Int {
-        return if (isVoiceMail(direction, rawNumber)) CallLog.Calls.VOICEMAIL_TYPE else direction
+    fun getSimCarrier(context: Context) : SimCarrier? {
+        if (!Permissions.hasPhoneStatePermissions(context)) {
+            Timber.e("$DEBUG_LOG_TAG: Can't get SIM carrier due to lack of permissions!!!")
+            return null
+        }
+
+        val tMgr = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+        val simCarrierName = tMgr.simCarrierIdName?.toString()?.lowercase() ?: return null
+
+        if (simCarrierName.contains("verizon")) return SimCarrier.VERIZON
+
+        if (simCarrierName.contains("at")) return SimCarrier.AT_T
+
+        if (simCarrierName.contains("t-mobile")) return SimCarrier.T_MOBILE
+
+        return null
     }
 
     /**
-     * TODO: Voicemail call log refine
+     * Gets direction as normal. However, voicemail direction is also accurately returned (in
+     * some carriers). If app doesn't have phone state permissions, then the direction returned is
+     * just the direction passed in.
      *
-     * Duct tape way to check if call log is a voicemail or not. Uses the idea that
-     * voicemail call logs always have a '+' in front of the number and are incoming.
-     * Don't know how this changes between carriers.
+     * NOTE: Retrieving SIM carrier requires phone state permissions.
      * NOTE: Requires non-normalized raw number.
      */
-    private fun isVoiceMail(direction: Int?, rawNumber: String) : Boolean {
-        return rawNumber.isNotEmpty() && rawNumber[0] == '+' && direction == CallLog.Calls.INCOMING_TYPE
+    fun getTrueDirection(context: Context, direction: Int, rawNumber: String) : Int {
+        return if (isVoiceMail(context, direction, rawNumber))
+            CallLog.Calls.VOICEMAIL_TYPE
+        else
+            direction
     }
+
+    /**
+     * TODO: Find a way to check for voicemails in carriers such as T-Mobile.
+     *
+     * TODO: Unfortunately, this seems to only work on Verizon phones as of now. T-Mobile phones
+     *  unfortunately don't work (always adds +1), and we're currently unsure of AT&T. This means
+     *  that we need to at least be able to tell what the user's carrier is so that we don't
+     *  misidentify call types. --> Partially done
+     *
+     * Duct tape way to check if call log is a voicemail or not. Uses the idea that voicemail call
+     * logs always have a '+' in front of the number and are incoming. Returns false if the trick
+     * cannot be used, that is, we automatically assume the call is not a voicemail if the trick
+     * doesn't work on the current carrier.
+     *
+     * NOTE: This trick currently only works on Verizon.
+     * NOTE: Retrieving SIM carrier requires phone state permissions.
+     * NOTE: Requires non-normalized raw number.
+     */
+    private fun isVoiceMail(context: Context, direction: Int?, rawNumber: String) : Boolean {
+        return when (getSimCarrier(context)) {
+            SimCarrier.VERIZON -> {
+                rawNumber.isNotEmpty()
+                && rawNumber[0] == '+'
+                && direction == CallLog.Calls.INCOMING_TYPE
+            }
+            else -> false
+        }
+    }
+
 
     // TODO: Problem with direction string maybe? Unknown code 0?
     fun getDirectionString(directionCode: Int) : String {

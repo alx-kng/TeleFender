@@ -103,14 +103,12 @@ class InCallFragment : Fragment() {
          ******************************************************************************************/
 
         binding.firstInfo.setOnClickListener {
-            val action =
-                InCallFragmentDirections.actionInCallFragmentToConferenceFragment()
+            val action = InCallFragmentDirections.actionInCallFragmentToConferenceFragment()
             findNavController().navigate(action)
         }
 
         binding.secondInfo.setOnClickListener {
-            val action =
-                InCallFragmentDirections.actionInCallFragmentToConferenceFragment()
+            val action = InCallFragmentDirections.actionInCallFragmentToConferenceFragment()
             findNavController().navigate(action)
         }
 
@@ -182,17 +180,17 @@ class InCallFragment : Fragment() {
         /**
          * Reset speaker and mute states.
          */
-        AudioHelpers.setSpeaker(context!!, false)
-        AudioHelpers.setMute(context!!, false)
+        AudioHelpers.setSpeaker(requireContext(), false)
+        AudioHelpers.setMute(requireContext(), false)
 
         /**
          * Set mute UI based on mute state.
          */
         AudioHelpers.muteStatus.observe(viewLifecycleOwner) { mute ->
             val color = if (mute) {
-                ColorStateList.valueOf(ContextCompat.getColor(context!!, R.color.clicked_blue))
+                ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.clicked_blue))
             } else {
-                ColorStateList.valueOf(ContextCompat.getColor(context!!, R.color.icon_white))
+                ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.icon_white))
             }
 
             binding.muteActive.iconTint = color
@@ -203,9 +201,9 @@ class InCallFragment : Fragment() {
          */
         AudioHelpers.speakerStatus.observe(viewLifecycleOwner) { speaker ->
             val color = if (speaker) {
-                ColorStateList.valueOf(ContextCompat.getColor(context!!, R.color.clicked_blue))
+                ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.clicked_blue))
             } else {
-                ColorStateList.valueOf(ContextCompat.getColor(context!!, R.color.icon_white))
+                ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.icon_white))
             }
 
             binding.speakerActive.iconTint = color
@@ -312,22 +310,22 @@ class InCallFragment : Fragment() {
             binding.firstNumber.setTextColor(ContextCompat.getColor(requireActivity(), R.color.icon_white))
             binding.firstText.setTextColor(ContextCompat.getColor(requireActivity(), R.color.icon_white))
             binding.firstDuration.setTextColor(ContextCompat.getColor(requireActivity(), R.color.icon_white))
-            binding.firstInfo.iconTint = ColorStateList.valueOf(ContextCompat.getColor(context!!, R.color.icon_white))
+            binding.firstInfo.iconTint = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.icon_white))
 
             binding.secondNumber.setTextColor(ContextCompat.getColor(requireActivity(), R.color.holding_grey))
             binding.secondText.setTextColor(ContextCompat.getColor(requireActivity(), R.color.holding_grey))
             binding.secondDuration.setTextColor(ContextCompat.getColor(requireActivity(), R.color.holding_grey))
-            binding.secondInfo.iconTint = ColorStateList.valueOf(ContextCompat.getColor(context!!, R.color.holding_grey))
+            binding.secondInfo.iconTint = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.holding_grey))
         } else {
             binding.firstNumber.setTextColor(ContextCompat.getColor(requireActivity(), R.color.holding_grey))
             binding.firstText.setTextColor(ContextCompat.getColor(requireActivity(), R.color.holding_grey))
             binding.firstDuration.setTextColor(ContextCompat.getColor(requireActivity(), R.color.holding_grey))
-            binding.firstInfo.iconTint = ColorStateList.valueOf(ContextCompat.getColor(context!!, R.color.holding_grey))
+            binding.firstInfo.iconTint = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.holding_grey))
 
             binding.secondNumber.setTextColor(ContextCompat.getColor(requireActivity(), R.color.icon_white))
             binding.secondText.setTextColor(ContextCompat.getColor(requireActivity(), R.color.icon_white))
             binding.secondDuration.setTextColor(ContextCompat.getColor(requireActivity(), R.color.icon_white))
-            binding.secondInfo.iconTint = ColorStateList.valueOf(ContextCompat.getColor(context!!, R.color.icon_white))
+            binding.secondInfo.iconTint = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.icon_white))
         }
     }
 
@@ -505,11 +503,11 @@ class InCallFragment : Fragment() {
         binding.addActive.isFocusable = addClickable
 
         if (addClickable) {
-            binding.addActive.iconTint = ColorStateList.valueOf(ContextCompat.getColor(context!!, R.color.icon_white))
-            binding.addText.setTextColor(ContextCompat.getColor(context!!, R.color.icon_white))
+            binding.addActive.iconTint = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.icon_white))
+            binding.addText.setTextColor(ContextCompat.getColor(requireContext(), R.color.icon_white))
         } else {
-            binding.addActive.iconTint = ColorStateList.valueOf(ContextCompat.getColor(context!!, R.color.disabled_grey))
-            binding.addText.setTextColor(ContextCompat.getColor(context!!, R.color.disabled_grey))
+            binding.addActive.iconTint = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.disabled_grey))
+            binding.addText.setTextColor(ContextCompat.getColor(requireContext(), R.color.disabled_grey))
         }
 
         /**
@@ -520,11 +518,11 @@ class InCallFragment : Fragment() {
         binding.swapActive.isFocusable = swapClickable
 
         if (swapClickable) {
-            binding.swapActive.iconTint = ColorStateList.valueOf(ContextCompat.getColor(context!!, R.color.icon_white))
-            binding.swapText.setTextColor(ContextCompat.getColor(context!!, R.color.icon_white))
+            binding.swapActive.iconTint = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.icon_white))
+            binding.swapText.setTextColor(ContextCompat.getColor(requireContext(), R.color.icon_white))
         } else {
-            binding.swapActive.iconTint = ColorStateList.valueOf(ContextCompat.getColor(context!!, R.color.disabled_grey))
-            binding.swapText.setTextColor(ContextCompat.getColor(context!!, R.color.disabled_grey))
+            binding.swapActive.iconTint = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.disabled_grey))
+            binding.swapText.setTextColor(ContextCompat.getColor(requireContext(), R.color.disabled_grey))
         }
 
         /**
@@ -536,11 +534,11 @@ class InCallFragment : Fragment() {
         binding.mergeActive.isFocusable = mergeClickable
 
         if (mergeClickable) {
-            binding.mergeActive.iconTint = ColorStateList.valueOf(ContextCompat.getColor(context!!, R.color.icon_white))
-            binding.mergeText.setTextColor(ContextCompat.getColor(context!!, R.color.icon_white))
+            binding.mergeActive.iconTint = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.icon_white))
+            binding.mergeText.setTextColor(ContextCompat.getColor(requireContext(), R.color.icon_white))
         } else {
-            binding.mergeActive.iconTint = ColorStateList.valueOf(ContextCompat.getColor(context!!, R.color.disabled_grey))
-            binding.mergeText.setTextColor(ContextCompat.getColor(context!!, R.color.disabled_grey))
+            binding.mergeActive.iconTint = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.disabled_grey))
+            binding.mergeText.setTextColor(ContextCompat.getColor(requireContext(), R.color.disabled_grey))
         }
     }
 }

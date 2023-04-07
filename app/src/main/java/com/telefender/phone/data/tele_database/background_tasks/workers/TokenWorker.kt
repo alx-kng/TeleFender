@@ -29,7 +29,7 @@ object TokenScheduler{
         val tokenRequest = OneTimeWorkRequestBuilder<CoroutineTokenWorker>()
             .setBackoffCriteria(
                 BackoffPolicy.LINEAR,
-                OneTimeWorkRequest.MIN_BACKOFF_MILLIS,
+                WorkRequest.MIN_BACKOFF_MILLIS,
                 TimeUnit.MILLISECONDS)
             .addTag(tokenOneTag)
             .build()
@@ -52,7 +52,7 @@ object TokenScheduler{
         val syncRequest = PeriodicWorkRequestBuilder<CoroutineTokenWorker>(1, TimeUnit.DAYS)
             .setBackoffCriteria(
                 BackoffPolicy.LINEAR,
-                PeriodicWorkRequest.MIN_BACKOFF_MILLIS,
+                WorkRequest.MIN_BACKOFF_MILLIS,
                 TimeUnit.MILLISECONDS)
             .setInitialDelay(10, TimeUnit.SECONDS)
             .addTag(tokenPeriodTag)

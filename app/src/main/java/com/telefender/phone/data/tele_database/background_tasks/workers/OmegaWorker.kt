@@ -48,7 +48,7 @@ object OmegaScheduler {
             .setInputData(workDataOf("variableName" to "oneTimeOmegaState", "notificationID" to "6565"))
             .setBackoffCriteria(
                 BackoffPolicy.LINEAR,
-                PeriodicWorkRequest.MIN_BACKOFF_MILLIS,
+                WorkRequest.MIN_BACKOFF_MILLIS,
                 TimeUnit.MILLISECONDS)
             .setInitialDelay(0, TimeUnit.SECONDS)
             .addTag(oneTimeOmegaWorkerTag)
@@ -73,7 +73,7 @@ object OmegaScheduler {
             .setInputData(workDataOf("variableName" to "periodicOmegaState", "notificationID" to "5656"))
             .setBackoffCriteria(
                 BackoffPolicy.LINEAR,
-                PeriodicWorkRequest.MIN_BACKOFF_MILLIS,
+                WorkRequest.MIN_BACKOFF_MILLIS,
                 TimeUnit.MILLISECONDS)
             .setInitialDelay(0, TimeUnit.SECONDS)
             .addTag(periodicOmegaWorkerTag)

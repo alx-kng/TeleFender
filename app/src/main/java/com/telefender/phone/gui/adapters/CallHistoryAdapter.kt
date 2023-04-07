@@ -215,7 +215,7 @@ class CallHistoryAdapter (
     }
 
     private fun getDirectionString(direction: Int, rawNumber: String): String {
-        val trueDirection = TeleHelpers.getTrueDirection(direction, rawNumber)
+        val trueDirection = TeleHelpers.getTrueDirection(context, direction, rawNumber)
 
         val directionString = when (trueDirection) {
             CallLog.Calls.INCOMING_TYPE  -> "Incoming Call"

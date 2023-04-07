@@ -2,7 +2,7 @@
 buildscript {
 
     ext {
-        kotlinVersion = '1.7.10'
+        kotlinVersion = '1.8.10'
         navVersion = "2.5.3"
         googleServicesVersion = '4.3.15'
     }
@@ -40,28 +40,28 @@ task clean(type: Delete) {
 
 ext {
     // Core / Kotlin
-    appCompatVersion = '1.6.0'
-    activityVersion = '1.6.1'
+    appCompatVersion = '1.6.1'
+    activityVersion = '1.7.0'
     coroutines = '1.6.0'
-    coreKtx = '1.7.0'
+    coreKtx = '1.10.0'
 
     // UI and Lifecycle
     constraintLayoutVersion = '2.1.4'
-    lifecycleVersion = '2.4.1'
-    livedataLifecycleVersion = '2.5.1'
-    materialVersion = "1.7.0"
+    lifecycleVersion = '2.6.1'
+    livedataLifecycleVersion = '2.6.1'
+    materialVersion = "1.8.0"
 
     // Work
-    workVersion = "2.7.1"
+    workVersion = "2.8.1"
 
     // Room
-    roomVersion = '2.5.0'
+    roomVersion = '2.5.1'
 
     // DataStore
     dataStoreVersion = '1.0.0'
 
     // Moshi
-    moshiVersion = '1.13.0'
+    moshiVersion = '1.14.0'
 
     // Volley
     volleyVersion = '1.2.1'

@@ -10,6 +10,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.ContentObserver
 import android.os.Build
+import android.os.Build.VERSION_CODES.P
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -246,7 +247,7 @@ class MainActivity : AppCompatActivity() {
          */
         val repository: ClientRepository = (application as App).repository
 
-        val job = (application as App).applicationScope.launch {
+        (application as App).applicationScope.launch {
             repository.dummyQuery()
         }
 
@@ -305,15 +306,33 @@ class MainActivity : AppCompatActivity() {
         return navController.navigateUp() || super.onSupportNavigateUp()
     }
 
+    /**
+     * TODO: We request default dialer if the app doesn't have phone state permissions, even if
+     *  Permissions supposedly say that app is default dialer for Android 8 and 9 (<Q=10), since,
+     *  at least on one instance of Android 9, on reinstalling the app, the OS "says" that the app
+     *  is the default dialer, but the permissions that come along with it are not given.
+     *  -
+     *  Unfortunately, even though we request the default dialer, the default dialer prompt won't
+     *  actually show, as the OS thinks we're already the default dialer, but at least
+     *  coreAltPermissions() will be called.
+     *  -
+     *  Note that this issue doesn't occur on the very first installation of the app.
+     *  -
+     *  See if we can find a better solution.
+     */
     private fun requestDefaultDialer() {
-        if (!Permissions.isDefaultDialer(this)) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (!Permissions.isDefaultDialer(this)) {
                 val roleManager = getSystemService(Context.ROLE_SERVICE) as RoleManager
                 val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_DIALER)
                     .putExtra(TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, packageName)
 
                 startForResult.launch(intent)
-            } else {
+            }
+        } else {
+            if (!Permissions.isDefaultDialer(this)
+                || !Permissions.hasPhoneStatePermissions(this)
+            ) {
                 val intent = Intent(TelecomManager.ACTION_CHANGE_DEFAULT_DIALER)
                     .putExtra(TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, packageName)
 

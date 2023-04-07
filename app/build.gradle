@@ -5,18 +5,13 @@ plugins {
     id 'kotlinx-serialization'
     id 'androidx.navigation.safeargs.kotlin'
     id 'com.google.gms.google-services'
-    /*
-    TODO possibly migrate over from 'kotlin-android-extensions' (which is deprecated). Apparently,
-     ViewBinding is already a replacement for this plugin, so maybe we can just remove it.
-     */
-    id 'kotlin-android-extensions'
 }
 android {
     compileSdkVersion 33
 
     defaultConfig {
         applicationId "com.telefender.phone"
-        minSdkVersion 26
+        minSdkVersion 28
         targetSdkVersion 33
         versionCode 1
         versionName "1.0"
@@ -73,7 +68,7 @@ dependencies {
     // Kotlin components
     api "org.jetbrains.kotlinx:kotlinx-coroutines-core:$rootProject.coroutines"
     api "org.jetbrains.kotlinx:kotlinx-coroutines-android:$rootProject.coroutines"
-    implementation "androidx.core:core-ktx:$coreKtx"
+    implementation "androidx.core:core-ktx:$rootProject.coreKtx"
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.0.1"
 
     // UI

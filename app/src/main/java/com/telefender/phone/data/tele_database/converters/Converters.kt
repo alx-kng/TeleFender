@@ -1,7 +1,6 @@
 package com.telefender.phone.data.tele_database.converters
 
 import androidx.room.TypeConverter
-import com.telefender.phone.data.tele_database.entities.Parameters
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -15,9 +14,11 @@ import kotlinx.serialization.json.Json
  */
 class Converters {
 
+    @kotlinx.serialization.ExperimentalSerializationApi
     @TypeConverter
     fun fromList(value : List<Long>) = Json.encodeToString(value)
 
+    @kotlinx.serialization.ExperimentalSerializationApi
     @TypeConverter
     fun toList(value: String) = Json.decodeFromString<List<Long>>(value)
 

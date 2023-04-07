@@ -28,12 +28,11 @@ object ForegroundInfoCreator {
                 )
             }
 
-        val notification : Notification = NotificationCompat.Builder(applicationContext)
+        val notification : Notification = NotificationCompat.Builder(applicationContext, channelID)
             .setSmallIcon(android.R.mipmap.sym_def_app_icon)
             .setContentTitle("TeleFender")
             .setContentText(contextText)
             .setContentIntent(pendingIntent)
-            .setChannelId(channelID)
             .build()
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
