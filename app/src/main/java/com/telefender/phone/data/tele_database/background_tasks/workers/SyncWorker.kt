@@ -46,6 +46,12 @@ object SyncScheduler{
             return null
         }
 
+        /*
+        Don't check worker running here since the work is about to be replaced no matter what.
+        That is, if we do the worker check here and the worker is already running, the state won't
+        set, even though we're about to replace the worker. It's not actually a big deal either way,
+        but this seems to be a little safer.
+         */
         WorkStates.setState(WorkType.CATCH_SYNC, WorkInfo.State.RUNNING)
 
         val syncRequest = OneTimeWorkRequestBuilder<CoroutineCatchSyncWorker>()
@@ -71,7 +77,12 @@ object SyncScheduler{
             return null
         }
 
-        WorkStates.setState(WorkType.ONE_TIME_SYNC, WorkInfo.State.RUNNING)
+        WorkStates.setState(
+            workType = WorkType.ONE_TIME_SYNC,
+            workState = WorkInfo.State.RUNNING,
+            context = context,
+            tag = syncOneTag
+        )
 
         val syncRequest = OneTimeWorkRequestBuilder<CoroutineSyncWorker>()
             .setInputData(workDataOf("variableName" to "oneTimeSyncState", "notificationID" to "5555"))
@@ -95,7 +106,12 @@ object SyncScheduler{
             return null
         }
 
-        WorkStates.setState(WorkType.PERIODIC_SYNC, WorkInfo.State.RUNNING, context, syncPeriodicTag)
+        WorkStates.setState(
+            workType = WorkType.PERIODIC_SYNC,
+            workState = WorkInfo.State.RUNNING,
+            context = context,
+            tag = syncPeriodicTag
+        )
 
         val syncRequest = PeriodicWorkRequestBuilder<CoroutineSyncWorker>(1, TimeUnit.HOURS)
             .setInputData(workDataOf("variableName" to "periodicSyncState", "notificationID" to "6666"))

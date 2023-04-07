@@ -20,8 +20,12 @@ object DownloadScheduler {
     val downloadPeriodTag = "periodicDownloadWorker"
     
     fun initiateOneTimeDownloadWorker(context : Context) : UUID {
-
-        WorkStates.setState(WorkType.ONE_TIME_DOWNLOAD, WorkInfo.State.RUNNING)
+        WorkStates.setState(
+            workType = WorkType.ONE_TIME_DOWNLOAD,
+            workState = WorkInfo.State.RUNNING,
+            context = context,
+            tag = downloadOneTag
+        )
 
         val downloadRequest = OneTimeWorkRequestBuilder<CoroutineDownloadWorker>()
             .setInputData(workDataOf("variableName" to "oneTimeDownloadState", "notificationID" to "7777"))
@@ -41,8 +45,12 @@ object DownloadScheduler {
     }
 
     fun initiatePeriodicDownloadWorker(context : Context) : UUID {
-
-        WorkStates.setState(WorkType.PERIODIC_DOWNLOAD, WorkInfo.State.RUNNING)
+        WorkStates.setState(
+            workType = WorkType.PERIODIC_DOWNLOAD,
+            workState = WorkInfo.State.RUNNING,
+            context = context,
+            tag = downloadPeriodTag
+        )
 
         val downloadRequest = PeriodicWorkRequestBuilder<CoroutineDownloadWorker>(1, TimeUnit.HOURS)
             .setInputData(workDataOf("variableName" to "periodicDownloadState", "notificationID" to "8888"))

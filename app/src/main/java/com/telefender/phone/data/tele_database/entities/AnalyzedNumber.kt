@@ -71,6 +71,7 @@ data class Analyzed(
     val notifyGate: Int,
     val notifyWindow: List<Long>,
 
+    // For SMS verification
     val serverSentWindow: List<Long>, // List of times when server sent SMS verify messages.
     val clientSentAfterExpire: Boolean, // True if already sent SMS request to server after link expires.
 
@@ -96,6 +97,7 @@ data class Analyzed(
     // Outgoing subtype
     val numOutgoing: Int,
     val lastOutgoingTime: Long? = null,
+    val lastFreshOutgoingTime: Long? = null, // Last outgoing time with no prior calls (within long period)
     val lastOutgoingDuration: Long? = null,
     val maxOutgoingDuration: Long,
     val avgOutgoingDuration: Double,

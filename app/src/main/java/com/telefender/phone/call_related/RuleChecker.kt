@@ -48,6 +48,7 @@ object RuleChecker {
 
         val repository = (context.applicationContext as App).repository
         val applicationScope = (context.applicationContext as App).applicationScope
+        val currentTime = Instant.now().toEpochMilli()
 
         val normalizedNumber = TeleHelpers.normalizedNumber(number)
             ?: TeleHelpers.bareNumber(number)
@@ -97,6 +98,10 @@ object RuleChecker {
         if (analyzed.maxIncomingDuration >= parameters.incomingGate) return true
 
         if (analyzed.maxOutgoingDuration >= parameters.outgoingGate) return true
+
+        analyzed.lastFreshOutgoingTime?.let {
+            if (currentTime - it < parameters.freshOutgoingExpirePeriod) return true
+        }
 
         if (analyzed.smsVerified) return true
 

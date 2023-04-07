@@ -34,7 +34,12 @@ object DebugScheduler {
     const val periodicDebugTag = "periodicDebugTag"
 
     fun initiateOneTimeDebugWorker(context : Context) : UUID {
-        WorkStates.setState(WorkType.ONE_TIME_DEBUG, WorkInfo.State.RUNNING)
+        WorkStates.setState(
+            workType = WorkType.ONE_TIME_DEBUG,
+            workState = WorkInfo.State.RUNNING,
+            context = context,
+            tag = oneTimeDebugTag
+        )
 
         val debugRequest = OneTimeWorkRequestBuilder<CoroutineDebugWorker>()
             .setInputData(workDataOf("variableName" to "oneTimeDebugState", "notificationID" to "7654"))
@@ -99,9 +104,7 @@ class CoroutineDebugWorker(
                 Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: ONE TIME DEBUG STARTED")
 
                 // Makes sure that both debug workers aren't running at the same time.
-                if (WorkStates.getState(WorkType.PERIODIC_DEBUG) == WorkInfo.State.RUNNING) {
-                    Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: ONE TIME DEBUG ENDED - PERIODIC RUNNING")
-                    WorkStates.setState(WorkType.ONE_TIME_DEBUG, WorkInfo.State.SUCCEEDED)
+                if (WorkStates.mutuallyExclusiveWork(WorkType.PERIODIC_DEBUG, WorkType.ONE_TIME_DEBUG)) {
                     return Result.success()
                 }
             }
@@ -110,9 +113,7 @@ class CoroutineDebugWorker(
                 WorkStates.setState(WorkType.PERIODIC_DEBUG, WorkInfo.State.RUNNING)
 
                 // Makes sure that both debug workers aren't running at the same time.
-                if (WorkStates.getState(WorkType.ONE_TIME_DEBUG) == WorkInfo.State.RUNNING) {
-                    Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: PERIODIC DEBUG ENDED - ONE TIME RUNNING")
-                    WorkStates.setState(WorkType.PERIODIC_DEBUG, WorkInfo.State.SUCCEEDED)
+                if (WorkStates.mutuallyExclusiveWork(WorkType.ONE_TIME_DEBUG, WorkType.PERIODIC_DEBUG)) {
                     return Result.success()
                 }
             }

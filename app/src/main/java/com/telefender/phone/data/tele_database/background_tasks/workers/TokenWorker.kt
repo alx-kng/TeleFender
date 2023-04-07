@@ -19,7 +19,12 @@ object TokenScheduler{
     val tokenPeriodTag = "periodicTokenWorker"
 
     fun initiateOneTimeTokenWorker(context : Context) : UUID {
-        WorkStates.setState(WorkType.ONE_TIME_TOKEN, WorkInfo.State.RUNNING)
+        WorkStates.setState(
+            workType = WorkType.ONE_TIME_TOKEN,
+            workState = WorkInfo.State.RUNNING,
+            context = context,
+            tag = tokenOneTag
+        )
 
         val tokenRequest = OneTimeWorkRequestBuilder<CoroutineTokenWorker>()
             .setBackoffCriteria(
@@ -36,9 +41,13 @@ object TokenScheduler{
         return tokenRequest.id
     }
 
-    //TODO for all workers with work that can wait a bit, maybe we set constraints so it begins when charging/full battery
     fun initiatePeriodicTokenWorker(context : Context) : UUID {
-        WorkStates.setState(WorkType.PERIODIC_TOKEN, WorkInfo.State.RUNNING)
+        WorkStates.setState(
+            workType = WorkType.PERIODIC_TOKEN,
+            workState = WorkInfo.State.RUNNING,
+            context = context,
+            tag = tokenPeriodTag
+        )
 
         val syncRequest = PeriodicWorkRequestBuilder<CoroutineTokenWorker>(1, TimeUnit.DAYS)
             .setBackoffCriteria(

@@ -144,6 +144,22 @@ object WorkStates {
         return success
     }
 
+    /**
+     * Used if you want two different types of work to not run at the same time (e.g.,
+     * ONE_TIME_DEBUG and PERIODIC_DEBUG). [originalWork] is the work that you think might already
+     * running, and [newWork] is the work that you want to stop if [originalWork] is already running.
+     * Returns true if [originalWork] is already running.
+     */
+    fun mutuallyExclusiveWork(originalWork: WorkType, newWork: WorkType) : Boolean{
+        if (getState(originalWork) == WorkInfo.State.RUNNING) {
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $newWork ENDED - $originalWork RUNNING")
+            setState(newWork, WorkInfo.State.SUCCEEDED)
+            return true
+        }
+
+        return false
+    }
+
     fun setState(
         workType: WorkType,
         workState: WorkInfo.State?,

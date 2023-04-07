@@ -23,10 +23,16 @@ object SMSVerifyScheduler{
 
     val smsVerifyTag = "oneTimeSMSVerifyWorker"
 
+    /**
+     * TODO: We just changed initiateSMSVerifyWorker() to not enqueue unique work in order to send
+     *  multiple SMSVerify requests at one time. --> Double check this!
+     */
     fun initiateSMSVerifyWorker(context : Context, number: String) : UUID? {
+        // Currently not doing worker check here since there can be multiple requests.
         WorkStates.setState(WorkType.ONE_TIME_SMS_VERIFY, WorkInfo.State.RUNNING)
 
         val smsVerifyRequest = OneTimeWorkRequestBuilder<CoroutineSMSVerifyWorker>()
+            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             .setInputData(workDataOf("notificationID" to "7171", "number" to number))
             .setBackoffCriteria(
                 BackoffPolicy.LINEAR,
@@ -35,10 +41,9 @@ object SMSVerifyScheduler{
             .addTag(smsVerifyTag)
             .build()
 
-        // ExistingWorkPolicy set to REPLACE so that sync observing period starts fresh after call.
         WorkManager
             .getInstance(context)
-            .enqueueUniqueWork(smsVerifyTag, ExistingWorkPolicy.REPLACE, smsVerifyRequest)
+            .enqueue(smsVerifyRequest)
 
         return smsVerifyRequest.id
     }
@@ -67,12 +72,12 @@ class CoroutineSMSVerifyWorker(
             Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", e.message)
         }
 
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SMS VERIFY WORKER STARTED")
-
         val repository = (applicationContext as App).repository
         val number = inputData.getString("number")!!
         val analyzed = repository.getAnalyzedNum(number)?.getAnalyzed()
         val waitTime = repository.getParameters()?.smsDeferredWaitTime ?: 60
+
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SMS VERIFY WORKER STARTED FOR - $number")
 
         /*
         Wait around a minute and send another SMS verify request if the number isn't already
@@ -83,7 +88,7 @@ class CoroutineSMSVerifyWorker(
             RequestWrappers.smsVerify(context, repository, scope, number)
         }
 
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SMS VERIFY WORKER ENDED")
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SMS VERIFY WORKER ENDED FOR - $number")
 
         WorkStates.setState(WorkType.ONE_TIME_SMS_VERIFY, WorkInfo.State.SUCCEEDED)
         return Result.success()

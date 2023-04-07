@@ -45,6 +45,9 @@ interface ParametersDao : StoredMapDao {
 
                     incomingGate = 40,
                     outgoingGate = 12,
+                    freshOutgoingGate = 1,
+                    freshOutgoingRequiredPeriod = 12,
+                    freshOutgoingExpirePeriod = 2,
 
                     smsImmediateWaitTime = 2000,
                     smsDeferredWaitTime = 60,

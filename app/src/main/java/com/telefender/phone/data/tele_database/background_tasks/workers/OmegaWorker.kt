@@ -16,8 +16,7 @@ import timber.log.Timber
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-//
-//
+
 /**
  * TODO: Change delay and backoff time later for production / optimization.
  * TODO: Enforce Application Context
@@ -25,8 +24,12 @@ import java.util.concurrent.TimeUnit
  * TODO: DANGEROUS TO SET RUNNING STATE FOR PERIODIC WORKER OUTSIDE OF doWork() as RUNNING STATE
  *  WILL BE SET, BUT THE ACTUAL work might not be, as there is a minimum repeat interval time,
  *  during which initiatePeriodicOmegaWorker() won't actually launch worker.
+ *  --> Fixed with updated setState(), which uses WorkManagerHelper. Should still double check though.
  *
  * TODO: Change workers to use WorkManagerHelper functions (which actually check worker state).
+ *  --> Done. But should double check.
+ *
+ * TODO for all workers with work that can wait a bit, maybe we set constraints so it begins when charging/full battery
  */
 object OmegaScheduler {
 
@@ -34,7 +37,12 @@ object OmegaScheduler {
     const val periodicOmegaWorkerTag = "periodicOmegaWorker"
 
     fun initiateOneTimeOmegaWorker(context : Context) : UUID {
-        WorkStates.setState(WorkType.ONE_TIME_OMEGA, WorkInfo.State.RUNNING)
+        WorkStates.setState(
+            workType = WorkType.ONE_TIME_OMEGA,
+            workState = WorkInfo.State.RUNNING,
+            context = context,
+            tag = oneTimeOmegaWorkerTag
+        )
 
         val omegaRequest = OneTimeWorkRequestBuilder<CoroutineOmegaWorker>()
             .setInputData(workDataOf("variableName" to "oneTimeOmegaState", "notificationID" to "6565"))
@@ -147,7 +155,7 @@ class CoroutineOmegaWorker(
          * Downloads changes from server
          */
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA DOWNLOAD STARTED")
-        RequestWrappers.downloadData(context, repository, scope, "OMEGA")
+//        RequestWrappers.downloadData(context, repository, scope, "OMEGA")
 
         /**
          * Executes logs in ExecuteQueue

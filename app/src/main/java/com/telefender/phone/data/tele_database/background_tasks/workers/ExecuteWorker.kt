@@ -24,8 +24,12 @@ object ExecuteScheduler {
     const val execPeriodTag = "periodicExecuteWorker"
     
     fun initiateOneTimeExecuteWorker(context: Context) : UUID {
-
-        WorkStates.setState(WorkType.ONE_TIME_EXEC, WorkInfo.State.RUNNING)
+        WorkStates.setState(
+            workType = WorkType.ONE_TIME_EXEC,
+            workState = WorkInfo.State.RUNNING,
+            context = context,
+            tag = execOneTag
+        )
 
         val executeRequest = OneTimeWorkRequestBuilder<CoroutineExecuteWorker>()
             .setInputData(workDataOf("variableName" to "oneTimeExecState", "notificationID" to "1111"))
@@ -45,8 +49,12 @@ object ExecuteScheduler {
     }
 
     fun initiatePeriodicExecuteWorker(context : Context) : UUID {
-
-        WorkStates.setState(WorkType.PERIODIC_EXEC, WorkInfo.State.RUNNING)
+        WorkStates.setState(
+            workType = WorkType.PERIODIC_EXEC,
+            workState = WorkInfo.State.RUNNING,
+            context = context,
+            tag = execPeriodTag
+        )
 
         val executeRequest = PeriodicWorkRequestBuilder<CoroutineExecuteWorker>(1, TimeUnit.HOURS)
             .setInputData(workDataOf("variableName" to "periodicExecState", "notificationID" to "2222"))

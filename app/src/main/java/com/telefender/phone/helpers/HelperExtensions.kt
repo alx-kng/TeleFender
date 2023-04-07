@@ -1,5 +1,10 @@
 package com.telefender.phone.helpers
 
+// Converts months (given as receiver Int) to milliseconds.
+fun Int.monthsToMilli() : Long {
+    return this * 2629800000L
+}
+
 // Converts days (given as receiver Int) to milliseconds.
 fun Int.daysToMilli() : Long {
     return this * 86400000L

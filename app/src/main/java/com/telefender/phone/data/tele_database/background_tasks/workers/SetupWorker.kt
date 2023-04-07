@@ -16,6 +16,7 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 
 object SetupScheduler {
+
     val setupTag = "setupWorker"
 
     fun initiateSetupWorker(context: Context): UUID? {
@@ -24,6 +25,10 @@ object SetupScheduler {
             return null
         }
 
+        /*
+        Probably no need to check that worker is running, as initiateSetupWorker already has quite
+        a few state checks in ClientDatabase.
+         */
         WorkStates.setState(WorkType.SETUP, WorkInfo.State.RUNNING)
 
         val setupRequest = OneTimeWorkRequestBuilder<CoroutineSetupWorker>()
@@ -53,8 +58,12 @@ class CoroutineSetupWorker(
     val CHANNEL_ID = "alxkng5737"
     val scope = CoroutineScope(Dispatchers.IO)
 
-    
     override suspend fun doWork() : Result {
+        /*
+        This may seem like a repeat to the one in initiateSetupWorker(), but it's actually used
+        when the worker retries. Additionally, we don't need to do the worker check for setState()
+        since we already know this is a valid worker.
+         */
         WorkStates.setState(WorkType.SETUP, WorkInfo.State.RUNNING)
 
         try {

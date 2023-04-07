@@ -78,6 +78,9 @@ data class Parameters(
 
     val incomingGate: Int, // inclusive seconds in order to let through
     val outgoingGate: Int, // inclusive seconds in order to let through
+    val freshOutgoingGate: Int, // inclusive seconds in order to even consider call as fresh outgoing time.
+    val freshOutgoingRequiredPeriod: Int, // # months with no prior incoming calls for fresh outgoing time.
+    val freshOutgoingExpirePeriod: Int, // # months that last fresh outgoing time can deem number safe.
 
     val smsImmediateWaitTime: Long, // milliseconds before force move on to allow / unallow
     val smsDeferredWaitTime: Int, // seconds before sending another SMS request (if no earlier result)

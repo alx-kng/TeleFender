@@ -19,7 +19,12 @@ object UploadScheduler {
     val uploadPeriodTag = "periodicUploadWorker"
     
     fun initiateOneTimeUploadWorker(context : Context) : UUID {
-        WorkStates.setState(WorkType.ONE_TIME_UPLOAD, WorkInfo.State.RUNNING)
+        WorkStates.setState(
+            workType = WorkType.ONE_TIME_UPLOAD,
+            workState = WorkInfo.State.RUNNING,
+            context = context,
+            tag = uploadOneTag
+        )
 
         val uploadRequest = OneTimeWorkRequestBuilder<CoroutineUploadWorker>()
             .setInputData(workDataOf("variableName" to "oneTimeUploadState", "notificationID" to "3333"))
@@ -39,7 +44,12 @@ object UploadScheduler {
     }
 
     fun initiatePeriodicUploadWorker(context : Context) : UUID {
-        WorkStates.setState(WorkType.PERIODIC_UPLOAD, WorkInfo.State.RUNNING)
+        WorkStates.setState(
+            workType = WorkType.PERIODIC_UPLOAD,
+            workState = WorkInfo.State.RUNNING,
+            context = context,
+            tag = uploadPeriodTag
+        )
 
         val uploadRequest = PeriodicWorkRequestBuilder<CoroutineUploadWorker>(1, TimeUnit.HOURS)
             .setInputData(workDataOf("variableName" to "periodicUploadState", "notificationID" to "4444"))

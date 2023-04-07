@@ -98,8 +98,7 @@ class CallService : InCallService() {
     }
 
     /**
-     * TODO: Should set to vibrate on Silence mode if don't have permissions.
-     *  Check insertCallDetail() works. Also, update response for unsafe calls in ALLOW_MODE,
+     * TODO: Check insertCallDetail() works. Also, update response for unsafe calls in ALLOW_MODE,
      *  specifically in terms of showing UI.
      */
     private fun unsafeCall(call: Call) {

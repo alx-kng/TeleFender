@@ -577,6 +577,11 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                             // Outgoing subtype
                             numOutgoing = numOutgoing + if (isOutgoing) 1 else 0,
                             lastOutgoingTime = if (isOutgoing) callEpochDate else lastOutgoingTime,
+                            lastFreshOutgoingTime = if (isFreshOutgoingTime(callDetail, oldAnalyzed, parameters)) {
+                                callEpochDate
+                            } else {
+                                lastFreshOutgoingTime
+                            },
                             lastOutgoingDuration = if (isOutgoing) callDuration else lastOutgoingDuration,
                             maxOutgoingDuration = max(maxOutgoingDuration, if(isOutgoing) callDuration else 0),
                             avgOutgoingDuration = if (isOutgoing) {
@@ -616,6 +621,38 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
         }
 
         return inserted
+    }
+
+    private fun isFreshOutgoingTime(
+        callDetail: CallDetail,
+        analyzed: Analyzed,
+        parameters: Parameters
+    ) : Boolean {
+
+        with(analyzed) {
+            // Don't allow calls from blocked / spam numbers to be given fresh outgoing times.
+            if (isBlocked) return false
+
+            // Makes sure that call duration is >= freshOutgoingGate before continuing.
+            if (callDetail.callDuration < parameters.freshOutgoingGate) return false
+
+            /*
+            Makes sure there are no incoming, rejected, blocked, etc... calls in the past long
+            time period (given by freshOutgoingRequiredPeriod).
+             */
+            for (time in listOf(
+                lastIncomingTime,
+                lastBlockedTime,
+                lastMissedTime,
+                lastVoicemailTime,
+                lastRejectedTime
+            )) {
+                if (time == null) continue
+                if (callDetail.callEpochDate - time < parameters.freshOutgoingRequiredPeriod) return false
+            }
+
+            return true
+        }
     }
 
 
@@ -680,8 +717,6 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                         }
                         SafeAction.SMS_VERIFY -> {
                             /*
-                            TODO: Change notifyGate protocol if necessary later.
-
                             Basically, sms verification only really affects numbers in the default
                             status (markedSafe = false and isBlocked = false) because if the number
                             is already markedSafe, then sms has not much effect, and the number is
