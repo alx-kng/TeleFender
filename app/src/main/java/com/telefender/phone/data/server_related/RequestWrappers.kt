@@ -16,7 +16,7 @@ import timber.log.Timber
 
 object RequestWrappers {
 
-    private const val retryAmount = 5
+    private const val retryAmount = 3
     const val retryDelayTime = 5000L // In milliseconds
 
     /**

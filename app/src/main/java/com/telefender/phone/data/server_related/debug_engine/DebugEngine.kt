@@ -102,6 +102,7 @@ object DebugEngine {
             "<log>" -> LogCommand.create(context, repository, scope, commandValue)
             "<help>" -> HelpCommand.create(context, repository, scope)
             "<sql-read>" -> ReadQueryCommand.create(context, repository, scope, commandValue)
+            "<inj-change>" -> InjectChangeCommand.create(context, repository, scope, commandValue)
             else -> null
         }
     }

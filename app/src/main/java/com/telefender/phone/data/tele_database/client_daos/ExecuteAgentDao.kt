@@ -3,10 +3,12 @@ package com.telefender.phone.data.tele_database.client_daos
 import android.provider.CallLog
 import androidx.room.Dao
 import androidx.room.Transaction
+import com.telefender.phone.data.default_database.DefaultContacts.deleteContact
 import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.entities.*
 import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.helpers.TeleHelpers.getNotifyItem
 import com.telefender.phone.helpers.daysToMilli
 import com.telefender.phone.helpers.hoursToMilli
 import com.telefender.phone.helpers.minutesToMilli
@@ -33,7 +35,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
     ErrorQueueDao, StoredMapDao, ParametersDao {
 
     companion object {
-        private const val retryAmount = 5
+        private const val retryAmount = 3
     }
 
     suspend fun executeAll(){
@@ -306,11 +308,15 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
         val mutexContactNumber = mutexLocks[MutexType.CONTACT_NUMBER]!!
         val mutexAnalyzed = mutexLocks[MutexType.ANALYZED]!!
         val mutexNotifyItem = mutexLocks[MutexType.NOTIFY_ITEM]!!
+        val mutexParameters = mutexLocks[MutexType.PARAMETERS]!!
 
         val change = changeLog.getChange()
 
         with(changeLog) {
             when (this.getChangeType()) {
+                ChangeType.PARAMETER_UPDATE -> mutexParameters.withLock {
+                    parameterUpdate(parameters = change?.getParameters())
+                }
                 ChangeType.NON_CONTACT_UPDATE -> mutexNotifyItem.withLock {
                     mutexAnalyzed.withLock {
                         nonContactUpdate(
@@ -615,7 +621,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                         )
                     )
 
-                    TeleHelpers.assert(success, "updateAnalyzedNum()")
+                    TeleHelpers.assert(success, "localLogInsert() - updateAnalyzedNum()")
                 }
             }
         }
@@ -655,6 +661,18 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
         }
     }
 
+    /**
+     * Updates the Parameters table with new [parameters].
+     */
+    @Transaction
+    suspend fun parameterUpdate(parameters: Parameters?) {
+        if (parameters == null) {
+            throw NullPointerException("parameters was null for parameterUpdate")
+        }
+
+        val success = updateParameters(parameters)
+        TeleHelpers.assert(success, "parameterUpdate() - updateParameters()")
+    }
 
     /**
      * TODO: The case for double blocking (where notifyGate goes to superSpamAmount) can only
@@ -673,165 +691,165 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
     ) {
         if (normalizedNumber == null || safeAction == null) {
             throw NullPointerException("normalizedNumber || safeAction was null for nonContactUpdate")
-        } else {
-            // Only update AnalyzedNumbers if change is from user's number (local client change).
-            if (instanceNumber == getUserNumber()!!) {
-                val analyzedNumber = getAnalyzedNum(normalizedNumber)!!
-                val oldAnalyzed = analyzedNumber.getAnalyzed()
-                with(oldAnalyzed) {
-                    val parameters = getParameters()!!
+        }
 
-                    val newNotifyGate: Int
-                    val newIsBlocked: Boolean
-                    val newMarkedSafe: Boolean
+        // Only update AnalyzedNumbers if change is from user's number (local client change).
+        if (instanceNumber == getUserNumber()!!) {
+            val analyzedNumber = getAnalyzedNum(normalizedNumber)!!
+            val oldAnalyzed = analyzedNumber.getAnalyzed()
+            with(oldAnalyzed) {
+                val parameters = getParameters()!!
 
-                    when (safeAction) {
-                        SafeAction.SAFE -> {
-                            newNotifyGate = parameters.initialNotifyGate
-                            newMarkedSafe = true
-                            newIsBlocked = false
+                val newNotifyGate: Int
+                val newIsBlocked: Boolean
+                val newMarkedSafe: Boolean
 
-                            // Remove number from notify list if it is currently on it.
-                            deleteNotifyItemIfExists(normalizedNumber, "nonContactUpdate()")
-                        }
-                        SafeAction.DEFAULT -> {
-                            newNotifyGate = parameters.initialNotifyGate
-                            newMarkedSafe = false
-                            newIsBlocked = false
-                        }
-                        SafeAction.BLOCKED -> {
-                            /*
-                            If already blocked, increase notify gate by significant amount.
-                            If not already blocked, increase notify gate to verified spam amount.
-                             */
-                            newNotifyGate = if (isBlocked) {
-                                parameters.superSpamNotifyGate
-                            } else {
-                                parameters.verifiedSpamNotifyGate
-                            }
-                            newMarkedSafe = false
-                            newIsBlocked = true
+                when (safeAction) {
+                    SafeAction.SAFE -> {
+                        newNotifyGate = parameters.initialNotifyGate
+                        newMarkedSafe = true
+                        newIsBlocked = false
 
-                            // Remove number from notify list if it is currently on it.
-                            deleteNotifyItemIfExists(normalizedNumber, "nonContactUpdate()")
-                        }
-                        SafeAction.SMS_VERIFY -> {
-                            /*
-                            Basically, sms verification only really affects numbers in the default
-                            status (markedSafe = false and isBlocked = false) because if the number
-                            is already markedSafe, then sms has not much effect, and the number is
-                            blocked, then we don't want sms to override the user's action. However,
-                            we would like to reset notifyGate to give credit to number.
-                             */
-                            val success = updateAnalyzedNum(
-                                normalizedNumber = normalizedNumber,
-                                analyzed = oldAnalyzed.copy(
-                                    notifyGate = parameters.initialNotifyGate,
-                                    smsVerified = true
-                                )
-                            )
-                            TeleHelpers.assert(success, "updateAnalyzedNum()")
-
-                            // Return because we're not updating the analyzed with the bottom code.
-                            return
-                        }
-                        SafeAction.SMS_SENT -> {
-                            val newServerSentWindow = TeleHelpers.updatedTimesWindow(
-                                window = oldAnalyzed.serverSentWindow,
-                                windowSize = parameters.serverSentWindowSize.hoursToMilli(),
-                                newTime = changeTime
-                            )
-
-                            val success = updateAnalyzedNum(
-                                normalizedNumber = normalizedNumber,
-                                analyzed = oldAnalyzed.copy(
-                                    serverSentWindow = newServerSentWindow,
-                                    clientSentAfterExpire = false
-                                )
-                            )
-                            TeleHelpers.assert(success, "updateAnalyzedNum()")
-
-                            // Return because we're not updating the analyzed with the bottom code.
-                            return
-                        }
-                        SafeAction.SMS_REQUEST -> {
-                            val newServerSentWindow = TeleHelpers.updatedTimesWindow(
-                                window = oldAnalyzed.serverSentWindow,
-                                windowSize = parameters.serverSentWindowSize.hoursToMilli(),
-                            )
-
-                            /*
-                            Technically, SMS_REQUEST should only happen after an SMS_SENT event,
-                            that is, there should be a last sent time in the sent window. However,
-                            we do extra checks for safety.
-                             */
-                            val lastSentTime = newServerSentWindow.lastOrNull()
-
-                            // True if this SMS_REQUEST event happens after sms link expires.
-                            val clientSentAfterExpire = if (lastSentTime != null) {
-                                // Request time is assumed to be changeTime
-                                changeTime - lastSentTime > parameters.smsLinkExpirePeriod.minutesToMilli()
-                            } else {
-                                false
-                            }
-
-                            val success = updateAnalyzedNum(
-                                normalizedNumber = normalizedNumber,
-                                analyzed = oldAnalyzed.copy(
-                                    serverSentWindow = newServerSentWindow,
-                                    clientSentAfterExpire = clientSentAfterExpire
-                                )
-                            )
-                            TeleHelpers.assert(success, "updateAnalyzedNum()")
-
-                            // Return because we're not updating the analyzed with the bottom code.
-                            return
-                        }
-                        SafeAction.SEEN -> {
-                            // SEEN events should only happen for numbers on the notify list.
-                            val oldNotifyItem = getNotifyItem(normalizedNumber)!!
-                            val currentTime = Instant.now().toEpochMilli()
-
-                            /*
-                            Don't update the AnalyzedNumber and NotifyItem if a SEEN event for the
-                            number has already been handled since the last call. Although, the
-                            SEEN event generator should already take this into account (so that the
-                            ChangeLogs aren't flooded with SEEN logs).
-                             */
-                            if (oldNotifyItem.seenSinceLastCall) return
-
-                            val updateAnalyzedSuccess = updateAnalyzedNum(
-                                normalizedNumber = normalizedNumber,
-                                analyzed = oldAnalyzed.copy(
-                                    notifyGate = notifyGate + parameters.seenGateIncrease,
-                                )
-                            )
-                            TeleHelpers.assert(updateAnalyzedSuccess, "nonContactUpdate() - updateAnalyzedNum()")
-
-                            val updateNotifySuccess = updateNotifyItem(
-                                oldNotifyItem.copy(
-                                    veryFirstSeenTime = oldNotifyItem.veryFirstSeenTime ?: currentTime,
-                                    seenSinceLastCall = true,
-                                    nextDropWindow = oldNotifyItem.nextDropWindow - parameters.seenWindowDecrease
-                                )
-                            )
-                            TeleHelpers.assert(updateNotifySuccess, "nonContactUpdate() - updateNotifyItem()")
-
-                            // Return because we're not updating the analyzed with the bottom code.
-                            return
-                        }
+                        // Remove number from notify list if it is currently on it.
+                        deleteNotifyItemIfExists(normalizedNumber, "nonContactUpdate()")
                     }
+                    SafeAction.DEFAULT -> {
+                        newNotifyGate = parameters.initialNotifyGate
+                        newMarkedSafe = false
+                        newIsBlocked = false
+                    }
+                    SafeAction.BLOCKED -> {
+                        /*
+                        If already blocked, increase notify gate by significant amount.
+                        If not already blocked, increase notify gate to verified spam amount.
+                         */
+                        newNotifyGate = if (isBlocked) {
+                            parameters.superSpamNotifyGate
+                        } else {
+                            parameters.verifiedSpamNotifyGate
+                        }
+                        newMarkedSafe = false
+                        newIsBlocked = true
 
-                    val success = updateAnalyzedNum(
-                        normalizedNumber = normalizedNumber,
-                        analyzed = this.copy(
-                            notifyGate = newNotifyGate,
-                            markedSafe = newMarkedSafe,
-                            isBlocked = newIsBlocked
+                        // Remove number from notify list if it is currently on it.
+                        deleteNotifyItemIfExists(normalizedNumber, "nonContactUpdate()")
+                    }
+                    SafeAction.SMS_VERIFY -> {
+                        /*
+                        Basically, sms verification only really affects numbers in the default
+                        status (markedSafe = false and isBlocked = false) because if the number
+                        is already markedSafe, then sms has not much effect, and the number is
+                        blocked, then we don't want sms to override the user's action. However,
+                        we would like to reset notifyGate to give credit to number.
+                         */
+                        val success = updateAnalyzedNum(
+                            normalizedNumber = normalizedNumber,
+                            analyzed = oldAnalyzed.copy(
+                                notifyGate = parameters.initialNotifyGate,
+                                smsVerified = true
+                            )
                         )
-                    )
-                    TeleHelpers.assert(success, "updateAnalyzedNum()")
+                        TeleHelpers.assert(success, "updateAnalyzedNum()")
+
+                        // Return because we're not updating the analyzed with the bottom code.
+                        return
+                    }
+                    SafeAction.SMS_SENT -> {
+                        val newServerSentWindow = TeleHelpers.updatedTimesWindow(
+                            window = oldAnalyzed.serverSentWindow,
+                            windowSize = parameters.serverSentWindowSize.hoursToMilli(),
+                            newTime = changeTime
+                        )
+
+                        val success = updateAnalyzedNum(
+                            normalizedNumber = normalizedNumber,
+                            analyzed = oldAnalyzed.copy(
+                                serverSentWindow = newServerSentWindow,
+                                clientSentAfterExpire = false
+                            )
+                        )
+                        TeleHelpers.assert(success, "updateAnalyzedNum()")
+
+                        // Return because we're not updating the analyzed with the bottom code.
+                        return
+                    }
+                    SafeAction.SMS_REQUEST -> {
+                        val newServerSentWindow = TeleHelpers.updatedTimesWindow(
+                            window = oldAnalyzed.serverSentWindow,
+                            windowSize = parameters.serverSentWindowSize.hoursToMilli(),
+                        )
+
+                        /*
+                        Technically, SMS_REQUEST should only happen after an SMS_SENT event,
+                        that is, there should be a last sent time in the sent window. However,
+                        we do extra checks for safety.
+                         */
+                        val lastSentTime = newServerSentWindow.lastOrNull()
+
+                        // True if this SMS_REQUEST event happens after sms link expires.
+                        val clientSentAfterExpire = if (lastSentTime != null) {
+                            // Request time is assumed to be changeTime
+                            changeTime - lastSentTime > parameters.smsLinkExpirePeriod.minutesToMilli()
+                        } else {
+                            false
+                        }
+
+                        val success = updateAnalyzedNum(
+                            normalizedNumber = normalizedNumber,
+                            analyzed = oldAnalyzed.copy(
+                                serverSentWindow = newServerSentWindow,
+                                clientSentAfterExpire = clientSentAfterExpire
+                            )
+                        )
+                        TeleHelpers.assert(success, "updateAnalyzedNum()")
+
+                        // Return because we're not updating the analyzed with the bottom code.
+                        return
+                    }
+                    SafeAction.SEEN -> {
+                        // SEEN events should only happen for numbers on the notify list.
+                        val oldNotifyItem = getNotifyItem(normalizedNumber)!!
+                        val currentTime = Instant.now().toEpochMilli()
+
+                        /*
+                        Don't update the AnalyzedNumber and NotifyItem if a SEEN event for the
+                        number has already been handled since the last call. Although, the
+                        SEEN event generator should already take this into account (so that the
+                        ChangeLogs aren't flooded with SEEN logs).
+                         */
+                        if (oldNotifyItem.seenSinceLastCall) return
+
+                        val updateAnalyzedSuccess = updateAnalyzedNum(
+                            normalizedNumber = normalizedNumber,
+                            analyzed = oldAnalyzed.copy(
+                                notifyGate = notifyGate + parameters.seenGateIncrease,
+                            )
+                        )
+                        TeleHelpers.assert(updateAnalyzedSuccess, "nonContactUpdate() - updateAnalyzedNum()")
+
+                        val updateNotifySuccess = updateNotifyItem(
+                            oldNotifyItem.copy(
+                                veryFirstSeenTime = oldNotifyItem.veryFirstSeenTime ?: currentTime,
+                                seenSinceLastCall = true,
+                                nextDropWindow = oldNotifyItem.nextDropWindow - parameters.seenWindowDecrease
+                            )
+                        )
+                        TeleHelpers.assert(updateNotifySuccess, "nonContactUpdate() - updateNotifyItem()")
+
+                        // Return because we're not updating the analyzed with the bottom code.
+                        return
+                    }
                 }
+
+                val success = updateAnalyzedNum(
+                    normalizedNumber = normalizedNumber,
+                    analyzed = this.copy(
+                        notifyGate = newNotifyGate,
+                        markedSafe = newMarkedSafe,
+                        isBlocked = newIsBlocked
+                    )
+                )
+                TeleHelpers.assert(success, "updateAnalyzedNum()")
             }
         }
     }
@@ -845,25 +863,25 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
     suspend fun cInsert(CID: String?, instanceNumber: String) {
         if (CID == null) {
             throw NullPointerException("CID was null for cInsert")
-        } else {
-            /*
-            Prevents double insertion by checking if contact exists first.
-            Especially required since the section below will fail out for duplicate inserts.
-             */
-            val numberExists = getContactRow(CID) != null
-            if (numberExists) {
-                Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
-                    "Duplicate cInsert() for CID = $CID | instanceNumber = $instanceNumber")
-                return
-            }
-
-            val result = insertContact(
-                Contact(CID = CID, instanceNumber = instanceNumber)
-            )
-
-            // insertContact() usually returns -1 if row wasn't inserted.
-            if (result < 0) throw Exception("cInsert() - insertContact() failed!")
         }
+
+        /*
+        Prevents double insertion by checking if contact exists first.
+        Especially required since the section below will fail out for duplicate inserts.
+         */
+        val numberExists = getContactRow(CID) != null
+        if (numberExists) {
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                "Duplicate cInsert() for CID = $CID | instanceNumber = $instanceNumber")
+            return
+        }
+
+        val result = insertContact(
+            Contact(CID = CID, instanceNumber = instanceNumber)
+        )
+
+        // insertContact() usually returns -1 if row wasn't inserted.
+        if (result < 0) throw Exception("cInsert() - insertContact() failed!")
     }
 
     /**
@@ -874,48 +892,48 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
     suspend fun cUpdate(CID: String?, instanceNumber: String, blocked: Boolean?) {
         if (CID == null || blocked == null) {
             throw NullPointerException("CID || blocked was null for cUpdate")
-        } else {
-            /*
-            Ensures current blocked status is different from the passed in blocked value
-            (to prevent duplicate update of AnalyzedNumber and unnecessary Contact update).
-            Especially required since the section below will fail out for duplicate updates.
-            Also, we just check if contact exists for safety.
-             */
-            val currBlockedStatus = contactBlocked(CID)
-            if (currBlockedStatus == null || currBlockedStatus == blocked) {
-                Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
-                    "Duplicate cUpdate() for CID = $CID | instanceNumber = $instanceNumber | blocked = $blocked")
-                return
-            }
+        }
 
-            val result = updateContactBlocked(CID, blocked)
+        /*
+        Ensures current blocked status is different from the passed in blocked value
+        (to prevent duplicate update of AnalyzedNumber and unnecessary Contact update).
+        Especially required since the section below will fail out for duplicate updates.
+        Also, we just check if contact exists for safety.
+         */
+        val currBlockedStatus = contactBlocked(CID)
+        if (currBlockedStatus == null || currBlockedStatus == blocked) {
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                "Duplicate cUpdate() for CID = $CID | instanceNumber = $instanceNumber | blocked = $blocked")
+            return
+        }
 
-            // updateContactBlocked() returns 1 if success and anything else if failure.
-            if (result != 1) throw Exception("cUpdate() - updateContactBlocked() failed!")
+        val result = updateContactBlocked(CID, blocked)
 
-            /*
-            Only update AnalyzedNumbers for child ContactNumbers if the Contact's instance number
-            is the same as user number (contact is direct contact).
-             */
-            if (instanceNumber == getUserNumber()!!) {
-                val contactNumberChildren : List<ContactNumber> = getContactNumbersByCID(CID)
-                for (contactNumber in contactNumberChildren) {
-                    val normalizedNumber = contactNumber.normalizedNumber
+        // updateContactBlocked() returns 1 if success and anything else if failure.
+        if (result != 1) throw Exception("cUpdate() - updateContactBlocked() failed!")
 
-                    val analyzedNumber = getAnalyzedNum(normalizedNumber)!!
-                    val oldAnalyzed = analyzedNumber.getAnalyzed()
+        /*
+        Only update AnalyzedNumbers for child ContactNumbers if the Contact's instance number
+        is the same as user number (contact is direct contact).
+         */
+        if (instanceNumber == getUserNumber()!!) {
+            val contactNumberChildren : List<ContactNumber> = getContactNumbersByCID(CID)
+            for (contactNumber in contactNumberChildren) {
+                val normalizedNumber = contactNumber.normalizedNumber
 
-                    val numBlockedDelta = if (blocked) 1 else -1
+                val analyzedNumber = getAnalyzedNum(normalizedNumber)!!
+                val oldAnalyzed = analyzedNumber.getAnalyzed()
 
-                    val success = updateAnalyzedNum(
-                        normalizedNumber = normalizedNumber,
-                        analyzed = oldAnalyzed.copy(
-                            isBlocked = blocked,
-                            numMarkedBlocked = oldAnalyzed.numMarkedBlocked + numBlockedDelta
-                        )
+                val numBlockedDelta = if (blocked) 1 else -1
+
+                val success = updateAnalyzedNum(
+                    normalizedNumber = normalizedNumber,
+                    analyzed = oldAnalyzed.copy(
+                        isBlocked = blocked,
+                        numMarkedBlocked = oldAnalyzed.numMarkedBlocked + numBlockedDelta
                     )
-                    TeleHelpers.assert(success, "updateAnalyzedNum()")
-                }
+                )
+                TeleHelpers.assert(success, "updateAnalyzedNum()")
             }
         }
     }
@@ -929,30 +947,30 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
     suspend fun cDelete(CID: String?) {
         if (CID == null) {
             throw NullPointerException("CID was null for cDelete")
-        } else {
-            /*
-            Prevents double deletion by checking if contact is deleted first.
-            Especially required since the section below will fail out for duplicate deletes.
-             */
-            val contactDeleted = getContactRow(CID) == null
-            if (contactDeleted) {
-                Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: Duplicate cDelete() for CID = $CID")
-                return
-            }
-
-            // Gets all contact numbers associated with that contact and deletes them as well.
-            val contactNumberChildren : List<ContactNumber> = getContactNumbersByCID(CID)
-            for (contactNumber in contactNumberChildren) {
-                with(contactNumber) {
-                    cnDelete(CID, normalizedNumber, instanceNumber, degree)
-                }
-            }
-
-            val result = deleteContact(CID)
-
-            // deleteContact() returns 1 if success and anything else if failure.
-            if (result != 1) throw Exception("cDelete() - deleteContact() failed!")
         }
+
+        /*
+        Prevents double deletion by checking if contact is deleted first.
+        Especially required since the section below will fail out for duplicate deletes.
+         */
+        val contactDeleted = getContactRow(CID) == null
+        if (contactDeleted) {
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: Duplicate cDelete() for CID = $CID")
+            return
+        }
+
+        // Gets all contact numbers associated with that contact and deletes them as well.
+        val contactNumberChildren : List<ContactNumber> = getContactNumbersByCID(CID)
+        for (contactNumber in contactNumberChildren) {
+            with(contactNumber) {
+                cnDelete(CID, normalizedNumber, instanceNumber, degree)
+            }
+        }
+
+        val result = deleteContact(CID)
+
+        // deleteContact() returns 1 if success and anything else if failure.
+        if (result != 1) throw Exception("cDelete() - deleteContact() failed!")
     }
 
     /**
@@ -972,73 +990,73 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
     ){
         if (null in listOf(CID, normalizedNumber, defaultCID, rawNumber, versionNumber, degree)) {
             throw NullPointerException("CID || number || defaultCID || versionNumber || degree was null for cnInsert")
-        } else {
-            /*
-            Prevents double insertion by checking if number exists first. Also necessary to prevent
-            AnalyzedNumber from being updated multiple times for same action.
-            Especially required since the section below will fail out for duplicate inserts.
-             */
-            val numberExists = getContactNumberRow(CID!!, normalizedNumber!!) != null
-            if (numberExists) {
-                Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
-                    "Duplicate cInsert() for CID = $CID | normalizedNumber = $normalizedNumber | instanceNumber = $instanceNumber")
-                return
-            }
+        }
 
-            val contactNumber = ContactNumber(
-                CID = CID,
-                normalizedNumber = normalizedNumber,
-                defaultCID = defaultCID!!,
-                rawNumber = rawNumber!!,
-                instanceNumber = instanceNumber,
-                versionNumber = versionNumber!!,
-                degree = degree!!
-            )
-            val result = insertContactNumbers(contactNumber)
+        /*
+        Prevents double insertion by checking if number exists first. Also necessary to prevent
+        AnalyzedNumber from being updated multiple times for same action.
+        Especially required since the section below will fail out for duplicate inserts.
+         */
+        val numberExists = getContactNumberRow(CID!!, normalizedNumber!!) != null
+        if (numberExists) {
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                "Duplicate cInsert() for CID = $CID | normalizedNumber = $normalizedNumber | instanceNumber = $instanceNumber")
+            return
+        }
 
-            // insertContactNumber() usually returns -1 if row wasn't inserted.
-            if (result < 0) throw Exception("cnInsert() - insertContactNumber() failed!")
+        val contactNumber = ContactNumber(
+            CID = CID,
+            normalizedNumber = normalizedNumber,
+            defaultCID = defaultCID!!,
+            rawNumber = rawNumber!!,
+            instanceNumber = instanceNumber,
+            versionNumber = versionNumber!!,
+            degree = degree!!
+        )
+        val result = insertContactNumbers(contactNumber)
 
-            /*
-            If number is added as a direct contact (instanceNumber = userNumber), set isBlocked to
-            false, increment numSharedContacts.
-            If number is not added as a direct contact, increment numTreeContacts.
-            ADDITIONALLY, for both direct / tree contacts, reset notifyGate, and recalculate
-            minDegree and degreeString
-             */
-            val analyzedNumber = getAnalyzedNum(normalizedNumber)!!
-            val oldAnalyzed = analyzedNumber.getAnalyzed()
-            with(oldAnalyzed) {
-                val newDegreeString = changeDegreeString(degreeString, degree, false)
-                val parameters = getParameters()!!
+        // insertContactNumber() usually returns -1 if row wasn't inserted.
+        if (result < 0) throw Exception("cnInsert() - insertContactNumber() failed!")
 
-                if (instanceNumber == getUserNumber()!!) {
-                    val success = updateAnalyzedNum(
-                        normalizedNumber = normalizedNumber,
-                        analyzed = this.copy(
-                            notifyGate = parameters.initialNotifyGate,
-                            isBlocked = false,
-                            numSharedContacts = numSharedContacts + 1,
-                            degreeString = newDegreeString,
-                            minDegree = 0
-                        )
+        /*
+        If number is added as a direct contact (instanceNumber = userNumber), set isBlocked to
+        false, increment numSharedContacts.
+        If number is not added as a direct contact, increment numTreeContacts.
+        ADDITIONALLY, for both direct / tree contacts, reset notifyGate, and recalculate
+        minDegree and degreeString
+         */
+        val analyzedNumber = getAnalyzedNum(normalizedNumber)!!
+        val oldAnalyzed = analyzedNumber.getAnalyzed()
+        with(oldAnalyzed) {
+            val newDegreeString = changeDegreeString(degreeString, degree, false)
+            val parameters = getParameters()!!
+
+            if (instanceNumber == getUserNumber()!!) {
+                val success = updateAnalyzedNum(
+                    normalizedNumber = normalizedNumber,
+                    analyzed = this.copy(
+                        notifyGate = parameters.initialNotifyGate,
+                        isBlocked = false,
+                        numSharedContacts = numSharedContacts + 1,
+                        degreeString = newDegreeString,
+                        minDegree = 0
                     )
-                    TeleHelpers.assert(success, "updateAnalyzedNum()")
+                )
+                TeleHelpers.assert(success, "updateAnalyzedNum()")
 
-                    // Remove number from notify list if it is currently on it.
-                    deleteNotifyItemIfExists(normalizedNumber, "cnInsert()")
-                } else {
-                    val success = updateAnalyzedNum(
-                        normalizedNumber = normalizedNumber,
-                        analyzed = this.copy(
-                            notifyGate = parameters.initialNotifyGate,
-                            numTreeContacts = numTreeContacts + 1,
-                            degreeString = newDegreeString,
-                            minDegree = getMinDegree(newDegreeString)
-                        )
+                // Remove number from notify list if it is currently on it.
+                deleteNotifyItemIfExists(normalizedNumber, "cnInsert()")
+            } else {
+                val success = updateAnalyzedNum(
+                    normalizedNumber = normalizedNumber,
+                    analyzed = this.copy(
+                        notifyGate = parameters.initialNotifyGate,
+                        numTreeContacts = numTreeContacts + 1,
+                        degreeString = newDegreeString,
+                        minDegree = getMinDegree(newDegreeString)
                     )
-                    TeleHelpers.assert(success, "updateAnalyzedNum()")
-                }
+                )
+                TeleHelpers.assert(success, "updateAnalyzedNum()")
             }
         }
     }
@@ -1055,23 +1073,23 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
     suspend fun cnUpdate(CID: String?, normalizedNumber: String?, rawNumber: String?, versionNumber: Int?) {
         if (null in listOf(CID, normalizedNumber, rawNumber, versionNumber)) {
             throw NullPointerException("CID || oldNumber || rawNumber || versionNumber was null for cnUpdate")
-        } else {
-            /*
-            Ensures current rawNumber is different from the passed in rawNumber to prevent duplicate
-            updates. Also, we just check if contactNumber exists for safety.
-             */
-            val currRawNumber = getContactNumberRow(CID!!, normalizedNumber!!)?.rawNumber
-            if (currRawNumber == null || currRawNumber == rawNumber!!) {
-                Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
-                    "Duplicate cnUpdate() for CID = $CID | normalizedNumber = $normalizedNumber | rawNumber = $rawNumber")
-                return
-            }
-
-            val result = updateContactNumber(CID, normalizedNumber, rawNumber, versionNumber)
-
-            // updateContactNumber() returns 1 if success and anything else if failure.
-            if (result != 1) throw Exception("updateContactNumber() failed!")
         }
+
+        /*
+        Ensures current rawNumber is different from the passed in rawNumber to prevent duplicate
+        updates. Also, we just check if contactNumber exists for safety.
+         */
+        val currRawNumber = getContactNumberRow(CID!!, normalizedNumber!!)?.rawNumber
+        if (currRawNumber == null || currRawNumber == rawNumber!!) {
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                "Duplicate cnUpdate() for CID = $CID | normalizedNumber = $normalizedNumber | rawNumber = $rawNumber")
+            return
+        }
+
+        val result = updateContactNumber(CID, normalizedNumber, rawNumber, versionNumber)
+
+        // updateContactNumber() returns 1 if success and anything else if failure.
+        if (result != 1) throw Exception("updateContactNumber() failed!")
     }
 
     /**
@@ -1083,63 +1101,63 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
     suspend fun cnDelete(CID: String?, normalizedNumber: String?, instanceNumber: String, degree: Int?) {
         if (null in listOf(CID, normalizedNumber, degree)) {
             throw NullPointerException("CID || number || degree was null for cnDelete")
-        } else {
-            /*
-            Prevents double deletion by checking if number is already deleted. Also necessary to
-            prevent AnalyzedNumber from being updated multiple times for same action.
-            Especially required since the section below will fail out for duplicate deletes.
-             */
-            val numberDeleted = getContactNumberRow(CID!!, normalizedNumber!!) == null
-            if (numberDeleted) {
-                Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
-                    "Duplicate cDelete() for CID = $CID | normalizedNumber = $normalizedNumber | instanceNumber = $instanceNumber")
-                return
-            }
-
-            /*
-            If instanceNumber is same as user contact (number is a direct contact of user), then
-            decrement numSharedContacts. Moreover, if the contact associated with the number is
-            blocked, then decrement numBlockedContacts. Remember, deleting contacts doesn't change
-            its isBlocked value.
-            If not direct contact, then just decrement numTreeContacts. Additionally, no matter if
-            the contact number is a direct contact or not, recalculate minDegree and degreeString.
-             */
-            val analyzedNumber = getAnalyzedNum(normalizedNumber)!!
-            val oldAnalyzed = analyzedNumber.getAnalyzed()
-            with(oldAnalyzed) {
-                val newDegreeString = changeDegreeString(degreeString, degree!!, true)
-
-                if (instanceNumber == getUserNumber()!!) {
-                    val numBlockedDelta = if (contactBlocked(CID) == true) 1 else 0
-
-                    val success = updateAnalyzedNum(
-                        normalizedNumber = normalizedNumber,
-                        analyzed = this.copy(
-                            numMarkedBlocked = numMarkedBlocked - numBlockedDelta,
-                            numSharedContacts = numSharedContacts - 1,
-                            degreeString = newDegreeString,
-                            minDegree = getMinDegree(newDegreeString),
-                        )
-                    )
-                    TeleHelpers.assert(success, "updateAnalyzedNum()")
-                } else {
-                    val success = updateAnalyzedNum(
-                        normalizedNumber = normalizedNumber,
-                        analyzed = this.copy(
-                            numTreeContacts = numTreeContacts - 1,
-                            degreeString = newDegreeString,
-                            minDegree = getMinDegree(newDegreeString),
-                        )
-                    )
-                    TeleHelpers.assert(success, "updateAnalyzedNum()")
-                }
-            }
-
-            val result = deleteContactNumber(CID, normalizedNumber)
-
-            // deleteContactNumber() returns 1 if success and anything else if failure.
-            if (result != 1) throw Exception("cnDelete() - deleteContactNumber() failed!")
         }
+
+        /*
+        Prevents double deletion by checking if number is already deleted. Also necessary to
+        prevent AnalyzedNumber from being updated multiple times for same action.
+        Especially required since the section below will fail out for duplicate deletes.
+         */
+        val numberDeleted = getContactNumberRow(CID!!, normalizedNumber!!) == null
+        if (numberDeleted) {
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                "Duplicate cDelete() for CID = $CID | normalizedNumber = $normalizedNumber | instanceNumber = $instanceNumber")
+            return
+        }
+
+        /*
+        If instanceNumber is same as user contact (number is a direct contact of user), then
+        decrement numSharedContacts. Moreover, if the contact associated with the number is
+        blocked, then decrement numBlockedContacts. Remember, deleting contacts doesn't change
+        its isBlocked value.
+        If not direct contact, then just decrement numTreeContacts. Additionally, no matter if
+        the contact number is a direct contact or not, recalculate minDegree and degreeString.
+         */
+        val analyzedNumber = getAnalyzedNum(normalizedNumber)!!
+        val oldAnalyzed = analyzedNumber.getAnalyzed()
+        with(oldAnalyzed) {
+            val newDegreeString = changeDegreeString(degreeString, degree!!, true)
+
+            if (instanceNumber == getUserNumber()!!) {
+                val numBlockedDelta = if (contactBlocked(CID) == true) 1 else 0
+
+                val success = updateAnalyzedNum(
+                    normalizedNumber = normalizedNumber,
+                    analyzed = this.copy(
+                        numMarkedBlocked = numMarkedBlocked - numBlockedDelta,
+                        numSharedContacts = numSharedContacts - 1,
+                        degreeString = newDegreeString,
+                        minDegree = getMinDegree(newDegreeString),
+                    )
+                )
+                TeleHelpers.assert(success, "updateAnalyzedNum()")
+            } else {
+                val success = updateAnalyzedNum(
+                    normalizedNumber = normalizedNumber,
+                    analyzed = this.copy(
+                        numTreeContacts = numTreeContacts - 1,
+                        degreeString = newDegreeString,
+                        minDegree = getMinDegree(newDegreeString),
+                    )
+                )
+                TeleHelpers.assert(success, "updateAnalyzedNum()")
+            }
+        }
+
+        val result = deleteContactNumber(CID, normalizedNumber)
+
+        // deleteContactNumber() returns 1 if success and anything else if failure.
+        if (result != 1) throw Exception("cnDelete() - deleteContactNumber() failed!")
     }
 
     /**
@@ -1151,12 +1169,11 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
     suspend fun insInsert(instanceNumber: String?) {
         if (instanceNumber == null) {
             throw NullPointerException("instanceNumber was null for insInsert")
-        } else {
-
-            insertInstanceNumber(
-                Instance(instanceNumber)
-            )
         }
+
+        insertInstanceNumber(
+            Instance(instanceNumber)
+        )
     }
 
     /**

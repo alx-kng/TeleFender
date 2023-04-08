@@ -17,7 +17,7 @@ import timber.log.Timber
 
 object TeleCallDetails {
 
-    private const val retryAmount = 5
+    private const val retryAmount = 3
 
     fun syncCallImmediate(context: Context?, repository: ClientRepository?, scope: CoroutineScope) {
         if (repository == null || context == null) {

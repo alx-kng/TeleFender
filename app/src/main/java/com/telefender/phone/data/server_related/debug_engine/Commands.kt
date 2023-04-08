@@ -1,10 +1,13 @@
 package com.telefender.phone.data.server_related.debug_engine
 
 import android.content.Context
+import android.icu.lang.UCharacter.GraphemeClusterBreak.T
 import com.telefender.phone.data.server_related.RemoteDebug
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.TableSynchronizer
+import com.telefender.phone.data.tele_database.entities.ChangeLog
 import com.telefender.phone.data.tele_database.entities.TableType
+import com.telefender.phone.data.tele_database.entities.toChangeLog
 import com.telefender.phone.data.tele_database.entities.toTableType
 import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
@@ -110,6 +113,11 @@ class HelpCommand(
                 | use = "<sql-read> {table_name} {query_string}"
                 | Executes {query_string} (MUST BE READ) with return type {table_name} and 
                 | returns data to server.
+                
+            <inj-change>
+                | use = "<inj-read> {change_log_json}"
+                | Injects {change_log_json} as a ChangeLog into the ExecuteAgent and executes the
+                | corresponding action.
                   
             Helpful info:
             
@@ -160,7 +168,7 @@ class ReadQueryCommand(
     private val tableType: TableType
 ) : Command(context, repository, scope) {
 
-    private val retryAmount = 5
+    private val retryAmount = 3
 
     override suspend fun execute() {
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: REMOTE ReadQueryCommand - $queryString")
@@ -188,7 +196,7 @@ class ReadQueryCommand(
     }
 
     override fun toString(): String {
-        return "QUERY COMMAND | queryString: $queryString"
+        return "READ-QUERY COMMAND | queryString: $queryString"
     }
 
     companion object {
@@ -215,6 +223,63 @@ class ReadQueryCommand(
             } else {
                 null
             }
+        }
+    }
+}
+
+class InjectChangeCommand(
+    context: Context,
+    repository: ClientRepository,
+    scope: CoroutineScope,
+    private val changeLog: ChangeLog
+) : Command(context, repository, scope) {
+
+    private val retryAmount = 1
+
+    /**
+     * TODO: Need to be able to insert / delete / update default database as well in order for
+     *  ChangeLogs affecting the user's direct contacts to stick. --> May eventually be handled
+     *  in changeFromClient.
+     */
+    override suspend fun execute() {
+        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: REMOTE InjectChangeCommand - ${changeLog.toJson()}")
+
+        for (i in 1..retryAmount) {
+            try {
+                // Bubble error so that error message can be seen by server.
+                repository.changeFromClient(changeLog, bubbleError = true)
+
+                break
+            } catch (e: Exception) {
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: InjectChangeCommand RETRYING... Error - ${e.message}")
+                delay(2000)
+
+                // On last retry, set the debug exchange error message (so server can see it).
+                if (i == retryAmount) {
+                    RemoteDebug.error = "${e.message}\nType <help> for helpful info."
+                }
+            }
+        }
+
+        RemoteDebug.lastCommandTime = Instant.now().toEpochMilli()
+        RemoteDebug.commandRunning = false
+    }
+
+    override fun toString(): String {
+        return "INJECT-CHANGE COMMAND | changeLog = ${changeLog.toJson()}"
+    }
+
+    companion object {
+        fun create(
+            context: Context,
+            repository: ClientRepository,
+            scope: CoroutineScope,
+            commandValue: String?
+        ) : InjectChangeCommand? {
+
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: InjectChangeCommand - commandValue = '$commandValue'")
+            val changeLog = commandValue?.toChangeLog() ?: return null
+            return InjectChangeCommand(context, repository, scope, changeLog)
         }
     }
 }

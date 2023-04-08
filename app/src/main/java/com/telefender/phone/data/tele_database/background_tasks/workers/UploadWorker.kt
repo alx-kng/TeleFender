@@ -88,19 +88,39 @@ class CoroutineUploadWorker(
         stateVarString = inputData.getString("variableName")
         NOTIFICATION_ID = inputData.getString("notificationID")?.toInt()
 
-        if (stateVarString == "oneTimeUploadState") {
-            try {
-                setForeground(getForegroundInfo())
-            } catch(e: Exception) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", e.message!!)
+        try {
+            setForeground(getForegroundInfo())
+        } catch(e: Exception) {
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", e.message!!)
+        }
+
+        when (stateVarString) {
+            "oneTimeUploadState" ->  {
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: UPLOAD ONE TIME STARTED")
+                // No need to set the state again for one time workers.
+            }
+            "periodicUploadState" -> {
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: UPLOAD PERIODIC STARTED")
+
+                /**
+                 * Although this may seem redundant, we need to set the state to running here,
+                 * because if we call initiatePeriodicWorker() and the worker is in its
+                 * enqueued state (interval down time), then the setState() called there will not
+                 * set the state to RUNNING due to its safety measures. However, when the periodic
+                 * worker DOES start, we still need to make sure the state accurately reflects the
+                 * actually RUNNING state of the worker.
+                 */
+                WorkStates.setState(WorkType.PERIODIC_UPLOAD, WorkInfo.State.RUNNING)
+            }
+            else -> {
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: UPLOAD_CHANGE WORKER THREAD: Worker state variable name is wrong")
             }
         }
 
         val repository: ClientRepository = (applicationContext as App).repository
 
         /**
-         * Uploads changes to server. Returns next Result action if uploadChange()
-         * doesn't return null (failure or retry).
+         * Uploads changes to server.
          */
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_CHANGE STARTED")
         RequestWrappers.uploadChange(context, repository, scope, "UPLOAD WORKER")
@@ -110,8 +130,7 @@ class CoroutineUploadWorker(
          *  or condition that allows us to choose whether or not we want to upload
          *  AnalyzedNumbers or not.
          *
-         * Uploads analyzedNumbers to server. Returns next Result action if uploadAnalyzed()
-         * doesn't return null (failure or retry).
+         * Uploads analyzedNumbers to server.
          */
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_ANALYZED_POST STARTED")
         RequestWrappers.uploadAnalyzed(context, repository, scope, "UPLOAD WORKER")
@@ -124,7 +143,7 @@ class CoroutineUploadWorker(
 
         when (stateVarString) {
             "oneTimeUploadState" ->  WorkStates.setState(WorkType.ONE_TIME_UPLOAD, WorkInfo.State.SUCCEEDED)
-            "periodicUploadState" -> WorkStates.setState(WorkType.PERIODIC_UPLOAD, WorkInfo.State.RUNNING)
+            "periodicUploadState" -> WorkStates.setState(WorkType.PERIODIC_UPLOAD, WorkInfo.State.SUCCEEDED)
             else -> {
                 Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: UPLOAD_CHANGE WORKER THREAD: Worker state variable name is wrong")
             }

@@ -21,7 +21,7 @@ import timber.log.Timber
 abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQueueDao,
     UploadAnalyzedQueueDao, ChangeLogDao, AnalyzedNumberDao, CallDetailDao, ErrorQueueDao {
 
-    private val retryAmount = 5
+    private val retryAmount = 3
 
     /**
      * TODO: Double check changeFromServer(). Preliminary tests have passed.
@@ -112,8 +112,7 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
                     linkedRowID = insertAnalyzedNum(this)
 
                     if (linkedRowID < 0) {
-                        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
-                            "insertAnalyzedNum() failed! with $this")
+                        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: insertAnalyzedNum() failed! with $this")
 
                         return ErrorQueue.create(
                             instanceNumber = getUserNumber()!!,
@@ -132,8 +131,7 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
                     linkedRowID = insertCallDetailIgnore(this)
 
                     if (linkedRowID < 0) {
-                        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
-                            "insertCallDetailIgnore() failed! with $this")
+                        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: insertCallDetailIgnore() failed! with $this")
 
                         return ErrorQueue.create(
                             instanceNumber = getUserNumber()!!,
@@ -232,7 +230,7 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
                 We need to throw an Exception here so that the enclosing syncContacts() can retry
                 if the lower level changeFromClient() fails too many times.
                  */
-                if (i == retryAmount && bubbleError) throw Exception("changeFromClient() FAILED")
+                if (i == retryAmount && bubbleError) throw Exception("changeFromClient() - ${e.message}")
 
                 Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
                     "changeFromClient() RETRYING... ${e.message}")
@@ -277,8 +275,12 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
                 linkedRowID = insertChangeLog(changeLog)
             }
 
-            // No need to upload non-contact updates since they don't affect other users.
-            if (this.getChangeType() != ChangeType.NON_CONTACT_UPDATE) {
+            val changeType = this.getChangeType()
+
+            // No need to upload non-contact / parameter updates since they don't affect other users.
+            if (changeType != ChangeType.NON_CONTACT_UPDATE
+                && changeType != ChangeType.PARAMETER_UPDATE
+            ) {
                 mutexLocks[MutexType.UPLOAD_CHANGE]!!.withLock {
                     val upLog = UploadChangeQueue(linkedRowID = linkedRowID)
                     insertChangeQTU(upLog)

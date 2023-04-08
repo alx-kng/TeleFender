@@ -95,6 +95,9 @@ class CoroutineDebugWorker(
 
     val scope = CoroutineScope(Dispatchers.IO)
 
+    /**
+     * TODO: Still have problem with mutually exclusive work.
+     */
     override suspend fun doWork() : Result {
         stateVarString = inputData.getString("variableName")
         NOTIFICATION_ID = inputData.getString("notificationID")?.toInt()
@@ -102,6 +105,7 @@ class CoroutineDebugWorker(
         when (stateVarString) {
             "oneTimeDebugState" -> {
                 Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: ONE TIME DEBUG STARTED")
+                // No need to set the state again for one time workers.
 
                 // Makes sure that both debug workers aren't running at the same time.
                 if (WorkStates.mutuallyExclusiveWork(WorkType.PERIODIC_DEBUG, WorkType.ONE_TIME_DEBUG)) {
@@ -110,6 +114,15 @@ class CoroutineDebugWorker(
             }
             "periodicDebugState" -> {
                 Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: PERIODIC DEBUG STARTED")
+
+                /**
+                 * Although this may seem redundant, we need to set the state to running here,
+                 * because if we call initiatePeriodicWorker() and the worker is in its
+                 * enqueued state (interval down time), then the setState() called there will not
+                 * set the state to RUNNING due to its safety measures. However, when the periodic
+                 * worker DOES start, we still need to make sure the state accurately reflects the
+                 * actually RUNNING state of the worker.
+                 */
                 WorkStates.setState(WorkType.PERIODIC_DEBUG, WorkInfo.State.RUNNING)
 
                 // Makes sure that both debug workers aren't running at the same time.

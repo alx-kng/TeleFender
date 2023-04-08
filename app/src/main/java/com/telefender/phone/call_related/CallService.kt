@@ -5,7 +5,8 @@ import android.provider.CallLog
 import android.telecom.Call
 import android.telecom.InCallService
 import com.telefender.phone.data.tele_database.TeleCallDetails
-import com.telefender.phone.data.tele_database.background_tasks.workers.SyncScheduler
+import com.telefender.phone.data.tele_database.background_tasks.workers.CatchSyncScheduler
+import com.telefender.phone.data.tele_database.background_tasks.workers.RegularSyncScheduler
 import com.telefender.phone.gui.InCallActivity
 import com.telefender.phone.gui.IncomingCallActivity
 import com.telefender.phone.helpers.TeleHelpers
@@ -78,7 +79,7 @@ class CallService : InCallService() {
          * as voicemails are not passed to our CallService. However, it also syncs the most
          * immediate call log.
          */
-        SyncScheduler.initiateCatchSyncWorker(this.applicationContext)
+        CatchSyncScheduler.initiateCatchSyncWorker(this.applicationContext)
 
         CallManager.removeCall(call)
         super.onCallRemoved(call)

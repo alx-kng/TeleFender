@@ -24,7 +24,7 @@ object RemoteDebug {
 
     // TODO: Change this to a more reasonable time.
     const val maxIdlePeriod = 6000000L
-    const val retryAmount = 5
+    const val retryAmount = 3
 
     var isEnabled = false
     var remoteSessionID: String? = null

@@ -101,6 +101,8 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * TODO: Fully make use of onRequestPermissionsResult()
+     * TODO: Put the Do Not Disturb permission request somewhere else to make the user flow
+     *  smoother.
      *
      * Basically, when any permission request's result is returned, onRequestPermissionsResult()
      * is called.
@@ -124,6 +126,10 @@ class MainActivity : AppCompatActivity() {
         when (requestCode) {
             PermissionRequestType.CORE_ALT.requestCode -> {
                 Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CORE_ALT Permissions result!")
+
+                if (grantResults.first() == PackageManager.PERMISSION_GRANTED) {
+                    Permissions.doNotDisturbPermission(this)
+                }
             }
             PermissionRequestType.PHONE_STATE.requestCode -> {
                 Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: PHONE_STATE Permissions result!")

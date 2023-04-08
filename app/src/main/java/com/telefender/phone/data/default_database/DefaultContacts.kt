@@ -224,6 +224,9 @@ object DefaultContacts {
         return exists
     }
 
+    /**
+     * TODO: Not even sure what this is for? Please look into this...
+     */
     private fun getContactID(
         contactHelper: ContentResolver,
         number: String
@@ -255,9 +258,14 @@ object DefaultContacts {
         return -1
     }
 
+    /**
+     * TODO: Make this cleaner and add more capability please...
+     *
+     * Inserts contact into default database.
+     */
     fun insertContact(
         contactAdder: ContentResolver,
-        firstName: String?,
+        firstName: String? = null,
         mobileNumber: String?
     ): Boolean {
         val ops = ArrayList<ContentProviderOperation>()
@@ -306,6 +314,12 @@ object DefaultContacts {
         return true
     }
 
+    /**
+     * TODO: Make this cleaner and add more capability please... Currently, this delete function
+     *  is like a sledge hammer doing an eye surgery (shouldn't delete all contacts by number).
+     *
+     * Deletes contact from default database.
+     */
     fun deleteContact(
         contactHelper: ContentResolver,
         number: String

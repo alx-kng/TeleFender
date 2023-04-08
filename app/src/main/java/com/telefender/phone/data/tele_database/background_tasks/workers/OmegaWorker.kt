@@ -105,6 +105,8 @@ object OmegaScheduler {
 
 /**
  * TODO: Test OmegaWorker more
+ *
+ * TODO: Is it really necessary for periodic workers to setForeground? --> Think probably not?
  */
 class CoroutineOmegaWorker(
     val context: Context,
@@ -116,7 +118,6 @@ class CoroutineOmegaWorker(
     private var stateVarString: String? = null
 
     val scope = CoroutineScope(Dispatchers.IO)
-
     
     override suspend fun doWork() : Result {
         stateVarString = inputData.getString("variableName")
@@ -131,9 +132,19 @@ class CoroutineOmegaWorker(
         when (stateVarString) {
             "oneTimeOmegaState" -> {
                 Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA ONE TIME STARTED")
+                // No need to set the state again for one time workers.
             }
             "periodicOmegaState" -> {
                 Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA PERIODIC STARTED")
+
+                /**
+                 * Although this may seem redundant, we need to set the state to running here,
+                 * because if we call initiatePeriodicWorker() and the worker is in its
+                 * enqueued state (interval down time), then the setState() called there will not
+                 * set the state to RUNNING due to its safety measures. However, when the periodic
+                 * worker DOES start, we still need to make sure the state accurately reflects the
+                 * actually RUNNING state of the worker.
+                 */
                 WorkStates.setState(WorkType.PERIODIC_OMEGA, WorkInfo.State.RUNNING)
             }
             else -> {

@@ -89,11 +89,32 @@ class CoroutineExecuteWorker(
 
         Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: EXECUTE STARTED")
 
-        if (stateVarString == "oneTimeExecState") {
-            try {
-                setForeground(getForegroundInfo())
-            } catch(e: Exception) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", e.message!!)
+        try {
+            setForeground(getForegroundInfo())
+        } catch(e: Exception) {
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", e.message!!)
+        }
+
+        when (stateVarString) {
+            "oneTimeExecState" -> {
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: EXECUTE ONE TIME STARTED")
+                // No need to set the state again for one time workers.
+            }
+            "periodicExecState" -> {
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: EXECUTE PERIODIC STARTED")
+
+                /**
+                 * Although this may seem redundant, we need to set the state to running here,
+                 * because if we call initiatePeriodicWorker() and the worker is in its
+                 * enqueued state (interval down time), then the setState() called there will not
+                 * set the state to RUNNING due to its safety measures. However, when the periodic
+                 * worker DOES start, we still need to make sure the state accurately reflects the
+                 * actually RUNNING state of the worker.
+                 */
+                WorkStates.setState(WorkType.PERIODIC_EXEC, WorkInfo.State.RUNNING)
+            }
+            else -> {
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: EXECUTE WORKER THREAD: Worker state variable name is wrong")
             }
         }
 

@@ -3,6 +3,7 @@ package com.telefender.phone.data.tele_database.entities
 import androidx.room.*
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
+import kotlin.text.Typography.degree
 
 
 /**
@@ -92,7 +93,8 @@ enum class ChangeType(val serverString: String) {
     CONTACT_NUMBER_DELETE("DELN"),
     INSTANCE_INSERT("ADDI"),
     INSTANCE_DELETE("DELI"),
-    NON_CONTACT_UPDATE("NONU")
+    NON_CONTACT_UPDATE("NONU"),
+    PARAMETER_UPDATE("PARU")
 }
 
 /**
@@ -119,12 +121,17 @@ data class Change(
     val rawNumber : String? = null,
     val blocked : Boolean? = null, // only used for contacts
     val safeAction : String? = null, // only used for non-contacts
+    val parameters : String? = null, // only used for parameter updates
     val degree : Int? = null,
     val counterValue : Int? = null,
 ) {
 
     fun getSafeAction() : SafeAction? {
         return safeAction?.toSafeAction()
+    }
+
+    fun getParameters() : Parameters? {
+        return parameters?.toParameters()
     }
 
     fun toJson() : String {
@@ -151,6 +158,7 @@ data class Change(
             rawNumber : String? = null,
             blocked : Boolean? = null, // only used for contacts
             safeAction : SafeAction? = null, // only used for non-contacts
+            parameters: Parameters? = null,
             degree : Int? = null,
             counterValue : Int? = null,
         ) : Change {
@@ -162,6 +170,7 @@ data class Change(
                 rawNumber = rawNumber,
                 blocked = blocked,
                 safeAction = safeAction?.serverString,
+                parameters = parameters?.toJson(),
                 degree = degree,
                 counterValue = counterValue
             )
@@ -200,6 +209,21 @@ fun String.toChange() : Change? {
     return try {
         val moshi = Moshi.Builder().build()
         val adapter = moshi.adapter(Change::class.java)
+
+        adapter.serializeNulls().fromJson(this)
+    } catch (e: Exception) {
+        null
+    }
+}
+
+/**
+ * Converts JSON string to ChangeLog object.
+ * Note: Need to put try-catch around any sort of Moshi string-to-object function.
+ */
+fun String.toChangeLog() : ChangeLog? {
+    return try {
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(ChangeLog::class.java)
 
         adapter.serializeNulls().fromJson(this)
     } catch (e: Exception) {

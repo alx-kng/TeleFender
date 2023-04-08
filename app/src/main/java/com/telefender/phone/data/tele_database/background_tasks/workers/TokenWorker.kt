@@ -80,6 +80,29 @@ class CoroutineTokenWorker(
     
     override suspend fun doWork() : Result {
 
+        when (stateVarString) {
+            "oneTimeTokenState" ->  {
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: TOKEN ONE TIME STARTED")
+                // No need to set the state again for one time workers.
+            }
+            "periodicTokenState" -> {
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: TOKEN PERIODIC STARTED")
+
+                /**
+                 * Although this may seem redundant, we need to set the state to running here,
+                 * because if we call initiatePeriodicWorker() and the worker is in its
+                 * enqueued state (interval down time), then the setState() called there will not
+                 * set the state to RUNNING due to its safety measures. However, when the periodic
+                 * worker DOES start, we still need to make sure the state accurately reflects the
+                 * actually RUNNING state of the worker.
+                 */
+                WorkStates.setState(WorkType.PERIODIC_TOKEN, WorkInfo.State.RUNNING)
+            }
+            else -> {
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: TOKEN WORKER THREAD: Worker state variable name is wrong")
+            }
+        }
+
         val repository: ClientRepository = (applicationContext as App).repository
         val scope = (applicationContext as App).applicationScope
 

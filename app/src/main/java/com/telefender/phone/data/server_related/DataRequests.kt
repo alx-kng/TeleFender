@@ -24,7 +24,7 @@ import timber.log.Timber
  */
 object DataRequests {
 
-    private const val retryAmount = 5
+    private const val retryAmount = 3
 
     /**
      * TODO: Maybe we should put in error counter like the upload requests.

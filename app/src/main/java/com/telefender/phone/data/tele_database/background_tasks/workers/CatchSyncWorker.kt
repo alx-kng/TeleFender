@@ -1,23 +1,14 @@
 package com.telefender.phone.data.tele_database.background_tasks.workers
 
-
-import android.app.Notification
-import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
-import android.content.pm.ServiceInfo
 import android.database.ContentObserver
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import androidx.core.app.NotificationCompat
 import androidx.work.*
 import com.telefender.phone.App
 import com.telefender.phone.data.tele_database.TeleCallDetails
-import com.telefender.phone.data.tele_database.background_tasks.TableSynchronizer
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
-import com.telefender.phone.gui.MainActivity
 import com.telefender.phone.helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,10 +25,8 @@ import java.util.concurrent.TimeUnit
  *
  * All workers NEED TO USE application context, or else the context will probably be null.
  */
-object SyncScheduler{
+object CatchSyncScheduler{
 
-    val syncOneTag = "oneTimeSyncWorker"
-    val syncPeriodicTag = "periodicSyncWorker"
     val syncCatchTag = "catchSyncWorker"
 
     fun initiateCatchSyncWorker(context : Context) : UUID? {
@@ -58,7 +47,7 @@ object SyncScheduler{
             .setInputData(workDataOf("notificationID" to "5556"))
             .setBackoffCriteria(
                 BackoffPolicy.LINEAR,
-WorkRequest.MIN_BACKOFF_MILLIS,
+                WorkRequest.MIN_BACKOFF_MILLIS,
                 TimeUnit.MILLISECONDS)
             .addTag(syncCatchTag)
             .build()
@@ -67,65 +56,6 @@ WorkRequest.MIN_BACKOFF_MILLIS,
         WorkManager
             .getInstance(context)
             .enqueueUniqueWork(syncCatchTag, ExistingWorkPolicy.REPLACE, syncRequest)
-
-        return syncRequest.id
-    }
-
-    fun initiateOneTimeSyncWorker(context : Context) : UUID? {
-        if (!TeleHelpers.hasValidStatus(context, logRequired = true)) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: Invalid status in initiateOneTimeSyncWorker()")
-            return null
-        }
-
-        WorkStates.setState(
-            workType = WorkType.ONE_TIME_SYNC,
-            workState = WorkInfo.State.RUNNING,
-            context = context,
-            tag = syncOneTag
-        )
-
-        val syncRequest = OneTimeWorkRequestBuilder<CoroutineSyncWorker>()
-            .setInputData(workDataOf("variableName" to "oneTimeSyncState", "notificationID" to "5555"))
-            .setBackoffCriteria(
-                BackoffPolicy.LINEAR,
-                WorkRequest.MIN_BACKOFF_MILLIS,
-                TimeUnit.MILLISECONDS)
-            .addTag(syncOneTag)
-            .build()
-
-        WorkManager
-            .getInstance(context)
-            .enqueueUniqueWork(syncOneTag, ExistingWorkPolicy.KEEP, syncRequest)
-
-        return syncRequest.id
-    }
-
-    fun initiatePeriodicSyncWorker(context : Context) : UUID? {
-        if (!TeleHelpers.hasValidStatus(context, logRequired = true)) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: Invalid status in initiatePeriodicSyncWorker()")
-            return null
-        }
-
-        WorkStates.setState(
-            workType = WorkType.PERIODIC_SYNC,
-            workState = WorkInfo.State.RUNNING,
-            context = context,
-            tag = syncPeriodicTag
-        )
-
-        val syncRequest = PeriodicWorkRequestBuilder<CoroutineSyncWorker>(1, TimeUnit.HOURS)
-            .setInputData(workDataOf("variableName" to "periodicSyncState", "notificationID" to "6666"))
-            .setBackoffCriteria(
-                BackoffPolicy.LINEAR,
-WorkRequest.MIN_BACKOFF_MILLIS,
-                TimeUnit.MILLISECONDS)
-            .setInitialDelay(10, TimeUnit.SECONDS)
-            .addTag(syncPeriodicTag)
-            .build()
-
-        WorkManager
-            .getInstance(context)
-            .enqueueUniquePeriodicWork(syncPeriodicTag, ExistingPeriodicWorkPolicy.KEEP, syncRequest)
 
         return syncRequest.id
     }
@@ -147,7 +77,7 @@ class CoroutineCatchSyncWorker(
     private var callLogObserverSync: CallLogObserverSync =
         CallLogObserverSync(Handler(Looper.getMainLooper()), context, scope)
 
-    
+
     override suspend fun doWork() : Result {
         NOTIFICATION_ID = inputData.getString("notificationID")?.toInt()
 
@@ -246,7 +176,7 @@ class CoroutineCatchSyncWorker(
         val context: Context,
         val scope: CoroutineScope,
         private val logObserver: CallLogObserverSync
-        ): PropertyChangeListener {
+    ): PropertyChangeListener {
 
         override fun propertyChange(p0: PropertyChangeEvent?) {
             if (p0?.newValue == WorkType.CATCH_SYNC) {
@@ -261,60 +191,5 @@ class CoroutineCatchSyncWorker(
                 }
             }
         }
-    }
-}
-
-class CoroutineSyncWorker(
-    val context: Context,
-    params: WorkerParameters
-) : CoroutineWorker(context, params) {
-
-    var NOTIFICATION_ID : Int? = -1
-    val CHANNEL_ID = "alxkng5737"
-    var stateVarString: String? = null
-
-    
-    override suspend fun doWork() : Result {
-        stateVarString = inputData.getString("variableName")
-        NOTIFICATION_ID = inputData.getString("notificationID")?.toInt()
-
-        if (stateVarString == "oneTimeSyncState") {
-            try {
-                setForeground(getForegroundInfo())
-            } catch(e: Exception) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", e.message!!)
-            }
-        }
-
-        val repository = (applicationContext as App).repository
-        val database = (applicationContext as App).database
-
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SYNC STARTED")
-
-        TableSynchronizer.syncContacts(context, database, context.contentResolver)
-        TableSynchronizer.syncCallLogs(context, repository, context.contentResolver)
-
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SYNC ENDED")
-
-        when (stateVarString) {
-            "oneTimeSyncState" ->  WorkStates.setState(WorkType.ONE_TIME_SYNC, WorkInfo.State.SUCCEEDED)
-            "periodicSyncState" -> WorkStates.setState(WorkType.PERIODIC_SYNC, WorkInfo.State.SUCCEEDED)
-            else -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SYNC WORKER THREAD: Worker state variable name is wrong")
-            }
-        }
-
-        return Result.success()
-    }
-
-    override suspend fun getForegroundInfo() : ForegroundInfo {
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SYNC WORKER FOREGROUND")
-
-        return ForegroundInfoCreator.createForegroundInfo(
-            applicationContext = applicationContext,
-            notificationID = NOTIFICATION_ID!!,
-            channelID = CHANNEL_ID,
-            contextText = "Syncing..."
-        )
     }
 }

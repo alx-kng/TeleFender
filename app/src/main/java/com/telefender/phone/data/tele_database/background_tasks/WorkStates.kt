@@ -1,6 +1,7 @@
 package com.telefender.phone.data.tele_database.background_tasks
 
 import android.content.Context
+import androidx.constraintlayout.motion.widget.Debug.getState
 import androidx.work.WorkInfo
 import com.telefender.phone.data.tele_database.background_tasks.workers.WorkManagerHelper
 import com.telefender.phone.helpers.TeleHelpers
@@ -83,10 +84,15 @@ object WorkStates {
     private val waiters: Array<Int> = Array(WorkType.values().size) {0}
 
     /**
-     * For now, we'll stick to using one mutex, since only one worker should really be working at
-     * a time.
+     * For now, we'll stick to using one mutex, since the number of waiters doesn't usually change
+     * that quickly.
      */
-    private val mutex = Mutex()
+    private val waiterMutex = Mutex()
+
+    /**
+     * Used by mutuallyExclusiveWork().
+     */
+    private val workMutex = Mutex()
 
     /***********************************************************************************************
      * TODO: Clean up edge cases. Ex) what if worker hasn't started yet before waiter???
@@ -115,7 +121,7 @@ object WorkStates {
             return false
         }
 
-        mutex.withLock { changeNumWaiters(workType, 1) }
+        waiterMutex.withLock { changeNumWaiters(workType, 1) }
 
         state = getState(workType)
         while(state != WorkInfo.State.SUCCEEDED && state != null) {
@@ -137,7 +143,7 @@ object WorkStates {
          *      from running indefinitely.
          */
         val success = state == WorkInfo.State.SUCCEEDED
-        mutex.withLock { changeNumWaiters(workType, -1) }
+        waiterMutex.withLock { changeNumWaiters(workType, -1) }
         if (getNumWaiters(workType) == 0 || (!success && certainFinish)) {
             setState(workType, null)
         }
@@ -150,16 +156,34 @@ object WorkStates {
      * running, and [newWork] is the work that you want to stop if [originalWork] is already running.
      * Returns true if [originalWork] is already running.
      */
-    fun mutuallyExclusiveWork(originalWork: WorkType, newWork: WorkType) : Boolean{
-        if (getState(originalWork) == WorkInfo.State.RUNNING) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $newWork ENDED - $originalWork RUNNING")
-            setState(newWork, WorkInfo.State.SUCCEEDED)
-            return true
-        }
+    suspend fun mutuallyExclusiveWork(originalWork: WorkType, newWork: WorkType) : Boolean {
+        /*
+        Mutex prevents the following scenario. Say you have one-time and periodic workers that
+        should not run at the same time (e.g., debug workers). Their states are both set to RUNNING
+        before the workers actually begin. In the very rare case that both make it past the "if"
+        statement (since both see that the other is running), both workers will be canceled. By
+        locking the code, we can make sure that the states are accurate when checked.
+         */
+        workMutex.withLock {
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: mutuallyExclusiveWork() - %s | %s",
+                "originalWork = $originalWork, state = ${getState(originalWork)}",
+                "newWork = $newWork, state = ${getState(newWork)}")
 
-        return false
+            if (getState(originalWork) == WorkInfo.State.RUNNING) {
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $newWork ENDED - $originalWork RUNNING")
+                setState(newWork, WorkInfo.State.SUCCEEDED)
+                return true
+            }
+
+            return false
+        }
     }
 
+    /**
+     * TODO: Seems to be some issues here.
+     *
+     * Sets the state of a certain WorkType.
+     */
     fun setState(
         workType: WorkType,
         workState: WorkInfo.State?,
@@ -167,7 +191,7 @@ object WorkStates {
         tag: String? = null
     ) {
         if (workState !in allowedStates && workState != null) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: setState() - invalid workState")
+            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: setState() for $workType - $workState is an invalid workState")
             return
         }
 
@@ -181,10 +205,11 @@ object WorkStates {
             && context != null
             && tag != null
         ) {
-            val state = WorkManagerHelper.getUniqueWorkerState(context, tag)
-            if (state == WorkInfo.State.RUNNING || state == WorkInfo.State.ENQUEUED) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
-                    "setState() - State not set! Worker already running / enqueued!")
+            val actualState = WorkManagerHelper.getUniqueWorkerState(context, tag)
+            if (actualState == WorkInfo.State.RUNNING || actualState == WorkInfo.State.ENQUEUED) {
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s | %s",
+                    "setState() for $workType - State not set! Worker already running / enqueued!",
+                    "If this coming from a periodic worker, the worker is most likely in it's ENQUEUED state (interval down time)")
                 return
             }
         }

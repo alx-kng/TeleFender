@@ -22,7 +22,7 @@ import java.util.*
 
 object TableSynchronizer {
 
-    private const val retryAmount = 5
+    private const val retryAmount = 3
     private const val checkBackPeriod = 5 * 60000
 
     /**
