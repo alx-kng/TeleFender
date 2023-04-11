@@ -87,11 +87,15 @@ class MainActivity : AppCompatActivity() {
         if (result.resultCode == Activity.RESULT_OK) {
             /*
             Due to a bug that prevents the default dialer from receiving the READ_PHONE_NUMBERS
-            permission (SDK > 29) automatically, we need to request the permission separately.
-            Requesting the permission separately should grant the permission to the default dialer
-            without bringing up a dialog to the user.
+            permission (SDK > 29 = Android 10) automatically, we need to request the permission
+            separately. Requesting the permission separately should grant the permission to the
+            default dialer without bringing up a dialog to the user.
              */
-            Permissions.phoneStatePermissions(this)
+            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.Q) {
+                Permissions.phoneStatePermissions(this)
+            } else {
+                Permissions.doNotDisturbPermission(this)
+            }
         } else {
             Permissions.coreAltPermissions(this)
         }
@@ -125,9 +129,12 @@ class MainActivity : AppCompatActivity() {
             PermissionRequestType.CORE_ALT.requestCode -> {
                 Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CORE_ALT Permissions result!")
 
-                if (grantResults.first() == PackageManager.PERMISSION_GRANTED) {
-                    Permissions.doNotDisturbPermission(this)
+                // Makes sure all permissions in CORE_ALT were granted.
+                for (result in grantResults) {
+                    if (result != PackageManager.PERMISSION_GRANTED) return
                 }
+
+                Permissions.doNotDisturbPermission(this)
             }
             PermissionRequestType.PHONE_STATE.requestCode -> {
                 Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: PHONE_STATE Permissions result!")

@@ -121,7 +121,7 @@ object Permissions {
     /**
      * Unlike the other permissions, we need to check if the app is both the default dialer and has
      * the phone state permission. This is due to a bug in Android that prevents the default dialer
-     * from immediately receiving the READ_PHONE_NUMBERS permission (SDK > 29).
+     * from immediately receiving the READ_PHONE_NUMBERS permission (SDK > 29 = Android 10).
      */
     fun hasPhoneStatePermissions(context: Context) : Boolean {
         return isDefaultDialer(context)
