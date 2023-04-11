@@ -72,16 +72,13 @@ class CallHistoryFragment : Fragment() {
             act.displayUpButton(true)
             act.setTitle("")
             act.displayMoreMenu(false)
-            act.displayEditOrAdd(true, isContact)
+            act.displayAppBarTextButton(show = true, text = if (isContact) "Edit" else "Add")
         }
     }
 
     private fun revertAppbar() {
         if (activity is MainActivity) {
-            val act = (activity as MainActivity)
-            act.displayUpButton(false)
-            act.displayMoreMenu(true)
-            act.displayEditOrAdd(false, false)
+            (activity as MainActivity).revertAppbar()
         }
     }
 }

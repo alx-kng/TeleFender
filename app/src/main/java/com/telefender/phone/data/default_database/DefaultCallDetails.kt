@@ -2,14 +2,10 @@ package com.telefender.phone.data.default_database
 
 import android.content.Context
 import android.database.Cursor
-import android.os.Build
 import android.provider.CallLog
-import androidx.annotation.RequiresApi
 import com.telefender.phone.data.tele_database.entities.CallDetail
-import com.telefender.phone.helpers.TeleHelpers
-import kotlinx.coroutines.CoroutineScope
+import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 
@@ -22,11 +18,8 @@ import timber.log.Timber
 object DefaultCallDetails{
 
     /**
-     * TODO: Use cached normalizedNumber
-     *
      * Returns list of CallDetail objects using contentResolver.query()
      */
-    
     suspend fun getDefaultCallDetails(context: Context): MutableList<CallDetail> {
 
         return withContext(Dispatchers.IO) {

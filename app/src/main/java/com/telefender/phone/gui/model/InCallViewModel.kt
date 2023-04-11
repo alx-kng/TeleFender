@@ -5,7 +5,7 @@ import androidx.lifecycle.*
 import com.telefender.phone.call_related.CallManager
 import com.telefender.phone.call_related.callDurationSEC
 import com.telefender.phone.call_related.getStateCompat
-import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

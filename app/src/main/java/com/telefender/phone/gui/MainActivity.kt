@@ -1,6 +1,5 @@
 package com.telefender.phone.gui
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -10,10 +9,10 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.ContentObserver
 import android.os.Build
-import android.os.Build.VERSION_CODES.P
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.ContactsContract
 import android.telecom.TelecomManager
 import android.view.Menu
 import android.view.MenuItem
@@ -23,16 +22,14 @@ import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.net.toUri
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import com.telefender.phone.App
 import com.telefender.phone.R
-import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.databinding.ActivityMainBinding
 import com.telefender.phone.gui.model.*
-import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.TeleHelpers
 import com.telefender.phone.permissions.PermissionRequestType
 import com.telefender.phone.permissions.Permissions
 import kotlinx.coroutines.*
@@ -72,6 +69,7 @@ class MainActivity : AppCompatActivity() {
     private val dialerViewModel : DialerViewModel by viewModels()
 
     private var callLogObserverUI: CallLogObserverUI? = null
+    private var contactObserver: ContactsObserver? = null
 
     /**
      * TODO: Should request regular call log / phone permissions if user denies default dialer
@@ -157,85 +155,15 @@ class MainActivity : AppCompatActivity() {
         setSupportActionBar(binding.topAppBar)
         displayMoreMenu(false)
 
-        /**
-         * TODO Make dialog to explain reason for Do not disturb access.
-         *
-         * Offers to replace default dialer, automatically makes requesting permissions
-         * separately unnecessary
-         */
         requestDefaultDialer()
 
         notificationChannelCreator()
 
-        /**
-         * Makes RecentsFragment more smooth on first enter by preloading call logs in MainActivity.
-         * If this is still too slow, you can consider querying only a portion of the call logs.
-         */
-        if (Permissions.hasPermissions(this, arrayOf(
-                android.Manifest.permission.READ_CALL_LOG,
-                android.Manifest.permission.READ_CONTACTS))
-        ) {
-            /*
-             *Dummy methods are called so that the ViewModels are initialized. Preloading of call
-             *logs and contacts occurs within the init{} blocks of the ViewModels.
-             */
-            recentsViewModel.activateDummy()
-            contactsViewModel.activateDummy()
+        setupObservers()
 
-            // Registers UI Call log observer (defined and unregistered in MainActivity)
-            callLogObserverUI = CallLogObserverUI(Handler(Looper.getMainLooper()), recentsViewModel)
-            this.applicationContext.contentResolver.registerContentObserver(
-                android.provider.CallLog.Calls.CONTENT_URI,
-                false,
-                callLogObserverUI!!
-            )
-        }
+        setupBottomNavigation()
 
-        /**
-         * We use this instead of setUpWithNavController() because this allows us to use global
-         * actions to each of the core fragments (e.g., Recents, Contacts, Dialer). As a result,
-         * touching the bottom navigation buttons always navigates to corresponding screen. The
-         * popBackStack() makes sure that there is only one core fragment in the back stack.
-         */
-        binding.bottomNavigation.setOnItemSelectedListener { item ->
-            when (item.itemId) {
-                R.id.recentsFragment -> {
-                    navController.popBackStack()
-                    navController.navigate(R.id.action_global_recentsFragment)
-                }
-                R.id.contactsFragment -> {
-                    navController.popBackStack()
-                    navController.navigate(R.id.action_global_contactsFragment)
-                }
-                R.id.dialerFragment -> {
-                    navController.popBackStack()
-                    navController.navigate(R.id.action_global_dialerFragment)
-                }
-            }
-            true
-        }
-        binding.bottomNavigation.selectedItemId = R.id.dialerFragment
-
-        /**
-         * TODO: Back button breaks.
-         *
-         * Needed to override onBackPressed() so that we could change the bottom navigation
-         * selected item to the shown fragment. Otherwise, when you press back button, the
-         * fragment shown changes, but the bottom selected item doesn't.
-         *
-         * NOTE: The isEnabled pattern prevents onBackPressed() from invoking the current callback,
-         * which causes an infinite loop (more in Android - General Notes).
-         */
-        onBackPressedDispatcher.addCallback(this, object: OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: Back pressed in MainActivity!")
-
-                isEnabled = false
-                onBackPressedDispatcher.onBackPressed()
-                updateBottomHighlight()
-                isEnabled= true
-            }
-        })
+        setupBackPress()
     }
 
     /**
@@ -245,45 +173,20 @@ class MainActivity : AppCompatActivity() {
      */
     override fun onStart() {
         super.onStart()
+
         updateBottomHighlight()
 
-        /**
-         * Repository / database needs to call a query first in order to initialize database,
-         * in which the ClientDatabase getDatabase is called
-         */
-        val repository: ClientRepository = (application as App).repository
-
-        (application as App).applicationScope.launch {
-            repository.dummyQuery()
-        }
+        initializeDatabase()
 
         /**
          * Registers UI Call log observer if not registered before (in case permissions weren't
          * granted before).
          */
-        if (Permissions.hasPermissions(this, arrayOf(
-                android.Manifest.permission.READ_CALL_LOG,
-                android.Manifest.permission.READ_CONTACTS))
-            && callLogObserverUI == null
-        ) {
-            // Registers UI Call log observer (defined and unregistered in MainActivity)
-            callLogObserverUI = CallLogObserverUI(Handler(Looper.getMainLooper()), recentsViewModel)
-            this.applicationContext.contentResolver.registerContentObserver(
-                android.provider.CallLog.Calls.CONTENT_URI,
-                false,
-                callLogObserverUI!!
-            )
-        }
+        setupObservers(onCreate = false)
     }
 
     override fun onDestroy() {
-        /*
-        Unregisters call log observer for UI. Might be null depending on whether permissions
-        were given.
-         */
-        callLogObserverUI?.let {
-            this.applicationContext.contentResolver.unregisterContentObserver(it)
-        }
+        unregisterObservers()
 
         /*
         Seems like it needs to be after other code so that MainActivity isn't destroyed too early.
@@ -325,6 +228,11 @@ class MainActivity : AppCompatActivity() {
      *  Note that this issue doesn't occur on the very first installation of the app.
      *  -
      *  See if we can find a better solution.
+     *
+     * TODO Make dialog to explain reason for Do not disturb access.
+     *
+     * Offers to replace default dialer, automatically makes requesting permissions
+     * separately unnecessary.
      */
     private fun requestDefaultDialer() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -347,28 +255,133 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    @SuppressLint("MissingPermission")
-    fun makeCallParam(number: String) {
-        try {
-            val telecomManager = getSystemService(Context.TELECOM_SERVICE) as TelecomManager
-            val uri = "tel:${number}".toUri()
-            telecomManager.placeCall(uri, null)
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OUTGOING CALL TO $number")
-        } catch (e: Exception) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: OUTGOING CALL FAILED!")
+    private fun notificationChannelCreator() {
+        // Create the NotificationChannel
+        val name = getString(R.string.channel_name)
+        val descriptionText = getString(R.string.channel_description)
+        val importance = NotificationManager.IMPORTANCE_DEFAULT
+        val mChannel = NotificationChannel(CHANNEL_ID, name, importance)
+        mChannel.description = descriptionText
+        mChannel.setSound(null, null)
+        // Register the channel with the system; you can't change the importance
+        // or other notification behaviors after this
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.createNotificationChannel(mChannel)
+    }
+
+    /**
+     * Sets up the call log and contact observers, which drive the UI updates for RecentsFragment
+     * and ContactsFragment. Also, we make the fragments more smooth by preloading call logs and
+     * contacts in the MainActivity. If this is still too slow, you can consider querying only a
+     * portion of the call logs.
+     */
+    private fun setupObservers(onCreate: Boolean = true) {
+        if (Permissions.hasPermissions(this, arrayOf(
+                android.Manifest.permission.READ_CALL_LOG,
+                android.Manifest.permission.READ_CONTACTS))
+        ) {
+            /*
+             *Dummy methods are called so that the ViewModels are initialized. Preloading of call
+             *logs and contacts occurs within the init{} blocks of the ViewModels.
+             */
+            recentsViewModel.activateDummy()
+            contactsViewModel.activateDummy()
+
+            // Registers UI Call log observer (defined and unregistered in MainActivity)
+            if (onCreate || callLogObserverUI == null) {
+                callLogObserverUI = CallLogObserverUI(Handler(Looper.getMainLooper()), recentsViewModel)
+                this.applicationContext.contentResolver.registerContentObserver(
+                    android.provider.CallLog.Calls.CONTENT_URI,
+                    false,
+                    callLogObserverUI!!
+                )
+            }
+
+            // Registers Contacts observer (defined and unregistered in MainActivity)
+            if (onCreate || contactObserver == null) {
+                contactObserver = ContactsObserver(Handler(Looper.getMainLooper()), contactsViewModel)
+                this.applicationContext.contentResolver.registerContentObserver(
+                    ContactsContract.Contacts.CONTENT_URI,
+                    true,
+                    contactObserver!!
+                )
+            }
         }
     }
 
-    @SuppressLint("MissingPermission")
-    fun makeCallNoParam() {
-        try {
-            val telecomManager = getSystemService(Context.TELECOM_SERVICE) as TelecomManager
-            val number = dialerViewModel.dialNumber.value
-            val uri = "tel:${number}".toUri()
-            telecomManager.placeCall(uri, null)
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OUTGOING CALL TO $number")
-        } catch (e: Exception) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: OUTGOING CALL FAILED!")
+    /**
+     * We use this instead of setUpWithNavController() because this allows us to use global
+     * actions to each of the core fragments (e.g., Recents, Contacts, Dialer). As a result,
+     * touching the bottom navigation buttons always navigates to corresponding screen. The
+     * popBackStack() makes sure that there is only one core fragment in the back stack.
+     */
+    private fun setupBottomNavigation() {
+        binding.bottomNavigation.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.recentsFragment -> {
+                    navController.popBackStack()
+                    navController.navigate(R.id.action_global_recentsFragment)
+                }
+                R.id.contactsFragment -> {
+                    navController.popBackStack()
+                    navController.navigate(R.id.action_global_contactsFragment)
+                }
+                R.id.dialerFragment -> {
+                    navController.popBackStack()
+                    navController.navigate(R.id.action_global_dialerFragment)
+                }
+            }
+            true
+        }
+        binding.bottomNavigation.selectedItemId = R.id.dialerFragment
+    }
+
+    /**
+     * TODO: Back button breaks.
+     *
+     * Needed to override onBackPressed() so that we could change the bottom navigation
+     * selected item to the shown fragment. Otherwise, when you press back button, the
+     * fragment shown changes, but the bottom selected item doesn't.
+     *
+     * NOTE: The isEnabled pattern prevents onBackPressed() from invoking the current callback,
+     * which causes an infinite loop (more in Android - General Notes).
+     */
+    private fun setupBackPress() {
+        onBackPressedDispatcher.addCallback(this, object: OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: Back pressed in MainActivity!")
+
+                isEnabled = false
+                onBackPressedDispatcher.onBackPressed()
+                updateBottomHighlight()
+                isEnabled= true
+            }
+        })
+    }
+
+    /**
+     * Repository / database needs to call a query first in order to initialize database,
+     * in which the ClientDatabase getDatabase is called
+     */
+    private fun initializeDatabase() {
+        val app = (application as App)
+
+        app.applicationScope.launch {
+            app.repository.dummyQuery()
+        }
+    }
+
+    /**
+     * Unregisters call log and contact observers for UI. Might be null depending on whether
+     * permissions were granted.
+     */
+    private fun unregisterObservers() {
+        callLogObserverUI?.let {
+            this.applicationContext.contentResolver.unregisterContentObserver(it)
+        }
+
+        contactObserver?.let {
+            this.applicationContext.contentResolver.unregisterContentObserver(it)
         }
     }
 
@@ -380,14 +393,18 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun displayEditOrAdd(show: Boolean, isContact: Boolean) {
+    fun displayAppBarTextButton(show: Boolean, text: String) {
         if (show) {
-            binding.editOrAdd.visibility = View.VISIBLE
+            binding.appBarTextButton.visibility = View.VISIBLE
         } else {
-            binding.editOrAdd.visibility = View.GONE
+            binding.appBarTextButton.visibility = View.GONE
             return
         }
-        binding.editOrAdd.text = if (isContact) "Edit" else "Add"
+        binding.appBarTextButton.text = text
+    }
+
+    fun setEditOrAddOnClickListener(onClickListener: (View)->Unit) {
+        binding.appBarTextButton.setOnClickListener(onClickListener)
     }
 
     fun displayMoreMenu(show: Boolean) {
@@ -415,12 +432,31 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
+     * Basically reverts the app bar to the original UI for each base fragment (e.g., Recents).
+     * Be very careful if you call this in a child fragment (e.g., EditContact) to revert the app
+     * bar. Specifically, if you call this after super.onDestroyView(), revertAppBar() might be
+     * called AFTER the setupAppBar() of the previous fragment, which will cause the app bar to
+     * not contain the expected views.
+     *
+     * NOTE: It's not necessary to use this function in every fragment.
+     */
+    fun revertAppbar() {
+        displayUpButton(false)
+        displayMoreMenu(true)
+        displayAppBarTextButton(show = false, text = "")
+        setEditOrAddOnClickListener {  } // Resets onClick listener to do nothing.
+    }
+
+    /**
      * TODO: See why observer is called multiple times after a single call ends. Doesn't seem to
      *  affect the UI at the moment but we should look out for it. I think the reason is that since
      *  we are observing Calls.CONTENT_URI (might not have any other option), every change to
      *  Default call logs (like number, direction, location, etc.) notifies the observer.
      *
      * TODO: Observer isn't being unregistered correctly!!!!!
+     *
+     * TODO: Remove id from CallLogObserverUI. Currently used to check if observer is correctly
+     *  unregistered or not.
      *
      * This CallLogObserver observes call logs purely for UI changes in RecentsFragments. The
      * observer is registered and unregistered along with MainActivity's lifecycle.
@@ -430,10 +466,6 @@ class MainActivity : AppCompatActivity() {
         private val recentsViewModel: RecentsViewModel
     ) : ContentObserver(handler) {
 
-        /*
-        TODO: Remove id from CallLogObserverUI. Currently used to check if observer is correctly
-         unregistered or not.
-         */
         private var id = (0..10000).random()
 
         override fun deliverSelfNotifications(): Boolean {
@@ -448,20 +480,25 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun notificationChannelCreator() {
-        // Create the NotificationChannel
-        val name = getString(R.string.channel_name)
-        val descriptionText = getString(R.string.channel_description)
-        val importance = NotificationManager.IMPORTANCE_DEFAULT
-        val mChannel = NotificationChannel(CHANNEL_ID, name, importance)
-        mChannel.description = descriptionText
-        mChannel.setSound(null, null)
-        // Register the channel with the system; you can't change the importance
-        // or other notification behaviors after this
-        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.createNotificationChannel(mChannel)
-    }
+    /**
+     * Observes changes to default contacts and updates the UI accordingly.
+     */
+    class ContactsObserver(
+        handler: Handler,
+        private val contactsViewModel: ContactsViewModel
+    ) : ContentObserver(handler) {
 
+        override fun deliverSelfNotifications(): Boolean {
+            return true
+        }
+
+        override fun onChange(selfChange: Boolean) {
+            super.onChange(selfChange)
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: ContactsFragment - New Contact!")
+
+            contactsViewModel.updateContacts()
+        }
+    }
     
     companion object {
         fun start(context: Context) {

@@ -5,10 +5,10 @@ import com.telefender.phone.App
 import com.telefender.phone.data.server_related.RequestWrappers
 import com.telefender.phone.data.tele_database.background_tasks.workers.SMSVerifyScheduler
 import com.telefender.phone.data.tele_database.entities.*
-import com.telefender.phone.helpers.TeleHelpers
-import com.telefender.phone.helpers.daysToMilli
-import com.telefender.phone.helpers.hoursToMilli
-import com.telefender.phone.helpers.minutesToMilli
+import com.telefender.phone.misc_helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.daysToMilli
+import com.telefender.phone.misc_helpers.hoursToMilli
+import com.telefender.phone.misc_helpers.minutesToMilli
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

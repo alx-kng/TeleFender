@@ -14,8 +14,7 @@ import androidx.lifecycle.Observer
 import com.telefender.phone.call_related.*
 import com.telefender.phone.data.tele_database.TeleCallDetails
 import com.telefender.phone.databinding.ActivityIncomingCallBinding
-import com.telefender.phone.helpers.TeleHelpers
-import com.telefender.phone.permissions.Permissions
+import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.*
 import timber.log.Timber
 

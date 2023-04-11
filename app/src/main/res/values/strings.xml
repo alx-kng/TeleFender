@@ -7,10 +7,11 @@
     <string name="next">Next</string>
     <string name="previous">Previous</string>
 
-    <string name="recents">Recents</string>
-    <string name="contacts">Contacts</string>
-    <string name="dialer">Dialer</string>
-    <string name="call_history">Call History</string>
+    <string name="recents_title">Recents</string>
+    <string name="contacts_title">Contacts</string>
+    <string name="edit_contact_title">Edit Contact</string>
+    <string name="dialer_title">Dialer</string>
+    <string name="call_history_title">Call History</string>
     <string name="keypad">Keypad</string>
     <string name="more_app_bar">More</string>
 

@@ -6,13 +6,12 @@ import android.content.Context
 import android.database.Cursor
 import android.provider.CallLog
 import com.telefender.phone.data.default_database.DefaultContacts
-import com.telefender.phone.data.default_database.DefaultContacts.getContactNumberCursor
 import com.telefender.phone.data.tele_database.ClientDatabase
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.entities.*
-import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.withLock
 import timber.log.Timber

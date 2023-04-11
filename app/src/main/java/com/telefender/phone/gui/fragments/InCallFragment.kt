@@ -16,7 +16,7 @@ import com.telefender.phone.databinding.FragmentInCallBinding
 import com.telefender.phone.gui.InCallActivity
 import com.telefender.phone.gui.IncomingCallActivity
 import com.telefender.phone.gui.model.InCallViewModel
-import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.TeleHelpers
 import timber.log.Timber
 
 class InCallFragment : Fragment() {

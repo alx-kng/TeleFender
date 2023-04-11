@@ -6,7 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.telefender.phone.data.tele_database.entities.Parameters
 import com.telefender.phone.data.tele_database.entities.ParametersWrapper
-import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.TeleHelpers
 
 
 @Dao

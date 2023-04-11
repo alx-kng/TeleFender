@@ -8,7 +8,7 @@ import com.telefender.phone.call_related.createTime
 import com.telefender.phone.call_related.number
 import com.telefender.phone.data.tele_database.background_tasks.TableSynchronizer
 import com.telefender.phone.data.tele_database.entities.CallDetail
-import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay

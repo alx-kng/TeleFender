@@ -1,4 +1,4 @@
-package com.telefender.phone.helpers
+package com.telefender.phone.misc_helpers
 
 import com.telefender.phone.data.tele_database.ClientDatabase
 import com.telefender.phone.data.tele_database.ClientRepository

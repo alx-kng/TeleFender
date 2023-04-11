@@ -1,16 +1,12 @@
 package com.telefender.phone.gui.fragments
 
-import android.database.ContentObserver
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.provider.ContactsContract
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.navigation.fragment.findNavController
 import com.telefender.phone.R
 import com.telefender.phone.databinding.FragmentContactsBinding
 import com.telefender.phone.gui.MainActivity
@@ -18,7 +14,8 @@ import com.telefender.phone.gui.adapters.ContactsAdapter
 import com.telefender.phone.gui.decoration.ContactHeaderDecoration
 import com.telefender.phone.gui.model.ContactsViewModel
 import com.telefender.phone.gui.model.ContactsViewModelFactory
-import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.TeleHelpers
+import timber.log.Timber
 
 
 /**
@@ -46,7 +43,8 @@ class ContactsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        setAppBarTitle(getString(R.string.contacts))
+        setupAppBar()
+        showAppBar()
 
         val recyclerView = binding.contactsRecyclerView
 
@@ -67,23 +65,25 @@ class ContactsFragment : Fragment() {
         contactsViewModel.contacts.observe(viewLifecycleOwner) {
             adapter.submitList(contactsViewModel.dividedContacts)
         }
-
-        // TODO: Handle case where permissions aren't given (or default dialer isn't granted).
-        requireActivity().applicationContext.contentResolver.registerContentObserver(
-            ContactsContract.Contacts.CONTENT_URI,
-            true,
-            ContactsObserver(Handler(Looper.getMainLooper()), contactsViewModel)
-        )
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+        revertAppbar()
     }
 
-    private fun setAppBarTitle(title: String) {
+    private fun setupAppBar() {
         if (activity is MainActivity) {
-            (activity as MainActivity).setTitle(title)
+            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: ContactsFragment - setupAppBar()!")
+
+            val act = activity as MainActivity
+            act.setTitle(getString(R.string.contacts_title))
+            act.displayAppBarTextButton(show = true, text = "Add")
+            act.setEditOrAddOnClickListener {
+                val action = ContactsFragmentDirections.actionContactsFragmentToEditContactFragment()
+                findNavController().navigate(action)
+            }
         }
     }
 
@@ -93,20 +93,9 @@ class ContactsFragment : Fragment() {
         }
     }
 
-    class ContactsObserver(
-        handler: Handler,
-        private val contactsViewModel: ContactsViewModel
-    ) : ContentObserver(handler) {
-
-        override fun deliverSelfNotifications(): Boolean {
-            return true
-        }
-
-        override fun onChange(selfChange: Boolean) {
-            super.onChange(selfChange)
-            Log.i(TeleHelpers.DEBUG_LOG_TAG, "NEW CONTACT")
-
-            contactsViewModel.updateContacts()
+    private fun revertAppbar() {
+        if (activity is MainActivity) {
+            (activity as MainActivity).revertAppbar()
         }
     }
 }

@@ -1,9 +1,8 @@
 package com.telefender.phone.gui.model
 
-import android.util.Log
 import android.view.View
 import androidx.lifecycle.*
-import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.TeleHelpers
 import timber.log.Timber
 
 class DialerViewModel : ViewModel() {

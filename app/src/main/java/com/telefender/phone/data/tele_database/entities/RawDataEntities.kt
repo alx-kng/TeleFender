@@ -8,7 +8,7 @@ import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import com.telefender.phone.gui.adapters.CallDetailItem
 import com.telefender.phone.gui.model.GroupedCallDetail
-import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.TeleHelpers
 
 
 /**

@@ -2,7 +2,7 @@ package com.telefender.phone.data.tele_database.client_daos
 
 import androidx.room.*
 import com.telefender.phone.data.tele_database.entities.StoredMap
-import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.TeleHelpers
 
 @Dao
 interface StoredMapDao {

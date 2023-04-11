@@ -1,4 +1,4 @@
-package com.telefender.phone.helpers
+package com.telefender.phone.misc_helpers
 
 // Converts months (given as receiver Int) to milliseconds.
 fun Int.monthsToMilli() : Long {

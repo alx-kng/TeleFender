@@ -24,7 +24,19 @@
         android:id="@+id/contactsFragment"
         android:name="com.telefender.phone.gui.fragments.ContactsFragment"
         android:label="ContactsFragment"
-        tools:layout="@layout/fragment_contacts"/>
+        tools:layout="@layout/fragment_contacts">
+        <action
+            android:id="@+id/action_contactsFragment_to_editContactFragment"
+            app:destination="@id/editContactFragment"
+            />
+    </fragment>
+
+    <fragment
+        android:id="@+id/editContactFragment"
+        android:name="com.telefender.phone.gui.fragments.EditContactFragment"
+        android:label="EditContactFragment"
+        tools:layout="@layout/fragment_edit_contact"
+        />
 
     <fragment
         android:id="@+id/dialerFragment"

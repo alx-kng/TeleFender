@@ -4,12 +4,12 @@
         android:id="@+id/recentsFragment"
         android:enabled="true"
         android:icon="@drawable/ic_baseline_access_time_24"
-        android:title="@string/recents"/>
+        android:title="@string/recents_title"/>
     <item
         android:id="@+id/contactsFragment"
         android:enabled="true"
         android:icon="@drawable/ic_baseline_person_24"
-        android:title="@string/contacts"/>
+        android:title="@string/contacts_title"/>
     <item
         android:id="@+id/dialerFragment"
         android:enabled="true"

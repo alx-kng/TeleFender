@@ -9,13 +9,14 @@ import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import com.telefender.phone.App
 import com.telefender.phone.R
+import com.telefender.phone.call_related.CallHelpers
 import com.telefender.phone.databinding.FragmentRecentsBinding
 import com.telefender.phone.gui.MainActivity
 import com.telefender.phone.gui.adapters.RecentsAdapter
 import com.telefender.phone.gui.model.RecentsViewModel
 import com.telefender.phone.gui.model.RecentsViewModelFactory
-import com.telefender.phone.helpers.DatabaseLogger
-import com.telefender.phone.helpers.PrintTypes
+import com.telefender.phone.misc_helpers.DatabaseLogger
+import com.telefender.phone.misc_helpers.PrintTypes
 
 /*
 TODO: Handle case where permissions aren't given (or default dialer isn't granted).
@@ -43,10 +44,10 @@ class RecentsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        setAppBarTitle(getString(R.string.recents))
+        setAppBarTitle(getString(R.string.recents_title))
         showAppBar()
 
-        val context = context!!
+        val context = requireContext()
         val recyclerView = binding.recentsRecyclerView
 
         /**
@@ -55,7 +56,7 @@ class RecentsFragment : Fragment() {
          */
         val adapter = RecentsAdapter(context,
             { number ->
-                makeCall(number)
+                CallHelpers.makeCall(requireContext(), number)
             },
             { number, epochTime ->
                 recentsViewModel.retrieveDayLogs(number, epochTime)
@@ -81,21 +82,11 @@ class RecentsFragment : Fragment() {
         super.onStart()
 
         val repository = (requireContext().applicationContext as App).repository
-        DatabaseLogger.omegaLogger(
-            repository = repository,
-            logSelect = listOf(PrintTypes.ANALYZED_NUMBER)
-        )
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
-    }
-
-    private fun makeCall(number: String) {
-        if (activity is MainActivity) {
-            (activity as MainActivity).makeCallParam(number)
-        }
     }
 
     private fun setAppBarTitle(title: String) {

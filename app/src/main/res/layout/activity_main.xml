@@ -31,7 +31,7 @@
                     >
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/edit_or_add"
+                        android:id="@+id/app_bar_text_button"
                         android:layout_width="wrap_content"
                         android:layout_height="match_parent"
                         android:layout_gravity="right"

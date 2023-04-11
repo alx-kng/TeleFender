@@ -11,7 +11,7 @@ import android.provider.ContactsContract
 import android.provider.ContactsContract.CommonDataKinds.Phone
 import android.provider.ContactsContract.PhoneLookup
 import android.provider.ContactsContract.RawContacts
-import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -166,6 +166,8 @@ object DefaultContacts {
      * TODO: Double check logic.
      *
      * Check if contact exists in default database given the _ID (our defaultCID).
+     *
+     * NOTE: If app doesn't have contact permissions, this code will throw an exception.
      */
     fun contactExists(
         contentResolver: ContentResolver,
@@ -191,9 +193,10 @@ object DefaultContacts {
     }
 
     /**
-     *
      * Check if contact exists in default database given the _ID (our defaultCID) and number
      * (our rawNumber).
+     *
+     * NOTE: If app doesn't have contact permissions, this code will throw an exception.
      */
     fun contactNumberExists(
         contentResolver: ContentResolver,
@@ -287,7 +290,8 @@ object DefaultContacts {
                 .withValue(
                     ContactsContract.CommonDataKinds.StructuredName.GIVEN_NAME,
                     firstName
-                ).build()
+                )
+                .build()
         )
         ops.add(
             ContentProviderOperation
@@ -304,7 +308,8 @@ object DefaultContacts {
                 .withValue(
                     Phone.TYPE,
                     Phone.TYPE_MOBILE
-                ).build()
+                )
+                .build()
         )
         try {
             contactAdder.applyBatch(ContactsContract.AUTHORITY, ops)

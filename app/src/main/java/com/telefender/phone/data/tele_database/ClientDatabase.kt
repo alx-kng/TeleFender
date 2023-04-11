@@ -22,9 +22,9 @@ import com.telefender.phone.data.tele_database.background_tasks.workers.SetupSch
 import com.telefender.phone.data.tele_database.client_daos.*
 import com.telefender.phone.data.tele_database.converters.Converters
 import com.telefender.phone.data.tele_database.entities.*
-import com.telefender.phone.helpers.DatabaseLogger
-import com.telefender.phone.helpers.PrintTypes
-import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.DatabaseLogger
+import com.telefender.phone.misc_helpers.PrintTypes
+import com.telefender.phone.misc_helpers.TeleHelpers
 import com.telefender.phone.permissions.Permissions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay

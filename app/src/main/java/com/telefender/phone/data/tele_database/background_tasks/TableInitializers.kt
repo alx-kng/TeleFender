@@ -7,7 +7,7 @@ import com.telefender.phone.App
 import com.telefender.phone.data.tele_database.ClientDatabase
 import com.telefender.phone.data.tele_database.entities.ChangeLog
 import com.telefender.phone.data.tele_database.entities.ChangeType
-import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.TeleHelpers
 import timber.log.Timber
 import java.time.Instant
 import java.util.*

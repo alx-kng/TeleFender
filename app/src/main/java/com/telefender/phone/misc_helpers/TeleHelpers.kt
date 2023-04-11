@@ -1,4 +1,4 @@
-package com.telefender.phone.helpers
+package com.telefender.phone.misc_helpers
 
 import android.annotation.SuppressLint
 import android.content.Context

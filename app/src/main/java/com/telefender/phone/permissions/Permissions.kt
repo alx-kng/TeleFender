@@ -11,7 +11,7 @@ import android.provider.Settings
 import android.telecom.TelecomManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.TeleHelpers
 import timber.log.Timber
 
 enum class PermissionRequestType(val requestCode: Int) {

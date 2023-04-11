@@ -10,7 +10,7 @@ import com.telefender.phone.data.server_related.request_generators.VerifyRequest
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
-import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import org.json.JSONException
 import timber.log.Timber

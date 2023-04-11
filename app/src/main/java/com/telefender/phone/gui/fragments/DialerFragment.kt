@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.telefender.phone.R
+import com.telefender.phone.call_related.CallHelpers
 import com.telefender.phone.call_related.CallManager
 import com.telefender.phone.databinding.FragmentDialerBinding
 import com.telefender.phone.gui.MainActivity
@@ -36,7 +37,8 @@ class DialerFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        setAppBarTitle(getString(R.string.dialer))
+
+        setAppBarTitle(getString(R.string.dialer_title))
         showAppBar()
 
         binding.apply {
@@ -45,7 +47,7 @@ class DialerFragment : Fragment() {
         }
 
         binding.dialPhone.setOnClickListener {
-            makeCall()
+            CallHelpers.makeCall(requireContext(), dialerViewModel.dialNumber.value)
         }
 
         binding.dial0.setOnClickListener {
@@ -114,12 +116,6 @@ class DialerFragment : Fragment() {
         _binding = null
     }
 
-    private fun makeCall() {
-        if (activity is MainActivity) {
-            (activity as MainActivity).makeCallNoParam()
-        }
-    }
-
     private fun setAppBarTitle(title: String) {
         if (activity is MainActivity) {
             (activity as MainActivity).setTitle(title)
@@ -129,6 +125,12 @@ class DialerFragment : Fragment() {
     private fun showAppBar() {
         if (activity is MainActivity) {
             (activity as MainActivity).displayAppBar(true)
+        }
+    }
+
+    private fun revertAppbar() {
+        if (activity is MainActivity) {
+            (activity as MainActivity).revertAppbar()
         }
     }
 }

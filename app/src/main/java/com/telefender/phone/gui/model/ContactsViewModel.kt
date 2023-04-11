@@ -2,10 +2,9 @@ package com.telefender.phone.gui.model
 
 import android.annotation.SuppressLint
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.*
 import com.telefender.phone.data.default_database.*
-import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

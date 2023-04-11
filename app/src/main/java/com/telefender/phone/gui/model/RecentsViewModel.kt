@@ -8,7 +8,7 @@ import com.telefender.phone.data.tele_database.entities.CallDetail
 import com.telefender.phone.gui.adapters.CallDetailItem
 import com.telefender.phone.gui.adapters.CallHistoryFooter
 import com.telefender.phone.gui.adapters.CallHistoryHeader
-import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

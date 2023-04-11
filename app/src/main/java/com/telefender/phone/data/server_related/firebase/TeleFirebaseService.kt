@@ -3,9 +3,7 @@ package com.telefender.phone.data.server_related.firebase
 import android.annotation.SuppressLint
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
-import com.telefender.phone.App
-import com.telefender.phone.helpers.TeleHelpers
-import kotlinx.coroutines.launch
+import com.telefender.phone.misc_helpers.TeleHelpers
 import timber.log.Timber
 
 /**

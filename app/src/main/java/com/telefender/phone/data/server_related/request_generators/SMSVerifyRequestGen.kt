@@ -14,7 +14,7 @@ import com.telefender.phone.data.tele_database.entities.Change
 import com.telefender.phone.data.tele_database.entities.ChangeLog
 import com.telefender.phone.data.tele_database.entities.ChangeType
 import com.telefender.phone.data.tele_database.entities.SafeAction
-import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

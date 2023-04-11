@@ -6,10 +6,9 @@ import android.telecom.Call
 import android.telecom.InCallService
 import com.telefender.phone.data.tele_database.TeleCallDetails
 import com.telefender.phone.data.tele_database.background_tasks.workers.CatchSyncScheduler
-import com.telefender.phone.data.tele_database.background_tasks.workers.RegularSyncScheduler
 import com.telefender.phone.gui.InCallActivity
 import com.telefender.phone.gui.IncomingCallActivity
-import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.TeleHelpers
 import timber.log.Timber
 
 

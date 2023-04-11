@@ -7,7 +7,7 @@ import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.entities.*
 import com.telefender.phone.data.tele_database.entities.CallDetail
-import com.telefender.phone.helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
@@ -197,7 +197,9 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
      * TODO: Debating whether or not we should handle default database changes here to. But on
      *  second thought, since this a DAO, we shouldn't mix between our database and the default
      *  database. Perhaps we should make an enveloping function in the repository or something
-     *  to call our changeFromClient() and handle the default database changes.
+     *  to call our changeFromClient() and handle the default database changes. Would have to
+     *  check if the thing is from sync or not (which we luckily already have the infrastructure
+     *  for).
      *
      * Function to handle a change (as a ChangeLog) from Client.
      * Inserts changes into actual tables (e.g., Instance, Contact, etc...) and adds change
