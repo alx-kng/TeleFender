@@ -9,6 +9,7 @@ import com.telefender.phone.data.tele_database.background_tasks.TableSynchronize
 import com.telefender.phone.data.server_related.RequestWrappers
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -126,16 +127,16 @@ class CoroutineOmegaWorker(
         try {
             setForeground(getForegroundInfo())
         } catch(e: Exception) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", e.message!!)
+            Timber.i("$DBL: %s", e.message!!)
         }
 
         when (stateVarString) {
             "oneTimeOmegaState" -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA ONE TIME STARTED")
+                Timber.i("$DBL: OMEGA ONE TIME STARTED")
                 // No need to set the state again for one time workers.
             }
             "periodicOmegaState" -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA PERIODIC STARTED")
+                Timber.i("$DBL: OMEGA PERIODIC STARTED")
 
                 /**
                  * Although this may seem redundant, we need to set the state to running here,
@@ -148,7 +149,7 @@ class CoroutineOmegaWorker(
                 WorkStates.setState(WorkType.PERIODIC_OMEGA, WorkInfo.State.RUNNING)
             }
             else -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA WORKER: Worker state variable name is wrong")
+                Timber.i("$DBL: OMEGA WORKER: Worker state variable name is wrong")
             }
         }
 
@@ -158,26 +159,26 @@ class CoroutineOmegaWorker(
         /**
          * Sync with contacts and call logs
          */
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA SYNC STARTED")
+        Timber.i("$DBL: OMEGA SYNC STARTED")
         TableSynchronizer.syncContacts(context, database, context.contentResolver)
         TableSynchronizer.syncCallLogs(context, repository, context.contentResolver)
 
         /**
          * Downloads changes from server
          */
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA DOWNLOAD STARTED")
+        Timber.i("$DBL: OMEGA DOWNLOAD STARTED")
 //        RequestWrappers.downloadData(context, repository, scope, "OMEGA")
 
         /**
          * Executes logs in ExecuteQueue
          */
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA EXECUTE STARTED")
+        Timber.i("$DBL: OMEGA EXECUTE STARTED")
         repository.executeAll()
 
         /**
          * Uploads changes to server.
          */
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_CHANGE STARTED")
+        Timber.i("$DBL: OMEGA UPLOAD_CHANGE STARTED")
         RequestWrappers.uploadChange(context, repository, scope, "OMEGA")
 
         /**
@@ -187,26 +188,26 @@ class CoroutineOmegaWorker(
          *
          * Uploads analyzedNumbers to server.
          */
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_ANALYZED STARTED")
+        Timber.i("$DBL: OMEGA UPLOAD_ANALYZED STARTED")
         RequestWrappers.uploadAnalyzed(context, repository, scope, "OMEGA")
 
         /**
          * Uploads error logs to server.
          */
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA UPLOAD_ERROR STARTED")
+        Timber.i("$DBL: OMEGA UPLOAD_ERROR STARTED")
         RequestWrappers.uploadError(context, repository, scope, "OMEGA")
 
         when (stateVarString) {
             "oneTimeOmegaState" -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA ONE TIME ENDED")
+                Timber.i("$DBL: OMEGA ONE TIME ENDED")
                 WorkStates.setState(WorkType.ONE_TIME_OMEGA, WorkInfo.State.SUCCEEDED)
             }
             "periodicOmegaState" -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA PERIODIC ENDED")
+                Timber.i("$DBL: OMEGA PERIODIC ENDED")
                 WorkStates.setState(WorkType.PERIODIC_OMEGA, WorkInfo.State.SUCCEEDED)
             }
             else -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA WORKER THREAD: Worker state variable name is wrong")
+                Timber.i("$DBL: OMEGA WORKER THREAD: Worker state variable name is wrong")
             }
         }
 
@@ -214,7 +215,7 @@ class CoroutineOmegaWorker(
     }
 
     override suspend fun getForegroundInfo() : ForegroundInfo {
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OMEGA WORKER FOREGROUND")
+        Timber.i("$DBL: OMEGA WORKER FOREGROUND")
 
         return ForegroundInfoCreator.createForegroundInfo(
             applicationContext = applicationContext,

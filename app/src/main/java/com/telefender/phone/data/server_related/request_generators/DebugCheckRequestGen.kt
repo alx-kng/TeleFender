@@ -11,6 +11,7 @@ import com.telefender.phone.data.server_related.json_classes.toServerResponse
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import timber.log.Timber
@@ -52,7 +53,7 @@ private fun debugCheckResponseHandler(
 ) : Response.Listener<String> {
 
     return Response.Listener<String> { response : String->
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: DEBUG CHECK RESPONSE %s", response)
+        Timber.i("$DBL: DEBUG CHECK RESPONSE %s", response)
 
         val debugCheckResponse : DefaultResponse? =
             response.toServerResponse(ServerResponseType.DEBUG_CHECK) ?:
@@ -66,14 +67,14 @@ private fun debugCheckResponseHandler(
         } else {
             WorkStates.setState(WorkType.DEBUG_CHECK_POST, WorkInfo.State.FAILED)
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN DEBUG CHECK: ${debugCheckResponse?.error}")
+            Timber.i("$DBL: VOLLEY: ERROR WHEN DEBUG CHECK: ${debugCheckResponse?.error}")
         }
     }
 }
 
 private val debugCheckErrorHandler = Response.ErrorListener { error ->
     if (error.toString() != "null") {
-        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY $error")
+        Timber.e("$DBL: VOLLEY $error")
         WorkStates.setState(WorkType.DEBUG_CHECK_POST, WorkInfo.State.FAILED)
     }
 }

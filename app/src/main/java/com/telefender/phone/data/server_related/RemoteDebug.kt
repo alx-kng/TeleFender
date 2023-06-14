@@ -13,6 +13,7 @@ import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.sync.Mutex
@@ -148,7 +149,7 @@ object RemoteDebug {
         val key = repository.getClientKey()
 
         if (instanceNumber == null || key == null) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+            Timber.i("$DBL: " +
                 "VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
 
             WorkStates.setState(WorkType.DEBUG_CHECK_POST, WorkInfo.State.FAILED)
@@ -184,7 +185,7 @@ object RemoteDebug {
         scope: CoroutineScope,
     ) {
         if (!isEnabled) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: debugSessionRequest() - Not enabled")
+            Timber.i("$DBL: debugSessionRequest() - Not enabled")
             WorkStates.setState(WorkType.DEBUG_SESSION_POST, WorkInfo.State.SUCCEEDED)
             return
         }
@@ -194,7 +195,7 @@ object RemoteDebug {
         val key = repository.getClientKey()
 
         if (instanceNumber == null || key == null) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+            Timber.i("$DBL: " +
                 "VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
 
             WorkStates.setState(WorkType.DEBUG_SESSION_POST, WorkInfo.State.FAILED)
@@ -230,7 +231,7 @@ object RemoteDebug {
         workerName: String
     ) {
         if (remoteSessionID == null || remoteSessionToken == null) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s",
+            Timber.i("$DBL: %s",
                 "debugExchangeRequest() - No remoteSessionID or remoteSessionToken")
             WorkStates.setState(WorkType.DEBUG_EXCHANGE_POST, WorkInfo.State.SUCCEEDED)
             return
@@ -241,7 +242,7 @@ object RemoteDebug {
         val key = repository.getClientKey()
 
         if (instanceNumber == null || key == null) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+            Timber.i("$DBL: " +
                 "VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
 
             WorkStates.setState(WorkType.DEBUG_EXCHANGE_POST, WorkInfo.State.FAILED)
@@ -259,7 +260,7 @@ object RemoteDebug {
             error = error
         ).toJson()
 
-        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+        Timber.e("$DBL: " +
             "REMOTE: error = $error | commandComplete = ${dataQueue.size == 0 && !commandRunning}")
 
         try {

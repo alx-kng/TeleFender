@@ -5,6 +5,7 @@ import androidx.lifecycle.*
 import com.telefender.phone.call_related.CallManager
 import com.telefender.phone.call_related.callDurationSEC
 import com.telefender.phone.call_related.getStateCompat
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -55,7 +56,7 @@ class InCallViewModel : ViewModel() {
                         }
                     }
                 }
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OUT OF CALL DURATION!")
+                Timber.i("$DBL: OUT OF CALL DURATION!")
             }
         }
     }

@@ -8,6 +8,7 @@ import com.telefender.phone.data.server_related.RequestWrappers
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -104,7 +105,7 @@ class CoroutineDebugWorker(
 
         when (stateVarString) {
             "oneTimeDebugState" -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: ONE TIME DEBUG STARTED")
+                Timber.i("$DBL: ONE TIME DEBUG STARTED")
                 // No need to set the state again for one time workers.
 
                 // Makes sure that both debug workers aren't running at the same time.
@@ -113,7 +114,7 @@ class CoroutineDebugWorker(
                 }
             }
             "periodicDebugState" -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: PERIODIC DEBUG STARTED")
+                Timber.i("$DBL: PERIODIC DEBUG STARTED")
 
                 /**
                  * Although this may seem redundant, we need to set the state to running here,
@@ -131,14 +132,14 @@ class CoroutineDebugWorker(
                 }
             }
             else -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: DEBUG WORKER: Worker state variable name is wrong")
+                Timber.i("$DBL: DEBUG WORKER: Worker state variable name is wrong")
             }
         }
 
         try {
             setForeground(getForegroundInfo())
         } catch(e: Exception) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", e.message!!)
+            Timber.i("$DBL: %s", e.message!!)
         }
 
         val repository: ClientRepository = (applicationContext as App).repository
@@ -146,13 +147,13 @@ class CoroutineDebugWorker(
         /**
          * Checks if should start debug from server.
          */
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: DEBUG CHECK STARTED")
+        Timber.i("$DBL: DEBUG CHECK STARTED")
         RequestWrappers.debugCheck(context, repository, scope, "DEBUG")
 
         /**
          * Retrieves if remote session ID from server if the debug is enabled.
          */
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: GET DEBUG SESSION STARTED")
+        Timber.i("$DBL: GET DEBUG SESSION STARTED")
         RequestWrappers.debugSession(context, repository, scope, "DEBUG")
 
         /**
@@ -160,20 +161,20 @@ class CoroutineDebugWorker(
          * This is the final wait point before the worker ends. If a debug exchange is occurring,
          * then the code just waits here, otherwise the code continues and the worker ends.
          */
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: DEBUG EXCHANGE STARTED")
+        Timber.i("$DBL: DEBUG EXCHANGE STARTED")
         RequestWrappers.debugExchange(context, repository, scope, "DEBUG")
 
         when (stateVarString) {
             "oneTimeDebugState" -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: ONE TIME DEBUG ENDED")
+                Timber.i("$DBL: ONE TIME DEBUG ENDED")
                 WorkStates.setState(WorkType.ONE_TIME_DEBUG, WorkInfo.State.SUCCEEDED)
             }
             "periodicDebugState" -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: PERIODIC DEBUG ENDED")
+                Timber.i("$DBL: PERIODIC DEBUG ENDED")
                 WorkStates.setState(WorkType.PERIODIC_DEBUG, WorkInfo.State.SUCCEEDED)
             }
             else -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: DEBUG WORKER: Worker state variable name is wrong")
+                Timber.i("$DBL: DEBUG WORKER: Worker state variable name is wrong")
             }
         }
 
@@ -181,7 +182,7 @@ class CoroutineDebugWorker(
     }
 
     override suspend fun getForegroundInfo() : ForegroundInfo {
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: DEBUG WORKER FOREGROUND")
+        Timber.i("$DBL: DEBUG WORKER FOREGROUND")
 
         return ForegroundInfoCreator.createForegroundInfo(
             applicationContext = applicationContext,

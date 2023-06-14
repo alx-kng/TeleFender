@@ -6,6 +6,7 @@ import com.telefender.phone.App
 import com.telefender.phone.data.server_related.RequestWrappers
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -69,7 +70,7 @@ class CoroutineSMSVerifyWorker(
         try {
             setForeground(getForegroundInfo())
         } catch(e: Exception) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", e.message)
+            Timber.i("$DBL: %s", e.message)
         }
 
         val repository = (applicationContext as App).repository
@@ -77,7 +78,7 @@ class CoroutineSMSVerifyWorker(
         val analyzed = repository.getAnalyzedNum(number)?.getAnalyzed()
         val waitTime = repository.getParameters()?.smsDeferredWaitTime ?: 60
 
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SMS VERIFY WORKER STARTED FOR - $number")
+        Timber.i("$DBL: SMS VERIFY WORKER STARTED FOR - $number")
 
         /*
         Wait around a minute and send another SMS verify request if the number isn't already
@@ -88,14 +89,14 @@ class CoroutineSMSVerifyWorker(
             RequestWrappers.smsVerify(context, repository, scope, number)
         }
 
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SMS VERIFY WORKER ENDED FOR - $number")
+        Timber.i("$DBL: SMS VERIFY WORKER ENDED FOR - $number")
 
         WorkStates.setState(WorkType.ONE_TIME_SMS_VERIFY, WorkInfo.State.SUCCEEDED)
         return Result.success()
     }
 
     override suspend fun getForegroundInfo() : ForegroundInfo {
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SMS VERIFY WORKER FOREGROUND")
+        Timber.i("$DBL: SMS VERIFY WORKER FOREGROUND")
 
         return ForegroundInfoCreator.createForegroundInfo(
             applicationContext = applicationContext,

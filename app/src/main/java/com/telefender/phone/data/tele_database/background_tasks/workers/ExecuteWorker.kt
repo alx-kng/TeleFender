@@ -6,6 +6,7 @@ import com.telefender.phone.App
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import timber.log.Timber
 import java.util.*
@@ -80,21 +81,21 @@ class CoroutineExecuteWorker(
         stateVarString = inputData.getString("variableName")
         NOTIFICATION_ID = inputData.getString("notificationID")?.toInt()
 
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: EXECUTE STARTED")
+        Timber.i("$DBL: EXECUTE STARTED")
 
         try {
             setForeground(getForegroundInfo())
         } catch(e: Exception) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", e.message!!)
+            Timber.i("$DBL: %s", e.message!!)
         }
 
         when (stateVarString) {
             "oneTimeExecState" -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: EXECUTE ONE TIME STARTED")
+                Timber.i("$DBL: EXECUTE ONE TIME STARTED")
                 // No need to set the state again for one time workers.
             }
             "periodicExecState" -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: EXECUTE PERIODIC STARTED")
+                Timber.i("$DBL: EXECUTE PERIODIC STARTED")
 
                 /**
                  * Although this may seem redundant, we need to set the state to running here,
@@ -107,7 +108,7 @@ class CoroutineExecuteWorker(
                 WorkStates.setState(WorkType.PERIODIC_EXEC, WorkInfo.State.RUNNING)
             }
             else -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: EXECUTE WORKER THREAD: Worker state variable name is wrong")
+                Timber.i("$DBL: EXECUTE WORKER THREAD: Worker state variable name is wrong")
             }
         }
 
@@ -116,22 +117,22 @@ class CoroutineExecuteWorker(
         /**
          * Executes logs in ExecuteQueue
          */
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: EXECUTE WORKER STARTED")
+        Timber.i("$DBL: EXECUTE WORKER STARTED")
         repository.executeAll()
 
         when (stateVarString) {
             "oneTimeExecState" -> WorkStates.setState(WorkType.ONE_TIME_EXEC, WorkInfo.State.SUCCEEDED)
             "periodicExecState" -> WorkStates.setState(WorkType.PERIODIC_EXEC, WorkInfo.State.SUCCEEDED)
             else -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: EXECUTE WORKER THREAD: Worker state variable name is wrong")
+                Timber.i("$DBL: EXECUTE WORKER THREAD: Worker state variable name is wrong")
             }
         }
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: EXECUTE ENDED")
+        Timber.i("$DBL: EXECUTE ENDED")
         return Result.success()
     }
 
     override suspend fun getForegroundInfo() : ForegroundInfo {
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: EXECUTE WORKER FOREGROUND")
+        Timber.i("$DBL: EXECUTE WORKER FOREGROUND")
 
         return ForegroundInfoCreator.createForegroundInfo(
             applicationContext = applicationContext,

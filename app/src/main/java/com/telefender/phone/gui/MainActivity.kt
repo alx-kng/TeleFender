@@ -29,6 +29,7 @@ import com.telefender.phone.App
 import com.telefender.phone.R
 import com.telefender.phone.databinding.ActivityMainBinding
 import com.telefender.phone.gui.model.*
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import com.telefender.phone.permissions.PermissionRequestType
 import com.telefender.phone.permissions.Permissions
@@ -37,6 +38,10 @@ import timber.log.Timber
 
 
 /**
+ *
+ * TODO: YOU LISTEN TO ME!!!! THERE IS A LEAK IN THE CONTACTS OBSERVER!!!
+ *  FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+ *
  * TODO make sure the app opens up to last used fragment.
  *
  * TODO: Probably need to request notifications permission in case default dialer is rejected.
@@ -127,7 +132,7 @@ class MainActivity : AppCompatActivity() {
 
         when (requestCode) {
             PermissionRequestType.CORE_ALT.requestCode -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CORE_ALT Permissions result!")
+                Timber.i("$DBL: CORE_ALT Permissions result!")
 
                 // Makes sure all permissions in CORE_ALT were granted.
                 for (result in grantResults) {
@@ -137,14 +142,14 @@ class MainActivity : AppCompatActivity() {
                 Permissions.doNotDisturbPermission(this)
             }
             PermissionRequestType.PHONE_STATE.requestCode -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: PHONE_STATE Permissions result!")
+                Timber.i("$DBL: PHONE_STATE Permissions result!")
 
                 if (grantResults.first() == PackageManager.PERMISSION_GRANTED) {
                     Permissions.doNotDisturbPermission(this)
                 }
             }
             PermissionRequestType.NOTIFICATIONS.requestCode -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: NOTIFICATIONS Permissions result!")
+                Timber.i("$DBL: NOTIFICATIONS Permissions result!")
             }
         }
     }
@@ -211,7 +216,7 @@ class MainActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.more -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: MainActivity: More menu button pressed!")
+                Timber.i("$DBL: MainActivity: More menu button pressed!")
                 return true
             }
             else -> super.onOptionsItemSelected(item)
@@ -277,6 +282,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
+     * TODO: USE PAGING
+     *
      * Sets up the call log and contact observers, which drive the UI updates for RecentsFragment
      * and ContactsFragment. Also, we make the fragments more smooth by preloading call logs and
      * contacts in the MainActivity. If this is still too slow, you can consider querying only a
@@ -356,7 +363,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupBackPress() {
         onBackPressedDispatcher.addCallback(this, object: OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: Back pressed in MainActivity!")
+                Timber.i("$DBL: Back pressed in MainActivity!")
 
                 isEnabled = false
                 onBackPressedDispatcher.onBackPressed()
@@ -481,7 +488,7 @@ class MainActivity : AppCompatActivity() {
 
         override fun onChange(selfChange: Boolean) {
             super.onChange(selfChange)
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OBSERVED NEW CALL LOG - UI - id = $id")
+            Timber.i("$DBL: OBSERVED NEW CALL LOG - UI - id = $id")
 
             recentsViewModel.updateCallLogs()
         }
@@ -501,7 +508,7 @@ class MainActivity : AppCompatActivity() {
 
         override fun onChange(selfChange: Boolean) {
             super.onChange(selfChange)
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: ContactsFragment - New Contact!")
+            Timber.i("$DBL: ContactsFragment - New Contact!")
 
             contactsViewModel.updateContacts()
         }

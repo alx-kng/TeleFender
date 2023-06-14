@@ -3,6 +3,7 @@ package com.telefender.phone.data.server_related.firebase
 import android.annotation.SuppressLint
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import timber.log.Timber
 
@@ -20,7 +21,7 @@ class TeleFirebaseService : FirebaseMessagingService() {
      * an Activity intent when the user clicks on the push notification (in the notification drawer).
      */
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
-        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: Firebase message received - ${remoteMessage.data}")
+        Timber.e("$DBL: Firebase message received - ${remoteMessage.data}")
 
         val data : Map<String, String> = remoteMessage.data
     }
@@ -44,7 +45,7 @@ class TeleFirebaseService : FirebaseMessagingService() {
      */
     @SuppressLint("MissingPermission")
     override fun onNewToken(token: String) {
-        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: Refreshed Firebase token: $token")
+        Timber.e("$DBL: Refreshed Firebase token: $token")
 
         // If you want to send messages to this application instance or
         // manage this apps subscriptions on the server side, send the

@@ -9,6 +9,7 @@ import com.telefender.phone.data.server_related.json_classes.toServerResponse
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import timber.log.Timber
@@ -59,14 +60,14 @@ private fun tokenResponseHandler(
         } else {
             WorkStates.setState(WorkType.UPLOAD_TOKEN, WorkInfo.State.FAILED)
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN TOKEN UPLOAD_TOKEN: ${defaultResponse?.error}")
+            Timber.i("$DBL: VOLLEY: ERROR WHEN TOKEN UPLOAD_TOKEN: ${defaultResponse?.error}")
         }
     }
 }
 
 private val tokenErrorHandler = Response.ErrorListener { error ->
     if (error.toString() != "null") {
-        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY $error")
+        Timber.e("$DBL: VOLLEY $error")
         WorkStates.setState(WorkType.UPLOAD_TOKEN, WorkInfo.State.FAILED)
     }
 }

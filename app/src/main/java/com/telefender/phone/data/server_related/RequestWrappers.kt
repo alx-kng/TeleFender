@@ -7,6 +7,7 @@ import com.telefender.phone.data.server_related.RemoteDebug.resetExchangeCounter
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -37,7 +38,7 @@ object RequestWrappers {
                 certainFinish = true
             )
             if (success) break
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $workerName - DOWNLOAD RETRYING")
+            Timber.i("$DBL: $workerName - DOWNLOAD RETRYING")
             delay(retryDelayTime)
         }
     }
@@ -75,7 +76,7 @@ object RequestWrappers {
                 certainFinish = true
             )
         ) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: INSIDE $workerName WORKER. PROBLEM WITH UPLOAD_CHANGE.")
+            Timber.e("$DBL: INSIDE $workerName WORKER. PROBLEM WITH UPLOAD_CHANGE.")
         }
     }
 
@@ -118,7 +119,7 @@ object RequestWrappers {
                 certainFinish = true
             )
         ) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: INSIDE $workerName WORKER. PROBLEM WITH UPLOAD_ANALYZED.")
+            Timber.e("$DBL: INSIDE $workerName WORKER. PROBLEM WITH UPLOAD_ANALYZED.")
         }
     }
 
@@ -155,7 +156,7 @@ object RequestWrappers {
                 certainFinish = true
             )
         ) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: INSIDE $workerName WORKER. PROBLEM WITH UPLOAD_ERROR.")
+            Timber.e("$DBL: INSIDE $workerName WORKER. PROBLEM WITH UPLOAD_ERROR.")
         }
     }
 
@@ -197,7 +198,7 @@ object RequestWrappers {
                 certainFinish = true
             )
             if (success) break
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $workerName - DEBUG_CHECK RETRYING")
+            Timber.i("$DBL: $workerName - DEBUG_CHECK RETRYING")
             delay(retryDelayTime)
         }
     }
@@ -224,7 +225,7 @@ object RequestWrappers {
                 certainFinish = true
             )
             if (success) break
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $workerName - DEBUG_SESSION RETRYING")
+            Timber.i("$DBL: $workerName - DEBUG_SESSION RETRYING")
             delay(retryDelayTime)
         }
     }
@@ -255,7 +256,7 @@ object RequestWrappers {
             if (success) break
 
             if (RemoteDebug.invTokenCounter < retryAmount) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $workerName - DEBUG_EXCHANGE RETRYING")
+                Timber.i("$DBL: $workerName - DEBUG_EXCHANGE RETRYING")
                 delay(retryDelayTime)
                 incrementExchangeErrorCounter()
             }

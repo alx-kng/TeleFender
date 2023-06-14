@@ -11,6 +11,7 @@ import android.provider.Settings
 import android.telecom.TelecomManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import timber.log.Timber
 
@@ -68,7 +69,7 @@ object Permissions {
      * onRequestPermissionsResult() so that you know which permission the result is for.
      */
     fun coreAltPermissions(activity: Activity) {
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: coreAltPermissions() called")
+        Timber.i("$DBL: coreAltPermissions() called")
 
         val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             arrayOf(
@@ -107,7 +108,7 @@ object Permissions {
     }
 
     fun phoneStatePermissions(activity: Activity) {
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: phoneStatePermissions() called")
+        Timber.i("$DBL: phoneStatePermissions() called")
 
         if (!hasPermissions(activity, arrayOf(phoneStatePermission))) {
             ActivityCompat.requestPermissions(

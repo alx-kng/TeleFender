@@ -9,6 +9,7 @@ import com.telefender.phone.App
 import com.telefender.phone.data.tele_database.TeleCallDetails
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,7 +32,7 @@ object CatchSyncScheduler{
 
     fun initiateCatchSyncWorker(context : Context) : UUID? {
         if (!TeleHelpers.hasValidStatus(context, logRequired = true)) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: Invalid status in initiateCatchSyncWorker()")
+            Timber.e("$DBL: Invalid status in initiateCatchSyncWorker()")
             return null
         }
 
@@ -84,13 +85,13 @@ class CoroutineCatchSyncWorker(
         try {
             setForeground(getForegroundInfo())
         } catch(e: Exception) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", e.message)
+            Timber.i("$DBL: %s", e.message)
         }
 
         val syncObserver = SyncWorkerObserver(context, scope, callLogObserverSync)
         WorkStates.addPropertyChangeListener(syncObserver)
 
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SYNC CATCHER OBSERVER STARTED")
+        Timber.i("$DBL: SYNC CATCHER OBSERVER STARTED")
 
         applicationContext.contentResolver.registerContentObserver(
             android.provider.CallLog.Calls.CONTENT_URI,
@@ -108,10 +109,10 @@ class CoroutineCatchSyncWorker(
 
         for (i in 1..numPrint) {
             delay(syncPeriod / numPrint)
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SYNC CATCHER OBSERVER RUNNING $i / $numPrint")
+            Timber.i("$DBL: SYNC CATCHER OBSERVER RUNNING $i / $numPrint")
         }
 
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SYNC CATCHER OBSERVER ENDED")
+        Timber.i("$DBL: SYNC CATCHER OBSERVER ENDED")
 
         WorkStates.removePropertyChangeListener(syncObserver)
         applicationContext.contentResolver.unregisterContentObserver(callLogObserverSync)
@@ -122,7 +123,7 @@ class CoroutineCatchSyncWorker(
     }
 
     override suspend fun getForegroundInfo() : ForegroundInfo {
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SYNC CATCHER OBSERVER WORKER FOREGROUND")
+        Timber.i("$DBL: SYNC CATCHER OBSERVER WORKER FOREGROUND")
 
         return ForegroundInfoCreator.createForegroundInfo(
             applicationContext = applicationContext,
@@ -159,7 +160,7 @@ class CoroutineCatchSyncWorker(
 
         override fun onChange(selfChange: Boolean) {
             super.onChange(selfChange)
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: OBSERVED NEW CALL LOG - SYNC - ID = $id")
+            Timber.i("$DBL: OBSERVED NEW CALL LOG - SYNC - ID = $id")
 
             val repository = ((context.applicationContext) as App).repository
             TeleCallDetails.syncCallImmediate(context.applicationContext, repository, scope)
@@ -181,7 +182,7 @@ class CoroutineCatchSyncWorker(
         override fun propertyChange(p0: PropertyChangeEvent?) {
             if (p0?.newValue == WorkType.CATCH_SYNC) {
                 scope.launch {
-                    Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: CANCELLING SYNC CATCHER OBSERVER - Probably due to restart / end in worker.")
+                    Timber.e("$DBL: CANCELLING SYNC CATCHER OBSERVER - Probably due to restart / end in worker.")
 
                     val contentResolver = context.applicationContext.contentResolver
                     contentResolver.unregisterContentObserver(logObserver)

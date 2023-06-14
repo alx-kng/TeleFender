@@ -6,6 +6,7 @@ import com.telefender.phone.App
 import com.telefender.phone.data.tele_database.background_tasks.TableSynchronizer
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import timber.log.Timber
 import java.util.*
@@ -23,7 +24,7 @@ object RegularSyncScheduler{
 
     fun initiateOneTimeSyncWorker(context : Context) : UUID? {
         if (!TeleHelpers.hasValidStatus(context, logRequired = true)) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: Invalid status in initiateOneTimeSyncWorker()")
+            Timber.e("$DBL: Invalid status in initiateOneTimeSyncWorker()")
             return null
         }
 
@@ -52,7 +53,7 @@ object RegularSyncScheduler{
 
     fun initiatePeriodicSyncWorker(context : Context) : UUID? {
         if (!TeleHelpers.hasValidStatus(context, logRequired = true)) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: Invalid status in initiatePeriodicSyncWorker()")
+            Timber.e("$DBL: Invalid status in initiatePeriodicSyncWorker()")
             return null
         }
 
@@ -98,16 +99,16 @@ class CoroutineSyncWorker(
         try {
             setForeground(getForegroundInfo())
         } catch(e: Exception) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", e.message!!)
+            Timber.i("$DBL: %s", e.message!!)
         }
 
         when (stateVarString) {
             "oneTimeSyncState" ->  {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SYNC ONE TIME STARTED")
+                Timber.i("$DBL: SYNC ONE TIME STARTED")
                 // No need to set the state again for one time workers.
             }
             "periodicSyncState" -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SYNC PERIODIC STARTED")
+                Timber.i("$DBL: SYNC PERIODIC STARTED")
 
                 /**
                  * Although this may seem redundant, we need to set the state to running here,
@@ -120,25 +121,25 @@ class CoroutineSyncWorker(
                 WorkStates.setState(WorkType.PERIODIC_SYNC, WorkInfo.State.RUNNING)
             }
             else -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SYNC WORKER THREAD: Worker state variable name is wrong")
+                Timber.i("$DBL: SYNC WORKER THREAD: Worker state variable name is wrong")
             }
         }
 
         val repository = (applicationContext as App).repository
         val database = (applicationContext as App).database
 
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SYNC STARTED")
+        Timber.i("$DBL: SYNC STARTED")
 
         TableSynchronizer.syncContacts(context, database, context.contentResolver)
         TableSynchronizer.syncCallLogs(context, repository, context.contentResolver)
 
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SYNC ENDED")
+        Timber.i("$DBL: SYNC ENDED")
 
         when (stateVarString) {
             "oneTimeSyncState" ->  WorkStates.setState(WorkType.ONE_TIME_SYNC, WorkInfo.State.SUCCEEDED)
             "periodicSyncState" -> WorkStates.setState(WorkType.PERIODIC_SYNC, WorkInfo.State.SUCCEEDED)
             else -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SYNC WORKER THREAD: Worker state variable name is wrong")
+                Timber.i("$DBL: SYNC WORKER THREAD: Worker state variable name is wrong")
             }
         }
 
@@ -146,7 +147,7 @@ class CoroutineSyncWorker(
     }
 
     override suspend fun getForegroundInfo() : ForegroundInfo {
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SYNC WORKER FOREGROUND")
+        Timber.i("$DBL: SYNC WORKER FOREGROUND")
 
         return ForegroundInfoCreator.createForegroundInfo(
             applicationContext = applicationContext,

@@ -8,6 +8,7 @@ import com.telefender.phone.data.server_related.json_classes.*
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import timber.log.Timber
@@ -49,7 +50,7 @@ private fun debugSessionResponseHandler(
 ) : Response.Listener<String> {
 
     return Response.Listener<String> { response : String->
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: DEBUG SESSION RESPONSE %s", response)
+        Timber.i("$DBL: DEBUG SESSION RESPONSE %s", response)
 
         val debugSessionResponse : DefaultResponse? =
             response.toServerResponse(ServerResponseType.DEBUG_SESSION) ?:
@@ -64,14 +65,14 @@ private fun debugSessionResponseHandler(
         } else {
             WorkStates.setState(WorkType.DEBUG_SESSION_POST, WorkInfo.State.FAILED)
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN GET DEBUG SESSION: ${debugSessionResponse?.error}")
+            Timber.i("$DBL: VOLLEY: ERROR WHEN GET DEBUG SESSION: ${debugSessionResponse?.error}")
         }
     }
 }
 
 private val debugSessionErrorHandler = Response.ErrorListener { error ->
     if (error.toString() != "null") {
-        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY $error")
+        Timber.e("$DBL: VOLLEY $error")
         WorkStates.setState(WorkType.DEBUG_SESSION_POST, WorkInfo.State.FAILED)
     }
 }

@@ -8,6 +8,7 @@ import com.telefender.phone.call_related.createTime
 import com.telefender.phone.call_related.number
 import com.telefender.phone.data.tele_database.background_tasks.TableSynchronizer
 import com.telefender.phone.data.tele_database.entities.CallDetail
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,7 +22,7 @@ object TeleCallDetails {
 
     fun syncCallImmediate(context: Context?, repository: ClientRepository?, scope: CoroutineScope) {
         if (repository == null || context == null) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: syncCallImmediate() PROBLEM - repository = $repository - context = $context")
+            Timber.e("$DBL: syncCallImmediate() PROBLEM - repository = $repository - context = $context")
             return
         }
 
@@ -66,14 +67,14 @@ object TeleCallDetails {
                 unallowed = unallowed
             )
 
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: $callDetail")
+            Timber.e("$DBL: $callDetail")
 
             for (i in 1..retryAmount) {
                 try {
                     repository.insertCallDetailSkeleton(callDetail)
                     break
                 } catch (e: Exception) {
-                    Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: insertCallDetail() RETRYING...")
+                    Timber.i("$DBL: insertCallDetail() RETRYING...")
                     delay(2000)
                 }
             }

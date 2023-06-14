@@ -37,6 +37,10 @@ android {
 
 dependencies {
 
+    // TODO: Supposed to be debugImplementation. Otherwise remove manually for production.
+    // LeakCanary framework is supposed to only run in debug builds.
+    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
+
     // Dependencies for working with Architecture components
     // You'll probably have to update the version numbers in build.gradle (Project)
 

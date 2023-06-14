@@ -22,7 +22,6 @@ TODO: Consider adding retry amount to be used for entire app.
  */
 object TeleHelpers {
 
-    const val DEBUG_LOG_TAG = "TELE_DEBUG"
     const val UNKNOWN_NUMBER = "UNKNOWN NUMBER"
 
     /**
@@ -72,7 +71,7 @@ object TeleHelpers {
         val userNumber = repository.getUserNumber()
 
         if (userNumber == null) {
-            Timber.e("$DEBUG_LOG_TAG: getUserNumberStored() returned null!!!")
+            Timber.e("$DBL: getUserNumberStored() returned null!!!")
         }
 
         return userNumber
@@ -95,7 +94,7 @@ object TeleHelpers {
 
         return databaseNumber ?:
             if (!Permissions.hasPhoneStatePermissions(context)) {
-                Timber.e("$DEBUG_LOG_TAG: User number was null due to lack of permissions!!!")
+                Timber.e("$DBL: User number was null due to lack of permissions!!!")
                 return null
             } else {
                 val tMgr = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
@@ -225,7 +224,7 @@ object TeleHelpers {
                 phoneUtil.format(protoNum, PhoneNumberUtil.PhoneNumberFormat.E164)
             } catch (e: Exception) {
                 e.printStackTrace()
-                Timber.i("$DEBUG_LOG_TAG: $number is either invalid or wonky!!")
+                Timber.i("$DBL: $number is either invalid or wonky!!")
                 null
             }
         }
@@ -252,7 +251,7 @@ object TeleHelpers {
      */
     fun getSimCarrier(context: Context) : SimCarrier? {
         if (!Permissions.hasPhoneStatePermissions(context)) {
-            Timber.e("$DEBUG_LOG_TAG: Can't get SIM carrier due to lack of permissions!!!")
+            Timber.e("$DBL: Can't get SIM carrier due to lack of permissions!!!")
             return null
         }
 

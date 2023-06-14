@@ -3,6 +3,7 @@ package com.telefender.phone.data.tele_database.background_tasks
 import android.content.Context
 import androidx.work.WorkInfo
 import com.telefender.phone.data.tele_database.background_tasks.workers.WorkManagerHelper
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
@@ -115,7 +116,7 @@ object WorkStates {
         var state = getState(workType)
 
         if (state !in allowedStates) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: ${workType.name} waiter called when worker is not running.")
+            Timber.e("$DBL: ${workType.name} waiter called when worker is not running.")
             setState(workType, null)
             return false
         }
@@ -128,7 +129,7 @@ object WorkStates {
                 break
             }
             if (runningMsg != null) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $runningMsg: %s", state.toString())
+                Timber.i("$DBL: $runningMsg: %s", state.toString())
             }
             delay(500)
             state = getState(workType)
@@ -164,12 +165,12 @@ object WorkStates {
         locking the code, we can make sure that the states are accurate when checked.
          */
         workMutex.withLock {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: mutuallyExclusiveWork() - %s | %s",
+            Timber.e("$DBL: mutuallyExclusiveWork() - %s | %s",
                 "originalWork = $originalWork, state = ${getState(originalWork)}",
                 "newWork = $newWork, state = ${getState(newWork)}")
 
             if (getState(originalWork) == WorkInfo.State.RUNNING) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $newWork ENDED - $originalWork RUNNING")
+                Timber.i("$DBL: $newWork ENDED - $originalWork RUNNING")
                 setState(newWork, WorkInfo.State.SUCCEEDED)
                 return true
             }
@@ -190,7 +191,7 @@ object WorkStates {
         tag: String? = null
     ) {
         if (workState !in allowedStates && workState != null) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: setState() for $workType - $workState is an invalid workState")
+            Timber.e("$DBL: setState() for $workType - $workState is an invalid workState")
             return
         }
 
@@ -206,7 +207,7 @@ object WorkStates {
         ) {
             val actualState = WorkManagerHelper.getUniqueWorkerState(context, tag)
             if (actualState == WorkInfo.State.RUNNING || actualState == WorkInfo.State.ENQUEUED) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s | %s",
+                Timber.i("$DBL: %s | %s",
                     "setState() for $workType - State not set! Worker already running / enqueued!",
                     "If this coming from a periodic worker, the worker is most likely in it's ENQUEUED state (interval down time)")
                 return

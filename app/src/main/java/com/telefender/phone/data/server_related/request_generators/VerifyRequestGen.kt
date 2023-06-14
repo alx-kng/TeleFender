@@ -9,6 +9,7 @@ import com.telefender.phone.data.server_related.json_classes.toServerResponse
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -64,21 +65,21 @@ private fun verifyPostResponseHandler(
                 repository.updateStoredMap(clientKey = keyResponse.key)
 
                 val key = repository.getClientKey()
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: key = $key")
+                Timber.i("$DBL: key = $key")
 
                 WorkStates.setState(WorkType.SETUP, WorkInfo.State.SUCCEEDED)
             }
         } else {
             WorkStates.setState(WorkType.SETUP, WorkInfo.State.FAILED)
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN VERIFY INSTALLATION: ${keyResponse?.error}")
+            Timber.i("$DBL: VOLLEY: ERROR WHEN VERIFY INSTALLATION: ${keyResponse?.error}")
         }
     }
 }
 
 private val verifyPostErrorHandler = Response.ErrorListener { error ->
     if (error.toString() != "null") {
-        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY $error")
+        Timber.e("$DBL: VOLLEY $error")
         WorkStates.setState(WorkType.SETUP, WorkInfo.State.FAILED)
     }
 }

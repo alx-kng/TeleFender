@@ -4,6 +4,7 @@ import android.content.Context
 import android.database.Cursor
 import android.provider.CallLog
 import com.telefender.phone.data.tele_database.entities.CallDetail
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -73,7 +74,7 @@ object DefaultCallDetails{
                 curs.close()
             }
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CALL LOG RETRIEVAL FINISHED")
+            Timber.i("$DBL: CALL LOG RETRIEVAL FINISHED")
             return@withContext calls
         }
     }

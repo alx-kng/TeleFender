@@ -16,9 +16,15 @@ import com.telefender.phone.databinding.FragmentInCallBinding
 import com.telefender.phone.gui.InCallActivity
 import com.telefender.phone.gui.IncomingCallActivity
 import com.telefender.phone.gui.model.InCallViewModel
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import timber.log.Timber
 
+/**
+ * TODO: Speakerphone issue, should reset to non-speaker after call finishes, or at least make
+ *  sure that speaker button color more accurately reflects state. Thought we fixed this before,
+ *  but apparently not.
+ */
 class InCallFragment : Fragment() {
 
     private var _binding: FragmentInCallBinding? = null
@@ -62,7 +68,7 @@ class InCallFragment : Fragment() {
                 || conferenceShouldDisconnect()
             ) {
                 requireActivity().finishAndRemoveTask()
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: IN CALL FINISHED!")
+                Timber.i("$DBL: IN CALL FINISHED!")
             } else {
                 updateCallerDisplay()
                 updateButtons()
@@ -157,7 +163,7 @@ class InCallFragment : Fragment() {
         }
 
         binding.keypadActive.setOnClickListener {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: Keypad button pressed!")
+            Timber.i("$DBL: Keypad button pressed!")
         }
     }
 
@@ -170,7 +176,7 @@ class InCallFragment : Fragment() {
         super.onDestroyView()
         _binding = null
 
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: InCallFragment Destroyed!")
+        Timber.i("$DBL: InCallFragment Destroyed!")
     }
 
     /**
@@ -371,11 +377,11 @@ class InCallFragment : Fragment() {
      */
     private fun updateCallerDisplay() {
 
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: incomingCall: ${CallManager.incomingCall}")
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: incomingActivity running: ${IncomingCallActivity.running}")
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: incomingActivity last answered: ${CallManager.lastAnsweredCall.number()}")
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: connections size: ${CallManager.connections.size}")
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: focusedCall: number = ${CallManager.focusedCall.number()}, " +
+        Timber.i("$DBL: incomingCall: ${CallManager.incomingCall}")
+        Timber.i("$DBL: incomingActivity running: ${IncomingCallActivity.running}")
+        Timber.i("$DBL: incomingActivity last answered: ${CallManager.lastAnsweredCall.number()}")
+        Timber.i("$DBL: connections size: ${CallManager.connections.size}")
+        Timber.i("$DBL: focusedCall: number = ${CallManager.focusedCall.number()}, " +
             "state = ${CallManager.callStateString(CallManager.focusedCall.getStateCompat())}")
 
         /**
@@ -386,13 +392,13 @@ class InCallFragment : Fragment() {
         if (CallManager.incomingCall && !IncomingCallActivity.running
             && CallManager.lastAnsweredCall != CallManager.focusedCall
         ) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: INSIDE INCOMING RETURN")
+            Timber.i("$DBL: INSIDE INCOMING RETURN")
             return
         }
 
         if (singleDisplay()) {
             // Single caller / outgoing call.
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SINGLE DISPLAY")
+            Timber.i("$DBL: SINGLE DISPLAY")
 
             // Switches out display views. Single caller display is used.
             binding.multiCallerDisplay.visibility = View.GONE
@@ -417,7 +423,7 @@ class InCallFragment : Fragment() {
             }
         } else if (singleConference()) {
             // Single conference call.
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SINGLE CONFERENCE")
+            Timber.i("$DBL: SINGLE CONFERENCE")
 
             // Switches out display views. Second display is hidden.
             binding.multiCallerDisplay.visibility = View.VISIBLE
@@ -438,7 +444,7 @@ class InCallFragment : Fragment() {
 
         } else if (twoConnections()) {
             // Two connections.
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: TWO CONNECTIONS")
+            Timber.i("$DBL: TWO CONNECTIONS")
 
             // Switches out display views. Both first and second display are shown.
             binding.multiCallerDisplay.visibility = View.VISIBLE

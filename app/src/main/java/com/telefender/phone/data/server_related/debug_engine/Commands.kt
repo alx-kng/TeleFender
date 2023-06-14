@@ -7,6 +7,7 @@ import com.telefender.phone.data.tele_database.entities.ChangeLog
 import com.telefender.phone.data.tele_database.entities.TableType
 import com.telefender.phone.data.tele_database.entities.toChangeLog
 import com.telefender.phone.data.tele_database.entities.toTableType
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -29,7 +30,7 @@ class EndCommand(
 ) : Command(context, repository, scope) {
 
     override suspend fun execute() {
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: REMOTE EndCommand - Stopping requests...")
+        Timber.i("$DBL: REMOTE EndCommand - Stopping requests...")
 
         RemoteDebug.resetStates()
     }
@@ -58,7 +59,7 @@ class LogCommand(
 ) : Command(context, repository, scope) {
 
     override suspend fun execute() {
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: REMOTE LogCommand - $message")
+        Timber.i("$DBL: REMOTE LogCommand - $message")
 
         // Echoes message to server.
         RemoteDebug.enqueueData(message ?: "null")
@@ -91,7 +92,7 @@ class HelpCommand(
 ) : Command(context, repository, scope) {
 
     override suspend fun execute() {
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: REMOTE HelpCommand")
+        Timber.i("$DBL: REMOTE HelpCommand")
 
         val helpString = """
             Possible commands:
@@ -169,7 +170,7 @@ class ReadQueryCommand(
     private val retryAmount = 3
 
     override suspend fun execute() {
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: REMOTE ReadQueryCommand - $queryString")
+        Timber.i("$DBL: REMOTE ReadQueryCommand - $queryString")
 
         for (i in 1..retryAmount) {
             try {
@@ -179,7 +180,7 @@ class ReadQueryCommand(
 
                 break
             } catch (e: Exception) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: ReadQueryCommand RETRYING... Error - ${e.message}")
+                Timber.i("$DBL: ReadQueryCommand RETRYING... Error - ${e.message}")
                 delay(2000)
 
                 // On last retry, set the debug exchange error message (so server can see it).
@@ -240,7 +241,7 @@ class InjectChangeCommand(
      *  in changeFromClient.
      */
     override suspend fun execute() {
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: REMOTE InjectChangeCommand - ${changeLog.toJson()}")
+        Timber.i("$DBL: REMOTE InjectChangeCommand - ${changeLog.toJson()}")
 
         for (i in 1..retryAmount) {
             try {
@@ -249,7 +250,7 @@ class InjectChangeCommand(
 
                 break
             } catch (e: Exception) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: InjectChangeCommand RETRYING... Error - ${e.message}")
+                Timber.i("$DBL: InjectChangeCommand RETRYING... Error - ${e.message}")
                 delay(2000)
 
                 // On last retry, set the debug exchange error message (so server can see it).
@@ -275,7 +276,7 @@ class InjectChangeCommand(
             commandValue: String?
         ) : InjectChangeCommand? {
 
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: InjectChangeCommand - commandValue = '$commandValue'")
+            Timber.e("$DBL: InjectChangeCommand - commandValue = '$commandValue'")
             val changeLog = commandValue?.toChangeLog() ?: return null
             return InjectChangeCommand(context, repository, scope, changeLog)
         }

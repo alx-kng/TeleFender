@@ -5,6 +5,7 @@ import android.media.AudioManager
 import android.os.Build
 import android.telecom.CallAudioState
 import androidx.lifecycle.MutableLiveData
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import com.telefender.phone.permissions.Permissions
 import timber.log.Timber
@@ -26,7 +27,7 @@ object AudioHelpers {
      */
     fun setRingerMode(context: Context, ringerMode: RingerMode) {
         if (!Permissions.hasDoNotDisturbPermission(context)) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: setRingerMode() - No permissions!")
+            Timber.e("$DBL: setRingerMode() - No permissions!")
             return
         }
 
@@ -99,7 +100,7 @@ object AudioHelpers {
         }
 
         speakerStatus.value = speakerOn
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: speaker: ${speakerStatus.value}")
+        Timber.i("$DBL: speaker: ${speakerStatus.value}")
     }
 
 }

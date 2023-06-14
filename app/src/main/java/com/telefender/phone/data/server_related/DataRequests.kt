@@ -10,6 +10,7 @@ import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
 import com.telefender.phone.data.tele_database.entities.ChangeLog
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,7 +41,7 @@ object DataRequests {
         val lastServerRowID = repository.getLastServerRowID()
 
         if (instanceNumber == null || key == null) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+            Timber.i("$DBL: " +
                 "VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
 
             WorkStates.setState(WorkType.DOWNLOAD_POST, WorkInfo.State.FAILED)
@@ -79,7 +80,7 @@ object DataRequests {
         errorCount: Int
     ) {
         if (errorCount == retryAmount) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: UPLOAD_CHANGE RETRY MAX")
+            Timber.i("$DBL: VOLLEY: UPLOAD_CHANGE RETRY MAX")
             WorkStates.setState(WorkType.UPLOAD_CHANGE_POST, WorkInfo.State.FAILED)
             return
         }
@@ -90,7 +91,7 @@ object DataRequests {
         val uploadRequestJson: String
 
         if (instanceNumber == null || key == null) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+            Timber.i("$DBL: " +
                 "VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
 
             WorkStates.setState(WorkType.UPLOAD_CHANGE_POST, WorkInfo.State.FAILED)
@@ -116,7 +117,7 @@ object DataRequests {
                 uploadRequestJson = UploadChangeRequest(instanceNumber, key, changeLogs).toJson()
             }
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG} UPLOAD_CHANGE REQUEST JSON: $uploadRequestJson")
+            Timber.i("$DBL UPLOAD_CHANGE REQUEST JSON: $uploadRequestJson")
 
             val stringRequest = UploadChangeRequestGen.create(
                 method = Request.Method.POST,
@@ -131,7 +132,7 @@ object DataRequests {
             // Adds entire string request to request queue
             RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
         } catch (e: Exception) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ${e.message}")
+            Timber.i("$DBL: VOLLEY: ${e.message}")
             e.printStackTrace()
         }
     }
@@ -148,7 +149,7 @@ object DataRequests {
         errorCount: Int
     ) {
         if (errorCount == retryAmount) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: UPLOAD_ANALYZED RETRY MAX")
+            Timber.i("$DBL: VOLLEY: UPLOAD_ANALYZED RETRY MAX")
             WorkStates.setState(WorkType.UPLOAD_ANALYZED_POST, WorkInfo.State.FAILED)
             return
         }
@@ -159,7 +160,7 @@ object DataRequests {
         val uploadRequestJson: String
 
         if (instanceNumber == null || key == null) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+            Timber.i("$DBL: " +
                 "VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
 
             WorkStates.setState(WorkType.UPLOAD_ANALYZED_POST, WorkInfo.State.FAILED)
@@ -185,7 +186,7 @@ object DataRequests {
                 uploadRequestJson = UploadAnalyzedRequest(instanceNumber, key, analyzedNumbers).toJson()
             }
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG} UPLOAD_ANALYZED_POST REQUEST JSON: $uploadRequestJson")
+            Timber.i("$DBL UPLOAD_ANALYZED_POST REQUEST JSON: $uploadRequestJson")
 
             val stringRequest = UploadAnalyzedRequestGen.create(
                 method = Request.Method.POST,
@@ -200,7 +201,7 @@ object DataRequests {
             // Adds entire string request to request queue
             RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
         } catch (e: Exception) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ${e.message}")
+            Timber.i("$DBL: VOLLEY: ${e.message}")
             e.printStackTrace()
         }
     }
@@ -217,7 +218,7 @@ object DataRequests {
         errorCount: Int
     ) {
         if (errorCount == retryAmount) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: UPLOAD_ERROR RETRY MAX")
+            Timber.i("$DBL: VOLLEY: UPLOAD_ERROR RETRY MAX")
             WorkStates.setState(WorkType.UPLOAD_ERROR_POST, WorkInfo.State.FAILED)
             return
         }
@@ -228,7 +229,7 @@ object DataRequests {
         val uploadRequestJson: String
 
         if (instanceNumber == null || key == null) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+            Timber.i("$DBL: " +
                 "VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
 
             WorkStates.setState(WorkType.UPLOAD_ERROR_POST, WorkInfo.State.FAILED)
@@ -242,7 +243,7 @@ object DataRequests {
                 uploadRequestJson = UploadErrorRequest(instanceNumber, key, errorLogs).toJson()
             }
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG} UPLOAD_CHANGE REQUEST JSON: $uploadRequestJson")
+            Timber.i("$DBL UPLOAD_CHANGE REQUEST JSON: $uploadRequestJson")
 
             val stringRequest = UploadErrorRequestGen.create(
                 method = Request.Method.POST,
@@ -257,7 +258,7 @@ object DataRequests {
             // Adds entire string request to request queue
             RequestQueueSingleton.getInstance(context).addToRequestQueue(stringRequest)
         } catch (e: Exception) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ${e.message}")
+            Timber.i("$DBL: VOLLEY: ${e.message}")
             e.printStackTrace()
         }
     }
@@ -276,7 +277,7 @@ object DataRequests {
         val key = repository.getClientKey()
 
         if (instanceNumber == null || key == null) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+            Timber.i("$DBL: " +
                 "VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
 
             WorkStates.setState(WorkType.SMS_VERIFY_POST, WorkInfo.State.FAILED)
@@ -321,7 +322,7 @@ object DataRequests {
         val key = repository.getClientKey()
 
         if (instanceNumber == null || key == null) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+            Timber.i("$DBL: " +
                 "VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
 
             WorkStates.setState(WorkType.UPLOAD_TOKEN, WorkInfo.State.FAILED)

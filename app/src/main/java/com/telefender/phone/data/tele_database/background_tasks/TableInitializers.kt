@@ -7,6 +7,7 @@ import com.telefender.phone.App
 import com.telefender.phone.data.tele_database.ClientDatabase
 import com.telefender.phone.data.tele_database.entities.ChangeLog
 import com.telefender.phone.data.tele_database.entities.ChangeType
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import timber.log.Timber
 import java.time.Instant
@@ -44,7 +45,7 @@ object TableInitializers {
                 contactRequired = true
             )
         ) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: Invalid status in initContacts()")
+            Timber.e("$DBL: Invalid status in initContacts()")
             return
         }
 
@@ -61,7 +62,7 @@ object TableInitializers {
                 logRequired = true,
             )
         ) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: Invalid status in initCallDetails()")
+            Timber.e("$DBL: Invalid status in initCallDetails()")
             return
         }
 

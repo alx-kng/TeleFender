@@ -4,7 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Application
 import androidx.lifecycle.*
 import com.telefender.phone.data.default_database.*
-import com.telefender.phone.misc_helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.DBL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -89,7 +89,7 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
             val tempContacts = DefaultContacts.getContactDetails(context)
             addDividers(tempContacts)
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: ABOUT TO ASSIGN CONTACTS VALUE")
+            Timber.i("$DBL: ABOUT TO ASSIGN CONTACTS VALUE")
             _contacts.value = tempContacts
         }
     }

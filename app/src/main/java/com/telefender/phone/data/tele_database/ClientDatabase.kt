@@ -12,6 +12,7 @@ import com.google.android.gms.tasks.OnCompleteListener
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.ktx.messaging
 import com.telefender.phone.App
+import com.telefender.phone.data.default_database.TestContacts
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.background_tasks.TableInitializers
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
@@ -22,6 +23,7 @@ import com.telefender.phone.data.tele_database.background_tasks.workers.SetupSch
 import com.telefender.phone.data.tele_database.client_daos.*
 import com.telefender.phone.data.tele_database.converters.Converters
 import com.telefender.phone.data.tele_database.entities.*
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.DatabaseLogger
 import com.telefender.phone.misc_helpers.PrintTypes
 import com.telefender.phone.misc_helpers.TeleHelpers
@@ -100,7 +102,7 @@ abstract class ClientDatabase : RoomDatabase() {
          */
         override fun onCreate(db: SupportSQLiteDatabase) {
             super.onCreate(db)
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: INSIDE DATABASE CALLBACK")
+            Timber.i("$DBL: INSIDE DATABASE CALLBACK")
             INSTANCE?.let { database ->
                 scope.launch {
                     firstTimeAccess = true
@@ -138,7 +140,7 @@ abstract class ClientDatabase : RoomDatabase() {
     protected suspend fun initCoreDatabase(context: Context) {
         initializationRunning = true
 
-        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: initCoreDatabase()")
+        Timber.e("$DBL: initCoreDatabase()")
 
         val userNumber = TeleHelpers.getUserNumberUncertain(context) ?: return
 
@@ -201,14 +203,14 @@ abstract class ClientDatabase : RoomDatabase() {
     protected suspend fun initFirebase(context: Context) {
         Firebase.messaging.token.addOnCompleteListener(OnCompleteListener { task ->
             if (!task.isSuccessful) {
-                Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                Timber.e("$DBL: " +
                     "Fetching FCM registration token failed ${task.exception}")
                 return@OnCompleteListener
             }
 
             // Get new FCM registration token
             val token = task.result
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: TOKEN: $token")
+            Timber.i("$DBL: TOKEN: $token")
 
             (context.applicationContext as App).applicationScope.launch {
                 this@ClientDatabase.storedMapDao().updateStoredMap(firebaseToken = token)
@@ -232,7 +234,7 @@ abstract class ClientDatabase : RoomDatabase() {
             || !Permissions.hasPhoneStatePermissions(context)
         ) {
             delay(500)
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: INSIDE $invokeLocation | " +
+            Timber.i("$DBL: INSIDE $invokeLocation | " +
                 "HAS CALL LOG PERMISSION: ${Permissions.hasLogPermissions(context)} | " +
                 "HAS PHONE STATE PERMISSION: ${Permissions.hasPhoneStatePermissions(context)}")
         }
@@ -244,7 +246,7 @@ abstract class ClientDatabase : RoomDatabase() {
      */
     private suspend fun waitForInitialization(context: Context, scope: CoroutineScope) {
         while (!isInitialized()) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: getDatabase() - DATABASE INITIALIZED = FALSE")
+            Timber.i("$DBL: getDatabase() - DATABASE INITIALIZED = FALSE")
             delay(500)
 
             /*
@@ -258,7 +260,7 @@ abstract class ClientDatabase : RoomDatabase() {
                 }
             }
         }
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: getDatabase() - DATABASE INITIALIZED = TRUE")
+        Timber.i("$DBL: getDatabase() - DATABASE INITIALIZED = TRUE")
     }
 
     /**
@@ -288,13 +290,13 @@ abstract class ClientDatabase : RoomDatabase() {
     private suspend fun waitForSetup(context: Context) {
         while (!isSetup()) {
             delay(500)
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: getDatabase() - USER SETUP = FALSE")
+            Timber.i("$DBL: getDatabase() - USER SETUP = FALSE")
 
             if (WorkStates.getState(WorkType.SETUP) == null) {
                 SetupScheduler.initiateSetupWorker(context)
             }
         }
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: getDatabase() - USER SETUP = TRUE")
+        Timber.i("$DBL: getDatabase() - USER SETUP = TRUE")
     }
 
     /**
@@ -366,13 +368,13 @@ abstract class ClientDatabase : RoomDatabase() {
                 instance
             }
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: GET DATABASE CALLED!")
+            Timber.i("$DBL: GET DATABASE CALLED!")
 
             runBlocking {
                 scope.launch {
                     instanceTemp.waitForCorePermissions(context, "getDatabase()")
 
-                    Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: SIM CARRIER = '${TeleHelpers.getSimCarrier(context)}'")
+                    Timber.e("$DBL: SIM CARRIER = '${TeleHelpers.getSimCarrier(context)}'")
 
                     // TODO: Probably need to restart firebase initialization process too.
                     // Waits for / restarts core database initialization and user setup.
@@ -381,7 +383,7 @@ abstract class ClientDatabase : RoomDatabase() {
 
                     // Wait for other possible initialization.
                     while (firstTimeAccess) {
-                        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: Waiting for rest of database!")
+                        Timber.i("$DBL: Waiting for rest of database!")
                         delay(500)
                     }
 
@@ -424,6 +426,10 @@ abstract class ClientDatabase : RoomDatabase() {
 
                     // Initialize Periodic Debug Worker
                     DebugScheduler.initiatePeriodicDebugWorker(context)
+
+//                    TestContacts.printContactsTable(context)
+//                    TestContacts.printRawContactsTable(context)
+//                    TestContacts.printContactDataTable(context, contentResolver)
                 }
             }
 

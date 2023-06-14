@@ -6,10 +6,7 @@ import androidx.room.Transaction
 import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.entities.*
-import com.telefender.phone.misc_helpers.TeleHelpers
-import com.telefender.phone.misc_helpers.daysToMilli
-import com.telefender.phone.misc_helpers.hoursToMilli
-import com.telefender.phone.misc_helpers.minutesToMilli
+import com.telefender.phone.misc_helpers.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.withLock
@@ -143,7 +140,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                     return
                 }
 
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                Timber.i("$DBL: " +
                     "executeFirst() RETRYING... ${e.message}")
                 delay(1000)
             }
@@ -167,7 +164,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                 // If the ErrorLog transaction fails too many times, just return.
                 if (i == retryAmount) return
 
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                Timber.i("$DBL: %s",
                     "moveToErrorLogs() RETRYING... ${e.message}")
                 delay(1000)
             }
@@ -212,7 +209,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
         mutexLocks[MutexType.EXECUTE]!!.withLock {
             val qteDeleted = getQTE(currQTE.rowID) == null
             if (qteDeleted) {
-                Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                Timber.e("$DBL: " +
                     "moveToErrorLogs() - QTE = $currQTE already deleted!")
                 return
             }
@@ -284,7 +281,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
             if (this.getChangeType() ==  ChangeType.INSTANCE_DELETE) {
                 insDelete(this, instanceNumber, qteRowID)
             } else {
-                Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: executeAgentINSD() - wrong type $type")
+                Timber.e("$DBL: executeAgentINSD() - wrong type $type")
             }
         }
     }
@@ -386,7 +383,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                     insInsert(instanceNumber = instanceNumber)
                 }
                 else -> {
-                    Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: executeAgentNORM() - Wrong Type: $type")
+                    Timber.e("$DBL: executeAgentNORM() - Wrong Type: $type")
                 }
             }
 
@@ -869,7 +866,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
          */
         val numberExists = getContactRow(CID) != null
         if (numberExists) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+            Timber.e("$DBL: " +
                 "Duplicate cInsert() for CID = $CID | instanceNumber = $instanceNumber")
             return
         }
@@ -900,7 +897,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
          */
         val currBlockedStatus = contactBlocked(CID)
         if (currBlockedStatus == null || currBlockedStatus == blocked) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+            Timber.e("$DBL: " +
                 "Duplicate cUpdate() for CID = $CID | instanceNumber = $instanceNumber | blocked = $blocked")
             return
         }
@@ -953,7 +950,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
          */
         val contactDeleted = getContactRow(CID) == null
         if (contactDeleted) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: Duplicate cDelete() for CID = $CID")
+            Timber.e("$DBL: Duplicate cDelete() for CID = $CID")
             return
         }
 
@@ -997,7 +994,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
          */
         val numberExists = getContactNumberRow(CID!!, normalizedNumber!!) != null
         if (numberExists) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+            Timber.e("$DBL: " +
                 "Duplicate cInsert() for CID = $CID | normalizedNumber = $normalizedNumber | instanceNumber = $instanceNumber")
             return
         }
@@ -1079,7 +1076,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
          */
         val currRawNumber = getContactNumberRow(CID!!, normalizedNumber!!)?.rawNumber
         if (currRawNumber == null || currRawNumber == rawNumber!!) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+            Timber.e("$DBL: " +
                 "Duplicate cnUpdate() for CID = $CID | normalizedNumber = $normalizedNumber | rawNumber = $rawNumber")
             return
         }
@@ -1108,7 +1105,7 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
          */
         val numberDeleted = getContactNumberRow(CID!!, normalizedNumber!!) == null
         if (numberDeleted) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+            Timber.e("$DBL: " +
                 "Duplicate cDelete() for CID = $CID | normalizedNumber = $normalizedNumber | instanceNumber = $instanceNumber")
             return
         }

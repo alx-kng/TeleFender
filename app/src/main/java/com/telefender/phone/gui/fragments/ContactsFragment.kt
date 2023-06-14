@@ -14,7 +14,7 @@ import com.telefender.phone.gui.adapters.ContactsAdapter
 import com.telefender.phone.gui.decoration.ContactHeaderDecoration
 import com.telefender.phone.gui.model.ContactsViewModel
 import com.telefender.phone.gui.model.ContactsViewModelFactory
-import com.telefender.phone.misc_helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.DBL
 import timber.log.Timber
 
 
@@ -75,7 +75,7 @@ class ContactsFragment : Fragment() {
 
     private fun setupAppBar() {
         if (activity is MainActivity) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: ContactsFragment - setupAppBar()!")
+            Timber.i("$DBL: ContactsFragment - setupAppBar()!")
 
             val act = activity as MainActivity
             act.setTitle(getString(R.string.contacts_title))

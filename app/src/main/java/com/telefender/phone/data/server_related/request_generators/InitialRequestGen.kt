@@ -11,6 +11,7 @@ import com.telefender.phone.data.server_related.json_classes.toServerResponse
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -73,21 +74,21 @@ private fun initialPostResponseHandler(
                 repository.updateStoredMap(sessionID = setupSessionResponse.sessionID)
 
                 val sessionID = repository.getSessionID()
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: sessionID = $sessionID")
+                Timber.i("$DBL: sessionID = $sessionID")
 
                 UserSetup.verifyPostRequest(context, repository, scope)
             }
         } else {
             WorkStates.setState(WorkType.SETUP, WorkInfo.State.FAILED)
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN REQUEST INSTALLATION: ${setupSessionResponse?.error}")
+            Timber.i("$DBL: VOLLEY: ERROR WHEN REQUEST INSTALLATION: ${setupSessionResponse?.error}")
         }
     }
 }
 
 private val initialPostErrorHandler = Response.ErrorListener { error ->
     if (error.toString() != "null") {
-        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY $error")
+        Timber.e("$DBL: VOLLEY $error")
         WorkStates.setState(WorkType.SETUP, WorkInfo.State.FAILED)
     }
 }

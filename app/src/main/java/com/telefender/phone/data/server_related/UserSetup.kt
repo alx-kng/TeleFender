@@ -10,6 +10,7 @@ import com.telefender.phone.data.server_related.request_generators.VerifyRequest
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import org.json.JSONException
@@ -27,7 +28,7 @@ object UserSetup {
         val instanceNumber = TeleHelpers.getUserNumberStored(context)
 
         if (instanceNumber == null) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR - INSTANCE NUMBER is null")
+            Timber.i("$DBL: VOLLEY: ERROR - INSTANCE NUMBER is null")
 
             WorkStates.setState(WorkType.SETUP, WorkInfo.State.FAILED)
             return
@@ -35,7 +36,7 @@ object UserSetup {
 
         val requestJson : String = DefaultRequest(instanceNumber).toJson()
 
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: initialRequestJson = $requestJson")
+        Timber.i("$DBL: initialRequestJson = $requestJson")
 
         try {
             val stringRequest = InitialRequestGen.create(
@@ -64,7 +65,7 @@ object UserSetup {
         val otp = 111111
 
         if (instanceNumber == null || sessionID == null) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+            Timber.i("$DBL: " +
                 "VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | SETUP_SESSION ID = $sessionID")
 
             WorkStates.setState(WorkType.SETUP, WorkInfo.State.FAILED)
@@ -73,7 +74,7 @@ object UserSetup {
 
         val verifyRequestJson = VerifyRequest(instanceNumber, sessionID, otp).toJson()
 
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: verifyRequestJson = $verifyRequestJson")
+        Timber.i("$DBL: verifyRequestJson = $verifyRequestJson")
 
         try {
             val stringRequest = VerifyRequestGen.create(

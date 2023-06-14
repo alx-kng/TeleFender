@@ -7,6 +7,7 @@ import com.telefender.phone.data.server_related.UserSetup
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import com.telefender.phone.permissions.Permissions
 import kotlinx.coroutines.CoroutineScope
@@ -21,7 +22,7 @@ object SetupScheduler {
 
     fun initiateSetupWorker(context: Context): UUID? {
         if (!Permissions.hasLogPermissions(context)) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: No log permissions in initiateSetupWorker()")
+            Timber.e("$DBL: No log permissions in initiateSetupWorker()")
             return null
         }
 
@@ -69,7 +70,7 @@ class CoroutineSetupWorker(
         try {
             setForeground(getForegroundInfo())
         } catch(e: Exception) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", e.message!!)
+            Timber.i("$DBL: %s", e.message!!)
         }
 
         val repository : ClientRepository = (applicationContext as App).repository
@@ -82,16 +83,16 @@ class CoroutineSetupWorker(
         UserSetup.initialPostRequest(context, repository, scope)
 
         if(!WorkStates.workWaiter(WorkType.SETUP, "SETUP WORKER", stopOnFail = true)) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: SETUP WORKER RETRYING...")
+            Timber.e("$DBL: SETUP WORKER RETRYING...")
             return Result.retry()
         }
 
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SETUP WORKER DONE")
+        Timber.i("$DBL: SETUP WORKER DONE")
         return Result.success()
     }
 
     override suspend fun getForegroundInfo() : ForegroundInfo {
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: SETUP WORKER FOREGROUND")
+        Timber.i("$DBL: SETUP WORKER FOREGROUND")
 
         return ForegroundInfoCreator.createForegroundInfo(
             applicationContext = applicationContext,

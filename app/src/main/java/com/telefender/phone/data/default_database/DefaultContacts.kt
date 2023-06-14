@@ -11,6 +11,7 @@ import android.provider.ContactsContract
 import android.provider.ContactsContract.CommonDataKinds.Phone
 import android.provider.ContactsContract.PhoneLookup
 import android.provider.ContactsContract.RawContacts
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -65,7 +66,7 @@ data class ContactDetail(
 /**
  * TODO: Consider changing this default database retrieval structure to a ContentProvider, but it
  *  may or may not be necessary seeing as that ContentProvider is often used to expose data to
- *  other applications.
+ *  other applications. --> This prompt might not even make sense. Probably just do as normal.
  */
 object DefaultContacts {
 
@@ -76,26 +77,31 @@ object DefaultContacts {
                 ContactsContract.Contacts.DISPLAY_NAME_PRIMARY,
             )
 
-            val cur: Cursor = context.contentResolver.query(
-                ContactsContract.Contacts.CONTENT_URI,
-                projection,
-                null,
-                null,
-                Phone.DISPLAY_NAME + " ASC"
-            )!!
-
             val contacts : MutableList<ContactDetail> = mutableListOf()
 
-            while (cur.moveToNext()) {
-                val id = cur.getString(0).toInt()
-                val name = cur.getString(1)
+            try {
+                val cur: Cursor = context.contentResolver.query(
+                    ContactsContract.Contacts.CONTENT_URI,
+                    projection,
+                    null,
+                    null,
+                    ContactsContract.Contacts.DISPLAY_NAME_PRIMARY + " ASC"
+                )!!
 
-                val contact = ContactDetail(name, id)
-                contacts.add(contact)
+                while (cur.moveToNext()) {
+                    val id = cur.getString(0).toInt()
+                    val name = cur.getString(1)
+
+                    val contact = ContactDetail(name, id)
+                    contacts.add(contact)
+                }
+
+                cur.close()
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-            cur.close()
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CONTACT RETRIEVAL FINISHED")
+            Timber.i("$DBL: CONTACT RETRIEVAL FINISHED")
             return@withContext contacts
         }
     }
@@ -137,7 +143,7 @@ object DefaultContacts {
      */
     fun getContactNumberCursor(context: Context, contentResolver: ContentResolver): Cursor? {
         if (!TeleHelpers.hasValidStatus(context, setupRequired = false, contactRequired = true)) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+            Timber.e("$DBL: " +
                 "No contact permissions in getContactNumberCursors()")
 
             return null
@@ -220,7 +226,7 @@ object DefaultContacts {
             null
         )
 
-        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: contactNumber: $rawNumber exists = ${curs != null && curs.moveToFirst()}")
+        Timber.e("$DBL: contactNumber: $rawNumber exists = ${curs != null && curs.moveToFirst()}")
 
         val exists = curs != null && curs.moveToFirst()
         curs?.close()

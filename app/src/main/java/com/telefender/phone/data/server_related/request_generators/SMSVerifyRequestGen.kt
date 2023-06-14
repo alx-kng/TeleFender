@@ -14,6 +14,7 @@ import com.telefender.phone.data.tele_database.entities.Change
 import com.telefender.phone.data.tele_database.entities.ChangeLog
 import com.telefender.phone.data.tele_database.entities.ChangeType
 import com.telefender.phone.data.tele_database.entities.SafeAction
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -80,7 +81,7 @@ private fun smsVerifyResponseHandler(
 
             // Makes sure that the server checked the sms verified status for the right number.
             if (responseNumber != number) {
-                Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: SMS_VERIFY - Returned wrong number!")
+                Timber.e("$DBL: SMS_VERIFY - Returned wrong number!")
                 WorkStates.setState(WorkType.SMS_VERIFY_POST, WorkInfo.State.FAILED)
                 return@Listener
             }
@@ -133,14 +134,14 @@ private fun smsVerifyResponseHandler(
         } else {
             WorkStates.setState(WorkType.SMS_VERIFY_POST, WorkInfo.State.FAILED)
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN SMS_VERIFY: ${smsVerifyResponse?.error}")
+            Timber.i("$DBL: VOLLEY: ERROR WHEN SMS_VERIFY: ${smsVerifyResponse?.error}")
         }
     }
 }
 
 private val smsVerifyErrorHandler = Response.ErrorListener { error ->
     if (error.toString() != "null") {
-        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY $error")
+        Timber.e("$DBL: VOLLEY $error")
         WorkStates.setState(WorkType.SMS_VERIFY_POST, WorkInfo.State.FAILED)
     }
 }

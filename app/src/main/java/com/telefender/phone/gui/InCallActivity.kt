@@ -12,6 +12,7 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import com.telefender.phone.R
 import com.telefender.phone.databinding.ActivityInCallBinding
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import timber.log.Timber
 
@@ -54,7 +55,7 @@ class InCallActivity : AppCompatActivity() {
          */
         onBackPressedDispatcher.addCallback(this, object: OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: Back pressed in InCallActivity!")
+                Timber.i("$DBL: Back pressed in InCallActivity!")
 
                 if (navController.currentDestination!!.id == R.id.inCallFragment) {
                     return
@@ -79,7 +80,7 @@ class InCallActivity : AppCompatActivity() {
         // Lets IncomingCallActivity know that InCallActivity is already running.
         _running = false
         _context = null
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: IN CALL DESTROYED")
+        Timber.i("$DBL: IN CALL DESTROYED")
     }
 
     private fun inCallOverLockScreen() {

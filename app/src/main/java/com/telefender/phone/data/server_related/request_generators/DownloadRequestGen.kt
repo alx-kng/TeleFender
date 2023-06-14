@@ -11,6 +11,7 @@ import com.telefender.phone.data.server_related.json_classes.toServerResponse
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -87,7 +88,7 @@ private fun downloadResponseHandler(
                     // Inserts ServerData into right table and into ExecuteQueue
                     val success = repository.changeFromServer(genericData)
                     if (!success) {
-                        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                        Timber.i("$DBL: " +
                             "VOLLEY: changeFromServer() wasn't successful. Stopping further requests.")
 
                         WorkStates.setState(WorkType.DOWNLOAD_POST, WorkInfo.State.SUCCEEDED)
@@ -99,11 +100,11 @@ private fun downloadResponseHandler(
                  * Keep launching download requests to server until no changeLogs left.
                  */
                 if (downloadResponse.data.isNotEmpty()) {
-                    Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: MORE TO DOWNLOAD")
+                    Timber.i("$DBL: VOLLEY: MORE TO DOWNLOAD")
 
                     downloadDataRequest(context, repository, scope)
                 } else {
-                    Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: All DOWNLOADS COMPLETE")
+                    Timber.i("$DBL: VOLLEY: All DOWNLOADS COMPLETE")
 
                     WorkStates.setState(WorkType.DOWNLOAD_POST, WorkInfo.State.SUCCEEDED)
                 }
@@ -111,14 +112,14 @@ private fun downloadResponseHandler(
         } else {
             WorkStates.setState(WorkType.DOWNLOAD_POST, WorkInfo.State.FAILED)
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN DOWNLOAD: ${downloadResponse?.error}")
+            Timber.i("$DBL: VOLLEY: ERROR WHEN DOWNLOAD: ${downloadResponse?.error}")
         }
     }
 }
 
 private val downloadErrorHandler = Response.ErrorListener { error ->
     if (error.toString() != "null") {
-        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY $error")
+        Timber.e("$DBL: VOLLEY $error")
         WorkStates.setState(WorkType.DOWNLOAD_POST, WorkInfo.State.FAILED)
     }
 }

@@ -6,6 +6,7 @@ import com.telefender.phone.data.server_related.RemoteDebug
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,7 +41,7 @@ object DebugEngine {
          */
         val timeSinceCommandComplete = currentTime - (RemoteDebug.lastCommandTime ?: RemoteDebug.startTime)
         if (!RemoteDebug.commandRunning && timeSinceCommandComplete > RemoteDebug.maxIdlePeriod) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+            Timber.i("$DBL: " +
                 "REMOTE - Max idle period reached! Ending debug exchange!")
 
             RemoteDebug.resetStates()
@@ -70,7 +71,7 @@ object DebugEngine {
             RemoteDebug.error = errorString
             RemoteDebug.commandRunning = false
 
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: $errorString")
+            Timber.e("$DBL: $errorString")
         }
 
         // If not EndCommand keep sending exchange data requests.

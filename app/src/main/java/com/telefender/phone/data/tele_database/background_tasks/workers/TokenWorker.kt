@@ -8,6 +8,7 @@ import com.telefender.phone.data.server_related.DataRequests
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import timber.log.Timber
 import java.util.*
@@ -82,11 +83,11 @@ class CoroutineTokenWorker(
 
         when (stateVarString) {
             "oneTimeTokenState" ->  {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: TOKEN ONE TIME STARTED")
+                Timber.i("$DBL: TOKEN ONE TIME STARTED")
                 // No need to set the state again for one time workers.
             }
             "periodicTokenState" -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: TOKEN PERIODIC STARTED")
+                Timber.i("$DBL: TOKEN PERIODIC STARTED")
 
                 /**
                  * Although this may seem redundant, we need to set the state to running here,
@@ -99,7 +100,7 @@ class CoroutineTokenWorker(
                 WorkStates.setState(WorkType.PERIODIC_TOKEN, WorkInfo.State.RUNNING)
             }
             else -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: TOKEN WORKER THREAD: Worker state variable name is wrong")
+                Timber.i("$DBL: TOKEN WORKER THREAD: Worker state variable name is wrong")
             }
         }
 
@@ -114,7 +115,7 @@ class CoroutineTokenWorker(
             "oneTimeTokenState" ->  WorkStates.setState(WorkType.ONE_TIME_TOKEN, WorkInfo.State.SUCCEEDED)
             "periodicTokenState" -> WorkStates.setState(WorkType.PERIODIC_TOKEN, WorkInfo.State.SUCCEEDED)
             else -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: TOKEN WORKER THREAD: Worker state variable name is wrong")
+                Timber.i("$DBL: TOKEN WORKER THREAD: Worker state variable name is wrong")
             }
         }
         return Result.success()

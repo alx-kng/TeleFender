@@ -109,10 +109,10 @@ object DatabaseLogger {
                 ?: repository?.getAllInstance()
                 ?: listOf()
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: INSTANCE TABLE SIZE: ${instances.size}")
+            Timber.i("$DBL: INSTANCE TABLE SIZE: ${instances.size}")
 
             for (instance in instances) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $instance")
+                Timber.i("$DBL: $instance")
             }
         }
     }
@@ -123,10 +123,10 @@ object DatabaseLogger {
                 ?: repository?.getAllContacts()
                 ?: listOf()
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CONTACT TABLE SIZE: ${contacts.size}")
+            Timber.i("$DBL: CONTACT TABLE SIZE: ${contacts.size}")
             
             for (contact in contacts) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $contact")
+                Timber.i("$DBL: $contact")
             }
         }
     }
@@ -137,10 +137,10 @@ object DatabaseLogger {
                 ?: repository?.getAllContactNumbers()
                 ?: listOf()
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CONTACT NUMBERS SIZE: ${contactNumbers.size}")
+            Timber.i("$DBL: CONTACT NUMBERS SIZE: ${contactNumbers.size}")
 
             for (contactNumber in contactNumbers) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $contactNumber")
+                Timber.i("$DBL: $contactNumber")
             }
         }
     }
@@ -151,10 +151,10 @@ object DatabaseLogger {
                 ?: repository?.getAllChangeLogs()
                 ?: listOf()
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CHANGE LOG SIZE: ${changeLogs.size}")
+            Timber.i("$DBL: CHANGE LOG SIZE: ${changeLogs.size}")
 
             for (changeLog in changeLogs) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $changeLog")
+                Timber.i("$DBL: $changeLog")
             }
         }
     }
@@ -165,10 +165,10 @@ object DatabaseLogger {
                 ?: repository?.getAllQTE()
                 ?: listOf()
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: EXECUTE LOG SIZE: ${executeLogs.size}")
+            Timber.i("$DBL: EXECUTE LOG SIZE: ${executeLogs.size}")
 
             for (executeLog in executeLogs) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $executeLog")
+                Timber.i("$DBL: $executeLog")
             }
         }
     }
@@ -179,10 +179,10 @@ object DatabaseLogger {
                 ?: repository?.getAllChangeQTU()
                 ?: listOf()
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: UPLOAD_CHANGE LOG SIZE: ${uploadLogs.size}")
+            Timber.i("$DBL: UPLOAD_CHANGE LOG SIZE: ${uploadLogs.size}")
 
             for (uploadLog in uploadLogs) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $uploadLog")
+                Timber.i("$DBL: $uploadLog")
             }
         }
     }
@@ -193,10 +193,10 @@ object DatabaseLogger {
                 ?: repository?.getAllAnalyzedQTU()
                 ?: listOf()
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: UPLOAD_ANALYZED LOG SIZE: ${uploadLogs.size}")
+            Timber.i("$DBL: UPLOAD_ANALYZED LOG SIZE: ${uploadLogs.size}")
 
             for (uploadLog in uploadLogs) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $uploadLog")
+                Timber.i("$DBL: $uploadLog")
             }
         }
     }
@@ -218,10 +218,10 @@ object DatabaseLogger {
                     ?: listOf()
             }
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: # OF PRINTED CALL LOGS: ${callLogs.size}")
+            Timber.i("$DBL: # OF PRINTED CALL LOGS: ${callLogs.size}")
 
             for (callLog in callLogs) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: CALL LOG: $callLog")
+                Timber.i("$DBL: CALL LOG: $callLog")
             }
         }
     }
@@ -232,10 +232,10 @@ object DatabaseLogger {
                 ?: repository?.getAllAnalyzedNum()
                 ?: listOf()
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: ANALYZED NUMBER SIZE: ${analyzedNumbers.size}")
+            Timber.i("$DBL: ANALYZED NUMBER SIZE: ${analyzedNumbers.size}")
 
             for (analyzedNumber in analyzedNumbers) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $analyzedNumber")
+                Timber.i("$DBL: $analyzedNumber")
             }
         }
     }
@@ -246,10 +246,10 @@ object DatabaseLogger {
                 ?: repository?.getAllErrorLog()
                 ?: listOf()
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: ERROR LOG SIZE: ${errorLogs.size}")
+            Timber.i("$DBL: ERROR LOG SIZE: ${errorLogs.size}")
 
             for (errorLog in errorLogs) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: $errorLog")
+                Timber.i("$DBL: $errorLog")
             }
         }
     }

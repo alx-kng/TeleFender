@@ -6,8 +6,7 @@ import com.telefender.phone.data.server_related.json_classes.ServerData
 import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.entities.*
-import com.telefender.phone.data.tele_database.entities.CallDetail
-import com.telefender.phone.misc_helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.DBL
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
@@ -43,7 +42,7 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
 
                 throw Exception("linkedRowID was -1 (unsuccessful insert)")
             } catch (e: Exception) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                Timber.i("$DBL: " +
                     "changeFromServer() RETRYING... ${e.message}")
                 delay(2000)
             }
@@ -71,7 +70,7 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
         // rowID of data in respective table. Used in ExecuteQueue for referencing a row.
         val linkedRowID: Long
 
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: changeFromServer() - serverRowID: ${serverData.serverRowID}}")
+        Timber.i("$DBL: changeFromServer() - serverRowID: ${serverData.serverRowID}}")
 
         /*
         The rowID = 0 resets downloaded rowID's, which conflict with user's own rowID PK. This way,
@@ -92,7 +91,7 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
                     linkedRowID = insertChangeLog(this)
 
                     if (linkedRowID < 0) {
-                        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                        Timber.i("$DBL: " +
                             "insertChangeLog() failed! with $this")
 
                         return ErrorQueue.create(
@@ -112,7 +111,7 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
                     linkedRowID = insertAnalyzedNum(this)
 
                     if (linkedRowID < 0) {
-                        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: insertAnalyzedNum() failed! with $this")
+                        Timber.i("$DBL: insertAnalyzedNum() failed! with $this")
 
                         return ErrorQueue.create(
                             instanceNumber = getUserNumber()!!,
@@ -131,7 +130,7 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
                     linkedRowID = insertCallDetailIgnore(this)
 
                     if (linkedRowID < 0) {
-                        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: insertCallDetailIgnore() failed! with $this")
+                        Timber.i("$DBL: insertCallDetailIgnore() failed! with $this")
 
                         return ErrorQueue.create(
                             instanceNumber = getUserNumber()!!,
@@ -234,7 +233,7 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
                  */
                 if (i == retryAmount && bubbleError) throw Exception("changeFromClient() - ${e.message}")
 
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: " +
+                Timber.i("$DBL: " +
                     "changeFromClient() RETRYING... ${e.message}")
                 delay(2000)
             }

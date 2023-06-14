@@ -14,6 +14,7 @@ import androidx.lifecycle.Observer
 import com.telefender.phone.call_related.*
 import com.telefender.phone.data.tele_database.TeleCallDetails
 import com.telefender.phone.databinding.ActivityIncomingCallBinding
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.*
 import timber.log.Timber
@@ -50,7 +51,7 @@ class IncomingCallActivity : AppCompatActivity() {
 
     private val observer = Observer { isIncoming: Boolean->
         if (!isIncoming) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: INCOMING FINISHED: focusedCall state: " +
+            Timber.i("$DBL: INCOMING FINISHED: focusedCall state: " +
                 CallManager.callStateString(CallManager.focusedCall.getStateCompat())
             )
 
@@ -93,7 +94,7 @@ class IncomingCallActivity : AppCompatActivity() {
 
         binding.answerIncoming.setOnClickListener {
             if (!safe) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s",
+                Timber.i("$DBL: %s",
                     "SILENCE_MODE Action: No block action taken because call was answered by user.")
             }
 
@@ -168,11 +169,11 @@ class IncomingCallActivity : AppCompatActivity() {
      */
     private suspend fun silenceHangup() {
         for (i in 1..10) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: INSIDE SILENCE HANGUP $i")
+            Timber.e("$DBL: INSIDE SILENCE HANGUP $i")
             delay(silenceDelay / 10)
         }
 
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s",
+        Timber.i("$DBL: %s",
             "SILENCE_MODE ACTION: Block action was taken because call was not answered or disconnected by user.")
 
         unallowed = true

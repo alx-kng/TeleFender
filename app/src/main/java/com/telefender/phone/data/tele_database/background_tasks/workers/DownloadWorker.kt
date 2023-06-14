@@ -7,6 +7,7 @@ import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.data.server_related.RequestWrappers
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -90,17 +91,17 @@ class CoroutineDownloadWorker(
             try {
                 setForeground(getForegroundInfo())
             } catch(e: Exception) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s", e.message!!)
+                Timber.i("$DBL: %s", e.message!!)
             }
         }
 
         when (stateVarString) {
             "oneTimeDownloadState" -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: DOWNLOAD ONE TIME STARTED")
+                Timber.i("$DBL: DOWNLOAD ONE TIME STARTED")
                 // No need to set the state again for one time workers.
             }
             "periodicDownloadState" -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: DOWNLOAD PERIODIC STARTED")
+                Timber.i("$DBL: DOWNLOAD PERIODIC STARTED")
 
                 /**
                  * Although this may seem redundant, we need to set the state to running here,
@@ -113,7 +114,7 @@ class CoroutineDownloadWorker(
                 WorkStates.setState(WorkType.PERIODIC_DOWNLOAD, WorkInfo.State.RUNNING)
             }
             else -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: DOWNLOAD WORKER THREAD: Worker state variable name is wrong")
+                Timber.i("$DBL: DOWNLOAD WORKER THREAD: Worker state variable name is wrong")
             }
         }
 
@@ -122,14 +123,14 @@ class CoroutineDownloadWorker(
         /**
          * Downloads changes from server
          */
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: DOWNLOAD WORKER STARTED")
+        Timber.i("$DBL: DOWNLOAD WORKER STARTED")
         RequestWrappers.downloadData(context, repository, scope, "DOWNlOAD WORKER")
 
         when (stateVarString) {
             "oneTimeDownloadState" -> WorkStates.setState(WorkType.ONE_TIME_DOWNLOAD, WorkInfo.State.SUCCEEDED)
             "periodicDownloadState" -> WorkStates.setState(WorkType.PERIODIC_DOWNLOAD, WorkInfo.State.SUCCEEDED)
             else -> {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: DOWNLOAD WORKER THREAD: Worker state variable name is wrong")
+                Timber.i("$DBL: DOWNLOAD WORKER THREAD: Worker state variable name is wrong")
             }
         }
 
@@ -137,7 +138,7 @@ class CoroutineDownloadWorker(
     }
 
     override suspend fun getForegroundInfo() : ForegroundInfo {
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: DOWNLOAD WORKER FOREGROUND")
+        Timber.i("$DBL: DOWNLOAD WORKER FOREGROUND")
 
         return ForegroundInfoCreator.createForegroundInfo(
             applicationContext = applicationContext,

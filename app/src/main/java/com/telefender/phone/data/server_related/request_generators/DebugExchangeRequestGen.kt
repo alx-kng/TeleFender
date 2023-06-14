@@ -13,6 +13,7 @@ import com.telefender.phone.data.server_related.json_classes.toServerResponse
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -60,7 +61,7 @@ private fun debugExchangeResponseHandler(
 ) : Response.Listener<String> {
 
     return Response.Listener<String> { response : String->
-        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: DEBUG EXCHANGE RESPONSE %s", response)
+        Timber.i("$DBL: DEBUG EXCHANGE RESPONSE %s", response)
 
         val debugExchangeResponse : DefaultResponse? =
             response.toServerResponse(ServerResponseType.DEBUG_EXCHANGE) ?:
@@ -87,11 +88,11 @@ private fun debugExchangeResponseHandler(
                 )
             }
         } else if (debugExchangeResponse != null && debugExchangeResponse.error == "InvToken"){
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: DEBUG EXCHANGE - NEED NEW TOKEN: ${debugExchangeResponse.error}")
+            Timber.i("$DBL: VOLLEY: DEBUG EXCHANGE - NEED NEW TOKEN: ${debugExchangeResponse.error}")
 
             scope.launch(Dispatchers.IO) {
                 if (RemoteDebug.invTokenCounter >= RemoteDebug.retryAmount) {
-                    Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: %s",
+                    Timber.i("$DBL: %s",
                         "VOLLEY: DEBUG EXCHANGE - STOPPING - TOO MANY INV TOKEN ERRORS!")
 
                     WorkStates.setState(WorkType.DEBUG_EXCHANGE_POST, WorkInfo.State.FAILED)
@@ -115,14 +116,14 @@ private fun debugExchangeResponseHandler(
         } else {
             WorkStates.setState(WorkType.DEBUG_EXCHANGE_POST, WorkInfo.State.FAILED)
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: DEBUG EXCHANGE - ERROR: ${debugExchangeResponse?.error}")
+            Timber.i("$DBL: VOLLEY: DEBUG EXCHANGE - ERROR: ${debugExchangeResponse?.error}")
         }
     }
 }
 
 private val debugExchangeErrorHandler = Response.ErrorListener { error ->
     if (error.toString() != "null") {
-        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY $error")
+        Timber.e("$DBL: VOLLEY $error")
         WorkStates.setState(WorkType.DEBUG_EXCHANGE_POST, WorkInfo.State.FAILED)
     }
 }

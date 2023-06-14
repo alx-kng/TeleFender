@@ -12,6 +12,7 @@ import com.telefender.phone.data.server_related.json_classes.toServerResponse
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.*
 import timber.log.Timber
@@ -81,11 +82,11 @@ private fun uploadChangeResponseHandler(
 
                 when (uploadResponse.status) {
                     "ok" -> {
-                        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: UPLOAD_CHANGE - $uploadResponse")
+                        Timber.i("$DBL: VOLLEY: UPLOAD_CHANGE - $uploadResponse")
                         repository.deleteChangeQTUInclusive(uploadResponse.lastUploadedRowID)
                     }
                     else -> {
-                        Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: PARTIALLY UPLOADED CHANGES WITH ERROR: ${uploadResponse.error}")
+                        Timber.i("$DBL: VOLLEY: PARTIALLY UPLOADED CHANGES WITH ERROR: ${uploadResponse.error}")
                         repository.deleteChangeQTUExclusive(uploadResponse.lastUploadedRowID)
                         nextErrorCount++
                         delay(RequestWrappers.retryDelayTime)
@@ -97,11 +98,11 @@ private fun uploadChangeResponseHandler(
                  * Keep launching upload requests to server until no uploadLogs left.
                  */
                 if (repository.hasChangeQTU()) {
-                    Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: MORE CHANGES TO UPLOAD")
+                    Timber.i("$DBL: VOLLEY: MORE CHANGES TO UPLOAD")
 
                     uploadChangeRequest(context, repository, scope, nextErrorCount)
                 } else {
-                    Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: All CHANGE UPLOADS COMPLETE")
+                    Timber.i("$DBL: VOLLEY: All CHANGE UPLOADS COMPLETE")
 
                     WorkStates.setState(WorkType.UPLOAD_CHANGE_POST, WorkInfo.State.SUCCEEDED)
                 }
@@ -109,14 +110,14 @@ private fun uploadChangeResponseHandler(
         } else {
             WorkStates.setState(WorkType.UPLOAD_CHANGE_POST, WorkInfo.State.FAILED)
 
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY: ERROR WHEN UPLOAD_CHANGE: ${uploadResponse?.error}")
+            Timber.i("$DBL: VOLLEY: ERROR WHEN UPLOAD_CHANGE: ${uploadResponse?.error}")
         }
     }
 }
 
 private val uploadChangeErrorHandler = Response.ErrorListener { error ->
     if (error.toString() != "null") {
-        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: VOLLEY $error")
+        Timber.e("$DBL: VOLLEY $error")
         WorkStates.setState(WorkType.UPLOAD_CHANGE_POST, WorkInfo.State.FAILED)
     }
 }

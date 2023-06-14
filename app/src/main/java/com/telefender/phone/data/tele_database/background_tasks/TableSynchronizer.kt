@@ -11,6 +11,7 @@ import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.entities.*
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.withLock
@@ -19,6 +20,10 @@ import java.time.Instant
 import java.util.*
 
 
+/**
+ * TODO: FUCK FUCK FUCK FUCK FUCK FUCK FUCK FUCK. Look out for possible sync bug with contact
+ *  number updates (something with duplicates). Probably checking version number wrong???? FUCK
+ */
 object TableSynchronizer {
 
     private const val retryAmount = 3
@@ -42,7 +47,7 @@ object TableSynchronizer {
                 syncCallLogsHelper(context, repository, contentResolver)
                 break
             } catch (e: Exception) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: syncCallImmediate() RETRYING...")
+                Timber.i("$DBL: syncCallImmediate() RETRYING...")
                 delay(2000)
             }
         }
@@ -58,7 +63,7 @@ object TableSynchronizer {
                 phoneStateRequired = true
             )
         ) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: No log permissions in syncCallLogs()")
+            Timber.e("$DBL: No log permissions in syncCallLogs()")
             return
         }
 
@@ -115,9 +120,9 @@ object TableSynchronizer {
 
                 val inserted = repository.callFromClient(callDetail)
                 if (inserted) {
-                    Timber.i("${TeleHelpers.DEBUG_LOG_TAG} syncCallLogs(): SYNCED: $callDetail")
+                    Timber.i("$DBL syncCallLogs(): SYNCED: $callDetail")
                 } else {
-                    Timber.i("${TeleHelpers.DEBUG_LOG_TAG} syncCallLogs(): ALREADY SYNCED: $callDetail")
+                    Timber.i("$DBL syncCallLogs(): ALREADY SYNCED: $callDetail")
                 }
             }
             curs.close()
@@ -169,7 +174,7 @@ object TableSynchronizer {
                 syncContactsHelper(context, database, contentResolver)
                 break
             } catch (e: Exception) {
-                Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: syncContacts() RETRYING...")
+                Timber.i("$DBL: syncContacts() RETRYING...")
                 delay(2000)
             }
         }
@@ -215,9 +220,9 @@ object TableSynchronizer {
         val defaultContactHashMap = HashMap<String, MutableList<ContactNumber>>()
 
         if (curs == null) {
-            Timber.i("${TeleHelpers.DEBUG_LOG_TAG}: Contact Number cursor is null; BAD")
+            Timber.i("$DBL: Contact Number cursor is null; BAD")
         } else {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: Inside table synchronizer")
+            Timber.e("$DBL: Inside table synchronizer")
             while (!curs.isAfterLast) {
                 /**
                  * Need to turn default CID into UUID version of CID since default CID is not the
@@ -333,7 +338,7 @@ object TableSynchronizer {
             }
             curs.close()
         }
-        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: AFTER SYNC INSERTS")
+        Timber.e("$DBL: AFTER SYNC INSERTS")
         // Contains all CIDs and their lists of contact numbers from default database (in our format)
         return defaultContactHashMap
     }
@@ -390,73 +395,44 @@ object TableSynchronizer {
                         )
                     }
                 }
-            } else {
-                // Corresponding contact number (by PK) in android default database
-                var matchPK: ContactNumber? = null
 
-                for (matchNumbers in matchCID) {
-                    // Uses custom .equals() implementation to check if their PKs are equal.
-                    if (matchNumbers == contactNumber) {
-                        matchPK = matchNumbers
-                        break
-                    }
+                continue
+            }
+
+            // Corresponding contact number (by PK) in android default database
+            var matchPK: ContactNumber? = null
+
+            for (matchNumbers in matchCID) {
+                // Uses custom .equals() implementation to check if their PKs are equal.
+                if (matchNumbers == contactNumber) {
+                    matchPK = matchNumbers
+                    break
                 }
+            }
 
-                // matchPK being null means that the corresponding contact number has been deleted
-                if (matchPK == null) {
-                    mutexSync.withLock {
-                        if (!DefaultContacts.contactNumberExists(
-                                contentResolver, defaultCID, contactNumber.rawNumber)
-                        ) {
-                            val changeID = UUID.randomUUID().toString()
-                            val changeTime = Instant.now().toEpochMilli()
-
-                            val change = Change.create(
-                                CID = teleCID,
-                                normalizedNumber = contactNumber.normalizedNumber,
-                                degree = 0
-                            )
-
-                            database.changeAgentDao().changeFromClient(
-                                ChangeLog.create(
-                                    changeID = changeID,
-                                    changeTime = changeTime,
-                                    type = ChangeType.CONTACT_NUMBER_DELETE,
-                                    instanceNumber = instanceNumber,
-                                    changeJson = change.toJson()
-                                ),
-                                fromSync = true,
-                                bubbleError = true
-                            )
-                        }
-                    }
-                } else {
-                    /**
-                     * TODO: Maybe we should make another default query in DefaultContacts to check
-                     *  that the version number is really different.
-                     *
-                     * If the code reaches here, then we know that matchPK and contactNumber must
-                     * both have the same PK (meaning same normalized number). So, if the
-                     * default contact number has a different version number, then we know that
-                     * the default rawNumber has been changed (almost definitely a small formatting
-                     * change, since normalizedNumber is preserved).
-                     */
-                    if (matchPK.versionNumber != contactNumber.versionNumber) {
+            // matchPK being null means that the corresponding contact number has been deleted
+            if (matchPK == null) {
+                mutexSync.withLock {
+                    if (!DefaultContacts.contactNumberExists(
+                            contentResolver,
+                            defaultCID,
+                            contactNumber.rawNumber
+                        )
+                    ) {
                         val changeID = UUID.randomUUID().toString()
                         val changeTime = Instant.now().toEpochMilli()
 
                         val change = Change.create(
                             CID = teleCID,
                             normalizedNumber = contactNumber.normalizedNumber,
-                            rawNumber = matchPK.rawNumber,
-                            counterValue = matchPK.versionNumber
+                            degree = 0
                         )
 
                         database.changeAgentDao().changeFromClient(
                             ChangeLog.create(
                                 changeID = changeID,
                                 changeTime = changeTime,
-                                type = ChangeType.CONTACT_NUMBER_UPDATE,
+                                type = ChangeType.CONTACT_NUMBER_DELETE,
                                 instanceNumber = instanceNumber,
                                 changeJson = change.toJson()
                             ),
@@ -465,6 +441,42 @@ object TableSynchronizer {
                         )
                     }
                 }
+
+                continue
+            }
+
+            /**
+             * TODO: Maybe we should make another default query in DefaultContacts to check
+             *  that the version number is really different.
+             *
+             * If the code reaches here, then we know that matchPK and contactNumber must
+             * both have the same PK (meaning same normalized number). So, if the
+             * default contact number has a different version number, then we know that
+             * the default rawNumber has been changed (almost definitely a small formatting
+             * change, since normalizedNumber is preserved).
+             */
+            if (matchPK.versionNumber != contactNumber.versionNumber) {
+                val changeID = UUID.randomUUID().toString()
+                val changeTime = Instant.now().toEpochMilli()
+
+                val change = Change.create(
+                    CID = teleCID,
+                    normalizedNumber = contactNumber.normalizedNumber,
+                    rawNumber = matchPK.rawNumber,
+                    counterValue = matchPK.versionNumber
+                )
+
+                database.changeAgentDao().changeFromClient(
+                    ChangeLog.create(
+                        changeID = changeID,
+                        changeTime = changeTime,
+                        type = ChangeType.CONTACT_NUMBER_UPDATE,
+                        instanceNumber = instanceNumber,
+                        changeJson = change.toJson()
+                    ),
+                    fromSync = true,
+                    bubbleError = true
+                )
             }
         }
     }

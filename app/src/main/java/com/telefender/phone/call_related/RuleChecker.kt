@@ -5,10 +5,7 @@ import com.telefender.phone.App
 import com.telefender.phone.data.server_related.RequestWrappers
 import com.telefender.phone.data.tele_database.background_tasks.workers.SMSVerifyScheduler
 import com.telefender.phone.data.tele_database.entities.*
-import com.telefender.phone.misc_helpers.TeleHelpers
-import com.telefender.phone.misc_helpers.daysToMilli
-import com.telefender.phone.misc_helpers.hoursToMilli
-import com.telefender.phone.misc_helpers.minutesToMilli
+import com.telefender.phone.misc_helpers.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -40,7 +37,7 @@ object RuleChecker {
 
         //Requires that app is initialized and setup before using algorithm.
         if (!TeleHelpers.hasValidStatus(context)) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+            Timber.e("$DBL: " +
                 "isSafe() - Doesn't have valid status to use algorithm!")
 
             return true
@@ -70,7 +67,7 @@ object RuleChecker {
             Allow number through if some huge internal error occurs so that the user isn't hard locked
             from receiving outside calls.
              */
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: isSafe() - Core data problem! ${e.message}")
+            Timber.e("$DBL: isSafe() - Core data problem! ${e.message}")
             e.printStackTrace()
             return true
         }
@@ -81,7 +78,7 @@ object RuleChecker {
          initialization stage.
          */
         if (storedMap.lastLogFullSyncTime == 0L || storedMap.lastContactFullSyncTime == 0L) {
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: " +
+            Timber.e("$DBL: " +
                 "isSafe() - Can't use algorithm since we haven't completed a full sync yet!")
 
             return true

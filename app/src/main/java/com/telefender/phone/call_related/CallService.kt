@@ -8,11 +8,14 @@ import com.telefender.phone.data.tele_database.TeleCallDetails
 import com.telefender.phone.data.tele_database.background_tasks.workers.CatchSyncScheduler
 import com.telefender.phone.gui.InCallActivity
 import com.telefender.phone.gui.IncomingCallActivity
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import timber.log.Timber
 
 
 /**
+ * TODO: LEAK IS HERE! --> Think we fixed it, but double check.
+ *
  * TODO: CHECK IF NO PERMISSION FOR SILENCE MODE.
  *
  * TODO: POSSIBLE ERROR - During setup, even after database initialization supposedly finishes,
@@ -30,16 +33,20 @@ class CallService : InCallService() {
         // Sets CallService context.
         _context = this
 
-        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: CallService onCreate()")
+        Timber.e("$DBL: CallService onCreate()")
     }
 
+    // Only called when there are no active / incoming calls left
     override fun onDestroy() {
         super.onDestroy()
 
         // Removes CallService context for safety.
         _context = null
 
-        Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: CallService onDestroy()")
+        // Removes remaining Call object references in CallManager to prevent memory leak
+        CallManager.clearCallObjects()
+
+        Timber.e("$DBL: CallService onDestroy()")
     }
 
     /**
@@ -57,7 +64,7 @@ class CallService : InCallService() {
          */
         if (call.getStateCompat() == Call.STATE_RINGING) {
             val isSafe = RuleChecker.isSafe(this, call.number())
-            Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: CallService - SAFE = $isSafe")
+            Timber.e("$DBL: CallService - SAFE = $isSafe")
 
             if (isSafe) {
                 safeCall()
@@ -101,7 +108,7 @@ class CallService : InCallService() {
     private fun unsafeCall(call: Call) {
         when(CallManager.currentMode) {
             HandleMode.BLOCK_MODE -> {
-                Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: BLOCK_MODE Action: Unsafe call blocked!")
+                Timber.e("$DBL: BLOCK_MODE Action: Unsafe call blocked!")
                 TeleCallDetails.insertCallDetail(this, call, true, CallLog.Calls.BLOCKED_TYPE)
                 CallManager.hangup()
             }
@@ -111,7 +118,7 @@ class CallService : InCallService() {
                 IncomingCallActivity.start(this, false)
             }
             HandleMode.ALLOW_MODE -> {
-                Timber.e("${TeleHelpers.DEBUG_LOG_TAG}: ALLOW_MODE Action: Unsafe call allowed!")
+                Timber.e("$DBL: ALLOW_MODE Action: Unsafe call allowed!")
                 IncomingCallActivity.start(this, true)
             }
         }
