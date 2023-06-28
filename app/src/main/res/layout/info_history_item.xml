@@ -47,7 +47,7 @@
                 app:layout_constraintBottom_toTopOf="@id/call_history_number"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Dodo.Button.Circle" />
+                app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.Circle" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -87,7 +87,7 @@
                     app:iconPadding="0dp"
                     app:iconSize="25sp"
                     app:iconTint="@color/white"
-                    app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Dodo.Button.Circle" />
+                    app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.Circle" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/info_message"
@@ -105,7 +105,7 @@
                     app:iconPadding="0dp"
                     app:iconSize="25sp"
                     app:iconTint="@color/white"
-                    app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Dodo.Button.Circle" />
+                    app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.Circle" />
 
             </LinearLayout>
         </androidx.constraintlayout.widget.ConstraintLayout>
@@ -140,7 +140,7 @@
                     android:textAllCaps="false"
                     android:textColor="@color/block_red"
                     android:backgroundTint="@color/grey"
-                    app:shapeAppearance="@style/ShapeAppearanceOverlay.Dodo.Button.LeftRounded">
+                    app:shapeAppearance="@style/ShapeAppearanceOverlay.Tele.Button.LeftRounded">
 
                 </com.google.android.material.button.MaterialButton>
 
@@ -159,7 +159,7 @@
                     tools:text="Unsafe"
                     tools:backgroundTint="#4CAF50"
                     tools:textColor="@color/white"
-                    app:shapeAppearance="@style/ShapeAppearanceOverlay.Dodo.Button.RightRounded">
+                    app:shapeAppearance="@style/ShapeAppearanceOverlay.Tele.Button.RightRounded">
 
                 </com.google.android.material.button.MaterialButton>
 

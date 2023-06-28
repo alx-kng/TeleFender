@@ -1,6 +1,7 @@
 package com.telefender.phone.call_related
 
 
+import android.content.Intent
 import android.provider.CallLog
 import android.telecom.Call
 import android.telecom.InCallService
@@ -10,11 +11,12 @@ import com.telefender.phone.gui.InCallActivity
 import com.telefender.phone.gui.IncomingCallActivity
 import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
+import com.telefender.phone.notifications.ActiveCallNotificationService
 import timber.log.Timber
 
 
 /**
- * TODO: LEAK IS HERE! --> Think we fixed it, but double check.
+ * TODO: LEAK IS HERE! --> Still haven't fixed it
  *
  * TODO: CHECK IF NO PERMISSION FOR SILENCE MODE.
  *
@@ -43,7 +45,7 @@ class CallService : InCallService() {
         // Removes CallService context for safety.
         _context = null
 
-        // Removes remaining Call object references in CallManager to prevent memory leak
+        // Removes remaining Call object references in CallManager to prevent possible memory leak?
         CallManager.clearCallObjects()
 
         Timber.e("$DBL: CallService onDestroy()")
@@ -124,6 +126,9 @@ class CallService : InCallService() {
         }
     }
 
+    /**
+     * TODO: This could be the cause of the leak, but it may or may not be an issue.
+     */
     companion object {
         /**
          * Stores CallService context. Used so that AudioHelpers can modify ringer mode and speaker.

@@ -69,7 +69,7 @@
                 app:iconPadding="0dp"
                 app:iconSize="45sp"
                 app:iconTint="@color/hangup_red"
-                app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Dodo.Button.Circle"
+                app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.Circle"
                 />
 
             <com.google.android.material.button.MaterialButton
@@ -89,7 +89,7 @@
                 app:iconPadding="0dp"
                 app:iconSize="45sp"
                 app:iconTint="@color/notificationGreen"
-                app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Dodo.Button.Circle"
+                app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.Circle"
                 />
 
         </LinearLayout>

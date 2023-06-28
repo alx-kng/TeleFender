@@ -138,16 +138,6 @@ object CallManager {
     }
 
     /**
-     * TODO: Why is DIALING state used to detect incoming call.
-     *
-     * Indicates whether there is currently an incoming call. Used to correctly update the
-     * InCallFragment UI in updateCallerDisplay(). [incomingCallLiveData] is not used because
-     * LiveData only updates its value when it's being observed.
-     */
-    val incomingCall : Boolean
-        get() = _focusedConnection.value?.state.let { it == Call.STATE_RINGING || it == Call.STATE_DIALING }
-
-    /**
      * Updates the current focused connection. Ringing, Connecting, and Dialing connections take
      * precedence over Active connections (since they should be addressed immediately). During
      * state transitions, there might not be any connections that are in the aforementioned states
@@ -184,6 +174,17 @@ object CallManager {
     }
 
     /**
+     * TODO: Why is DIALING state used to detect incoming call -> Removed it but should double check
+     *
+     * Indicates whether there is currently an incoming call. Used to correctly update the
+     * InCallFragment UI in updateCallerDisplay(). [incomingCallLiveData] is not used because
+     * LiveData only updates its value when it's being observed.
+     */
+    fun incomingCall(): Boolean {
+        return connections.find { it.state == Call.STATE_RINGING || it.state == Call.STATE_NEW } != null
+    }
+
+    /**
      * Finds the connection that is a conference (if there is one).
      */
     fun conferenceConnection(): Connection? {
@@ -196,6 +197,10 @@ object CallManager {
      */
     fun orderedConnections(): List<Connection?> {
         return connections.filter { it.state != Call.STATE_DISCONNECTED }
+    }
+
+    fun hasActiveConnection(): Boolean {
+        return connections.find { it.state == Call.STATE_ACTIVE } != null
     }
 
     /**
@@ -321,7 +326,7 @@ object CallManager {
      */
     fun removeCall(call: Call) {
         if (existingConnection(call)) {
-            connections.removeIf {it.call == call}
+            connections.removeIf { it.call == call }
         }
 
         calls.remove(call)

@@ -6,9 +6,12 @@ import android.telecom.Call
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.content.res.AppCompatResources
+import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
 import com.telefender.phone.R
 import com.telefender.phone.call_related.*
@@ -17,7 +20,6 @@ import com.telefender.phone.gui.InCallActivity
 import com.telefender.phone.gui.IncomingCallActivity
 import com.telefender.phone.gui.model.InCallViewModel
 import com.telefender.phone.misc_helpers.DBL
-import com.telefender.phone.misc_helpers.TeleHelpers
 import timber.log.Timber
 
 /**
@@ -30,6 +32,33 @@ class InCallFragment : Fragment() {
     private var _binding: FragmentInCallBinding? = null
     private val binding get() = _binding!!
     private val inCallViewModel: InCallViewModel by viewModels()
+
+    /**
+     * TODO: Conference count doesn't update correctly (not sure if fixed).
+     *
+     * Observes and updates UI based off current focusedConnection
+     */
+    private val observer = Observer<Connection?> { connection ->
+        /**
+         * End InCallActivity if there are no connections, only disconnected connections, or a
+         * single conference connection that is about to end.
+         */
+        /**
+         * End InCallActivity if there are no connections, only disconnected connections, or a
+         * single conference connection that is about to end.
+         */
+        val edgeState = (CallManager.connections.firstOrNull()?.state ?: Call.STATE_DISCONNECTED)
+        if (connection == null
+            || (CallManager.connections.size == 1 && edgeState == Call.STATE_DISCONNECTED)
+            || conferenceShouldDisconnect()
+        ) {
+            requireActivity().finishAndRemoveTask()
+            Timber.i("$DBL: IN CALL FINISHED!")
+        } else {
+            updateCallerDisplay()
+            updateButtons()
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -52,28 +81,8 @@ class InCallFragment : Fragment() {
 
         prepareAudio()
 
-        /**
-         * TODO: Conference count doesn't update correctly (not sure if fixed).
-         *
-         * Observes and updates UI based off current focusedConnection
-         */
-        CallManager.focusedConnection.observe(viewLifecycleOwner) { connection ->
-            /**
-             * End InCallActivity if there are no connections, only disconnected connections, or a
-             * single conference connection that is about to end.
-             */
-            val edgeState = (CallManager.connections.firstOrNull()?.state ?: Call.STATE_DISCONNECTED)
-            if (connection == null
-                || (CallManager.connections.size == 1 && edgeState == Call.STATE_DISCONNECTED)
-                || conferenceShouldDisconnect()
-            ) {
-                requireActivity().finishAndRemoveTask()
-                Timber.i("$DBL: IN CALL FINISHED!")
-            } else {
-                updateCallerDisplay()
-                updateButtons()
-            }
-        }
+        // Need to observe forever so that observer still runs when activity is not showing.
+        CallManager.focusedConnection.observeForever(observer)
 
         /*******************************************************************************************
          * On click listeners for multi-display. Should swap calls if the holding call is pressed.
@@ -173,10 +182,12 @@ class InCallFragment : Fragment() {
     }
 
     override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
-
         Timber.i("$DBL: InCallFragment Destroyed!")
+
+        CallManager.focusedConnection.removeObserver(observer)
+
+        _binding = null
+        super.onDestroyView()
     }
 
     /**
@@ -193,13 +204,21 @@ class InCallFragment : Fragment() {
          * Set mute UI based on mute state.
          */
         AudioHelpers.muteStatus.observe(viewLifecycleOwner) { mute ->
+            val icon = if (mute) {
+                AppCompatResources.getDrawable(requireActivity(), R.drawable.ic_baseline_mic_off_24)
+            } else {
+                AppCompatResources.getDrawable(requireActivity(), R.drawable.ic_baseline_mic_24)
+            }
+
             val color = if (mute) {
                 ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.clicked_blue))
             } else {
                 ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.icon_white))
             }
 
+            binding.muteActive.icon = icon
             binding.muteActive.iconTint = color
+            binding.muteActiveText.text = if (mute) "Unmute" else "Mute"
         }
 
         /**
@@ -287,7 +306,7 @@ class InCallFragment : Fragment() {
     }
 
     /**
-     * Returns the number display string for a Connection. If the connection is a conference, 0then
+     * Returns the number display string for a Connection. If the connection is a conference, then
      * a different display string is used.
      */
     private fun getNumberDisplay(connection: Connection): String {
@@ -377,8 +396,8 @@ class InCallFragment : Fragment() {
      */
     private fun updateCallerDisplay() {
 
-        Timber.i("$DBL: incomingCall: ${CallManager.incomingCall}")
-        Timber.i("$DBL: incomingActivity running: ${IncomingCallActivity.running}")
+        Timber.i("$DBL: incomingCall: ${CallManager.incomingCall()}")
+        Timber.i("$DBL: incomingActivity showing: ${IncomingCallActivity.showing}")
         Timber.i("$DBL: incomingActivity last answered: ${CallManager.lastAnsweredCall.number()}")
         Timber.i("$DBL: connections size: ${CallManager.connections.size}")
         Timber.i("$DBL: focusedCall: number = ${CallManager.focusedCall.number()}, " +
@@ -389,7 +408,7 @@ class InCallFragment : Fragment() {
          * and the IncomingActivity is not currently showing (refer to Call UI Flow). Leads
          * to smoother UI transitions.
          */
-        if (CallManager.incomingCall && !IncomingCallActivity.running
+        if (CallManager.incomingCall() && !IncomingCallActivity.showing
             && CallManager.lastAnsweredCall != CallManager.focusedCall
         ) {
             Timber.i("$DBL: INSIDE INCOMING RETURN")

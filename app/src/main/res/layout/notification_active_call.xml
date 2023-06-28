@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/active_layout"
+    android:layout_width="match_parent"
+    android:layout_height="48dp"
+    android:padding="0dp"
+    tools:background="@color/teal_700"
+    >
+
+    <TextView
+        android:id="@+id/active_notification_title"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_marginStart="10dp"
+        android:layout_weight="1"
+        android:textColor="@color/icon_white"
+        tools:text="Placeholder Title"
+        android:textSize="16dp"
+        />
+
+    <LinearLayout
+        android:id="@+id/active_notification_linear_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        >
+
+        <TextView
+            android:id="@+id/active_notification_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="20dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginEnd="75sp"
+            android:textColor="@color/icon_white"
+            tools:text="Placeholder Text"
+            />
+
+        <ImageButton
+            android:id="@+id/active_notification_speaker_button"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:layout_marginEnd="10sp"
+            android:foreground="?android:selectableItemBackground"
+            android:background="@drawable/rounded_box_black"
+            android:src="@drawable/ic_baseline_volume_up_24"
+            android:scaleType="fitXY"
+            android:textColor="#fff"
+            />
+
+        <ImageButton
+            android:id="@+id/active_notification_mute_button"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:layout_marginEnd="10sp"
+            android:foreground="?android:selectableItemBackground"
+            android:background="@drawable/rounded_box_black"
+            android:src="@drawable/ic_baseline_mic_24"
+            android:scaleType="fitXY"
+            android:textColor="#fff"
+            />
+
+        <ImageButton
+            android:id="@+id/active_notification_hangup_button"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:layout_marginEnd="10sp"
+            android:foreground="?android:selectableItemBackground"
+            android:background="@drawable/rounded_box_red"
+            android:src="@drawable/ic_baseline_call_end_24_white"
+            android:scaleType="fitXY"
+            android:textColor="#fff"
+            />
+
+<!--        <Button-->
+<!--            android:id="@+id/hangup_button"-->
+<!--            style="?attr/materialButtonStyle"-->
+<!--            android:layout_width="43sp"-->
+<!--            android:layout_height="43sp"-->
+<!--            android:backgroundTint="@color/hangup_red"-->
+<!--            android:foreground="?android:selectableItemBackground"-->
+<!--            android:insetLeft="0dp"-->
+<!--            android:insetTop="0dp"-->
+<!--            android:insetRight="0dp"-->
+<!--            android:insetBottom="0dp"-->
+<!--            android:padding="0dp"-->
+<!--            app:icon="@drawable/ic_baseline_call_end_24"-->
+<!--            app:iconGravity="textStart"-->
+<!--            app:iconPadding="0dp"-->
+<!--            app:iconSize="30sp"-->
+<!--            app:iconTint="@color/icon_white"-->
+<!--            app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.Rounded"-->
+<!--            />-->
+    </LinearLayout>
+</RelativeLayout>

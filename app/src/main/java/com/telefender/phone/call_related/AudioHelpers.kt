@@ -58,6 +58,7 @@ object AudioHelpers {
         audioManager.mode = AudioManager.MODE_NORMAL
 
         muteStatus.value = audioManager.isMicrophoneMute
+        Timber.i("$DBL: muted: ${muteStatus.value}")
     }
 
     fun setSpeaker(context: Context?, setSpeaker: Boolean) {

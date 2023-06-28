@@ -7,7 +7,7 @@
     android:layout_height="wrap_content"
     android:clickable="true"
     android:focusable="true"
-    app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Dodo.CardView.Square">
+    app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.CardView.Square">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/contact_parent"

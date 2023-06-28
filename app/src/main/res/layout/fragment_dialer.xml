@@ -229,7 +229,7 @@
                 app:layout_constraintHorizontal_bias="0.488"
                 app:layout_constraintStart_toStartOf="@id/dial_0"
                 app:layout_constraintTop_toBottomOf="@id/dial_0"
-                app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Dodo.Button.Circle" />
+                app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.Circle" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/dial_delete"

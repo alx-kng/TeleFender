@@ -27,7 +27,7 @@
                     app:title="Dialer"
                     app:titleTextColor="@color/white"
                     app:menu="@menu/top_app_bar"
-                    app:theme="@style/ThemeOverlay.Dodo.ActionBar"
+                    app:theme="@style/ThemeOverlay.Tele.ActionBar"
                     >
 
                     <com.google.android.material.button.MaterialButton

@@ -19,6 +19,8 @@ import timber.log.Timber
 
 
 /**
+ * TODO: THERE IS SOME SORT OF LEAK HERE (One with actual Fragment and one with LinearLayout)
+ *
  * TODO: Consider not showing contacts that don't have a number associated with them.
  *
  * TODO: If you go to CallHistoryFragment, tap on ContactsFragment, and press back, then we go

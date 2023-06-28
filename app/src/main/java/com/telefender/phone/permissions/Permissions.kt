@@ -178,7 +178,8 @@ object Permissions {
      * the permissions (regardless of build version).
      */
     fun hasNotificationPermission(context: Context) : Boolean {
-        return Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
+        return isDefaultDialer(context)
+            || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
             || hasPermissions(context, arrayOf(POST_NOTIFICATIONS))
     }
 }

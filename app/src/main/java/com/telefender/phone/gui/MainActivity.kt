@@ -104,6 +104,8 @@ class MainActivity : AppCompatActivity() {
         } else {
             Permissions.coreAltPermissions(this)
         }
+
+        Permissions.notificationPermission(this, this)
     }
 
     /**

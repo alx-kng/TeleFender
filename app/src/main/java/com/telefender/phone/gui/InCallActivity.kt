@@ -7,13 +7,19 @@ import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import com.telefender.phone.R
+import com.telefender.phone.call_related.CallManager
+import com.telefender.phone.data.server_related.RemoteDebug.isEnabled
 import com.telefender.phone.databinding.ActivityInCallBinding
 import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
+import com.telefender.phone.notifications.ActiveCallNotificationService
 import timber.log.Timber
 
 /**
@@ -27,7 +33,6 @@ import timber.log.Timber
  * TODO: Make sure to request that dialer activity shows of in-call screen during add call, or
  *  at least bring up keyguard.
  */
-
 class InCallActivity : AppCompatActivity() {
 
     private val CHANNEL_ID = "alxkng5737"
@@ -39,6 +44,8 @@ class InCallActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        Timber.e("$DBL: InCallActivity - onCreate() - $this")
 
         binding = ActivityInCallBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -69,18 +76,23 @@ class InCallActivity : AppCompatActivity() {
 
         // Lets IncomingCallActivity know that InCallActivity is already running.
         _running = true
-        _context = this
+        _contexts.add(this)
+
+//        _contextLiveData.value = this
 
         inCallOverLockScreen()
     }
 
     override fun onDestroy() {
-        super.onDestroy()
+        Timber.e("$DBL: InCallActivity - onDestroy() - $this")
 
-        // Lets IncomingCallActivity know that InCallActivity is already running.
+        // Cleans up references
         _running = false
-        _context = null
-        Timber.i("$DBL: IN CALL DESTROYED")
+        _contexts.remove(this)
+
+//        _contextLiveData.value = null
+
+        super.onDestroy()
     }
 
     private fun inCallOverLockScreen() {
@@ -94,20 +106,39 @@ class InCallActivity : AppCompatActivity() {
     }
 
     // TODO: Maybe get rid of static Context and find better solution.
+    /**
+     * TODO: Probably requires static list of Contexts to be safe. Also, maybe should switch from
+     *  using most recently added context.
+     */
     companion object {
 
         private var _running = false
         val running : Boolean
             get() = _running
 
-        private var _context: Context? = null
+        private val _contexts : MutableList<Context> = mutableListOf()
         val context : Context?
-            get() = _context
+            get() = _contexts.lastOrNull()
 
         fun start(context: Context) {
             Intent(context, InCallActivity::class.java)
                 .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 .let(context::startActivity)
+
+            /**
+             * Launches active call notification. We put this in start() since the active
+             * notification service kills itself when an incoming call occurs (to make way for the
+             * incoming call notification). As a result, if the incoming call is answered, then an
+             * intent is sent to InCallActivity and we need to make sure to relaunch the notification.
+             *
+             * NOTE: Sending an Intent to start an already started service shouldn't cause any issues?
+             * NOTE: Relaunching the notification after an incoming call is declined is handled in
+             *  IncomingCallActivity
+             */
+            val applicationContext = context.applicationContext
+            applicationContext.startForegroundService(
+                Intent(applicationContext, ActiveCallNotificationService::class.java)
+            )
         }
 
         /**

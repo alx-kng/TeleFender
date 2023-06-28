@@ -79,7 +79,7 @@
                 android:insetTop="0dp"
                 android:insetRight="0dp"
                 android:insetBottom="0dp"
-                app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Dodo.Button.Circle"
+                app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.Circle"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintEnd_toEndOf="parent" />

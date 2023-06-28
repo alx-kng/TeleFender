@@ -98,7 +98,7 @@
                     android:insetTop="0dp"
                     android:insetRight="0dp"
                     android:insetBottom="0dp"
-                    app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Dodo.Button.Circle"
+                    app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.Circle"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
                     app:layout_constraintStart_toStartOf="parent" />
@@ -183,7 +183,7 @@
                     android:insetTop="0dp"
                     android:insetRight="0dp"
                     android:insetBottom="0dp"
-                    app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Dodo.Button.Circle"
+                    app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.Circle"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
                     app:layout_constraintStart_toStartOf="parent" />
@@ -290,7 +290,7 @@
                         app:iconPadding="0dp"
                         app:iconSize="45sp"
                         app:iconTint="@color/icon_white"
-                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Dodo.Button.Rounded"
+                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.Rounded"
                         />
 
                     <TextView
@@ -330,7 +330,7 @@
                         app:iconSize="45sp"
                         app:iconTint="@color/icon_white"
                         tools:iconTint="@color/disabled_grey"
-                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Dodo.Button.Rounded"
+                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.Rounded"
                         />
 
                     <TextView
@@ -369,7 +369,7 @@
                         app:iconPadding="0dp"
                         app:iconSize="45sp"
                         app:iconTint="@color/icon_white"
-                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Dodo.Button.Rounded"
+                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.Rounded"
                         />
 
                     <TextView
@@ -416,7 +416,7 @@
                         app:iconSize="40sp"
                         app:iconTint="@color/icon_white"
                         tools:iconTint="@color/clicked_blue"
-                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Dodo.Button.Rounded"
+                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.Rounded"
                         />
 
                     <TextView
@@ -449,15 +449,16 @@
                         android:insetRight="0dp"
                         android:insetBottom="0dp"
                         android:padding="0dp"
-                        app:icon="@drawable/ic_baseline_mic_off_24"
+                        app:icon="@drawable/ic_baseline_mic_24"
                         app:iconGravity="textStart"
                         app:iconPadding="0dp"
                         app:iconSize="40sp"
                         app:iconTint="@color/icon_white"
-                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Dodo.Button.Rounded"
+                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.Rounded"
                         />
 
                     <TextView
+                        android:id="@+id/mute_active_text"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_gravity="center"
@@ -491,7 +492,7 @@
                         app:iconPadding="0dp"
                         app:iconSize="40sp"
                         app:iconTint="@color/icon_white"
-                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Dodo.Button.Rounded"
+                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.Rounded"
                         />
 
                     <TextView
@@ -530,7 +531,7 @@
                     app:iconPadding="0dp"
                     app:iconSize="45sp"
                     app:iconTint="@color/icon_white"
-                    app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Dodo.Button.Circle"
+                    app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.Circle"
                     />
 
             </LinearLayout>

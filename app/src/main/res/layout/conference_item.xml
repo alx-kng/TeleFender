@@ -59,7 +59,7 @@
             app:iconPadding="0dp"
             app:iconSize="30sp"
             app:iconTint="@color/icon_white"
-            app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Dodo.Button.LessRounded"
+            app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.LessRounded"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintEnd_toEndOf="parent"

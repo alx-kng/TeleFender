@@ -1,11 +1,13 @@
 package com.telefender.phone
 
-import android.annotation.SuppressLint
 import android.app.Application
-import android.os.Build
-import androidx.annotation.RequiresApi
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
 import com.telefender.phone.data.tele_database.ClientDatabase
 import com.telefender.phone.data.tele_database.ClientRepository
+import com.telefender.phone.notifications.ActiveCallNotificationService
+import com.telefender.phone.notifications.NotificationChannels
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 //import com.dododial.phone.data.database.ClientDatabase
@@ -69,11 +71,25 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
 
+        createNotificationChannels()
+
+        // if we want, we could add custom crash reporting tree for release that would send error messages back to server
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())
         }
     }
 
-    //if we want, we could add custom crash reporting tree for release that would send error messages back to server
+    private fun createNotificationChannels() {
+        val inCallChannel = NotificationChannel(
+            NotificationChannels.IN_CALL_CHANNEL_ID,
+            "InCall",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "Used for in call notification"
+        }
+
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.createNotificationChannel(inCallChannel)
+    }
 }
  
