@@ -20,9 +20,6 @@ import timber.log.Timber
 /**
  * TODO: See if startForeground() should be in onCreate() or onStartCommand() -> might not be that
  *  big of a deal
- *
- * TODO: Case = active underlying -> don't swipe away -> press on active notification -> incoming
- *  -> lingering in call screen
  */
 class ActiveCallNotificationService : LifecycleService() {
 
@@ -48,7 +45,7 @@ class ActiveCallNotificationService : LifecycleService() {
     override fun onCreate() {
         super.onCreate()
 
-        Timber.e("$DBL: ActiveCallNotificationService - onCreate()")
+        Timber.i("$DBL: ActiveCallNotificationService - onCreate()")
         startForeground(notificationID, createNotification(applicationContext).build())
 
         CallManager.focusedConnection.observe(this, callObserver)
@@ -56,13 +53,9 @@ class ActiveCallNotificationService : LifecycleService() {
         AudioHelpers.muteStatus.observe(this, audioObserver)
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        return super.onStartCommand(intent, flags, startId)
-    }
-
     override fun onDestroy() {
         super.onDestroy()
-        Timber.e("$DBL: ActiveCallNotificationService - onDestroy()")
+        Timber.i("$DBL: ActiveCallNotificationService - onDestroy()")
         stopForeground(STOP_FOREGROUND_DETACH)
     }
 
@@ -169,6 +162,7 @@ class ActiveCallNotificationService : LifecycleService() {
             /*
             TODO: Using separateIncoming() here may or may not be a problem. -> MIGHT BE -> Not
              even entirely sure if we need it or not. For now, I've been trying removing it.
+             -> seems to work well.
 
             Updates the title / text of the notification. We first make sure that the
             focusedConnection is not null (null means the notification is about to close) and that
@@ -177,7 +171,7 @@ class ActiveCallNotificationService : LifecycleService() {
             the service self-stops if such an end case occurs, this a safety check in case the
             notification updates due an audio state change at the last second.
              */
-            if (CallManager.focusedConnection.value != null ) {
+            if (CallManager.focusedConnection.value != null) {
                 contentView.apply {
                     setTextViewText(R.id.active_notification_title, notificationTitle)
                     setTextViewText(R.id.active_notification_text, notificationText)

@@ -1,7 +1,6 @@
 package com.telefender.phone.call_related
 
 
-import android.content.Intent
 import android.provider.CallLog
 import android.telecom.Call
 import android.telecom.InCallService
@@ -10,8 +9,6 @@ import com.telefender.phone.data.tele_database.background_tasks.workers.CatchSyn
 import com.telefender.phone.gui.InCallActivity
 import com.telefender.phone.gui.IncomingCallActivity
 import com.telefender.phone.misc_helpers.DBL
-import com.telefender.phone.misc_helpers.TeleHelpers
-import com.telefender.phone.notifications.ActiveCallNotificationService
 import timber.log.Timber
 
 
@@ -33,7 +30,7 @@ class CallService : InCallService() {
         super.onCreate()
 
         // Sets CallService context.
-        _context = this
+        _contexts.add(this)
 
         Timber.e("$DBL: CallService onCreate()")
     }
@@ -43,7 +40,7 @@ class CallService : InCallService() {
         super.onDestroy()
 
         // Removes CallService context for safety.
-        _context = null
+        _contexts.remove(this)
 
         // Removes remaining Call object references in CallManager to prevent possible memory leak?
         CallManager.clearCallObjects()
@@ -132,9 +129,11 @@ class CallService : InCallService() {
     companion object {
         /**
          * Stores CallService context. Used so that AudioHelpers can modify ringer mode and speaker.
+         * Also used to safely launch some activities. We use a list here for static safety, check
+         * Android - General Notes for more info
          */
-        private var _context : CallService? = null
+        private val _contexts : MutableList<CallService> = mutableListOf()
         val context : CallService?
-            get() = _context
+            get() = _contexts.lastOrNull()
     }
 }

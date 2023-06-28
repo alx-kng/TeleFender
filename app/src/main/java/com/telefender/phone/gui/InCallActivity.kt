@@ -7,18 +7,12 @@ import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import com.telefender.phone.R
-import com.telefender.phone.call_related.CallManager
-import com.telefender.phone.data.server_related.RemoteDebug.isEnabled
 import com.telefender.phone.databinding.ActivityInCallBinding
 import com.telefender.phone.misc_helpers.DBL
-import com.telefender.phone.misc_helpers.TeleHelpers
 import com.telefender.phone.notifications.ActiveCallNotificationService
 import timber.log.Timber
 
@@ -35,9 +29,6 @@ import timber.log.Timber
  */
 class InCallActivity : AppCompatActivity() {
 
-    private val CHANNEL_ID = "alxkng5737"
-    private val NOTIFICATION_ID = 12345678
-
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var navController: NavController
     private lateinit var binding: ActivityInCallBinding
@@ -45,7 +36,7 @@ class InCallActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        Timber.e("$DBL: InCallActivity - onCreate() - $this")
+        Timber.i("$DBL: InCallActivity - onCreate()")
 
         binding = ActivityInCallBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -78,19 +69,15 @@ class InCallActivity : AppCompatActivity() {
         _running = true
         _contexts.add(this)
 
-//        _contextLiveData.value = this
-
         inCallOverLockScreen()
     }
 
     override fun onDestroy() {
-        Timber.e("$DBL: InCallActivity - onDestroy() - $this")
+        Timber.i("$DBL: InCallActivity - onDestroy()")
 
         // Cleans up references
         _running = false
         _contexts.remove(this)
-
-//        _contextLiveData.value = null
 
         super.onDestroy()
     }
@@ -105,17 +92,17 @@ class InCallActivity : AppCompatActivity() {
         }
     }
 
-    // TODO: Maybe get rid of static Context and find better solution.
-    /**
-     * TODO: Probably requires static list of Contexts to be safe. Also, maybe should switch from
-     *  using most recently added context.
-     */
     companion object {
 
         private var _running = false
         val running : Boolean
             get() = _running
 
+        /**
+         * TODO: Is it safe to just use the most recently added context?
+         *
+         * We use a static list of Contexts to be safe (explained in Android - General Notes).
+         */
         private val _contexts : MutableList<Context> = mutableListOf()
         val context : Context?
             get() = _contexts.lastOrNull()

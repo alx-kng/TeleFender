@@ -20,18 +20,6 @@ import timber.log.Timber
 
 
 /**
- * TODO: Backstack management needs a little improvement. When pressing on incoming call notification
- *  to start IncomingCallActivity, a new instance / screen is created even when there is an existing
- *  screen (sometimes). The other problem is that if you destroy the current incoming call activity
- *  and re-instantiate through the notification. If you answer the notification, the InCallActivity
- *  opens up in a new screen rather than in the same one, which leaves an incoming call activity
- *  screen husk (which is bad).
- *
- *  TODO: LAST PROBLEM CASE -> active underlying call -> incoming call -> DON'T get rid of incoming
- *   call activity from recents screen -> press the incoming call notification -> double screen
- *
- * TODO: NEED TO REFACTOR FLOW. -> think we did now
- *
  * TODO: Provide way to access incoming activity from main activity in case user gets rid of this
  *  activity from the Recents screen --> done now through notification, but maybe we can add another
  *  in app way (like a floating button).
@@ -45,14 +33,6 @@ import timber.log.Timber
 class IncomingCallActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityIncomingCallBinding
-    private val scope = CoroutineScope(Dispatchers.Default)
-
-    private val silenceDelay: Long = 10000L
-    private val incomingCall = CallManager.focusedCall
-    private var answered = false
-    private var unallowed : Boolean? = false
-    private var rejected = false
-    private var safe = true
 
     /**
      * Finishes activity if there is no incoming call. Used to finish activity for all cases,
@@ -64,8 +44,6 @@ class IncomingCallActivity : AppCompatActivity() {
 
     private val observer = Observer { isIncoming: Boolean->
         if (!isIncoming) {
-            scope.cancel()
-
             /*
             Gets rid of task only if activity is in own task separate from InCallActivity. This
             prevents lingering IncomingCallActivity document husk on Recents screen and also makes
@@ -82,8 +60,6 @@ class IncomingCallActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        Timber.e("$DBL: IncomingCallActivity - onCreate()")
 
         binding = ActivityIncomingCallBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -143,50 +119,6 @@ class IncomingCallActivity : AppCompatActivity() {
         CallManager.incomingCallLiveData.removeObserver(observer)
 
         super.onDestroy()
-    }
-
-    private fun answer() {
-        if (!safe) {
-            Timber.i("$DBL: %s",
-                "SILENCE_MODE Action: No block action taken because call was answered by user.")
-        }
-
-        CallManager.lastAnsweredCall = CallManager.focusedCall
-        scope.cancel()
-        answered = true
-        CallManager.answer()
-        InCallActivity.start(this)
-    }
-
-    private fun hangup() {
-        scope.cancel()
-        rejected = true
-        CallManager.hangup()
-    }
-
-    /**
-     * TODO: Double check logic
-     *
-     * Hangup in silence mode if unsafe call isn't already answered, declined, or disconnected.
-     * If incoming unsafe call is successfully unallowed using silenceHangup() (that is, before
-     * the scope is cancelled due to user answer or decline), then insert into CallDetail table
-     * that the call was unallowed. If incoming unsafe call is hung up by other user, then do
-     * nothing, as CallDetail was already inserted into CallDetail table inside observer.
-     *
-     * Don't need to check call state, since case when other user / phone disconnects is handled
-     * by incomingCall observer (as well as answer and hangup cases).
-     */
-    private suspend fun silenceHangup() {
-        for (i in 1..10) {
-            Timber.e("$DBL: INSIDE SILENCE HANGUP $i")
-            delay(silenceDelay / 10)
-        }
-
-        Timber.i("$DBL: %s",
-            "SILENCE_MODE ACTION: Block action was taken because call was not answered or disconnected by user.")
-
-        unallowed = true
-        CallManager.hangup()
     }
 
     /**
@@ -259,10 +191,10 @@ class IncomingCallActivity : AppCompatActivity() {
          *  -
          *  We won't be doing this for now since we observed some problems with the incoming call
          *  notification behavior when doing this. For now, we just start the incoming activity
-         *  and stop the in call activity
+         *  and stop the in call activity.
          */
         fun start(context: Context, safe: Boolean) {
-            Timber.e("$DBL: IncomingCallActivity - onStart()")
+            Timber.i("$DBL: IncomingCallActivity - onStart()")
 
             val applicationContext = context.applicationContext
 
@@ -294,18 +226,6 @@ class IncomingCallActivity : AppCompatActivity() {
 
             // Stops InCallActivity
             (InCallActivity.context as InCallActivity?)?.finishAndRemoveTask()
-
-//            if (InCallActivity.running){
-//                Timber.i("$DBL: IncomingCallActivity start() - InCallActivity running!")
-//                InCallActivity.startIncoming(safe)
-//            } else {
-//                Timber.i("$DBL: IncomingCallActivity start() - InCallActivity not running!")
-//                Intent(context, IncomingCallActivity::class.java)
-//                    .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-//                    .addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT)
-//                    .putExtra("Safe", safe)
-//                    .let(context::startActivity)
-//            }
         }
     }
 }

@@ -2,7 +2,6 @@ package com.telefender.phone.notifications
 
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.app.TaskStackBuilder
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -19,18 +18,14 @@ import com.telefender.phone.data.tele_database.TeleCallDetails
 import com.telefender.phone.gui.InCallActivity
 import com.telefender.phone.gui.IncomingCallActivity
 import com.telefender.phone.misc_helpers.DBL
-import com.telefender.phone.notifications.ActiveCallNotificationService.Companion.createNotification
-import com.telefender.phone.notifications.ActiveCallNotificationService.Companion.updateNotification
 import com.telefender.phone.notifications.NotificationChannels.IN_CALL_CHANNEL_ID
 import kotlinx.coroutines.*
 import timber.log.Timber
 
 
 /**
- * TODO: Sometimes incoming notification doesn't always show
- *
  * TODO: See if startForeground() should be in onCreate() or onStartCommand() -> might not be that
- *  big of a deal
+ *  big of a deal -> seconded
  *
  * IncomingCallService not only represents the incoming call but also doubles as a foreground
  * service for the incoming call notification.
@@ -55,7 +50,7 @@ class IncomingCallService : LifecycleService() {
 
     /**
      * TODO: Only technically observes when incoming call goes away. So, I guess incoming
-     *  notification isn't updated anywhere but in the beginning currently.
+     *  notification isn't updated anywhere but in the beginning currently. -> not a big deal though
      */
     private val callObserver =  Observer<Connection?> {
         /**
@@ -83,26 +78,16 @@ class IncomingCallService : LifecycleService() {
         }
     }
 
-    /**
-     * Since the InCallActivity can swiped away by the user, we need to make sure that we switch
-     * to using the application Context for the notification activity PendingIntent.
-     */
-//    private val inCallContextObserver = Observer<Int> {
-//        Timber.i("$DBL: IncomingCallService - inCallContext update()")
-//        updateNotification(applicationContext)
-//    }
-
     override fun onCreate() {
         super.onCreate()
 
-        Timber.e("$DBL: IncomingCallService - onCreate()")
+        Timber.i("$DBL: IncomingCallService - onCreate()")
 
         // Sets context to be used by notification receiver
-        _context = this
+        _contexts.add(this)
 
         startForeground(notificationID, createNotification(applicationContext).build())
         CallManager.focusedConnection.observe(this, callObserver)
-//        InCallActivity.contextSizeLiveData.observe(this, inCallContextObserver)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -119,17 +104,11 @@ class IncomingCallService : LifecycleService() {
         return super.onStartCommand(intent, flags, startId)
     }
 
-    /**
-     * TODO: Sometimes this doesn't open the active notification -> takes too long for onDestroy()
-     *  to be called? Maybe should launch from observer.
-     *
-     * TODO: CLEAN UP COMMENTS
-     */
     override fun onDestroy() {
-        Timber.e("$DBL: IncomingCallService - onDestroy()")
+        Timber.i("$DBL: IncomingCallService - onDestroy()")
 
         // Cleans up references
-        _context = null
+        _contexts.remove(this)
 
         /*
         Only need to set the ringer mode back to normal if changed in the first place. Ringer mode
@@ -141,29 +120,12 @@ class IncomingCallService : LifecycleService() {
         stopForeground(STOP_FOREGROUND_DETACH)
 
         /*
-        TODO: Check if repeat launches will cause problems --> Pretty sure they won't
-
-        Relaunches active call notification if still has active call underneath. There are some
-        cases where this relaunch code overlaps with the relaunch code in InCallActivity.start()
-        (particularly when you answer the call), but repeat launches probably won't be a problem.
-        Just in case though, we make sure that the call wasn't answered here as well (since the
-        answer button also launches the service).
-         */
-//        if (!answered && CallManager.hasActiveConnection()) {
-//            Timber.e("$DBL: onDestroy() start ActiveCallNotification")
-//            this.startForegroundService(Intent(this, ActiveCallNotificationService::class.java))
-//        }
-
-        /*
-        TODO: Could this cause any problems?
-
-        TODO: ONLY REBRING UP FOR NON ANSWER AND NON REJECT IF INCOMING CALL ACTIVITY WAS SHOWING -> No
-
         We put the InCallActivity launch here if the call is answered from the notification because
         starting the activity immediately when the answer button is pressed often causes the
         incoming notification to linger a while, even when the active notification is already
         showing. Possible launch overlap with answer with fromActivity passed in as true, so extra
-        check is added.
+        check is added. We also restart the InCallActivity if there is an active underlying
+        connection.
          */
         val shouldStartActivity = answered || CallManager.hasActiveConnection()
         if (shouldStartActivity && !activeActivityLaunched) {
@@ -172,8 +134,6 @@ class IncomingCallService : LifecycleService() {
                 InCallActivity.start(it)
             }
         }
-
-        Timber.i("$DBL: IncomingCallService - start InCall = ${shouldStartActivity && !activeActivityLaunched}")
 
         super.onDestroy()
     }
@@ -209,10 +169,6 @@ class IncomingCallService : LifecycleService() {
         }
     }
 
-    /**
-     * TODO: IF ACTIVE CALL AND NO InCallActivity running because user swiped it away and user
-     *  hangs up. Then, should bring back InCallActivity. -> prob do anyway since we destroy it.
-     */
     fun hangup(fromActivity: Boolean) {
         scope.cancel()
         rejected = true
@@ -275,19 +231,21 @@ class IncomingCallService : LifecycleService() {
 
     companion object {
 
-        // TODO: Should ID be different than active notification?
-        // Yes, ID should be different than active notification
+        /**
+         * ID is different from active notification ID
+         */
         private const val notificationID = 2
         const val ANSWER_ACTION = "answer"
         const val HANGUP_ACTION = "hangup"
 
         /**
          * Stores service context. Used so that IncomingCallActivity and notification Receiver can
-         * call the correct hangup / answer methods.
+         * call the correct hangup / answer methods. We use a list here for static safety, check
+         * Android - General Notes for more info.
          */
-        private var _context : IncomingCallService? = null
+        private val _contexts : MutableList<IncomingCallService> = mutableListOf()
         val context : IncomingCallService?
-            get() = _context
+            get() = _contexts.lastOrNull()
 
         /**
          * TODO: Maybe choose this over separateIncoming?
@@ -308,45 +266,19 @@ class IncomingCallService : LifecycleService() {
             notificationManager.notify(notificationID, notification)
         }
 
-        /**
-         * TODO: PROBLEM -> NOT USING CURRENT DATA TO UPDATE ACTIVITY FLAGS SINCE CREATE NOTIFICATION
-         *  ISN'T CALLED EVERYTIME NOTIF PRESSED
-         */
         fun createNotification(applicationContext: Context) : NotificationCompat.Builder {
-            /*
-            TODO: We're not using this for now. See if we can use this one day.
-
-            We only want to launch new document on Recents screen if InCallActivity isn't already
-            running. As otherwise, we want to just launch the IncomingCallActivity onto the
-            existing InCallActivity task and document.
-             */
-//            var activityFlags = if (InCallActivity.running) {
-//                Timber.e("$DBL: IncomingCallService activityFlags - InCallActivity running!")
-//                Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
-//            } else {
-//                Timber.e("$DBL: IncomingCallService activityFlags - InCallActivity not running!")
-//                Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NEW_DOCUMENT
-//            }
-
             // Safer to use CallService context if possible (which should be available)
             val activityLaunchContext = CallService.context ?: applicationContext
 
             val activityIntent = Intent(activityLaunchContext, IncomingCallActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NEW_DOCUMENT
             }
-            val activityPendingIntent = if (CallManager.hasActiveConnection()) {
-                TaskStackBuilder.create(activityLaunchContext).run {
-                    addNextIntentWithParentStack(activityIntent)
-                    getPendingIntent(5, PendingIntent.FLAG_IMMUTABLE)
-                }
-            } else {
-                PendingIntent.getActivity(
-                    activityLaunchContext,
-                    5,
-                    activityIntent,
-                    PendingIntent.FLAG_IMMUTABLE
-                )
-            }
+            val activityPendingIntent = PendingIntent.getActivity(
+                activityLaunchContext,
+                5,
+                activityIntent,
+                PendingIntent.FLAG_IMMUTABLE
+            )
 
             val answerIntent = Intent(applicationContext, IncomingCallNotificationReceiver::class.java).apply {
                 putExtra("action", ANSWER_ACTION)
