@@ -19,6 +19,7 @@ TODO: Leftover gray divider bar when there are no contacts.
  */
 class ContactsViewModel(app: Application) : AndroidViewModel(app) {
 
+    // TODO: THIS MIGHT BE CAUSE OF A MEMORY LEAK!!!
     @SuppressLint("StaticFieldLeak")
     private val context = getApplication<Application>().applicationContext
 

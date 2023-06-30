@@ -21,11 +21,19 @@ import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.notifications.NotificationChannels.IN_CALL_CHANNEL_ID
 import kotlinx.coroutines.*
 import timber.log.Timber
+import java.lang.ref.WeakReference
 
 
 /**
  * TODO: See if startForeground() should be in onCreate() or onStartCommand() -> might not be that
  *  big of a deal -> seconded
+ *
+ * TODO: On Android 9 at least (SDK 29), the incoming notification doesn't always replace the
+ *  in-call notification when there is an underlying call.
+ *
+ * TODO: Why does heads-up notification still show for Android 9 and 10 (SDK 29 & 30)? No problem
+ *  on Android 12 but not sure about Android 11 or 13. ACTUALLY, every time notification is
+ *  updated, a heads-up notification shows AND there is a notification sound.
  *
  * IncomingCallService not only represents the incoming call but also doubles as a foreground
  * service for the incoming call notification.
@@ -84,7 +92,7 @@ class IncomingCallService : LifecycleService() {
         Timber.i("$DBL: IncomingCallService - onCreate()")
 
         // Sets context to be used by notification receiver
-        _contexts.add(this)
+        _contexts.add(WeakReference(this))
 
         startForeground(notificationID, createNotification(applicationContext).build())
         CallManager.focusedConnection.observe(this, callObserver)
@@ -108,7 +116,7 @@ class IncomingCallService : LifecycleService() {
         Timber.i("$DBL: IncomingCallService - onDestroy()")
 
         // Cleans up references
-        _contexts.remove(this)
+        _contexts.removeAll { it.get() == this }
 
         /*
         Only need to set the ringer mode back to normal if changed in the first place. Ringer mode
@@ -243,9 +251,19 @@ class IncomingCallService : LifecycleService() {
          * call the correct hangup / answer methods. We use a list here for static safety, check
          * Android - General Notes for more info.
          */
-        private val _contexts : MutableList<IncomingCallService> = mutableListOf()
+        private val _contexts : MutableList<WeakReference<IncomingCallService>> = mutableListOf()
         val context : IncomingCallService?
-            get() = _contexts.lastOrNull()
+            get() {
+                cleanUp()
+                return _contexts.lastOrNull()?.get()
+            }
+
+        /**
+         * Remove any WeakReferences that no longer reference a CallService
+         */
+        private fun cleanUp() {
+            _contexts.removeAll { it.get() == null }
+        }
 
         /**
          * TODO: Maybe choose this over separateIncoming?

@@ -10,10 +10,11 @@ import com.telefender.phone.gui.InCallActivity
 import com.telefender.phone.gui.IncomingCallActivity
 import com.telefender.phone.misc_helpers.DBL
 import timber.log.Timber
+import java.lang.ref.WeakReference
 
 
 /**
- * TODO: LEAK IS HERE! --> Still haven't fixed it
+ * TODO: LEAK IS HERE! --> Still haven't fixed it -> Pretty sure it's fixed
  *
  * TODO: CHECK IF NO PERMISSION FOR SILENCE MODE.
  *
@@ -29,23 +30,28 @@ class CallService : InCallService() {
     override fun onCreate() {
         super.onCreate()
 
-        // Sets CallService context.
-        _contexts.add(this)
-
         Timber.e("$DBL: CallService onCreate()")
+
+        // Sets CallService context.
+        _contexts.add(WeakReference(this))
     }
 
-    // Only called when there are no active / incoming calls left
+    /**
+     * TODO: Maybe clearCallObjects() is unneeded?
+     *
+     * Only called when there are no active / incoming calls left
+     */
     override fun onDestroy() {
-        super.onDestroy()
+        Timber.e("$DBL: CallService onDestroy()")
 
-        // Removes CallService context for safety.
-        _contexts.remove(this)
+        // Removes CallService context for memory leak safety.
+        _contexts.removeAll { it.get() == this }
 
         // Removes remaining Call object references in CallManager to prevent possible memory leak?
         CallManager.clearCallObjects()
 
-        Timber.e("$DBL: CallService onDestroy()")
+        // We put onDestroy() at the end so that we can still use the reference before it
+        super.onDestroy()
     }
 
     /**
@@ -123,17 +129,24 @@ class CallService : InCallService() {
         }
     }
 
-    /**
-     * TODO: This could be the cause of the leak, but it may or may not be an issue.
-     */
     companion object {
         /**
          * Stores CallService context. Used so that AudioHelpers can modify ringer mode and speaker.
          * Also used to safely launch some activities. We use a list here for static safety, check
-         * Android - General Notes for more info
+         * Android - General Notes for more info.
          */
-        private val _contexts : MutableList<CallService> = mutableListOf()
+        private val _contexts : MutableList<WeakReference<CallService>> = mutableListOf()
         val context : CallService?
-            get() = _contexts.lastOrNull()
+            get() {
+                cleanUp()
+                return _contexts.lastOrNull()?.get()
+            }
+
+        /**
+         * Remove any WeakReferences that no longer reference a CallService
+         */
+        private fun cleanUp() {
+            _contexts.removeAll { it.get() == null }
+        }
     }
 }

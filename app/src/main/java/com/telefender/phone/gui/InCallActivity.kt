@@ -11,10 +11,12 @@ import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import com.telefender.phone.R
+import com.telefender.phone.call_related.CallService
 import com.telefender.phone.databinding.ActivityInCallBinding
 import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.notifications.ActiveCallNotificationService
 import timber.log.Timber
+import java.lang.ref.WeakReference
 
 /**
  * TODO: Rare bug where call is sent even after you press hangup (particularly, when you hangup
@@ -45,6 +47,10 @@ class InCallActivity : AppCompatActivity() {
             .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         navController = navHostFragment.navController
 
+        // Lets IncomingCallActivity know that InCallActivity is already running.
+        _running = true
+        _contexts.add(WeakReference(this))
+
         /**
          * Don't allow back press when in InCallFragment.
          *
@@ -65,10 +71,6 @@ class InCallActivity : AppCompatActivity() {
             }
         })
 
-        // Lets IncomingCallActivity know that InCallActivity is already running.
-        _running = true
-        _contexts.add(this)
-
         inCallOverLockScreen()
     }
 
@@ -77,7 +79,7 @@ class InCallActivity : AppCompatActivity() {
 
         // Cleans up references
         _running = false
-        _contexts.remove(this)
+        _contexts.removeAll { it.get() == this }
 
         super.onDestroy()
     }
@@ -103,9 +105,19 @@ class InCallActivity : AppCompatActivity() {
          *
          * We use a static list of Contexts to be safe (explained in Android - General Notes).
          */
-        private val _contexts : MutableList<Context> = mutableListOf()
-        val context : Context?
-            get() = _contexts.lastOrNull()
+        private val _contexts : MutableList<WeakReference<InCallActivity>> = mutableListOf()
+        val context : InCallActivity?
+            get() {
+                cleanUp()
+                return _contexts.lastOrNull()?.get()
+            }
+
+        /**
+         * Remove any WeakReferences that no longer reference a CallService
+         */
+        private fun cleanUp() {
+            _contexts.removeAll { it.get() == null }
+        }
 
         fun start(context: Context) {
             Intent(context, InCallActivity::class.java)

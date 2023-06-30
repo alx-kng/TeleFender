@@ -20,6 +20,9 @@ import timber.log.Timber
 /**
  * TODO: See if startForeground() should be in onCreate() or onStartCommand() -> might not be that
  *  big of a deal
+ *
+ * TODO: Why does heads-up notification still show for Android 9 and 10 (SDK 29 & 30)? No problem
+ *  on Android 12 but not sure about Android 11 or 13.
  */
 class ActiveCallNotificationService : LifecycleService() {
 
