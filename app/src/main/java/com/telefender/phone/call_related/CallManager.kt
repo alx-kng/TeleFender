@@ -81,6 +81,10 @@ class Connection(val call: Call?) {
             call?.unhold()
         }
     }
+
+    override fun toString() : String {
+        return "{ number: ${call.number()}, state: $state }"
+    }
 }
 
 enum class HandleMode {

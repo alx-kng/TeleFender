@@ -25,15 +25,18 @@ import java.lang.ref.WeakReference
 
 
 /**
+ * TODO: LAYOUT TOO SMALL FOR LOWER CHANNEL IMPORTANCE LEVEL / SMALLER DEVICES -> Need dynamic /
+ *  different layouts depending on channel importance / device!!! -> Actually it's because the
+ *  default layout is non-expanded SOMETIMES in the notification panel. Making layout smaller could
+ *  still be a fix -> Maybe we can leave it as is for now, not a big deal.
+ *
  * TODO: See if startForeground() should be in onCreate() or onStartCommand() -> might not be that
  *  big of a deal -> seconded
- *
- * TODO: On Android 9 at least (SDK 29), the incoming notification doesn't always replace the
- *  in-call notification when there is an underlying call.
  *
  * TODO: Why does heads-up notification still show for Android 9 and 10 (SDK 29 & 30)? No problem
  *  on Android 12 but not sure about Android 11 or 13. ACTUALLY, every time notification is
  *  updated, a heads-up notification shows AND there is a notification sound.
+ *  -> only possible solution as of now, is to update normally and don't worry about heads-up.
  *
  * IncomingCallService not only represents the incoming call but also doubles as a foreground
  * service for the incoming call notification.
@@ -59,6 +62,9 @@ class IncomingCallService : LifecycleService() {
     /**
      * TODO: Only technically observes when incoming call goes away. So, I guess incoming
      *  notification isn't updated anywhere but in the beginning currently. -> not a big deal though
+     *
+     * TODO: No need to check for holding when destroying service it seems, as answered already
+     *  takes care of the case (and is faster).
      */
     private val callObserver =  Observer<Connection?> {
         /**
@@ -66,8 +72,7 @@ class IncomingCallService : LifecycleService() {
          * incoming calls.
          */
         val hasRinging = it?.state == Call.STATE_RINGING || it?.state == Call.STATE_NEW
-        val hasHolding = CallManager.holdingConnection() != null
-        if (!hasRinging || hasHolding || answered) {
+        if (!hasRinging || answered) {
             Timber.i("$DBL: INCOMING FINISHED: focusedCall state: " +
                 CallManager.callStateString(CallManager.focusedCall.getStateCompat())
             )
@@ -242,7 +247,7 @@ class IncomingCallService : LifecycleService() {
         /**
          * ID is different from active notification ID
          */
-        private const val notificationID = 2
+        private const val notificationID = 3
         const val ANSWER_ACTION = "answer"
         const val HANGUP_ACTION = "hangup"
 
@@ -263,19 +268,6 @@ class IncomingCallService : LifecycleService() {
          */
         private fun cleanUp() {
             _contexts.removeAll { it.get() == null }
-        }
-
-        /**
-         * TODO: Maybe choose this over separateIncoming?
-         *
-         * Similar to separateIncoming() in ActiveCallNotificationService. Possibly even better.
-         * We use multiple different checks for incoming call since there is a tiny period after
-         * answering call (with underlying call) when there is still a ringing call (e.g., holding
-         * and ringing connection).
-         */
-        private fun hasIncoming() : Boolean {
-            val hasHolding = CallManager.holdingConnection() != null
-            return CallManager.incomingCall() && !hasHolding
         }
 
         fun updateNotification(applicationContext: Context) {
@@ -329,12 +321,17 @@ class IncomingCallService : LifecycleService() {
             val notificationTitle = CallManager.focusedCall.number()
             val notificationText = "Incoming call"
 
-            // Updates the title / text of the notification.
-            if (hasIncoming()) {
-                contentView.apply {
-                    setTextViewText(R.id.incoming_notification_title, notificationTitle)
-                    setTextViewText(R.id.incoming_notification_text, notificationText)
-                }
+            /*
+            TODO: We used to use hasIncoming() to determine if we should update the title here, as
+             we didn't want the incoming notification to flash to the underlying active call's
+             number at the last second when hanging up the incoming call. However, since we are
+             destroying the notification fast enough, this might not be a problem anymore.
+
+            Updates the title / text of the notification.
+             */
+            contentView.apply {
+                setTextViewText(R.id.incoming_notification_title, notificationTitle)
+                setTextViewText(R.id.incoming_notification_text, notificationText)
             }
 
             val notification = NotificationCompat.Builder(applicationContext, IN_CALL_CHANNEL_ID)

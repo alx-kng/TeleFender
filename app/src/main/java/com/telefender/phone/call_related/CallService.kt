@@ -1,6 +1,5 @@
 package com.telefender.phone.call_related
 
-
 import android.provider.CallLog
 import android.telecom.Call
 import android.telecom.InCallService
@@ -14,7 +13,14 @@ import java.lang.ref.WeakReference
 
 
 /**
- * TODO: LEAK IS HERE! --> Still haven't fixed it -> Pretty sure it's fixed
+ * TODO: LEAK IS HERE! --> Still haven't fixed it -> Pretty sure it's fixed -> Actual still detected
+ *  some leaks on LeakCanary --> 5th thought, maybe we actually did fix the major leak, as the leak
+ *  isn't detected on every call. It's possible that the OS just naturally has a small / delayed
+ *  leak that's no longer an issue. Before, when the leak was more frequent, it's possible that a
+ *  real leak (through not using WeakReferences) was overlapped with the delayed leak, causing very
+ *  similar short term behavior. However, if we've actually fixed the true leak, hopefully we'll be
+ *  able to tell in the long term if there isn't a gradually increasing memory usage that leads to
+ *  an OutOfMemory exception.
  *
  * TODO: CHECK IF NO PERMISSION FOR SILENCE MODE.
  *

@@ -9,6 +9,7 @@ import android.os.PowerManager
 import android.view.WindowManager
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat.startActivity
 import androidx.lifecycle.Observer
 import com.telefender.phone.call_related.*
 import com.telefender.phone.databinding.ActivityIncomingCallBinding
@@ -193,11 +194,7 @@ class IncomingCallActivity : AppCompatActivity() {
          *  notification behavior when doing this. For now, we just start the incoming activity
          *  and stop the in call activity.
          */
-        fun start(context: Context, safe: Boolean) {
-            Timber.i("$DBL: IncomingCallActivity - onStart()")
-
-            val applicationContext = context.applicationContext
-
+        fun start(context: CallService, safe: Boolean) {
             /**
              * Stops the active call notification when there is an incoming call. We check it
              * here because using the CallManager to detect incoming calls is not fine grained
@@ -206,13 +203,26 @@ class IncomingCallActivity : AppCompatActivity() {
              * causes the immediate destruction of the notification / other unexpected behaviors.
              *
              * NOTE: All incoming calls go through this start() function first.
+             * NOTE: shouldStopActiveNotification checks for holding connection in devices lower
+             * than Android 10, as the following case:
+             *
+             * active 1 -> incoming 2 -> answer 2 -> hangup active 2 from other end -> incoming 2 again
+             *
+             * Causes the connection states to actually be [Holding, Ringing] instead of
+             * [Active, Ringing] in Android 9.
              */
-            if (CallManager.hasActiveConnection()) {
-                applicationContext.stopService(Intent(context, ActiveCallNotificationService::class.java))
+            val shouldStopActiveNotification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                CallManager.hasActiveConnection()
+            } else {
+                CallManager.hasActiveConnection() || CallManager.holdingConnection() != null
+            }
+
+            if (shouldStopActiveNotification) {
+                context.stopService(Intent(context, ActiveCallNotificationService::class.java))
             }
 
             // Start incoming call notification
-            applicationContext.startForegroundService(
+            context.startForegroundService(
                 Intent(context, IncomingCallService::class.java)
                     .putExtra("Safe", safe)
             )
@@ -225,7 +235,7 @@ class IncomingCallActivity : AppCompatActivity() {
                 .let(context::startActivity)
 
             // Stops InCallActivity
-            (InCallActivity.context as InCallActivity?)?.finishAndRemoveTask()
+            InCallActivity.context?.finishAndRemoveTask()
         }
     }
 }

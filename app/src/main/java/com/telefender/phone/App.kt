@@ -4,6 +4,7 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.os.Build
 import com.telefender.phone.data.tele_database.ClientDatabase
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.notifications.ActiveCallNotificationService
@@ -79,6 +80,23 @@ class App : Application() {
         }
     }
 
+    /**
+     * TODO: See if Android 11 & > 12 have the heads-up behavior as well.
+     *
+     * TODO: CAN'T DO LOW IMPORTANCE SINCE ALL THE OTHER FUCKER APPS PUT THEIR IMPORTANCE AS HIGH
+     *  AND PUSH OUR NOTIFICATION TO THE BOTTOM.
+     *
+     * TODO: Here's a problem:
+     *  On Android 9 and 10 at least, if you set the importance as HIGH, everytime you update the
+     *  notification, a heads-up notification pops up along with a sound, which can get very
+     *  annoying. The problem with setting a lower importance is that the notification is more
+     *  easily pushed to a lower position by other notifications. Android 12 doesn't seem to have
+     *  this problem however, so we still use HIGH importance in that case.
+     *  -
+     *  -> May have found fix with conditional notification update.
+     *  -
+     *  -> I take that back, fix is actually more annoying
+     */
     private fun createNotificationChannels() {
         val inCallChannel = NotificationChannel(
             NotificationChannels.IN_CALL_CHANNEL_ID,
@@ -86,6 +104,8 @@ class App : Application() {
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
             description = "Used for in call notification"
+            // Gets rid of notification sound (sometimes sound is output on  notification updates)
+            setSound(null, null)
         }
 
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

@@ -3,26 +3,38 @@ package com.telefender.phone.notifications
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
+import android.content.Context.NOTIFICATION_SERVICE
 import android.content.Intent
 import android.os.Build
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat.stopForeground
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.Observer
 import com.telefender.phone.R
 import com.telefender.phone.call_related.*
 import com.telefender.phone.gui.InCallActivity
 import com.telefender.phone.misc_helpers.DBL
+import com.telefender.phone.notifications.IncomingCallService.Companion.createNotification
+import com.telefender.phone.notifications.IncomingCallService.Companion.updateNotification
 import com.telefender.phone.notifications.NotificationChannels.IN_CALL_CHANNEL_ID
 import timber.log.Timber
 
 /**
+ * TODO: LAYOUT TOO SMALL FOR LOWER CHANNEL IMPORTANCE LEVEL / SMALLER DEVICES -> Need dynamic /
+ *  different layouts depending on channel importance / device!!! -> Actually it's because the
+ *  default layout is non-expanded SOMETIMES in the notification panel. Making layout smaller could
+ *  still be a fix -> Maybe we can leave it as is for now, not a big deal.
+ *
  * TODO: See if startForeground() should be in onCreate() or onStartCommand() -> might not be that
  *  big of a deal
  *
  * TODO: Why does heads-up notification still show for Android 9 and 10 (SDK 29 & 30)? No problem
- *  on Android 12 but not sure about Android 11 or 13.
+ *  on Android 12 but not sure about Android 11 or 13. ACTUALLY, every time notification is
+ *  updated, a heads-up notification shows AND there is a notification sound.
+ *  -> only possible solution as of now, is to update normally and don't worry about heads-up.
  */
 class ActiveCallNotificationService : LifecycleService() {
 
@@ -37,6 +49,12 @@ class ActiveCallNotificationService : LifecycleService() {
                 Intent(applicationContext, ActiveCallNotificationService::class.java)
             )
         } else {
+            /*
+            We update the notification regardless of the SDK level when the focused connection
+            changes since it is infrequent / important enough to update (even if the heads-up
+            notification shows for devices < Android 12). Moreover, it's really hard to keep the
+            notification updated through some other control flow, so this is the best choice.
+             */
             updateNotification(applicationContext)
         }
     }
@@ -64,24 +82,10 @@ class ActiveCallNotificationService : LifecycleService() {
 
     companion object {
         private const val notificationID = 1
+
         const val SPEAKER_ACTION = "speaker"
         const val MUTE_ACTION = "mute"
         const val HANGUP_ACTION = "hangup"
-
-        /**
-         * TODO: Check if this causes problems
-         *
-         * We use separateIncoming to detect whether there is an incoming call or not. Although it
-         * doesn't perfectly determine incoming calls (in the case of incoming call with no
-         * underlying active call), it does seem to detect incoming calls with an underlying active
-         * call. However, it is a double edged sword, as even after answering an incoming call, the
-         * Call object sometimes takes a split second to switch from incoming to active, which
-         * gives a faulty output here. We might not need to worry about that though, as the
-         * notification behavior seems to be correct as of now.
-         */
-        private fun separateIncoming() : Boolean {
-            return CallManager.incomingCall() && CallManager.hasActiveConnection()
-        }
 
         fun updateNotification(applicationContext: Context) {
             val notification = createNotification(applicationContext).build()
