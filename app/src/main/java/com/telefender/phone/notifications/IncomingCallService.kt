@@ -25,6 +25,8 @@ import java.lang.ref.WeakReference
 
 
 /**
+ * TODO: Check if silentHangup() / call detail database actually works.
+ *
  * TODO: LAYOUT TOO SMALL FOR LOWER CHANNEL IMPORTANCE LEVEL / SMALLER DEVICES -> Need dynamic /
  *  different layouts depending on channel importance / device!!! -> Actually it's because the
  *  default layout is non-expanded SOMETIMES in the notification panel. Making layout smaller could
@@ -73,9 +75,7 @@ class IncomingCallService : LifecycleService() {
          */
         val hasRinging = it?.state == Call.STATE_RINGING || it?.state == Call.STATE_NEW
         if (!hasRinging || answered) {
-            Timber.i("$DBL: INCOMING FINISHED: focusedCall state: " +
-                CallManager.callStateString(CallManager.focusedCall.getStateCompat())
-            )
+            Timber.i("$DBL: INCOMING FINISHED: focusedCall state: ${CallManager.focusedCall.stateString()}")
 
             // Cancels silent hangup
             scope.cancel()
@@ -213,7 +213,7 @@ class IncomingCallService : LifecycleService() {
             }
 
             val unallowedParam = unallowed ?: false
-            TeleCallDetails.insertCallDetail(this, incomingCall!!, unallowedParam, direction)
+            TeleCallDetails.insertCallDetail(applicationContext, incomingCall!!, unallowedParam, direction)
         }
     }
 

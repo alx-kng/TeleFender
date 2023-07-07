@@ -1,13 +1,18 @@
 package com.telefender.phone.call_related
 
+import android.content.Context
 import android.telecom.Call
 import android.telecom.VideoProfile
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.map
+import com.telefender.phone.App
 import com.telefender.phone.call_related.CallManager.connections
+import com.telefender.phone.data.server_related.RequestWrappers
 import com.telefender.phone.misc_helpers.DBL
-import com.telefender.phone.misc_helpers.TeleHelpers
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import timber.log.Timber
 
 
@@ -62,7 +67,7 @@ class Connection(val call: Call?) {
         get() = call.isConference()
 
     val state: Int
-        get() = call.getStateCompat()
+        get() = call.stateCompat()
 
     fun hold() {
         if (isConference) {
@@ -83,12 +88,14 @@ class Connection(val call: Call?) {
     }
 
     override fun toString() : String {
-        return "{ number: ${call.number()}, state: $state }"
+        return "{ Connection | number: ${call.number()}, state: ${state.toStateString()}, " +
+            "isConference = $isConference, children size: ${call?.children?.size}, " +
+            "createTime = ${call.createTime()} }"
     }
 }
 
-enum class HandleMode {
-    BLOCK_MODE, SILENCE_MODE, ALLOW_MODE;
+enum class HandleMode(val serverString: String) {
+    BLOCK_MODE("Block"), SILENCE_MODE("Silence"), ALLOW_MODE("Allow");
 
     fun toInt() : Int {
         return this.ordinal
@@ -102,6 +109,11 @@ enum class HandleMode {
 }
 
 object CallManager {
+
+    /**
+     * CoroutineScope used to launch debugCallState() requests to the server.
+     */
+    val debugScope = CoroutineScope(Dispatchers.IO)
 
     // TODO: Store current block mode in database.
     private var _currentMode = HandleMode.SILENCE_MODE
@@ -152,11 +164,15 @@ object CallManager {
      * are no live calls).
      */
     fun updateFocusedConnection() {
+        Timber.i("$DBL: updateFocusedConnection()")
+
         for (connection in connections) {
             if (connection.state in listOf(
                     Call.STATE_RINGING, Call.STATE_CONNECTING, Call.STATE_DIALING, Call.STATE_NEW)
             ) {
                 _focusedConnection.value = connection
+
+                launchDebugCallState()
                 return
             }
         }
@@ -164,17 +180,44 @@ object CallManager {
         for (connection in connections) {
             if (connection.state == Call.STATE_ACTIVE) {
                 _focusedConnection.value = connection
+
+                launchDebugCallState()
                 return
             }
         }
 
         if (focusedConnection.value?.state != Call.STATE_DISCONNECTED) {
+            launchDebugCallState()
             return
         }
 
         _focusedConnection.value = connections.find { it.state != Call.STATE_DISCONNECTED }
 
-        Timber.i("DODDEBUG: UPDATE FOCUS")
+        launchDebugCallState()
+    }
+
+    /**
+     * TODO: Check if overlapping debugCallState() requests can occur and if they can cause any
+     *  problems.
+     *
+     * TODO: Currently here for debug. In the future, the flow may be refactored or this may be
+     *  omitted from the code entirely (if we fix all calling / UI problems).
+     *
+     * Launches post request to server to upload the current call / UI states.
+     */
+    fun launchDebugCallState() {
+        debugScope.launch {
+            Timber.i("$DBL: launchDebugCallState()")
+
+            val applicationContext = CallService.context?.applicationContext
+            applicationContext?.let {
+                RequestWrappers.debugCallState(
+                    context = it,
+                    repository = (it as App).repository,
+                    scope = debugScope
+                )
+            }
+        }
     }
 
     /**
@@ -212,7 +255,7 @@ object CallManager {
      * function is slightly different from orderedConnections().
      */
     fun nonDisconnectedCalls(): List<Call?> {
-        return calls.filter { it.getStateCompat() != Call.STATE_DISCONNECTED }
+        return calls.filter { it.stateCompat() != Call.STATE_DISCONNECTED }
     }
 
     /**
@@ -263,7 +306,7 @@ object CallManager {
      *      3. There are no disconnected calls
      */
     fun isStableState(): Boolean {
-        val hasDisconnected = calls.find { it.getStateCompat() == Call.STATE_DISCONNECTED } != null
+        val hasDisconnected = calls.find { it.stateCompat() == Call.STATE_DISCONNECTED } != null
         return !(sameStateConnections() || repeatCalls() || hasDisconnected)
     }
 
@@ -365,7 +408,7 @@ object CallManager {
     }
 
     fun hangupArg(call: Call?) {
-        if (call.getStateCompat() == Call.STATE_RINGING) {
+        if (call.stateCompat() == Call.STATE_RINGING) {
             call?.reject(false, null)
         } else {
             call?.disconnect()
@@ -437,7 +480,7 @@ object CallManager {
     fun logConnections() {
         for (connection in connections) {
             Timber.i("$DBL: CONNECTIONS ======= " +
-                "connection state: ${callStateString(connection.state)}"
+                "connection: $connection"
             )
         }
     }
@@ -447,7 +490,7 @@ object CallManager {
             Timber.i("$DBL: CALLS ============= " +
                 "${call.details?.handle?.schemeSpecificPart}" +
                 " | in conference: ${call.isConference()}" +
-                " | call state: ${callStateString(call.getStateCompat())}" +
+                " | call state: ${call.stateString()}" +
                 " | conferenceable: ${conferenceableState(call)}"
             )
         }
@@ -470,21 +513,6 @@ object CallManager {
             "CDMA - Conferenceable with ${call.conferenceableCalls.size} calls"
         } else {
             "GSM - Is Conferenceable"
-        }
-    }
-
-    fun callStateString(state: Int): String {
-        return when (state) {
-            Call.STATE_RINGING -> "Ringing"
-            Call.STATE_ACTIVE -> "Active"
-            Call.STATE_DIALING -> "Dialing"
-            Call.STATE_CONNECTING -> "Connecting"
-            Call.STATE_HOLDING -> "Holding"
-            Call.STATE_AUDIO_PROCESSING -> "Audio Processing"
-            Call.STATE_DISCONNECTED -> "Disconnected"
-            Call.STATE_DISCONNECTING -> "Disconnecting"
-            Call.STATE_NEW -> "New"
-            else -> "Some other state"
         }
     }
 }

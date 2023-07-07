@@ -236,6 +236,55 @@ class DebugExchangeRequest(
 }
 
 @JsonClass(generateAdapter = true)
+class DebugCallStateRequest(
+    instanceNumber : String,
+    key : String,
+    @Json(name = "connectionsJson")
+    val debugCallState: String
+) : KeyRequest(instanceNumber, key) {
+
+    override fun toJson() : String {
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(DebugCallStateRequest::class.java)
+
+        return adapter.serializeNulls().toJson(this)
+    }
+
+    override fun toString() : String {
+        return "${super.toString()} debugCallState: $debugCallState"
+    }
+}
+
+@JsonClass(generateAdapter = true)
+class DebugCallState(
+    val currentMode : String,
+    val lastAnsweredCall : String?,
+    val calls : List<String?>,
+    val connections : List<String>,
+    val focusedConnection : String?,
+    val focusedCall : String?,
+    val incomingActivityRunning : Boolean,
+    val inCallActivityRunning : Boolean,
+    val incomingCallServiceRunning : Boolean,
+    val activeCallServiceRunning : Boolean,
+) {
+    fun toJson() : String {
+        val moshi = Moshi.Builder().build()
+        val adapter = moshi.adapter(DebugCallState::class.java)
+
+        return adapter.serializeNulls().toJson(this)
+    }
+
+    override fun toString() : String {
+        return "currentMode: $currentMode, lastAnsweredCall: $lastAnsweredCall, calls: $calls " +
+            "connections: $connections, focusedConnection: $focusedConnection, " +
+            "focusedCall $focusedCall, incomingActivityRunning: $incomingActivityRunning" +
+            "inCallActivityRunning: $inCallActivityRunning, incomingCallServiceRunning: $incomingCallServiceRunning, " +
+            "activeCallServiceRunning: $activeCallServiceRunning"
+    }
+}
+
+@JsonClass(generateAdapter = true)
 class TokenRequest(
     instanceNumber : String,
     key : String,

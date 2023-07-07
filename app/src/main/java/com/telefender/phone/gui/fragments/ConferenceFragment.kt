@@ -8,7 +8,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.telefender.phone.call_related.CallManager
-import com.telefender.phone.call_related.getStateCompat
+import com.telefender.phone.call_related.stateCompat
 import com.telefender.phone.databinding.FragmentConferenceBinding
 import com.telefender.phone.gui.adapters.ConferenceAdapter
 
@@ -62,7 +62,7 @@ class ConferenceFragment : Fragment() {
              */
             val children = CallManager.conferenceConnection()?.call?.children
             val calls = children?.filter {
-                it.getStateCompat() != Call.STATE_DISCONNECTED
+                it.stateCompat() != Call.STATE_DISCONNECTED
             }
 
             if (!calls.isNullOrEmpty()) {

@@ -73,7 +73,7 @@ class CallService : InCallService() {
          * Only launches IncomingActivity if it is an incoming call. Otherwise, InCallActivity is
          * directly started. Also, safe calls and unsafe calls are handled separately.
          */
-        if (call.getStateCompat() == Call.STATE_RINGING) {
+        if (call.stateCompat() == Call.STATE_RINGING) {
             val isSafe = RuleChecker.isSafe(this, call.number())
             Timber.e("$DBL: CallService - SAFE = $isSafe")
 

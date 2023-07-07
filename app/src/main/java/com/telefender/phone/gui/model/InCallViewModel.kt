@@ -4,9 +4,8 @@ import android.telecom.Call
 import androidx.lifecycle.*
 import com.telefender.phone.call_related.CallManager
 import com.telefender.phone.call_related.callDurationSEC
-import com.telefender.phone.call_related.getStateCompat
+import com.telefender.phone.call_related.stateCompat
 import com.telefender.phone.misc_helpers.DBL
-import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -64,8 +63,8 @@ class InCallViewModel : ViewModel() {
     private fun secondsToTime(totalSeconds: Int): String{
 
         // Don't display time if call hasn't connected yet.
-        if (CallManager.focusedCall.getStateCompat() == Call.STATE_CONNECTING
-            || CallManager.focusedCall.getStateCompat() == Call.STATE_DIALING) {
+        if (CallManager.focusedCall.stateCompat() == Call.STATE_CONNECTING
+            || CallManager.focusedCall.stateCompat() == Call.STATE_DIALING) {
             return "Calling..."
         }
 

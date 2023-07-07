@@ -65,8 +65,10 @@ class ActiveCallNotificationService : LifecycleService() {
 
     override fun onCreate() {
         super.onCreate()
-
         Timber.i("$DBL: ActiveCallNotificationService - onCreate()")
+
+        _running = true
+
         startForeground(notificationID, createNotification(applicationContext).build())
 
         CallManager.focusedConnection.observe(this, callObserver)
@@ -77,11 +79,18 @@ class ActiveCallNotificationService : LifecycleService() {
     override fun onDestroy() {
         super.onDestroy()
         Timber.i("$DBL: ActiveCallNotificationService - onDestroy()")
+
+        _running = false
+
         stopForeground(STOP_FOREGROUND_DETACH)
     }
 
     companion object {
         private const val notificationID = 1
+
+        private var _running = false
+        val running: Boolean
+            get() = _running
 
         const val SPEAKER_ACTION = "speaker"
         const val MUTE_ACTION = "mute"

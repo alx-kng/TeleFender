@@ -19,6 +19,9 @@ import timber.log.Timber
 import java.lang.ref.WeakReference
 
 /**
+ * TODO: SOMETIMES IN-CALL ACTIVITY DOESN'T CLOSE CORRECTLY!! Probably some observer related
+ *  problem in InCallFragment.
+ *
  * TODO: Rare bug where call is sent even after you press hangup (particularly, when you hangup
  *  immediately after sending call), and the call connects, but the InCallActivity doesn't show.
  *

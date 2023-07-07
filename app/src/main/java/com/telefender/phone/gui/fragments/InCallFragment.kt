@@ -7,7 +7,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.content.res.AppCompatResources
-import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -39,10 +38,8 @@ class InCallFragment : Fragment() {
      * Observes and updates UI based off current focusedConnection
      */
     private val observer = Observer<Connection?> { connection ->
-        /**
-         * End InCallActivity if there are no connections, only disconnected connections, or a
-         * single conference connection that is about to end.
-         */
+        Timber.e("$DBL: InCallFragment - Observer Fired! - connections = ${CallManager.connections}")
+
         /**
          * End InCallActivity if there are no connections, only disconnected connections, or a
          * single conference connection that is about to end.
@@ -52,8 +49,8 @@ class InCallFragment : Fragment() {
             || (CallManager.connections.size == 1 && edgeState == Call.STATE_DISCONNECTED)
             || conferenceShouldDisconnect()
         ) {
+            Timber.e("$DBL: InCallFragment - Should finish!")
             requireActivity().finishAndRemoveTask()
-            Timber.i("$DBL: IN CALL FINISHED!")
         } else {
             updateCallerDisplay()
             updateButtons()
@@ -239,6 +236,13 @@ class InCallFragment : Fragment() {
      * Conference should disconnect when it is the only connection left and has 0 child calls.
      */
     private fun conferenceShouldDisconnect(): Boolean {
+        /*
+        Logic basically says, if there is only one connection left, and it is a conference call,
+        then we check the number of children. If the number of children is 0, then the conference
+        call should disconnect. If the only connection IS NOT a conference call, then children
+        will be null and noChildren will be false, which is really to say that we cannot determine
+        if the conference call should disconnect since there is none.
+         */
         val oneConnection = CallManager.connections.size == 1
         val children = CallManager.conferenceConnection()?.call?.children
         val noChildren = children?.size == 0
@@ -257,7 +261,7 @@ class InCallFragment : Fragment() {
                 && !nonDisconnectedCalls.firstOrNull().isConference()
             )
 
-        val outgoing = CallManager.focusedCall.getStateCompat().let {
+        val outgoing = CallManager.focusedCall.stateCompat().let {
             it == Call.STATE_CONNECTING || it == Call.STATE_DIALING
         }
 
@@ -399,9 +403,9 @@ class InCallFragment : Fragment() {
         Timber.i("$DBL: incomingCall: ${CallManager.incomingCall()}")
         Timber.i("$DBL: incomingActivity showing: ${IncomingCallActivity.showing}")
         Timber.i("$DBL: incomingActivity last answered: ${CallManager.lastAnsweredCall.number()}")
-        Timber.i("$DBL: connections size: ${CallManager.connections.size}")
-        Timber.i("$DBL: focusedCall: number = ${CallManager.focusedCall.number()}, " +
-            "state = ${CallManager.callStateString(CallManager.focusedCall.getStateCompat())}")
+        Timber.i("$DBL: connections: ${CallManager.connections}")
+        Timber.i("$DBL: focusedConnection: ${CallManager.focusedConnection.value}")
+        Timber.i("$DBL: focusedCall: ${CallManager.focusedCall.toSimpleString()}")
 
         /**
          * Used to decide whether or not the UI should update when an incoming call is detected

@@ -262,4 +262,19 @@ object RequestWrappers {
             }
         }
     }
+
+    /**
+     * TODO: We currently don't retry here, as it would become too messy for the server (as this is
+     *  invoked everytime there is a change in call state).
+     *
+     * Uploads call / UI state data to server.
+     */
+    suspend fun debugCallState(
+        context: Context,
+        repository: ClientRepository,
+        scope: CoroutineScope
+    ) {
+        WorkStates.setState(WorkType.DEBUG_CALL_STATE_POST, WorkInfo.State.RUNNING)
+        RemoteDebug.debugCallStateRequest(context, repository, scope)
+    }
 }

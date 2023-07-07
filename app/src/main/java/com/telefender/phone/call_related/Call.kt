@@ -2,7 +2,6 @@ package com.telefender.phone.call_related
 
 import android.os.Build
 import android.telecom.Call
-import timber.log.Timber
 
 
 private val OUTGOING_CALL_STATES = arrayOf(
@@ -11,7 +10,20 @@ private val OUTGOING_CALL_STATES = arrayOf(
     Call.STATE_SELECT_PHONE_ACCOUNT
 )
 
-fun Call?.getStateCompat(): Int {
+fun Call?.toSimpleString(): String? {
+    return if (this != null) {
+        "{ Call | number: ${this.number()}, state: ${stateString()}, createTime = ${createTime()} }"
+    } else {
+        null
+    }
+}
+
+fun Call?.number(): String? {
+    return this?.details?.handle?.schemeSpecificPart
+}
+
+// TODO: Should we fix things to show call state as null if call is null?
+fun Call?.stateCompat(): Int {
     return when {
         this == null -> Call.STATE_DISCONNECTED
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> details.state
@@ -19,24 +31,23 @@ fun Call?.getStateCompat(): Int {
     }
 }
 
-fun Int.toStateString(): String = when (this) {
-    Call.STATE_NEW -> "NEW"
-    Call.STATE_RINGING -> "RINGING"
-    Call.STATE_DIALING -> "DIALING"
-    Call.STATE_ACTIVE -> "ACTIVE"
-    Call.STATE_HOLDING -> "HOLDING"
-    Call.STATE_DISCONNECTED -> "DISCONNECTED"
-    Call.STATE_CONNECTING -> "CONNECTING"
-    Call.STATE_DISCONNECTING -> "DISCONNECTING"
-    Call.STATE_SELECT_PHONE_ACCOUNT -> "SELECT_PHONE_ACCOUNT"
-    else -> {
-        Timber.w("Unknown state $this")
-        "UNKNOWN"
-    }
+fun Call?.stateString(): String {
+    return this.stateCompat().toStateString()
 }
 
-fun Call?.stateString(): String {
-    return this.getStateCompat().toStateString()
+
+fun Int?.toStateString(): String = when (this) {
+    Call.STATE_NEW -> "New"
+    Call.STATE_RINGING -> "Ringing"
+    Call.STATE_DIALING -> "Dialing"
+    Call.STATE_CONNECTING -> "Connecting"
+    Call.STATE_ACTIVE -> "Active"
+    Call.STATE_HOLDING -> "Holding"
+    Call.STATE_AUDIO_PROCESSING -> "Audio Processing"
+    Call.STATE_DISCONNECTED -> "Disconnected"
+    Call.STATE_DISCONNECTING -> "Disconnecting"
+    null -> "null"
+    else -> "Unknown state $this"
 }
 
 /*
@@ -83,15 +94,11 @@ fun Call?.connectTime(): Long {
     }
 }
 
-fun Call?.number(): String? {
-    return this?.details?.handle?.schemeSpecificPart
-}
-
 fun Call.isOutgoing(): Boolean {
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         details.callDirection == Call.Details.DIRECTION_OUTGOING
     } else {
-        OUTGOING_CALL_STATES.contains(getStateCompat())
+        OUTGOING_CALL_STATES.contains(stateCompat())
     }
 }
 
