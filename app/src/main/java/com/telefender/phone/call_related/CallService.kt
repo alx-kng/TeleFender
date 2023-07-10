@@ -61,6 +61,9 @@ class CallService : InCallService() {
     }
 
     /**
+     * TODO: Debug doesn't always accurately reflect which components are running since the
+     *  launchCallDebugState() is launched before the components are actually created.
+     *
      * Note that voicemails are not passed to CallService, so you pretty much need to observer
      * default database to know when user receives voicemail.
      */

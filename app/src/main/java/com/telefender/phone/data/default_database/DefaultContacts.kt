@@ -11,57 +11,13 @@ import android.provider.ContactsContract
 import android.provider.ContactsContract.CommonDataKinds.Phone
 import android.provider.ContactsContract.PhoneLookup
 import android.provider.ContactsContract.RawContacts
+import com.telefender.phone.gui.adapters.recycler_view_items.ContactDetail
 import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 
-
-/***************************************************************************************************
- * TODO: Move these classes to another file.
- *
- * For ContactsFragment
- **************************************************************************************************/
-sealed interface ContactItem
-
-object ContactFooter : ContactItem
-
-data class Divider(
-    val letter: String
-) : ContactItem {
-    override fun toString(): String {
-        return "Divider: Letter = $letter"
-    }
-
-    override fun equals(other: Any?): Boolean {
-        return other is Divider && this.letter == other.letter
-    }
-
-    override fun hashCode(): Int {
-        return letter.hashCode()
-    }
-}
-
-data class ContactDetail(
-    val name : String,
-    val id: Int
-) : ContactItem {
-
-    override fun toString(): String {
-        return "ContactData: Name = $name, ID = $id"
-    }
-
-    override fun equals(other: Any?): Boolean {
-        return other is ContactDetail && this.name == other.name && this.id == other.id
-    }
-
-    override fun hashCode(): Int {
-        var result = name.hashCode()
-        result = 31 * result + id
-        return result
-    }
-}
 
 /**
  * TODO: Consider changing this default database retrieval structure to a ContentProvider, but it
@@ -268,11 +224,141 @@ object DefaultContacts {
     }
 
     /**
+     * Inserts a contact with the given fields. At least one of the fields must be a non-empty
+     * string.
+     */
+    fun insertContact(
+        contentResolver: ContentResolver,
+        name: String,
+        number: String,
+        email: String,
+        address: String
+    ) : Boolean {
+        val operations = ArrayList<ContentProviderOperation>()
+
+        operations.add(
+            ContentProviderOperation
+                .newInsert(RawContacts.CONTENT_URI)
+                .withValue(RawContacts.ACCOUNT_TYPE, null)
+                .withValue(RawContacts.ACCOUNT_NAME, null)
+                .build()
+        )
+
+        if (name != "") {
+            operations.add(
+                getNameDataCPO(name)
+            )
+        }
+
+        if (number != "") {
+            operations.add(
+                getNumberDataCPO(number, Phone.TYPE_MOBILE)
+            )
+        }
+
+        if (email != "") {
+            operations.add(
+                getEmailDataCPO(email)
+            )
+        }
+
+        if (email != "") {
+            operations.add(
+                getAddressDataCPO(address)
+            )
+        }
+
+        return try {
+            contentResolver.applyBatch(ContactsContract.AUTHORITY, operations)
+            true
+        } catch (e: Exception) {
+            Timber.e("$DBL: insertContact() failed!")
+            false
+        }
+    }
+
+    /**
+     * Returns ContentProviderOperation for name Data row. Should pass in non-empty string.
+     */
+    private fun getNameDataCPO(name: String) : ContentProviderOperation {
+        return ContentProviderOperation
+            .newInsert(ContactsContract.Data.CONTENT_URI)
+            .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
+            .withValue(
+                ContactsContract.Data.MIMETYPE,
+                ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE
+            )
+            .withValue(
+                ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME,
+                name
+            )
+            .build()
+    }
+
+    /**
+     * Returns ContentProviderOperation for number Data row. Should pass in non-empty string.
+     */
+    private fun getNumberDataCPO(number: String, type: Int) : ContentProviderOperation {
+        return ContentProviderOperation
+            .newInsert(ContactsContract.Data.CONTENT_URI)
+            .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
+            .withValue(
+                ContactsContract.Data.MIMETYPE,
+                Phone.CONTENT_ITEM_TYPE
+            )
+            .withValue(
+                Phone.NUMBER,
+                number
+            )
+            .withValue(
+                Phone.TYPE,
+                type
+            )
+            .build()
+    }
+
+    /**
+     * Returns ContentProviderOperation for email Data row. Should pass in non-empty string.
+     */
+    private fun getEmailDataCPO(email: String) : ContentProviderOperation {
+        return ContentProviderOperation
+            .newInsert(ContactsContract.Data.CONTENT_URI)
+            .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
+            .withValue(
+                ContactsContract.Data.MIMETYPE,
+                ContactsContract.CommonDataKinds.Email.CONTENT_ITEM_TYPE
+            )
+            .withValue(
+                ContactsContract.CommonDataKinds.Email.ADDRESS,
+                email
+            )
+            .build()
+    }
+
+    /**
+     * Returns ContentProviderOperation for address Data row. Should pass in non-empty string.
+     */
+    private fun getAddressDataCPO(address: String) : ContentProviderOperation {
+        return ContentProviderOperation
+            .newInsert(ContactsContract.Data.CONTENT_URI)
+            .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
+            .withValue(
+                ContactsContract.Data.MIMETYPE,
+                ContactsContract.CommonDataKinds.StructuredPostal.CONTENT_ITEM_TYPE
+            )
+            .withValue(
+                ContactsContract.CommonDataKinds.StructuredPostal.FORMATTED_ADDRESS,
+                address
+            )
+            .build()
+    }
+
+    /**
      * TODO: Make this cleaner and add more capability please...
      *
      * Inserts contact into default database.
      */
-    fun insertContact(
+    fun insertContactOld(
         contactAdder: ContentResolver,
         firstName: String? = null,
         mobileNumber: String?

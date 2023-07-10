@@ -18,6 +18,8 @@ import com.telefender.phone.data.tele_database.TeleCallDetails
 import com.telefender.phone.gui.InCallActivity
 import com.telefender.phone.gui.IncomingCallActivity
 import com.telefender.phone.misc_helpers.DBL
+import com.telefender.phone.notifications.ActiveCallNotificationService.Companion.createNotification
+import com.telefender.phone.notifications.ActiveCallNotificationService.Companion.updateNotification
 import com.telefender.phone.notifications.NotificationChannels.IN_CALL_CHANNEL_ID
 import kotlinx.coroutines.*
 import timber.log.Timber
@@ -49,10 +51,11 @@ class IncomingCallService : LifecycleService() {
 
     private val silenceDelay: Long = 10000L
     private val incomingCall = CallManager.focusedCall
-    private var answered = false
-    private var unallowed : Boolean? = false
-    private var rejected = false
+
     private var safe = true
+    private var unallowed : Boolean? = false
+    private var answered = false
+    private var rejected = false
 
     /**
      * Indicates whether the InCallActivity was already launched by IncomingCallActivity when pressing
@@ -240,6 +243,13 @@ class IncomingCallService : LifecycleService() {
 
         unallowed = true
         CallManager.hangup()
+    }
+
+    /**
+     * For debugCallStateRequest().
+     */
+    fun getDecisionState() : Array<Boolean?> {
+        return arrayOf(safe, unallowed, answered, rejected)
     }
 
     companion object {

@@ -9,10 +9,10 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.telefender.phone.R
-import com.telefender.phone.data.default_database.ContactDetail
-import com.telefender.phone.data.default_database.ContactFooter
-import com.telefender.phone.data.default_database.ContactItem
-import com.telefender.phone.data.default_database.Divider
+import com.telefender.phone.gui.adapters.recycler_view_items.ContactDetail
+import com.telefender.phone.gui.adapters.recycler_view_items.ContactFooter
+import com.telefender.phone.gui.adapters.recycler_view_items.ContactItem
+import com.telefender.phone.gui.adapters.recycler_view_items.Divider
 
 
 class ContactsAdapter(

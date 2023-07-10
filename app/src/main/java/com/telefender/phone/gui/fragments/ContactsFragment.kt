@@ -19,6 +19,8 @@ import timber.log.Timber
 
 
 /**
+ * TODO: Sometimes, Add contact button is not shown -> Caused by tapping bottom again
+ *
  * TODO: THERE IS SOME SORT OF LEAK HERE (One with actual Fragment and one with LinearLayout)
  *
  * TODO: Consider not showing contacts that don't have a number associated with them.
@@ -44,6 +46,8 @@ class ContactsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        Timber.e("$DBL: ContactsFragment - onViewCreated() - $this")
 
         setupAppBar()
         showAppBar()
@@ -83,7 +87,7 @@ class ContactsFragment : Fragment() {
             act.setTitle(getString(R.string.contacts_title))
             act.displayAppBarTextButton(show = true, text = "Add")
             act.setEditOrAddOnClickListener {
-                val action = ContactsFragmentDirections.actionContactsFragmentToEditContactFragment()
+                val action = ContactsFragmentDirections.actionContactsFragmentToChangeContactFragment()
                 findNavController().navigate(action)
             }
         }

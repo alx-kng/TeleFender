@@ -310,6 +310,8 @@ object RemoteDebug {
             return
         }
 
+        val decisionState = IncomingCallService.context?.getDecisionState()
+
         val debugRequestJson = DebugCallStateRequest(
             instanceNumber = instanceNumber,
             key = key,
@@ -324,7 +326,11 @@ object RemoteDebug {
                     incomingActivityRunning = IncomingCallActivity.running,
                     inCallActivityRunning = InCallActivity.running,
                     incomingCallServiceRunning = IncomingCallService.context != null,
-                    activeCallServiceRunning = ActiveCallNotificationService.running
+                    activeCallServiceRunning = ActiveCallNotificationService.running,
+                    incomingSafe = decisionState?.get(0),
+                    incomingUnallowed = decisionState?.get(1),
+                    incomingAnswered = decisionState?.get(2),
+                    incomingRejected = decisionState?.get(3),
                 ).toJson()
             }
         ).toJson()

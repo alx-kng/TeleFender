@@ -4,6 +4,10 @@ import android.annotation.SuppressLint
 import android.app.Application
 import androidx.lifecycle.*
 import com.telefender.phone.data.default_database.*
+import com.telefender.phone.gui.adapters.recycler_view_items.ContactDetail
+import com.telefender.phone.gui.adapters.recycler_view_items.ContactFooter
+import com.telefender.phone.gui.adapters.recycler_view_items.ContactItem
+import com.telefender.phone.gui.adapters.recycler_view_items.Divider
 import com.telefender.phone.misc_helpers.DBL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

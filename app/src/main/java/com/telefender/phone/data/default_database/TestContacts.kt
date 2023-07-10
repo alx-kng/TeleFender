@@ -100,6 +100,7 @@ object TestContacts {
             ContactsContract.Data.DATA13,
             ContactsContract.Data.DATA14,
             ContactsContract.Data.DATA15,
+            ContactsContract.CommonDataKinds.Phone.NORMALIZED_NUMBER
         )
 
         try {

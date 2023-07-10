@@ -14,14 +14,13 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.telefender.phone.R
 import com.telefender.phone.data.tele_database.entities.CallDetail
+import com.telefender.phone.gui.adapters.recycler_view_items.CallDetailItem
+import com.telefender.phone.gui.adapters.recycler_view_items.CallHistoryFooter
+import com.telefender.phone.gui.adapters.recycler_view_items.CallHistoryHeader
 import com.telefender.phone.misc_helpers.TeleHelpers
 import java.text.SimpleDateFormat
 import java.util.*
 
-interface CallDetailItem
-
-object CallHistoryHeader : CallDetailItem
-object CallHistoryFooter : CallDetailItem
 
 class CallHistoryAdapter (
     private val context: Context,

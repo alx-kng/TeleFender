@@ -5,9 +5,9 @@ import android.app.Application
 import androidx.lifecycle.*
 import com.telefender.phone.data.default_database.DefaultCallDetails
 import com.telefender.phone.data.tele_database.entities.CallDetail
-import com.telefender.phone.gui.adapters.CallDetailItem
-import com.telefender.phone.gui.adapters.CallHistoryFooter
-import com.telefender.phone.gui.adapters.CallHistoryHeader
+import com.telefender.phone.gui.adapters.recycler_view_items.CallDetailItem
+import com.telefender.phone.gui.adapters.recycler_view_items.CallHistoryFooter
+import com.telefender.phone.gui.adapters.recycler_view_items.CallHistoryHeader
 import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.Dispatchers

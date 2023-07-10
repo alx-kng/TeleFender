@@ -9,7 +9,7 @@
 
     <string name="recents_title">Recents</string>
     <string name="contacts_title">Contacts</string>
-    <string name="edit_contact_title">Edit Contact</string>
+    <string name="add_contact_title">Add Contact</string>
     <string name="dialer_title">Dialer</string>
     <string name="call_history_title">Call History</string>
     <string name="keypad">Keypad</string>

@@ -137,8 +137,20 @@ object TableSynchronizer {
     }
 
     /**********************************************************************************************
+     * TODO: We seem to very occasionally get a default cnUpdate() for every contact number?
+     *  Specifically, everytime the app is run (on some instances) all the contact numbers are
+     *  duplicate inserted. There's probably something wrong with the sync process. -> Think it
+     *  might be caused by our test contact insertions.
+     *  ->
+     *  Here's the problem. When version number is upped, sometimes the rawNumber isn't actually
+     *  changed. However, in cnUpdate() since we just return if we see that the rawNumber is the
+     *  same (since we think it's a duplicate), the versionNumber never gets updated. As a result,
+     *  it continues to get the cnUpdate() execution command, as we never made the versionNumber
+     *  current.
+     *
      * TODO: RETRIEVE DEFAULT CONTACT BY DEFAULT CID USING SAME METHOD AS syncCallLogs(). Also,
      *  summarize in document.
+     *
      * TODO: Need to include default blocked update.
      *
      * Syncs our Contact / ContactNumber database with Android's default Contact / PhoneNumbers database

@@ -267,6 +267,10 @@ class DebugCallState(
     val inCallActivityRunning : Boolean,
     val incomingCallServiceRunning : Boolean,
     val activeCallServiceRunning : Boolean,
+    val incomingSafe : Boolean?,
+    val incomingUnallowed : Boolean?,
+    val incomingAnswered : Boolean?,
+    val incomingRejected : Boolean?,
 ) {
     fun toJson() : String {
         val moshi = Moshi.Builder().build()
