@@ -1,6 +1,7 @@
 package com.telefender.phone.data.server_related.debug_engine
 
 import android.content.Context
+import com.telefender.phone.data.default_database.DefaultContacts
 import com.telefender.phone.data.server_related.RemoteDebug
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.entities.ChangeLog
@@ -8,7 +9,6 @@ import com.telefender.phone.data.tele_database.entities.TableType
 import com.telefender.phone.data.tele_database.entities.toChangeLog
 import com.telefender.phone.data.tele_database.entities.toTableType
 import com.telefender.phone.misc_helpers.DBL
-import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import timber.log.Timber
@@ -117,6 +117,14 @@ class HelpCommand(
                 | use = "<inj-read> {change_log_json}"
                 | Injects {change_log_json} as a ChangeLog into the ExecuteAgent and executes the
                 | corresponding action.
+                | 
+                | Should not be used to inject direct (non-tree) contacts, as they won't stick
+                | without the default database being changed. Instead, use 
+                
+            <inj-def>
+                | use = "<inj-def> {operation_type} {operation_json}"
+                | Inserts / updates / deletes rows into the default contact database (e.g., 
+                | RawContact, Data) given the {operation_type} and {operation_json}.
                   
             Helpful info:
             
@@ -133,6 +141,20 @@ class HelpCommand(
                 | contact_number
                 | analyzed_number
                 | notify_item
+            
+            Default operation types
+                | ADDC
+                    | Adds a new RawContact and Data rows with the given name / numbers.
+                | ADDN 
+                    | Adds a new Data row for the given numbers.
+                | UPDN 
+                    | Updates numbers specified by the given updates (oldNumber -> newNumber) 
+                    | in the given RawContact (passed in as RawContact ID). 
+                | DELN
+                    | Deletes all of the Data rows with the given numbers that are linked to the 
+                    | specified RawContact (passed in as RawContact ID).
+                | DELC
+                    | Deletes specified RawContact (passed in as RawContact ID).
                 
         """.trimIndent()
 
@@ -226,6 +248,13 @@ class ReadQueryCommand(
     }
 }
 
+/**
+ * TODO: Put a check around this to only allow in secure debug mode. For example, we can start off in
+ *  production (non-debug) mode and only switch to secure debug mode after some secret action (e.g.,
+ *  7 taps). The important thing is that the debug mode cannot be directly modified by the server,
+ *  as otherwise it would be a security leak. Note that the secure debug mode is different from the
+ *  regular debug, as secure debug allows the server to inject changes into the device.
+ */
 class InjectChangeCommand(
     context: Context,
     repository: ClientRepository,
@@ -282,3 +311,124 @@ class InjectChangeCommand(
         }
     }
 }
+
+/**
+ * TODO: Put a check around this to only allow in secure debug mode. For example, we can start off in
+ *  production (non-debug) mode and only switch to secure debug mode after some secret action (e.g.,
+ *  7 taps). The important thing is that the debug mode cannot be directly modified by the server,
+ *  as otherwise it would be a security leak. Note that the secure debug mode is different from the
+ *  regular debug, as secure debug allows the server to inject changes into the device.
+ */
+class InjectDefaultCommand(
+    context: Context,
+    repository: ClientRepository,
+    scope: CoroutineScope,
+    private val injectDefaultOp: InjectDefaultOperation
+) : Command(context, repository, scope) {
+
+    private val retryAmount = 3
+
+    override suspend fun execute() {
+        Timber.i("$DBL: REMOTE InjectDefaultCommand - $injectDefaultOp")
+
+        val contentResolver = context.contentResolver
+
+        for (i in 1..retryAmount) {
+            try {
+                when(injectDefaultOp) {
+                    is InjectADDC -> {
+                        RemoteDebug.enqueueData(
+                            DefaultContacts.debugInsertContact(
+                                contentResolver = contentResolver,
+                                name = injectDefaultOp.name,
+                                numbers = injectDefaultOp.numbers
+                            ).toString()
+                        )
+                    }
+                    is InjectADDN -> {
+                        RemoteDebug.enqueueData(
+                            DefaultContacts.debugInsertNumber(
+                                contentResolver = contentResolver,
+                                rawContactID = injectDefaultOp.defaultCID,
+                                numbers = injectDefaultOp.numbers
+                            ).toString()
+                        )
+                    }
+                    is InjectUPDN -> {
+                        RemoteDebug.enqueueData(
+                            DefaultContacts.debugUpdateNumber(
+                                contentResolver = contentResolver,
+                                rawContactID = injectDefaultOp.defaultCID,
+                                updates = injectDefaultOp.updates
+                            ).toString()
+                        )
+                    }
+                    is InjectDELN -> {
+                        RemoteDebug.enqueueData(
+                            DefaultContacts.debugDeleteNumber(
+                                contentResolver = contentResolver,
+                                rawContactID = injectDefaultOp.defaultCID,
+                                numbers = injectDefaultOp.numbers
+                            ).toString()
+                        )
+                    }
+                    is InjectDELC -> {
+                        RemoteDebug.enqueueData(
+                            DefaultContacts.debugDeleteContact(
+                                contentResolver = contentResolver,
+                                rawContactID = injectDefaultOp.defaultCID
+                            ).toString()
+                        )
+                    }
+                }
+
+                break
+            } catch (e: Exception) {
+                Timber.i("$DBL: InjectDefaultCommand RETRYING... Error - ${e.message}")
+                delay(2000)
+
+                // On last retry, set the debug exchange error message (so server can see it).
+                if (i == retryAmount) {
+                    RemoteDebug.error = "${e.message}\nType <help> for helpful info."
+                }
+            }
+        }
+
+        RemoteDebug.lastCommandTime = Instant.now().toEpochMilli()
+        RemoteDebug.commandRunning = false
+    }
+
+    override fun toString(): String {
+        return "INJECT-DEFAULT COMMAND | injectDefaultOp: $injectDefaultOp"
+    }
+
+    companion object {
+        fun create(
+            context: Context,
+            repository: ClientRepository,
+            scope: CoroutineScope,
+            commandValue: String?
+        ) : InjectDefaultCommand? {
+
+            val injectDefaultOp = parseCommandValue(commandValue) ?: return null
+            return InjectDefaultCommand(context, repository, scope, injectDefaultOp)
+        }
+
+        private fun parseCommandValue(commandValue: String?) : InjectDefaultOperation? {
+            if (commandValue == null) return null
+
+            val args = commandValue.split(" ", limit = 2)
+            val injectDefaultType = args.getOrNull(0)?.trim()?.toInjectDefaultType()
+            val paramJson = args.getOrNull(1)?.trim()
+
+            return if (injectDefaultType != null && paramJson != null) {
+                paramJson.toInjectDefaultOperation(injectDefaultType)
+            } else {
+                null
+            }
+        }
+    }
+}
+
+
+

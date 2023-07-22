@@ -23,18 +23,6 @@
                       <LayoutPositions />
                     </value>
                   </entry>
-                  <entry key="addContactFragment">
-                    <value>
-                      <LayoutPositions>
-                        <option name="myPosition">
-                          <Point>
-                            <option name="x" value="223" />
-                            <option name="y" value="23" />
-                          </Point>
-                        </option>
-                      </LayoutPositions>
-                    </value>
-                  </entry>
                   <entry key="callHistoryFragment">
                     <value>
                       <LayoutPositions>
@@ -47,18 +35,47 @@
                       </LayoutPositions>
                     </value>
                   </entry>
+                  <entry key="changeContactFragment">
+                    <value>
+                      <LayoutPositions>
+                        <option name="myPosition">
+                          <Point>
+                            <option name="x" value="188" />
+                            <option name="y" value="-362" />
+                          </Point>
+                        </option>
+                      </LayoutPositions>
+                    </value>
+                  </entry>
+                  <entry key="changeContactFragmentOld">
+                    <value>
+                      <LayoutPositions>
+                        <option name="myPosition">
+                          <Point>
+                            <option name="x" value="178" />
+                            <option name="y" value="38" />
+                          </Point>
+                        </option>
+                      </LayoutPositions>
+                    </value>
+                  </entry>
                   <entry key="contactsFragment">
                     <value>
                       <LayoutPositions>
                         <option name="myPosition">
                           <Point>
-                            <option name="x" value="4" />
-                            <option name="y" value="17" />
+                            <option name="x" value="-79" />
+                            <option name="y" value="-128" />
                           </Point>
                         </option>
                         <option name="myPositions">
                           <map>
-                            <entry key="action_contactsFragment_to_addContactFragment">
+                            <entry key="action_contactsFragment_to_ChangeContactFragment_Old">
+                              <value>
+                                <LayoutPositions />
+                              </value>
+                            </entry>
+                            <entry key="action_contactsFragment_to_changeContactFragment">
                               <value>
                                 <LayoutPositions />
                               </value>

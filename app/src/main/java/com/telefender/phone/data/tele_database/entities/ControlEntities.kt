@@ -15,8 +15,8 @@ data class StoredMap(
     val clientKey: String? = null, // UUID key to push and pull changes to / from server
     val firebaseToken: String? = null,
     val lastLogSyncTime: Long = 0, // Last INDIVIDUAL call log sync time (changes after each call)
-    val lastLogFullSyncTime: Long = 0, // First time the log sync PROCESS fully completes.
-    val lastContactFullSyncTime: Long = 0, // First time the contact sync PROCESS fully completes.
+    val lastLogFullSyncTime: Long = 0, // Last time the log sync PROCESS fully completes.
+    val lastContactFullSyncTime: Long = 0, // Last time the contact sync PROCESS fully completes.
     val lastServerRowID: Long? = null,
 ) : TableEntity() {
 

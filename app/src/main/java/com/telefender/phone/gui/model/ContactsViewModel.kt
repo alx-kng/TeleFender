@@ -4,9 +4,9 @@ import android.annotation.SuppressLint
 import android.app.Application
 import androidx.lifecycle.*
 import com.telefender.phone.data.default_database.*
-import com.telefender.phone.gui.adapters.recycler_view_items.ContactDetail
+import com.telefender.phone.gui.adapters.recycler_view_items.AggregateContact
 import com.telefender.phone.gui.adapters.recycler_view_items.ContactFooter
-import com.telefender.phone.gui.adapters.recycler_view_items.ContactItem
+import com.telefender.phone.gui.adapters.recycler_view_items.BaseContactItem
 import com.telefender.phone.gui.adapters.recycler_view_items.Divider
 import com.telefender.phone.misc_helpers.DBL
 import kotlinx.coroutines.Dispatchers
@@ -15,23 +15,27 @@ import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 
-/*
-TODO: Probably / Maybe refactor ContactsViewModel to use repository to actually query the data,
- as the "good" app architecture suggests the repository should be a single source of truth.
-TODO: LOOK INTO PAGING FOR RECENTS AND CONTACTS
-TODO: Leftover gray divider bar when there are no contacts.
+/**
+ * TODO: Contact sorting algorithm has some issues.
+ *
+ * TODO: Probably / Maybe refactor ContactsViewModel to use repository to actually query the data
+ *  as the "good" app architecture suggests the repository should be a single source of truth.
+ *
+ * TODO: LOOK INTO PAGING FOR RECENTS AND CONTACTS
+ *
+ * TODO: Leftover gray divider bar when there are no contacts.
  */
 class ContactsViewModel(app: Application) : AndroidViewModel(app) {
 
-    // TODO: THIS MIGHT BE CAUSE OF A MEMORY LEAK!!!
+    // TODO: THIS MIGHT BE CAUSE OF A MEMORY LEAK!!! -> maybe, maybe not
     @SuppressLint("StaticFieldLeak")
     private val context = getApplication<Application>().applicationContext
 
-    private var _contacts = MutableLiveData<List<ContactDetail>>()
-    val contacts : LiveData<List<ContactDetail>> = _contacts
+    private var _contacts = MutableLiveData<List<AggregateContact>>()
+    val contacts : LiveData<List<AggregateContact>> = _contacts
 
-    private var _dividedContacts : MutableList<ContactItem> = mutableListOf()
-    val dividedContacts : List<ContactItem>
+    private var _dividedContacts : MutableList<BaseContactItem> = mutableListOf()
+    val dividedContacts : List<BaseContactItem>
         get() = _dividedContacts
 
     /**
@@ -46,11 +50,11 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun activateDummy() {}
 
-    private suspend fun addDividers(contacts: List<ContactDetail>) {
-        val tempDividers =  mutableListOf<ContactItem>()
+    private suspend fun addDividers(contacts: List<AggregateContact>) {
+        val tempDividers =  mutableListOf<BaseContactItem>()
 
         withContext(Dispatchers.Default) {
-            val miscContacts = mutableListOf<ContactItem>()
+            val miscContacts = mutableListOf<BaseContactItem>()
             var currLetter: Char? = null
 
             for (contact in contacts) {
@@ -91,7 +95,7 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun updateContacts() {
         viewModelScope.launch {
-            val tempContacts = DefaultContacts.getContactDetails(context)
+            val tempContacts = DefaultContacts.getAggregateContacts(context)
             addDividers(tempContacts)
 
             Timber.i("$DBL: ABOUT TO ASSIGN CONTACTS VALUE")

@@ -4,13 +4,14 @@ package com.telefender.phone.gui.adapters.recycler_view_items
 /***************************************************************************************************
  * For ContactsFragment / ContactsAdapter
  **************************************************************************************************/
-sealed interface ContactItem
 
-object ContactFooter : ContactItem
+sealed interface BaseContactItem
+
+object ContactFooter : BaseContactItem
 
 data class Divider(
     val letter: String
-) : ContactItem {
+) : BaseContactItem {
     override fun toString(): String {
         return "Divider: Letter = $letter"
     }
@@ -24,17 +25,17 @@ data class Divider(
     }
 }
 
-data class ContactDetail(
+data class AggregateContact(
     val name : String,
     val id: Int
-) : ContactItem {
+) : BaseContactItem {
 
     override fun toString(): String {
         return "ContactData: Name = $name, ID = $id"
     }
 
     override fun equals(other: Any?): Boolean {
-        return other is ContactDetail && this.name == other.name && this.id == other.id
+        return other is AggregateContact && this.name == other.name && this.id == other.id
     }
 
     override fun hashCode(): Int {

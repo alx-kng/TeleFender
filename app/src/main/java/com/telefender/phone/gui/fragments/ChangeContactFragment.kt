@@ -6,11 +6,9 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import com.telefender.phone.R
 import com.telefender.phone.data.default_database.DefaultContacts
-import com.telefender.phone.databinding.FragmentChangeContactBinding
+import com.telefender.phone.databinding.FragmentChangeContactOldBinding
 import com.telefender.phone.gui.MainActivity
 
 
@@ -27,7 +25,7 @@ import com.telefender.phone.gui.MainActivity
  */
 class ChangeContactFragment : Fragment() {
 
-    private var _binding: FragmentChangeContactBinding? = null
+    private var _binding: FragmentChangeContactOldBinding? = null
     private val binding get() = _binding!!
 
     /**
@@ -55,20 +53,20 @@ class ChangeContactFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        _binding = FragmentChangeContactBinding.inflate(inflater, container, false)
+        _binding = FragmentChangeContactOldBinding.inflate(inflater, container, false)
         return binding.root
     }
 
     /**
      * TODO: Fill in values with existing contact if there is one.
      *
-     * TODO: Cancel and Done buttons should be moved to App Bar or something,
+     * TODO: Cancel and Done buttons shoudld be moved to App Bar or something,
      */
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         setupAppBar()
-        showAppBar()
+        hideBottomNavigation()
 
         updatedDoneEnabled()
 
@@ -76,15 +74,6 @@ class ChangeContactFragment : Fragment() {
         binding.changeContactNumberEdit.addTextChangedListener(doneTextWatcher)
         binding.changeContactEmailEdit.addTextChangedListener(doneTextWatcher)
         binding.changeContactAddressEdit.addTextChangedListener(doneTextWatcher)
-
-        binding.changeContactDone.setOnClickListener {
-            submitContact()
-            requireActivity().onBackPressedDispatcher.onBackPressed()
-        }
-
-        binding.changeContactCancel.setOnClickListener {
-            requireActivity().onBackPressedDispatcher.onBackPressed()
-        }
     }
 
     override fun onDestroyView() {
@@ -103,16 +92,9 @@ class ChangeContactFragment : Fragment() {
     }
 
     private fun updatedDoneEnabled() {
-        if (validContactEntries()) {
-            binding.changeContactDone.isClickable = true
-            binding.changeContactDone.setTextColor(
-                ContextCompat.getColor(requireContext(), R.color.teal_700)
-            )
-        } else {
-            binding.changeContactDone.isClickable = false
-            binding.changeContactDone.setTextColor(
-                ContextCompat.getColor(requireContext(), R.color.disabled_grey)
-            )
+        if (activity is MainActivity) {
+            val act = activity as MainActivity
+            act.setEnabledAppBarTextButton(enabled2 = validContactEntries())
         }
     }
 
@@ -126,15 +108,41 @@ class ChangeContactFragment : Fragment() {
     private fun setupAppBar() {
         if (activity is MainActivity) {
             val act = activity as MainActivity
-            act.setTitle(getString(R.string.add_contact_title))
-            act.displayAppBarTextButton(show = false, text = "")
-            act.setEditOrAddOnClickListener {  }
+
+            // Cleans old app bar before setting up new app bar
+            act.revertAppBar()
+
+            // New app bar stuff
+            act.displayMoreMenu(show = false)
+
+            act.displayAppBarTextButton(
+                show1 = true,
+                show2 = true,
+                text1 = "Cancel",
+                text2 = "Done"
+            )
+
+            act.setAppBarTextButtonOnClickListener(
+                onClickListener1 = {
+                    requireActivity().onBackPressedDispatcher.onBackPressed()
+                },
+                onClickListener2 = {
+                    submitContact()
+                    requireActivity().onBackPressedDispatcher.onBackPressed()
+                }
+            )
+
+            act.setEnabledAppBarTextButton(enabled2 = false)
+
+            // Actually show app bar
+            act.displayAppBar(true)
         }
     }
 
-    private fun showAppBar() {
+    private fun hideBottomNavigation() {
         if (activity is MainActivity) {
-            (activity as MainActivity).displayAppBar(true)
+            val act = (activity as MainActivity)
+            act.displayBottomNavigation(false)
         }
     }
 }

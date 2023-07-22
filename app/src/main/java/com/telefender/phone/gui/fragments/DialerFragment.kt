@@ -6,12 +6,15 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.navigation.fragment.findNavController
 import com.telefender.phone.R
 import com.telefender.phone.call_related.CallHelpers
 import com.telefender.phone.call_related.CallManager
 import com.telefender.phone.databinding.FragmentDialerBinding
 import com.telefender.phone.gui.MainActivity
 import com.telefender.phone.gui.model.DialerViewModel
+import com.telefender.phone.misc_helpers.DBL
+import timber.log.Timber
 
 
 /**
@@ -38,8 +41,8 @@ class DialerFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        setAppBarTitle(getString(R.string.dialer_title))
-        showAppBar()
+        setupAppBar()
+        showBottomNavigation()
 
         binding.apply {
             viewModel = dialerViewModel
@@ -116,21 +119,27 @@ class DialerFragment : Fragment() {
         _binding = null
     }
 
-    private fun setAppBarTitle(title: String) {
+    private fun setupAppBar() {
         if (activity is MainActivity) {
-            (activity as MainActivity).setTitle(title)
+            Timber.i("$DBL: DialerFragment - setupAppBar()!")
+
+            val act = activity as MainActivity
+
+            // Cleans old app bar before setting up new app bar
+            act.revertAppBar()
+
+            // New app bar stuff
+            act.setTitle(getString(R.string.dialer_title))
+
+            // Actually show app bar
+            act.displayAppBar(true)
         }
     }
 
-    private fun showAppBar() {
+    private fun showBottomNavigation() {
         if (activity is MainActivity) {
-            (activity as MainActivity).displayAppBar(true)
-        }
-    }
-
-    private fun revertAppbar() {
-        if (activity is MainActivity) {
-            (activity as MainActivity).revertAppbar()
+            val act = (activity as MainActivity)
+            act.displayBottomNavigation(true)
         }
     }
 }

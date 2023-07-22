@@ -19,6 +19,7 @@
     <color name="border_color">#637D8A</color>
     <color name="grey">#222222</color>
     <color name="disabled_grey">#4A4A4A</color>
+    <color name="hint_grey">#888888</color>
     <color name="clicked_blue">#37D6A4</color>
     <color name="block_red">#F44336</color>
     <color name="business_blue">#399EF0</color>

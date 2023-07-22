@@ -9,15 +9,15 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.telefender.phone.R
-import com.telefender.phone.gui.adapters.recycler_view_items.ContactDetail
+import com.telefender.phone.gui.adapters.recycler_view_items.AggregateContact
 import com.telefender.phone.gui.adapters.recycler_view_items.ContactFooter
-import com.telefender.phone.gui.adapters.recycler_view_items.ContactItem
+import com.telefender.phone.gui.adapters.recycler_view_items.BaseContactItem
 import com.telefender.phone.gui.adapters.recycler_view_items.Divider
 
 
 class ContactsAdapter(
     private val context: Context)
-    : ListAdapter<ContactItem, RecyclerView.ViewHolder>(ContactComparator()) {
+    : ListAdapter<BaseContactItem, RecyclerView.ViewHolder>(ContactComparator()) {
 
     private val TYPE_CONTACT = 0
     private val TYPE_DIVIDER = 1
@@ -35,12 +35,12 @@ class ContactsAdapter(
 
     class FooterViewHolder(view: View) : RecyclerView.ViewHolder(view)
 
-    class ContactComparator : DiffUtil.ItemCallback<ContactItem>() {
-        override fun areItemsTheSame(oldItem: ContactItem, newItem: ContactItem): Boolean {
+    class ContactComparator : DiffUtil.ItemCallback<BaseContactItem>() {
+        override fun areItemsTheSame(oldItem: BaseContactItem, newItem: BaseContactItem): Boolean {
             return oldItem === newItem
         }
 
-        override fun areContentsTheSame(oldItem: ContactItem, newItem: ContactItem): Boolean {
+        override fun areContentsTheSame(oldItem: BaseContactItem, newItem: BaseContactItem): Boolean {
             return oldItem == newItem
         }
     }
@@ -48,7 +48,7 @@ class ContactsAdapter(
     override fun getItemId(position: Int): Long {
         val current = getItem(position)
         return when (current) {
-            is ContactDetail -> current.hashCode().toLong()
+            is AggregateContact -> current.hashCode().toLong()
             is Divider -> current.hashCode().toLong()
             is ContactFooter -> FOOTER_UUID
         }
@@ -56,7 +56,7 @@ class ContactsAdapter(
 
     override fun getItemViewType(position: Int): Int {
         return when (getItem(position)) {
-            is ContactDetail -> TYPE_CONTACT
+            is AggregateContact -> TYPE_CONTACT
             is Divider -> TYPE_DIVIDER
             is ContactFooter -> TYPE_FOOTER
         }
@@ -88,7 +88,7 @@ class ContactsAdapter(
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (holder) {
             is ContactViewHolder -> {
-                val current = getItem(position) as ContactDetail
+                val current = getItem(position) as AggregateContact
                 holder.name.text = current.name
             }
             is DividerViewHolder -> {

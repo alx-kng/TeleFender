@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.ContentObserver
 import android.os.Build
+import android.os.Build.VERSION_CODES.P
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -22,6 +23,8 @@ import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContentProviderCompat.requireContext
+import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
@@ -30,7 +33,7 @@ import com.telefender.phone.R
 import com.telefender.phone.databinding.ActivityMainBinding
 import com.telefender.phone.gui.model.*
 import com.telefender.phone.misc_helpers.DBL
-import com.telefender.phone.misc_helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.dpToPx
 import com.telefender.phone.permissions.PermissionRequestType
 import com.telefender.phone.permissions.Permissions
 import kotlinx.coroutines.*
@@ -269,6 +272,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * TODO: Get rid of this
+     */
     private fun notificationChannelCreator() {
         // Create the NotificationChannel
         val name = getString(R.string.channel_name)
@@ -326,25 +332,39 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * We use this instead of setUpWithNavController() because this allows us to use global
-     * actions to each of the core fragments (e.g., Recents, Contacts, Dialer). As a result,
-     * touching the bottom navigation buttons always navigates to corresponding screen. The
-     * popBackStack() makes sure that there is only one core fragment in the back stack.
+     * We use this instead of setUpWithNavController() because this allows us to use global actions
+     * to each of the core fragments (e.g., Recents, Contacts, Dialer). As a result, touching the
+     * bottom navigation buttons always navigates to corresponding screen. The popBackStack() makes
+     * sure that there is only one core fragment in the back stack. We also check if the fragment
+     * is already in view before trying to navigate to it again, as we don't want to unnecessarily
+     * recreate it (other problems arise as well).
      */
     private fun setupBottomNavigation() {
         binding.bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.recentsFragment -> {
-                    navController.popBackStack()
-                    navController.navigate(R.id.action_global_recentsFragment)
+                    if (navController.currentDestination?.id != R.id.recentsFragment) {
+                        navController.popBackStack()
+                        navController.navigate(R.id.action_global_recentsFragment)
+                    } else {
+                        Timber.i("$DBL: setupBottomNavigation() - Already in recents!")
+                    }
                 }
                 R.id.contactsFragment -> {
-                    navController.popBackStack()
-                    navController.navigate(R.id.action_global_contactsFragment)
+                    if (navController.currentDestination?.id != R.id.contactsFragment) {
+                        navController.popBackStack()
+                        navController.navigate(R.id.action_global_contactsFragment)
+                    } else {
+                        Timber.i("$DBL: setupBottomNavigation() - Already in contacts!")
+                    }
                 }
                 R.id.dialerFragment -> {
-                    navController.popBackStack()
-                    navController.navigate(R.id.action_global_dialerFragment)
+                    if (navController.currentDestination?.id != R.id.dialerFragment) {
+                        navController.popBackStack()
+                        navController.navigate(R.id.action_global_dialerFragment)
+                    } else {
+                        Timber.i("$DBL: setupBottomNavigation() - Already in dialer!")
+                    }
                 }
             }
             true
@@ -409,18 +429,69 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun displayAppBarTextButton(show: Boolean, text: String) {
-        if (show) {
-            binding.appBarTextButton.visibility = View.VISIBLE
+    /**
+     * Controls the display of the app bar text buttons.
+     *
+     * NOTE: TextButton1 should not be shown along with the app bar title, as we changes the
+     * start inset specifically for TextButton1.
+     */
+    fun displayAppBarTextButton(
+        show1: Boolean = false,
+        show2: Boolean = false,
+        text1: String = "",
+        text2: String = ""
+    ) {
+        val pixelInset = this.dpToPx(16)
+
+        if (show1) {
+            // Gets rid of the extra space on the left of the button when there is no title.
+            binding.topAppBar.setContentInsetsRelative(0, pixelInset)
+            binding.appBarTextButton1.visibility = View.VISIBLE
+            binding.appBarTextButton1.text = text1
         } else {
-            binding.appBarTextButton.visibility = View.GONE
-            return
+            binding.topAppBar.setContentInsetsRelative(pixelInset, pixelInset)
+            binding.appBarTextButton1.visibility = View.GONE
         }
-        binding.appBarTextButton.text = text
+
+        if (show2) {
+            binding.appBarTextButton2.visibility = View.VISIBLE
+            binding.appBarTextButton2.text = text2
+        } else {
+            binding.appBarTextButton2.visibility = View.GONE
+        }
     }
 
-    fun setEditOrAddOnClickListener(onClickListener: (View)->Unit) {
-        binding.appBarTextButton.setOnClickListener(onClickListener)
+    fun setEnabledAppBarTextButton(
+        enabled1: Boolean = true,
+        enabled2: Boolean = true
+    ) {
+        binding.appBarTextButton1.isEnabled = enabled1
+        binding.appBarTextButton1.setTextColor(
+            if (enabled1) {
+                ContextCompat.getColor(this, R.color.white)
+            } else {
+                ContextCompat.getColor(this, R.color.disabled_grey)
+            }
+
+        )
+
+        binding.appBarTextButton2.isEnabled = enabled2
+        binding.appBarTextButton2.setTextColor(
+            if (enabled2) {
+                ContextCompat.getColor(this, R.color.white)
+            } else {
+                ContextCompat.getColor(this, R.color.disabled_grey)
+            }
+
+        )
+    }
+
+    fun setAppBarTextButtonOnClickListener(
+        onClickListener1: (View)->Unit = {},
+        onClickListener2: (View)->Unit = {}
+    ) {
+        binding.appBarTextButton1.setOnClickListener(onClickListener1)
+        binding.appBarTextButton2.setOnClickListener(onClickListener2)
     }
 
     fun displayMoreMenu(show: Boolean) {
@@ -447,20 +518,38 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    fun displayBottomNavigation(show: Boolean) {
+        if (show) {
+            if (binding.bottomNavigation.visibility != View.VISIBLE) {
+                binding.bottomNavigation.visibility = View.VISIBLE
+            }
+        } else {
+            if (binding.bottomNavigation.visibility != View.GONE) {
+                binding.bottomNavigation.visibility = View.GONE
+            }
+        }
+    }
+
     /**
+     * TODO: It's not necessary to use this function in every fragment.
+     *
      * Basically reverts the app bar to the original UI for each base fragment (e.g., Recents).
      * Be very careful if you call this in a child fragment (e.g., EditContact) to revert the app
      * bar. Specifically, if you call this after super.onDestroyView(), revertAppBar() might be
      * called AFTER the setupAppBar() of the previous fragment, which will cause the app bar to
      * not contain the expected views.
      *
-     * NOTE: It's not necessary to use this function in every fragment.
+     * NOTE: For now revertAppBar() should be used before the setupAppBar() in each fragment. This
+     * way, we avoid the onDestroyView() timing problem and simply clean the app bar before we use
+     * it.
      */
-    fun revertAppbar() {
+    fun revertAppBar() {
+        setTitle("")
         displayUpButton(false)
         displayMoreMenu(true)
-        displayAppBarTextButton(show = false, text = "")
-        setEditOrAddOnClickListener {  } // Resets onClick listener to do nothing.
+        displayAppBarTextButton() // Hides all text buttons
+        setEnabledAppBarTextButton() // Re-enables all text buttons
+        setAppBarTextButtonOnClickListener() // Resets onClick listener to do nothing.
     }
 
     /**

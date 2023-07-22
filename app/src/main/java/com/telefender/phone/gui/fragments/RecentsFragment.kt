@@ -15,8 +15,10 @@ import com.telefender.phone.gui.MainActivity
 import com.telefender.phone.gui.adapters.RecentsAdapter
 import com.telefender.phone.gui.model.RecentsViewModel
 import com.telefender.phone.gui.model.RecentsViewModelFactory
+import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.DatabaseLogger
 import com.telefender.phone.misc_helpers.PrintTypes
+import timber.log.Timber
 
 /*
 TODO: Handle case where permissions aren't given (or default dialer isn't granted).
@@ -44,8 +46,8 @@ class RecentsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        setAppBarTitle(getString(R.string.recents_title))
-        showAppBar()
+        setupAppBar()
+        showBottomNavigation()
 
         val context = requireContext()
         val recyclerView = binding.recentsRecyclerView
@@ -89,15 +91,27 @@ class RecentsFragment : Fragment() {
         _binding = null
     }
 
-    private fun setAppBarTitle(title: String) {
+    private fun setupAppBar() {
         if (activity is MainActivity) {
-            (activity as MainActivity).setTitle(title)
+            Timber.i("$DBL: RecentsFragment - setupAppBar()!")
+
+            val act = activity as MainActivity
+
+            // Cleans old app bar before setting up new app bar
+            act.revertAppBar()
+
+            // New app bar stuff
+            act.setTitle(getString(R.string.recents_title))
+
+            // Actually show app bar
+            act.displayAppBar(true)
         }
     }
 
-    private fun showAppBar() {
+    private fun showBottomNavigation() {
         if (activity is MainActivity) {
-            (activity as MainActivity).displayAppBar(true)
+            val act = (activity as MainActivity)
+            act.displayBottomNavigation(true)
         }
     }
 }

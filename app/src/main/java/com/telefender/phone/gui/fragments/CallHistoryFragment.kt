@@ -34,7 +34,8 @@ class CallHistoryFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        historyAppBar(true)
+        setupAppBar(true)
+        hideBottomNavigation()
 
         val number = recentsViewModel.selectNumber
 
@@ -63,22 +64,29 @@ class CallHistoryFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
-        revertAppbar()
     }
 
-    private fun historyAppBar(isContact: Boolean) {
+    private fun setupAppBar(isContact: Boolean) {
         if (activity is MainActivity) {
             val act = (activity as MainActivity)
+
+            // Cleans old app bar before setting up new app bar
+            act.revertAppBar()
+
+            // New app bar stuff
             act.displayUpButton(true)
-            act.setTitle("")
             act.displayMoreMenu(false)
-            act.displayAppBarTextButton(show = true, text = if (isContact) "Edit" else "Add")
+            act.displayAppBarTextButton(show2 = true, text2 = if (isContact) "Edit" else "Add")
+
+            // Actually show app bar
+            act.displayAppBar(true)
         }
     }
 
-    private fun revertAppbar() {
+    private fun hideBottomNavigation() {
         if (activity is MainActivity) {
-            (activity as MainActivity).revertAppbar()
+            val act = (activity as MainActivity)
+            act.displayBottomNavigation(false)
         }
     }
 }

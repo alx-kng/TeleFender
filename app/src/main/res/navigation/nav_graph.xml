@@ -26,7 +26,11 @@
         android:label="ContactsFragment"
         tools:layout="@layout/fragment_contacts">
         <action
-            android:id="@+id/action_contactsFragment_to_ChangeContactFragment"
+            android:id="@+id/action_contactsFragment_to_changeContactFragment_Old"
+            app:destination="@id/changeContactFragmentOld"
+            />
+        <action
+            android:id="@+id/action_contactsFragment_to_changeContactFragment"
             app:destination="@id/changeContactFragment"
             />
     </fragment>
@@ -36,6 +40,13 @@
         android:name="com.telefender.phone.gui.fragments.ChangeContactFragment"
         android:label="ChangeContactFragment"
         tools:layout="@layout/fragment_change_contact"
+        />
+
+    <fragment
+        android:id="@+id/changeContactFragmentOld"
+        android:name="com.telefender.phone.gui.fragments.ChangeContactFragment"
+        android:label="ChangeContactFragmentOld"
+        tools:layout="@layout/fragment_change_contact_old"
         />
 
     <fragment

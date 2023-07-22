@@ -7,7 +7,6 @@ import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.misc_helpers.DBL
-import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -104,6 +103,7 @@ object DebugEngine {
             "<help>" -> HelpCommand.create(context, repository, scope)
             "<sql-read>" -> ReadQueryCommand.create(context, repository, scope, commandValue)
             "<inj-change>" -> InjectChangeCommand.create(context, repository, scope, commandValue)
+            "<inj-def>" -> InjectDefaultCommand.create(context, repository, scope, commandValue)
             else -> null
         }
     }

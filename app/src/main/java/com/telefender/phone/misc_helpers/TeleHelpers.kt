@@ -17,8 +17,10 @@ import timber.log.Timber
 import java.time.Instant
 
 
-/*
-TODO: Consider adding retry amount to be used for entire app.
+/**
+ * TODO: Consider adding retry amount to be used for entire app.
+ *
+ * Helper functions specifically for anything phone / database related.
  */
 object TeleHelpers {
 

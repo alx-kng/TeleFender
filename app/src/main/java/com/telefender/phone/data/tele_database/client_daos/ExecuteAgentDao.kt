@@ -670,12 +670,15 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
     }
 
     /**
+     * TODO: What the exact fuck is SafeAction.BLOCKED vs isBlocked in AnalyzedNumber ->
+     *  numBlocked doesn't seem to increase.
+     *
      * TODO: The case for double blocking (where notifyGate goes to superSpamAmount) can only
      *  happen in 2 cases. You can directly double block on the NotifyItem OR if you call
      *  from the NotifyItem and block again from the after-call screen.
      *
      * For updates to non-contact numbers (e.g., mark safe, default, blocked, sms verify).
-     * Note that blocking contacts is handled in cUpdate().
+     * Note that blocking contacts is handled in [cUpdate].
      */
     @Transaction
     suspend fun nonContactUpdate(
@@ -715,6 +718,8 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                     }
                     SafeAction.BLOCKED -> {
                         /*
+                        TODO: Can the number be isBlocked for non-contact?
+
                         If already blocked, increase notify gate by significant amount.
                         If not already blocked, increase notify gate to verified spam amount.
                          */

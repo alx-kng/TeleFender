@@ -82,7 +82,7 @@ object TestContacts {
 
     fun printContactDataTable(context: Context, contentResolver: ContentResolver) {
         val projection = arrayOf(
-            ContactsContract.Contacts._ID,
+            ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
             ContactsContract.Data.MIMETYPE,
             ContactsContract.Data.RAW_CONTACT_ID,
             ContactsContract.Data.DATA1,
@@ -114,7 +114,7 @@ object TestContacts {
 
             while (cur.moveToNext()) {
                 Timber.i("$DBL: TEST DATA - " +
-                    "id = ${cur.getString(0)} | mime = ${cur.getString(1)} | " +
+                    "contact_ID = ${cur.getString(0)} | mime = ${cur.getString(1)} | " +
                     "raw_contact_ID = ${cur.getString(2)} | data1 = ${cur.getString(3)} | " +
                     "data2 = ${cur.getString(4)} | data3 = ${cur.getString(5)} | " +
                     "data4 = ${cur.getString(6)} | data5 = ${cur.getString(7)} | " +

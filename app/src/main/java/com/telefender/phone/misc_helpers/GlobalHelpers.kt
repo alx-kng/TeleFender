@@ -1,6 +1,13 @@
 package com.telefender.phone.misc_helpers
 
-import androidx.lifecycle.MutableLiveData
+import android.content.Context
+import kotlin.math.roundToInt
+
+
+/***********************************************************************************************
+ * Helper functions / extensions that are basic / unique / commonly used enough to be globally
+ * available.
+ **********************************************************************************************/
 
 // Converts months (given as receiver Int) to milliseconds.
 fun Int.monthsToMilli() : Long {
@@ -20,4 +27,10 @@ fun Int.hoursToMilli() : Long {
 // Converts minutes (given as receiver Int) to milliseconds.
 fun Int.minutesToMilli() : Long {
     return this * 60000L
+}
+
+// Converts dp to pixels
+fun Context.dpToPx(dp: Int): Int {
+    val density: Float = resources.displayMetrics.density
+    return (dp * density).roundToInt()
 }

@@ -17,7 +17,8 @@
 
             <com.google.android.material.appbar.AppBarLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="wrap_content"
+                >
 
                 <com.google.android.material.appbar.MaterialToolbar
                     android:id="@+id/topAppBar"
@@ -31,7 +32,22 @@
                     >
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/app_bar_text_button"
+                        android:id="@+id/app_bar_text_button_1"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:layout_gravity="left"
+                        android:gravity="center"
+                        android:foreground="?android:selectableItemBackground"
+                        android:background="?android:selectableItemBackground"
+                        android:visibility="gone"
+                        android:textSize="17sp"
+                        android:textColor="@color/white"
+                        tools:visibility="visible"
+                        tools:text="Cancel"
+                        />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/app_bar_text_button_2"
                         android:layout_width="wrap_content"
                         android:layout_height="match_parent"
                         android:layout_gravity="right"
@@ -39,10 +55,11 @@
                         android:foreground="?android:selectableItemBackground"
                         android:background="?android:selectableItemBackground"
                         android:visibility="gone"
-                        tools:visibility="visible"
-                        android:text="Add"
                         android:textSize="17sp"
-                        android:textColor="@color/white"/>
+                        android:textColor="@color/white"
+                        tools:visibility="visible"
+                        tools:text="Add"
+                        />
 
                 </com.google.android.material.appbar.MaterialToolbar>
 
@@ -72,6 +89,7 @@
                 android:id="@+id/bottom_navigation"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:background="@color/black"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"

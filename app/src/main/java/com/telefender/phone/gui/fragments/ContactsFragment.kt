@@ -19,7 +19,9 @@ import timber.log.Timber
 
 
 /**
- * TODO: Sometimes, Add contact button is not shown -> Caused by tapping bottom again
+ * TODO: Sometimes, Add contact button is not shown -> Caused by tapping bottom again -> We fixed
+ *  the problem in the MainActivity setupBottomNavigation() but maybe there is a cleaner way.
+ *  -> I think revertAppBar() being put in onDestroyView is causing this.
  *
  * TODO: THERE IS SOME SORT OF LEAK HERE (One with actual Fragment and one with LinearLayout)
  *
@@ -47,10 +49,10 @@ class ContactsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        Timber.e("$DBL: ContactsFragment - onViewCreated() - $this")
+        Timber.i("$DBL: ContactsFragment - onViewCreated() - $this")
 
         setupAppBar()
-        showAppBar()
+        showBottomNavigation()
 
         val recyclerView = binding.contactsRecyclerView
 
@@ -76,7 +78,6 @@ class ContactsFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
-        revertAppbar()
     }
 
     private fun setupAppBar() {
@@ -84,24 +85,27 @@ class ContactsFragment : Fragment() {
             Timber.i("$DBL: ContactsFragment - setupAppBar()!")
 
             val act = activity as MainActivity
+
+            // Cleans old app bar before setting up new app bar
+            act.revertAppBar()
+
+            // New app bar stuff
             act.setTitle(getString(R.string.contacts_title))
-            act.displayAppBarTextButton(show = true, text = "Add")
-            act.setEditOrAddOnClickListener {
+            act.displayAppBarTextButton(show2 = true, text2 = "Add")
+            act.setAppBarTextButtonOnClickListener(onClickListener2 = {
                 val action = ContactsFragmentDirections.actionContactsFragmentToChangeContactFragment()
                 findNavController().navigate(action)
-            }
+            })
+
+            // Actually show app bar
+            act.displayAppBar(true)
         }
     }
 
-    private fun showAppBar() {
+    private fun showBottomNavigation() {
         if (activity is MainActivity) {
-            (activity as MainActivity).displayAppBar(true)
-        }
-    }
-
-    private fun revertAppbar() {
-        if (activity is MainActivity) {
-            (activity as MainActivity).revertAppbar()
+            val act = (activity as MainActivity)
+            act.displayBottomNavigation(true)
         }
     }
 }

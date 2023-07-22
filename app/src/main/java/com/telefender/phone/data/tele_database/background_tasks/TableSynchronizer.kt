@@ -23,6 +23,7 @@ import java.util.*
 /**
  * TODO: FUCK FUCK FUCK FUCK FUCK FUCK FUCK FUCK. Look out for possible sync bug with contact
  *  number updates (something with duplicates). Probably checking version number wrong???? FUCK
+ *  -> look below, think i summarized it. haven't fixed it yet tho.
  */
 object TableSynchronizer {
 
@@ -256,7 +257,7 @@ object TableSynchronizer {
 
                 /**
                  * If no ContactNumber have the same CID, that means the corresponding contact
-                 * doesn't even exist and thus needs to be inserted into the Contacts table.
+                 * doesn't even exist and thus needs to be inserted into our Contacts table.
                  * However, as mentioned in the main comment of syncContacts(), we need to double
                  * check that the contact still exists in the default database and wasn't deleted
                  * by something other client-side delete query before we continue with the insert.
@@ -264,7 +265,7 @@ object TableSynchronizer {
                  */
                 if (matchCID.isEmpty()) {
                     mutexSync.withLock {
-                        if (firstAccess || DefaultContacts.contactExists(contentResolver, defaultCID)) {
+                        if (firstAccess || DefaultContacts.rawContactExists(contentResolver, defaultCID)) {
                             val changeID = UUID.randomUUID().toString()
                             val changeTime = Instant.now().toEpochMilli()
 
@@ -386,7 +387,7 @@ object TableSynchronizer {
              */
             if (matchCID == null || matchCID.size == 0) {
                 mutexSync.withLock {
-                    if (!DefaultContacts.contactExists(contentResolver, defaultCID)) {
+                    if (!DefaultContacts.rawContactExists(contentResolver, defaultCID)) {
                         val changeID = UUID.randomUUID().toString()
                         val changeTime = Instant.now().toEpochMilli()
 
