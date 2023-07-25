@@ -5,11 +5,13 @@ import android.content.ContentResolver
 import android.content.Context
 import android.database.Cursor
 import android.provider.CallLog
+import androidx.work.WorkInfo
 import com.telefender.phone.data.default_database.DefaultContacts
 import com.telefender.phone.data.tele_database.ClientDatabase
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
+import com.telefender.phone.data.tele_database.background_tasks.workers.OmegaScheduler
 import com.telefender.phone.data.tele_database.entities.*
 import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
@@ -54,7 +56,10 @@ object TableSynchronizer {
         }
     }
 
-    
+
+    /**
+     * TODO: All of a sudden, this has a problem. FIX YOU FUCKER!!!!
+     */
     private suspend fun syncCallLogsHelper(context: Context, repository: ClientRepository, contentResolver: ContentResolver) {
         // Check for permissions even though syncCallLogs() would catch the permission error.
         if (!TeleHelpers.hasValidStatus(
@@ -138,6 +143,8 @@ object TableSynchronizer {
     }
 
     /**********************************************************************************************
+     * TODO: Put in sync work state (different from worker).
+     *
      * TODO: We seem to very occasionally get a default cnUpdate() for every contact number?
      *  Specifically, everytime the app is run (on some instances) all the contact numbers are
      *  duplicate inserted. There's probably something wrong with the sync process. -> Think it
@@ -175,20 +182,39 @@ object TableSynchronizer {
      * associated contact numbers. In TableInitializers, initContacts() DOES add in contacts
      * without numbers to our Tele database. However, this should not be an issue to the algorithm,
      * as only contacts with contact numbers affect the algorithm.
+     *
+     * NOTE: At most two SYNC_CONTACTS processes should be competing with each other at any given
+     * time. Specifically, the only time SYNC_CONTACTS processes should need to wait for each other
+     * is when the user initiated mini-sync and full sync (either ONE_TIME or PERIODIC or both)
+     * overlap with each other.
     ***********************************************************************************************/
     
     suspend fun syncContacts(context: Context, database: ClientDatabase, contentResolver: ContentResolver) {
+        // Waits for any possible duplicate SYNC_CONTACTS processes to finish before continuing.
+        WorkStates.workWaiter(
+            workType = WorkType.SYNC_CONTACTS,
+            runningMsg = "SYNC_CONTACTS",
+            stopOnFail = true,
+            certainFinish = true
+        )
+
         /*
         No need to check for contact permissions here because getContactNumberCursor() is already
         permission guarded.
          */
         for (i in 1..retryAmount) {
             try {
+                WorkStates.setState(WorkType.SYNC_CONTACTS, WorkInfo.State.RUNNING)
                 syncContactsHelper(context, database, contentResolver)
+                WorkStates.setState(WorkType.SYNC_CONTACTS, WorkInfo.State.SUCCEEDED)
                 break
             } catch (e: Exception) {
-                Timber.i("$DBL: syncContacts() RETRYING...")
-                delay(2000)
+                if (i < retryAmount) {
+                    Timber.i("$DBL: syncContacts() RETRYING...")
+                    delay(2000)
+                } else {
+                    WorkStates.setState(WorkType.SYNC_CONTACTS, WorkInfo.State.FAILED)
+                }
             }
         }
     }
@@ -462,13 +488,21 @@ object TableSynchronizer {
              * TODO: Maybe we should make another default query in DefaultContacts to check
              *  that the version number is really different.
              *
-             * If the code reaches here, then we know that matchPK and contactNumber must
-             * both have the same PK (meaning same normalized number). So, if the
-             * default contact number has a different version number, then we know that
-             * the default rawNumber has been changed (almost definitely a small formatting
-             * change, since normalizedNumber is preserved).
+             * TODO: See if versionNumber can ever be useful. -> Maybe if there was ever a need to
+             *  store data other than the raw / normalized number, we could use versionNumber to
+             *  detect changes in the default database. Ho
+             *
+             * If the code reaches here, then we know that matchPK and contactNumber must both have
+             * the same PK (meaning same normalized number). So, if the default contact number has
+             * a different rawNumber (almost definitely a small formatting change), then we update
+             * the ContactNumber.
+             *
+             * NOTE: We don't base our check on versionNumber anymore. Although in MOST cases, a
+             * change in versionNumber means a change in rawNumber; however, that is NOT ALWAYS the
+             * case. For example, a change in phone number type (e.g., MOBILE, HOME, WORK) can also
+             * cause a change in versionNumber.
              */
-            if (matchPK.versionNumber != contactNumber.versionNumber) {
+            if (matchPK.rawNumber != contactNumber.rawNumber) {
                 val changeID = UUID.randomUUID().toString()
                 val changeTime = Instant.now().toEpochMilli()
 

@@ -566,6 +566,9 @@ class ClientRepository(
      * DebugEngine Queries
      **********************************************************************************************/
 
+    /**
+     * Only allows queries that return a list of rows.
+     */
     @WorkerThread
     suspend fun readData(queryString: String, tableType: TableType) : List<TableEntity> {
         val query = SimpleSQLiteQuery(queryString)
@@ -585,5 +588,15 @@ class ClientRepository(
             TableType.ANALYZED -> rawDao.readDataAnalyzedNumber(query)
             TableType.NOTIFY_ITEM -> rawDao.readDataNotifyItem(query)
         }
+    }
+
+    /**
+     * Only allows queries that return a numerical value.
+     */
+    @WorkerThread
+    suspend fun readData_Numerical(queryString: String) : Double {
+        val query = SimpleSQLiteQuery(queryString)
+
+        return rawDao.readData_Numerical(query)
     }
 }

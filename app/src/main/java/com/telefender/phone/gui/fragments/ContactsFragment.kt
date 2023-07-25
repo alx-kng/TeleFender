@@ -19,9 +19,8 @@ import timber.log.Timber
 
 
 /**
- * TODO: Sometimes, Add contact button is not shown -> Caused by tapping bottom again -> We fixed
- *  the problem in the MainActivity setupBottomNavigation() but maybe there is a cleaner way.
- *  -> I think revertAppBar() being put in onDestroyView is causing this.
+ * TODO: Don't update adapter list if there isn't a visual change. Or at least stop the UI from
+ *  scrolling to the bottom when there is a new update.
  *
  * TODO: THERE IS SOME SORT OF LEAK HERE (One with actual Fragment and one with LinearLayout)
  *

@@ -21,7 +21,7 @@ enum class TableType(val serverString: String) {
 }
 
 /**
- * Converts serverStr to ChangeType if possible.
+ * Converts serverStr to ChangeType if possibl
  */
 fun String.toTableType() : TableType? {
     for (tableType in TableType.values()) {

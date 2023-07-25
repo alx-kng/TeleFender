@@ -23,6 +23,8 @@ import com.telefender.phone.notifications.NotificationChannels.IN_CALL_CHANNEL_I
 import timber.log.Timber
 
 /**
+ * TODO: Notification UI handling for UNKNOWN numbers is faulty.
+ *
  * TODO: LAYOUT TOO SMALL FOR LOWER CHANNEL IMPORTANCE LEVEL / SMALLER DEVICES -> Need dynamic /
  *  different layouts depending on channel importance / device!!! -> Actually it's because the
  *  default layout is non-expanded SOMETIMES in the notification panel. Making layout smaller could

@@ -85,6 +85,7 @@ object DebugEngine {
         }
     }
 
+    // TODO: Put in command for test functionality.
     fun parse(
         context: Context,
         repository: ClientRepository,
@@ -104,6 +105,7 @@ object DebugEngine {
             "<sql-read>" -> ReadQueryCommand.create(context, repository, scope, commandValue)
             "<inj-change>" -> InjectChangeCommand.create(context, repository, scope, commandValue)
             "<inj-def>" -> InjectDefaultCommand.create(context, repository, scope, commandValue)
+            "<test>" -> ConsoleTestCommand.create(context, repository, scope, commandValue)
             else -> null
         }
     }

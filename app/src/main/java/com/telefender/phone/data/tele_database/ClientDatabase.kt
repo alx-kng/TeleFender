@@ -427,9 +427,9 @@ abstract class ClientDatabase : RoomDatabase() {
                     // Initialize Periodic Debug Worker
                     DebugScheduler.initiatePeriodicDebugWorker(context)
 
-                    TestContacts.printContactsTable(context)
-                    TestContacts.printRawContactsTable(context)
-                    TestContacts.printContactDataTable(context, contentResolver)
+//                    TestContacts.printContactsTable(context)
+//                    TestContacts.printRawContactsTable(context)
+//                    TestContacts.printContactDataTable(context, contentResolver)
                 }
             }
 

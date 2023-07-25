@@ -10,6 +10,7 @@ import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 import java.beans.PropertyChangeListener
 import java.beans.PropertyChangeSupport
+import java.util.*
 
 
 enum class WorkType(val isWorker : Boolean = false) {
@@ -52,7 +53,11 @@ enum class WorkType(val isWorker : Boolean = false) {
     DEBUG_CHECK_POST,
     DEBUG_SESSION_POST,
     DEBUG_EXCHANGE_POST,
-    DEBUG_CALL_STATE_POST
+    DEBUG_CALL_STATE_POST,
+
+    // Other processes
+    SYNC_CONTACTS,
+    SYNC_LOGS,
 }
 
 
@@ -77,12 +82,12 @@ object WorkStates {
     /**
      * Work states
      */
-    private val states: Array<WorkInfo.State?> = Array(WorkType.values().size) {null}
+    private val states: Array<WorkInfo.State?> = Array(WorkType.values().size) { null }
 
     /**
      * Waiter counters used in workerWaiter() to decide what state to set upon finishing.
      */
-    private val waiters: Array<Int> = Array(WorkType.values().size) {0}
+    private val waiters: Array<Int> = Array(WorkType.values().size) { 0 }
 
     /**
      * For now, we'll stick to using one mutex, since the number of waiters doesn't usually change
@@ -96,6 +101,10 @@ object WorkStates {
     private val workMutex = Mutex()
 
     /***********************************************************************************************
+     * TODO: Maybe improve work states by allowing multiple processes to have their own version
+     *  of the same work state. That way, we could support duplicate processes. -> Would have to
+     *  use map.
+     *
      * TODO: Clean up edge cases. Ex) what if worker hasn't started yet before waiter???
      *  ?? Fix inside workers initialize functions. Also, Polish up system for multiple
      *  waiters of one type.
@@ -181,7 +190,10 @@ object WorkStates {
     }
 
     /**
+     * TODO: Do we need mutex lock for same work.
      * TODO: Seems to be some issues here.
+     * TODO: When setting state to anything but running, make sure that there are no other ones
+     *  running.
      *
      * Sets the state of a certain WorkType.
      */

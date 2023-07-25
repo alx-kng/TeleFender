@@ -108,6 +108,8 @@ object OmegaScheduler {
  * TODO: Test OmegaWorker more
  *
  * TODO: Is it really necessary for periodic workers to setForeground? --> Think probably not?
+ *
+ * TODO: Uncomment download.
  */
 class CoroutineOmegaWorker(
     val context: Context,

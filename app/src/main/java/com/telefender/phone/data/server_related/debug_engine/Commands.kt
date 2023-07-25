@@ -1,9 +1,13 @@
 package com.telefender.phone.data.server_related.debug_engine
 
 import android.content.Context
+import com.telefender.phone.App
 import com.telefender.phone.data.default_database.DefaultContacts
 import com.telefender.phone.data.server_related.RemoteDebug
+import com.telefender.phone.data.server_related.RequestWrappers
+import com.telefender.phone.data.server_related.debug_engine.command_subtypes.*
 import com.telefender.phone.data.tele_database.ClientRepository
+import com.telefender.phone.data.tele_database.background_tasks.TableSynchronizer
 import com.telefender.phone.data.tele_database.entities.ChangeLog
 import com.telefender.phone.data.tele_database.entities.TableType
 import com.telefender.phone.data.tele_database.entities.toChangeLog
@@ -106,7 +110,8 @@ class HelpCommand(
                 | Echoes {message} back to the server.
                 
             <help> 
-                | use = "<help>" | Lists helpful commands / info.
+                | use = "<help>" 
+                | Lists helpful commands / info.
                 
             <sql-read> 
                 | use = "<sql-read> {table_name} {query_string}"
@@ -114,7 +119,7 @@ class HelpCommand(
                 | returns data to server.
                 
             <inj-change>
-                | use = "<inj-read> {change_log_json}"
+                | use = "<inj-change> {change_log_json}"
                 | Injects {change_log_json} as a ChangeLog into the ExecuteAgent and executes the
                 | corresponding action.
                 | 
@@ -125,6 +130,11 @@ class HelpCommand(
                 | use = "<inj-def> {operation_type} {operation_json}"
                 | Inserts / updates / deletes rows into the default contact database (e.g., 
                 | RawContact, Data) given the {operation_type} and {operation_json}.
+            
+            <test>
+                | use = "<test> {test_type} {operation_json_if_applicable}"
+                | Runs a test for an experimental functionality.
+                | You can use {test_type} = "list_tests" to list all currently available {test_type}.
                   
             Helpful info:
             
@@ -137,6 +147,7 @@ class HelpCommand(
                 | stored_map
                 | parameters
                 | call_detail
+                | instance
                 | contact
                 | contact_number
                 | analyzed_number
@@ -145,14 +156,18 @@ class HelpCommand(
             Default operation types
                 | ADDC
                     | Adds a new RawContact and Data rows with the given name / numbers.
+                    
                 | ADDN 
                     | Adds a new Data row for the given numbers.
+                    
                 | UPDN 
                     | Updates numbers specified by the given updates (oldNumber -> newNumber) 
                     | in the given RawContact (passed in as RawContact ID). 
+                    
                 | DELN
                     | Deletes all of the Data rows with the given numbers that are linked to the 
                     | specified RawContact (passed in as RawContact ID).
+                    
                 | DELC
                     | Deletes specified RawContact (passed in as RawContact ID).
                 
@@ -196,9 +211,21 @@ class ReadQueryCommand(
 
         for (i in 1..retryAmount) {
             try {
-                val stringDataList = repository.readData(queryString, tableType)
-                    .map { it.toJson() }
-                RemoteDebug.enqueueList(stringDataList)
+                /*
+                If the query returns a numerical value (e.g., COUNT, AVG, SUM), then use the
+                numerical raw query handler. Otherwise, use the regular raw query handler (which
+                returns a list of rows).
+                 */
+                val isNumericalQuery = queryString.contains(Regex("(?i)select (count|avg|sum)\\("))
+
+                if (isNumericalQuery) {
+                    val stringResult = repository.readData_Numerical(queryString).toString()
+                    RemoteDebug.enqueueData(stringResult)
+                } else {
+                    val stringDataList = repository.readData(queryString, tableType)
+                        .map { it.toJson() }
+                    RemoteDebug.enqueueList(stringDataList)
+                }
 
                 break
             } catch (e: Exception) {
@@ -318,6 +345,8 @@ class InjectChangeCommand(
  *  7 taps). The important thing is that the debug mode cannot be directly modified by the server,
  *  as otherwise it would be a security leak. Note that the secure debug mode is different from the
  *  regular debug, as secure debug allows the server to inject changes into the device.
+ *
+ * Used to insert contacts into the default database.
  */
 class InjectDefaultCommand(
     context: Context,
@@ -429,6 +458,137 @@ class InjectDefaultCommand(
         }
     }
 }
+
+/**
+ * TODO: Add in better help logic. That is, add in more functionality to explain how the command /
+ *  testOp works to the console user.
+ *
+ * TODO: Put a check around this to only allow in secure debug mode. For example, we can start off in
+ *  production (non-debug) mode and only switch to secure debug mode after some secret action (e.g.,
+ *  7 taps). The important thing is that the debug mode cannot be directly modified by the server,
+ *  as otherwise it would be a security leak. Note that the secure debug mode is different from the
+ *  regular debug, as secure debug allows the server to inject changes into the device.
+ *
+ * Used to easily test whatever new functionality we have.
+ */
+class ConsoleTestCommand(
+    context: Context,
+    repository: ClientRepository,
+    scope: CoroutineScope,
+    private val consoleTestType: ConsoleTestType,
+    private val consoleTestOp: ConsoleTestOperation?
+) : Command(context, repository, scope) {
+
+    private val retryAmount = 3
+
+    override suspend fun execute() {
+        Timber.i("$DBL: REMOTE ConsoleTestCommand - %s",
+            "consoleTestType = $consoleTestType, consoleTestOp = $consoleTestType")
+
+        val contentResolver = context.contentResolver
+        val repository = (context.applicationContext as App).repository
+        val database = (context.applicationContext as App).database
+
+        for (i in 1..retryAmount) {
+            try {
+                when(consoleTestType) {
+                    ConsoleTestType.EXAMPLE -> RemoteDebug.enqueueData(consoleTestOp!!.toString())
+                    ConsoleTestType.LIST_TESTS -> {
+                        for (testType in ConsoleTestType.values()) {
+                            RemoteDebug.enqueueData("ConsoleTestType - \"${testType.serverString}\"")
+                        }
+                    }
+                    ConsoleTestType.SYNC_CONTACTS -> {
+                        RemoteDebug.enqueueData("sync_contacts - start = ${Instant.now().toEpochMilli()}")
+                        TableSynchronizer.syncContacts(
+                            context = context,
+                            database = database,
+                            contentResolver = contentResolver
+                        )
+                        RemoteDebug.enqueueData("sync_contacts - end = ${Instant.now().toEpochMilli()}")
+                    }
+                    ConsoleTestType.SYNC_LOGS -> {
+                        RemoteDebug.enqueueData("sync_logs - start = ${Instant.now().toEpochMilli()}")
+                        TableSynchronizer.syncCallLogs(
+                            context = context,
+                            repository = repository,
+                            contentResolver = contentResolver
+                        )
+                        RemoteDebug.enqueueData("sync_logs - end = ${Instant.now().toEpochMilli()}")
+                    }
+                    ConsoleTestType.DOWNLOAD_DATA -> {
+                        RemoteDebug.enqueueData("download - start = ${Instant.now().toEpochMilli()}")
+                        RequestWrappers.downloadData(context, repository, scope, "DEBUG")
+                        RemoteDebug.enqueueData("download - end = ${Instant.now().toEpochMilli()}")
+                    }
+                    ConsoleTestType.UPLOAD_DATA -> {
+                        RemoteDebug.enqueueData("upload - start = ${Instant.now().toEpochMilli()}")
+                        RequestWrappers.uploadChange(context, repository, scope, "DEBUG")
+                        RequestWrappers.uploadAnalyzed(context, repository, scope, "DEBUG")
+                        RequestWrappers.uploadError(context, repository, scope, "DEBUG")
+                        RemoteDebug.enqueueData("upload - end = ${Instant.now().toEpochMilli()}")
+                    }
+                }
+
+                break
+            } catch (e: Exception) {
+                Timber.i("$DBL: ConsoleTestCommand RETRYING... Error - ${e.message}")
+                delay(2000)
+
+                // On last retry, set the debug exchange error message (so server can see it).
+                if (i == retryAmount) {
+                    RemoteDebug.error = "${e.message}\nType <help> for helpful info."
+                }
+            }
+        }
+
+        RemoteDebug.lastCommandTime = Instant.now().toEpochMilli()
+        RemoteDebug.commandRunning = false
+    }
+
+    override fun toString(): String {
+        return "CONSOLE-TEST COMMAND | consoleTestType: $consoleTestType, consoleTestOp: $consoleTestOp"
+    }
+
+    companion object {
+        fun create(
+            context: Context,
+            repository: ClientRepository,
+            scope: CoroutineScope,
+            commandValue: String?
+        ) : ConsoleTestCommand? {
+
+            val parsedCommand = parseCommandValue(commandValue) ?: return null
+            val consoleTestType = parsedCommand.first
+            val consoleTestOp = parsedCommand.second?.toConsoleTestOperation(consoleTestType)
+
+            /*
+            If test operation needs class, and paramJson isn't correctly parsed, then return null
+            so that the DebugEngine knows that the command was formatted incorrectly.
+             */
+            if (consoleTestType.requiresParam && consoleTestOp == null) {
+                return null
+            }
+
+            return ConsoleTestCommand(context, repository, scope, consoleTestType, consoleTestOp)
+        }
+
+        private fun parseCommandValue(commandValue: String?) : Pair<ConsoleTestType, String?>? {
+            if (commandValue == null) return null
+
+            val args = commandValue.split(" ", limit = 2)
+            val consoleTestType = args.getOrNull(0)?.trim()?.toConsoleTestType()
+            val paramJson = args.getOrNull(1)?.trim()
+
+            return if (consoleTestType != null) {
+                Pair(consoleTestType, paramJson)
+            } else {
+                null
+            }
+        }
+    }
+}
+
 
 
 

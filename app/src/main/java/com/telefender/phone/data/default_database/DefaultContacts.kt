@@ -8,7 +8,7 @@ import android.provider.ContactsContract
 import android.provider.ContactsContract.CommonDataKinds.Phone
 import android.provider.ContactsContract.PhoneLookup
 import android.provider.ContactsContract.RawContacts
-import com.telefender.phone.data.server_related.debug_engine.NumberUpdate
+import com.telefender.phone.data.server_related.debug_engine.command_subtypes.NumberUpdate
 import com.telefender.phone.gui.adapters.recycler_view_items.*
 import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers

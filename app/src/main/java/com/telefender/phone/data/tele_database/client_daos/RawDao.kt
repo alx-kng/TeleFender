@@ -15,6 +15,9 @@ interface RawDao {
      * large returns.
      **********************************************************************************************/
 
+    @RawQuery
+    suspend fun readData_Numerical(query: SupportSQLiteQuery) : Double
+
     @Transaction
     @RawQuery
     suspend fun readDataChangeLog(query: SupportSQLiteQuery) : List<ChangeLog>
@@ -66,4 +69,5 @@ interface RawDao {
     @Transaction
     @RawQuery
     suspend fun readDataNotifyItem(query: SupportSQLiteQuery) : List<NotifyItem>
+
 }

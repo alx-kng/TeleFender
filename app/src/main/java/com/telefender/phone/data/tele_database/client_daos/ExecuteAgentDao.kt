@@ -1064,9 +1064,10 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
     /**
      * TODO: Make sure nothing is fishy with versionNumber, specifically, with the default value.
      * TODO: Need to include default blocked update.
+     * TODO: See if versionNumber can ever be useful.
      *
      * Updates ContactNumber given CID, oldNumber, and new rawNumber. Note that versionNumber is
-     * actually still used. So far, it seems like ContactNumber updates don't affect its
+     * actually still used (not anymore). So far, it seems like ContactNumber updates don't affect its
      * AnalyzedNumber, as updating the rawNumber shouldn't really change the algorithm.
      */
     @Transaction
@@ -1076,13 +1077,14 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
         }
 
         /*
-        Ensures current rawNumber is different from the passed in rawNumber to prevent duplicate
-        updates. Also, we just check if contactNumber exists for safety.
+        Ensures current rawNumber OR versionNumber is different from the passed in rawNumber to
+        prevent duplicate updates. Also, we just check if contactNumber exists for safety.
          */
-        val currRawNumber = getContactNumberRow(CID!!, normalizedNumber!!)?.rawNumber
-        if (currRawNumber == null || currRawNumber == rawNumber!!) {
-            Timber.e("$DBL: " +
-                "Duplicate cnUpdate() for CID = $CID | normalizedNumber = $normalizedNumber | rawNumber = $rawNumber")
+        val currCN = getContactNumberRow(CID!!, normalizedNumber!!)
+        val noChange = currCN?.rawNumber == rawNumber!! && currCN.versionNumber == versionNumber!!
+        if (currCN == null || noChange) {
+            Timber.e("$DBL: Duplicate cnUpdate() for %s",
+                "CID = $CID | normalizedNumber = $normalizedNumber | rawNumber = $rawNumber | versionNumber = $versionNumber")
             return
         }
 
