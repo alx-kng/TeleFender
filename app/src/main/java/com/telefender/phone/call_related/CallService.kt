@@ -3,11 +3,15 @@ package com.telefender.phone.call_related
 import android.provider.CallLog
 import android.telecom.Call
 import android.telecom.InCallService
+import com.telefender.phone.App
 import com.telefender.phone.data.tele_database.TeleCallDetails
 import com.telefender.phone.data.tele_database.background_tasks.workers.CatchSyncScheduler
 import com.telefender.phone.gui.InCallActivity
 import com.telefender.phone.gui.IncomingCallActivity
 import com.telefender.phone.misc_helpers.DBL
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.lang.ref.WeakReference
 
@@ -32,6 +36,8 @@ import java.lang.ref.WeakReference
  * TODO: Maybe we need do not disturb permissions (for premium) no matter what??? --> Seconded
  */
 class CallService : InCallService() {
+
+    val scope = CoroutineScope(Dispatchers.Default)
 
     override fun onCreate() {
         super.onCreate()
@@ -77,13 +83,20 @@ class CallService : InCallService() {
          * directly started. Also, safe calls and unsafe calls are handled separately.
          */
         if (call.stateCompat() == Call.STATE_RINGING) {
-            val isSafe = RuleChecker.isSafe(this, call.number())
-            Timber.e("$DBL: CallService - SAFE = $isSafe")
+            scope.launch {
+                val isSafe = RuleChecker.isSafe(
+                    context = this@CallService,
+                    scope = scope,
+                    number = call.number()
+                )
 
-            if (isSafe) {
-                safeCall()
-            } else {
-                unsafeCall(call)
+                Timber.e("$DBL: CallService - SAFE = $isSafe")
+
+                if (isSafe) {
+                    safeCall()
+                } else {
+                    unsafeCall(call)
+                }
             }
         } else {
             InCallActivity.start(this)
@@ -99,7 +112,10 @@ class CallService : InCallService() {
          * as voicemails are not passed to our CallService. However, it also syncs the most
          * immediate call log.
          */
-        CatchSyncScheduler.initiateCatchSyncWorker(this.applicationContext)
+        val applicationContext = this.applicationContext
+        (applicationContext as App).applicationScope.launch {
+            CatchSyncScheduler.initiateCatchSyncWorker(applicationContext)
+        }
 
         CallManager.removeCall(call)
         super.onCallRemoved(call)

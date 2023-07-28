@@ -6,6 +6,7 @@ import com.android.volley.Request
 import com.telefender.phone.data.server_related.json_classes.*
 import com.telefender.phone.data.server_related.request_generators.*
 import com.telefender.phone.data.tele_database.ClientRepository
+import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
@@ -41,10 +42,9 @@ object DataRequests {
         val lastServerRowID = repository.getLastServerRowID()
 
         if (instanceNumber == null || key == null) {
-            Timber.i("$DBL: " +
-                "VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
+            Timber.i("$DBL: VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
 
-            WorkStates.setState(WorkType.DOWNLOAD_POST, WorkInfo.State.FAILED)
+            ExperimentalWorkStates.generalizedSetState(WorkType.DOWNLOAD_POST, WorkInfo.State.FAILED)
             return
         }
 
@@ -81,7 +81,7 @@ object DataRequests {
     ) {
         if (errorCount == retryAmount) {
             Timber.i("$DBL: VOLLEY: UPLOAD_CHANGE RETRY MAX")
-            WorkStates.setState(WorkType.UPLOAD_CHANGE_POST, WorkInfo.State.FAILED)
+            ExperimentalWorkStates.generalizedSetState(WorkType.UPLOAD_CHANGE_POST, WorkInfo.State.FAILED)
             return
         }
 
@@ -91,10 +91,9 @@ object DataRequests {
         val uploadRequestJson: String
 
         if (instanceNumber == null || key == null) {
-            Timber.i("$DBL: " +
-                "VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
+            Timber.i("$DBL: VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
 
-            WorkStates.setState(WorkType.UPLOAD_CHANGE_POST, WorkInfo.State.FAILED)
+            ExperimentalWorkStates.generalizedSetState(WorkType.UPLOAD_CHANGE_POST, WorkInfo.State.FAILED)
             return
         }
 
@@ -150,7 +149,7 @@ object DataRequests {
     ) {
         if (errorCount == retryAmount) {
             Timber.i("$DBL: VOLLEY: UPLOAD_ANALYZED RETRY MAX")
-            WorkStates.setState(WorkType.UPLOAD_ANALYZED_POST, WorkInfo.State.FAILED)
+            ExperimentalWorkStates.generalizedSetState(WorkType.UPLOAD_ANALYZED_POST, WorkInfo.State.FAILED)
             return
         }
 
@@ -160,10 +159,9 @@ object DataRequests {
         val uploadRequestJson: String
 
         if (instanceNumber == null || key == null) {
-            Timber.i("$DBL: " +
-                "VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
+            Timber.i("$DBL: VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
 
-            WorkStates.setState(WorkType.UPLOAD_ANALYZED_POST, WorkInfo.State.FAILED)
+            ExperimentalWorkStates.generalizedSetState(WorkType.UPLOAD_ANALYZED_POST, WorkInfo.State.FAILED)
             return
         }
 
@@ -219,7 +217,7 @@ object DataRequests {
     ) {
         if (errorCount == retryAmount) {
             Timber.i("$DBL: VOLLEY: UPLOAD_ERROR RETRY MAX")
-            WorkStates.setState(WorkType.UPLOAD_ERROR_POST, WorkInfo.State.FAILED)
+            ExperimentalWorkStates.generalizedSetState(WorkType.UPLOAD_ERROR_POST, WorkInfo.State.FAILED)
             return
         }
 
@@ -229,10 +227,9 @@ object DataRequests {
         val uploadRequestJson: String
 
         if (instanceNumber == null || key == null) {
-            Timber.i("$DBL: " +
-                "VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
+            Timber.i("$DBL: VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
 
-            WorkStates.setState(WorkType.UPLOAD_ERROR_POST, WorkInfo.State.FAILED)
+            ExperimentalWorkStates.generalizedSetState(WorkType.UPLOAD_ERROR_POST, WorkInfo.State.FAILED)
             return
         }
 
@@ -277,10 +274,9 @@ object DataRequests {
         val key = repository.getClientKey()
 
         if (instanceNumber == null || key == null) {
-            Timber.i("$DBL: " +
-                "VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
+            Timber.i("$DBL: VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
 
-            WorkStates.setState(WorkType.SMS_VERIFY_POST, WorkInfo.State.FAILED)
+            ExperimentalWorkStates.generalizedSetState(WorkType.SMS_VERIFY_POST, WorkInfo.State.FAILED)
             return
         }
 
@@ -322,10 +318,9 @@ object DataRequests {
         val key = repository.getClientKey()
 
         if (instanceNumber == null || key == null) {
-            Timber.i("$DBL: " +
-                "VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
+            Timber.i("$DBL: VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
 
-            WorkStates.setState(WorkType.UPLOAD_TOKEN, WorkInfo.State.FAILED)
+            ExperimentalWorkStates.generalizedSetState(WorkType.UPLOAD_TOKEN, WorkInfo.State.FAILED)
             return
         }
 

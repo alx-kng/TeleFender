@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.*
 import com.telefender.phone.App
 import com.telefender.phone.data.tele_database.ClientRepository
+import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.misc_helpers.DBL
@@ -17,8 +18,8 @@ object ExecuteScheduler {
     const val execOneTag = "oneTimeExecuteWorker"
     const val execPeriodTag = "periodicExecuteWorker"
     
-    fun initiateOneTimeExecuteWorker(context: Context) : UUID {
-        WorkStates.setState(
+    suspend fun initiateOneTimeExecuteWorker(context: Context) : UUID {
+        ExperimentalWorkStates.generalizedSetState(
             workType = WorkType.ONE_TIME_EXEC,
             workState = WorkInfo.State.RUNNING,
             context = context,
@@ -42,8 +43,8 @@ object ExecuteScheduler {
         return executeRequest.id
     }
 
-    fun initiatePeriodicExecuteWorker(context : Context) : UUID {
-        WorkStates.setState(
+    suspend fun initiatePeriodicExecuteWorker(context : Context) : UUID {
+        ExperimentalWorkStates.generalizedSetState(
             workType = WorkType.PERIODIC_EXEC,
             workState = WorkInfo.State.RUNNING,
             context = context,
@@ -105,7 +106,7 @@ class CoroutineExecuteWorker(
                  * worker DOES start, we still need to make sure the state accurately reflects the
                  * actually RUNNING state of the worker.
                  */
-                WorkStates.setState(WorkType.PERIODIC_EXEC, WorkInfo.State.RUNNING)
+                ExperimentalWorkStates.generalizedSetState(WorkType.PERIODIC_EXEC, WorkInfo.State.RUNNING)
             }
             else -> {
                 Timber.i("$DBL: EXECUTE WORKER THREAD: Worker state variable name is wrong")
@@ -121,8 +122,8 @@ class CoroutineExecuteWorker(
         repository.executeAll()
 
         when (stateVarString) {
-            "oneTimeExecState" -> WorkStates.setState(WorkType.ONE_TIME_EXEC, WorkInfo.State.SUCCEEDED)
-            "periodicExecState" -> WorkStates.setState(WorkType.PERIODIC_EXEC, WorkInfo.State.SUCCEEDED)
+            "oneTimeExecState" -> ExperimentalWorkStates.generalizedSetState(WorkType.ONE_TIME_EXEC, null)
+            "periodicExecState" -> ExperimentalWorkStates.generalizedSetState(WorkType.PERIODIC_EXEC, null)
             else -> {
                 Timber.i("$DBL: EXECUTE WORKER THREAD: Worker state variable name is wrong")
             }

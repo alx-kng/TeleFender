@@ -7,7 +7,9 @@ import com.telefender.phone.data.server_related.RemoteDebug
 import com.telefender.phone.data.server_related.RequestWrappers
 import com.telefender.phone.data.server_related.debug_engine.command_subtypes.*
 import com.telefender.phone.data.tele_database.ClientRepository
+import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
 import com.telefender.phone.data.tele_database.background_tasks.TableSynchronizer
+import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.data.tele_database.entities.ChangeLog
 import com.telefender.phone.data.tele_database.entities.TableType
 import com.telefender.phone.data.tele_database.entities.toChangeLog
@@ -527,6 +529,13 @@ class ConsoleTestCommand(
                         RequestWrappers.uploadAnalyzed(context, repository, scope, "DEBUG")
                         RequestWrappers.uploadError(context, repository, scope, "DEBUG")
                         RemoteDebug.enqueueData("upload - end = ${Instant.now().toEpochMilli()}")
+                    }
+                    ConsoleTestType.WORK_STATES -> {
+                        for (workType in WorkType.values()) {
+                            RemoteDebug.enqueueData(
+                                "$workType = ${ExperimentalWorkStates.generalizedGetState(workType)}"
+                            )
+                        }
                     }
                 }
 

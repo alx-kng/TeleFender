@@ -479,7 +479,7 @@ object DefaultContacts {
      *
      * NOTE: Make sure that calling function closes the cursor.
      */
-    fun getContactNumberCursor(context: Context, contentResolver: ContentResolver): Cursor? {
+    suspend fun getContactNumberCursor(context: Context, contentResolver: ContentResolver): Cursor? {
         if (!TeleHelpers.hasValidStatus(context, setupRequired = false, contactRequired = true)) {
             Timber.e("$DBL: " +
                 "No contact permissions in getContactNumberCursors()")
@@ -1250,130 +1250,5 @@ object DefaultContacts {
                 newAddress
             )
             .build()
-    }
-
-    /***********************************************************************************************
-     * TODO: Old / unused functions. Once new infrastructure is established, remove these.
-     **********************************************************************************************/
-
-    /**
-     * TODO: Make this cleaner and add more capability please...
-     *
-     * Inserts contact into default database.
-     */
-    fun insertContactOld(
-        contactAdder: ContentResolver,
-        firstName: String? = null,
-        mobileNumber: String?
-    ): Boolean {
-        val ops = ArrayList<ContentProviderOperation>()
-        ops.add(
-            ContentProviderOperation
-                .newInsert(RawContacts.CONTENT_URI)
-                .withValue(RawContacts.ACCOUNT_TYPE, null)
-                .withValue(RawContacts.ACCOUNT_NAME, null)
-                .build()
-        )
-        ops.add(
-            ContentProviderOperation
-                .newInsert(ContactsContract.Data.CONTENT_URI)
-                .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
-                .withValue(
-                    ContactsContract.Data.MIMETYPE,
-                    ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE
-                )
-                .withValue(
-                    ContactsContract.CommonDataKinds.StructuredName.GIVEN_NAME,
-                    firstName
-                )
-                .build()
-        )
-        ops.add(
-            ContentProviderOperation
-                .newInsert(ContactsContract.Data.CONTENT_URI)
-                .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
-                .withValue(
-                    ContactsContract.Data.MIMETYPE,
-                    Phone.CONTENT_ITEM_TYPE
-                )
-                .withValue(
-                    Phone.NUMBER,
-                    mobileNumber
-                )
-                .withValue(
-                    Phone.TYPE,
-                    Phone.TYPE_MOBILE
-                )
-                .build()
-        )
-        try {
-            contactAdder.applyBatch(ContactsContract.AUTHORITY, ops)
-        } catch (e: Exception) {
-            return false
-        }
-        return true
-    }
-
-    /**
-     * TODO: Make this cleaner and add more capability please... Currently, this delete function
-     *  is like a sledge hammer doing an eye surgery (shouldn't delete all contacts by number).
-     *
-     * Deletes contact from default database.
-     */
-    fun deleteContact(
-        contactHelper: ContentResolver,
-        number: String
-    ) {
-        val ops = ArrayList<ContentProviderOperation>()
-        val args = arrayOf(
-            getContactID(
-                contactHelper, number
-            ).toString()
-        )
-        ops.add(
-            ContentProviderOperation.newDelete(RawContacts.CONTENT_URI)
-                .withSelection(RawContacts.CONTACT_ID + "=?", args).build()
-        )
-        try {
-            contactHelper.applyBatch(ContactsContract.AUTHORITY, ops)
-        } catch (e: RemoteException) {
-            e.printStackTrace()
-        } catch (e: OperationApplicationException) {
-            e.printStackTrace()
-        }
-    }
-
-    /**
-     * TODO: Not even sure what this is for? Please look into this...
-     */
-    private fun getContactID(
-        contactHelper: ContentResolver,
-        number: String
-    ): Long {
-        val contactUri = Uri.withAppendedPath(
-            PhoneLookup.CONTENT_FILTER_URI,
-            Uri.encode(number)
-        )
-        val projection = arrayOf(PhoneLookup._ID)
-        var cursor: Cursor? = null
-        try {
-            cursor = contactHelper.query(
-                contactUri, projection, null, null,
-                null
-            )
-            if (cursor!!.moveToFirst()) {
-                val personID = cursor.getColumnIndex(PhoneLookup._ID)
-                return cursor.getLong(personID)
-            }
-            return -1
-        } catch (e: Exception) {
-            e.printStackTrace()
-        } finally {
-            if (cursor != null) {
-                cursor.close()
-                cursor = null
-            }
-        }
-        return -1
     }
 }

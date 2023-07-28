@@ -7,11 +7,14 @@ import com.telefender.phone.data.server_related.json_classes.DefaultResponse
 import com.telefender.phone.data.server_related.json_classes.ServerResponseType
 import com.telefender.phone.data.server_related.json_classes.toServerResponse
 import com.telefender.phone.data.tele_database.ClientRepository
+import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import timber.log.Timber
 
 
@@ -37,7 +40,7 @@ class TokenRequestGen(
                 method = method,
                 url = url,
                 listener = tokenResponseHandler(context, repository, scope),
-                errorListener = tokenErrorHandler,
+                errorListener = tokenErrorHandler(scope),
                 requestJson = requestJson
             )
         }
@@ -56,18 +59,24 @@ private fun tokenResponseHandler(
         val defaultResponse: DefaultResponse? = response.toServerResponse(ServerResponseType.DEFAULT)
 
         if (defaultResponse != null && defaultResponse.status == "ok") {
-            WorkStates.setState(WorkType.UPLOAD_TOKEN, WorkInfo.State.SUCCEEDED)
+            scope.launch(Dispatchers.IO) {
+                ExperimentalWorkStates.generalizedSetState(WorkType.UPLOAD_TOKEN, null)
+            }
         } else {
-            WorkStates.setState(WorkType.UPLOAD_TOKEN, WorkInfo.State.FAILED)
+            scope.launch(Dispatchers.IO) {
+                ExperimentalWorkStates.generalizedSetState(WorkType.UPLOAD_TOKEN, WorkInfo.State.FAILED)
 
-            Timber.i("$DBL: VOLLEY: ERROR WHEN TOKEN UPLOAD_TOKEN: ${defaultResponse?.error}")
+                Timber.i("$DBL: VOLLEY: ERROR WHEN TOKEN UPLOAD_TOKEN: ${defaultResponse?.error}")
+            }
         }
     }
 }
 
-private val tokenErrorHandler = Response.ErrorListener { error ->
-    if (error.toString() != "null") {
-        Timber.e("$DBL: VOLLEY $error")
-        WorkStates.setState(WorkType.UPLOAD_TOKEN, WorkInfo.State.FAILED)
+private fun tokenErrorHandler(scope: CoroutineScope) = Response.ErrorListener { error ->
+    scope.launch(Dispatchers.IO) {
+        if (error.toString() != "null") {
+            Timber.e("$DBL: VOLLEY $error")
+            ExperimentalWorkStates.generalizedSetState(WorkType.UPLOAD_TOKEN, WorkInfo.State.FAILED)
+        }
     }
 }

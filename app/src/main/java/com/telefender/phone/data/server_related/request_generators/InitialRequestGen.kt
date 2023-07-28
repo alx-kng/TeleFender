@@ -9,6 +9,7 @@ import com.telefender.phone.data.server_related.json_classes.ServerResponseType
 import com.telefender.phone.data.server_related.json_classes.SetupSessionResponse
 import com.telefender.phone.data.server_related.json_classes.toServerResponse
 import com.telefender.phone.data.tele_database.ClientRepository
+import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.misc_helpers.DBL
@@ -41,7 +42,7 @@ class InitialRequestGen(
                 method = method,
                 url = url,
                 listener = initialPostResponseHandler(context, repository, scope),
-                errorListener = initialPostErrorHandler,
+                errorListener = initialPostErrorHandler(scope),
                 requestJson = requestJson
             )
         }
@@ -79,16 +80,20 @@ private fun initialPostResponseHandler(
                 UserSetup.verifyPostRequest(context, repository, scope)
             }
         } else {
-            WorkStates.setState(WorkType.SETUP, WorkInfo.State.FAILED)
+            scope.launch(Dispatchers.IO) {
+                ExperimentalWorkStates.generalizedSetState(WorkType.SETUP, WorkInfo.State.FAILED)
 
-            Timber.i("$DBL: VOLLEY: ERROR WHEN REQUEST INSTALLATION: ${setupSessionResponse?.error}")
+                Timber.i("$DBL: VOLLEY: ERROR WHEN REQUEST INSTALLATION: ${setupSessionResponse?.error}")
+            }
         }
     }
 }
 
-private val initialPostErrorHandler = Response.ErrorListener { error ->
-    if (error.toString() != "null") {
-        Timber.e("$DBL: VOLLEY $error")
-        WorkStates.setState(WorkType.SETUP, WorkInfo.State.FAILED)
+private fun initialPostErrorHandler(scope: CoroutineScope) = Response.ErrorListener { error ->
+    scope.launch(Dispatchers.IO) {
+        if (error.toString() != "null") {
+            Timber.e("$DBL: VOLLEY $error")
+            ExperimentalWorkStates.generalizedSetState(WorkType.SETUP, WorkInfo.State.FAILED)
+        }
     }
 }

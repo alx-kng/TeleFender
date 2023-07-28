@@ -143,6 +143,9 @@ object TableSynchronizer {
     }
 
     /**********************************************************************************************
+     * TODO: HAVING THE EXISTING SYNC LOCK MECHANISM (IF YOU ALSO USE IF FOR THE OTHER FUNCTIONS)
+     *  MAY MAKE OVERLAPPING SYNCS SAFE.
+     *
      * TODO: Put in sync work state (different from worker).
      *
      * TODO: We seem to very occasionally get a default cnUpdate() for every contact number?
@@ -189,13 +192,16 @@ object TableSynchronizer {
      * overlap with each other.
     ***********************************************************************************************/
     
-    suspend fun syncContacts(context: Context, database: ClientDatabase, contentResolver: ContentResolver) {
+    suspend fun syncContacts(
+        context: Context,
+        database: ClientDatabase,
+        contentResolver: ContentResolver
+    ) {
         // Waits for any possible duplicate SYNC_CONTACTS processes to finish before continuing.
-        WorkStates.workWaiter(
+        val workInstanceKey = ExperimentalWorkStates.localizedCompete(
             workType = WorkType.SYNC_CONTACTS,
             runningMsg = "SYNC_CONTACTS",
-            stopOnFail = true,
-            certainFinish = true
+            newWorkInstance = true
         )
 
         /*
@@ -203,24 +209,41 @@ object TableSynchronizer {
         permission guarded.
          */
         for (i in 1..retryAmount) {
+            // When retrying, the instance re-competes for the RUNNING state if not already RUNNING.
+            ExperimentalWorkStates.localizedCompete(
+                workType = WorkType.SYNC_CONTACTS,
+                runningMsg = "SYNC_CONTACTS",
+                workInstanceKey = workInstanceKey
+            )
+
             try {
-                WorkStates.setState(WorkType.SYNC_CONTACTS, WorkInfo.State.RUNNING)
                 syncContactsHelper(context, database, contentResolver)
-                WorkStates.setState(WorkType.SYNC_CONTACTS, WorkInfo.State.SUCCEEDED)
+                ExperimentalWorkStates.localizedRemoveState(
+                    workType = WorkType.SYNC_CONTACTS,
+                    workInstanceKey = workInstanceKey
+                )
                 break
             } catch (e: Exception) {
                 if (i < retryAmount) {
                     Timber.i("$DBL: syncContacts() RETRYING...")
                     delay(2000)
                 } else {
-                    WorkStates.setState(WorkType.SYNC_CONTACTS, WorkInfo.State.FAILED)
+                    ExperimentalWorkStates.localizedSetStateKey(
+                        workType = WorkType.SYNC_CONTACTS,
+                        workState = WorkInfo.State.FAILED,
+                        workInstanceKey = workInstanceKey
+                    )
                 }
             }
         }
     }
 
     
-    private suspend fun syncContactsHelper(context: Context, database: ClientDatabase, contentResolver: ContentResolver) {
+    private suspend fun syncContactsHelper(
+        context: Context,
+        database: ClientDatabase,
+        contentResolver: ContentResolver
+    ) {
         val defaultContactHashMap = checkForInserts(context, database, contentResolver)
         checkForUpdatesAndDeletes(context, database, defaultContactHashMap, contentResolver)
 

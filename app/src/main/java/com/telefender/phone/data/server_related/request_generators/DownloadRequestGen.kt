@@ -9,6 +9,7 @@ import com.telefender.phone.data.server_related.json_classes.DownloadResponse
 import com.telefender.phone.data.server_related.json_classes.ServerResponseType
 import com.telefender.phone.data.server_related.json_classes.toServerResponse
 import com.telefender.phone.data.tele_database.ClientRepository
+import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.misc_helpers.DBL
@@ -41,7 +42,7 @@ class DownloadRequestGen(
                 method = method,
                 url = url,
                 listener = downloadResponseHandler(context, repository, scope),
-                errorListener = downloadErrorHandler,
+                errorListener = downloadErrorHandler(scope),
                 requestJson = requestJson
             )
         }
@@ -49,6 +50,9 @@ class DownloadRequestGen(
 }
 
 /**
+ * TODO: Is it possible / do we need to make the Response lambda tail recursive?
+ *  -> Apparently not necessary.
+ *
  * Retrieves DownloadResponse object containing (status, error, List<ServerData>)
  * and inserts each ServerData value into our database using changeFromServer() in ChangeAgentDao.
  */
@@ -91,7 +95,7 @@ private fun downloadResponseHandler(
                         Timber.i("$DBL: " +
                             "VOLLEY: changeFromServer() wasn't successful. Stopping further requests.")
 
-                        WorkStates.setState(WorkType.DOWNLOAD_POST, WorkInfo.State.SUCCEEDED)
+                        ExperimentalWorkStates.generalizedSetState(WorkType.DOWNLOAD_POST, WorkInfo.State.FAILED)
                         return@launch
                     }
                 }
@@ -106,20 +110,24 @@ private fun downloadResponseHandler(
                 } else {
                     Timber.i("$DBL: VOLLEY: All DOWNLOADS COMPLETE")
 
-                    WorkStates.setState(WorkType.DOWNLOAD_POST, WorkInfo.State.SUCCEEDED)
+                    ExperimentalWorkStates.generalizedSetState(WorkType.DOWNLOAD_POST, null)
                 }
             }
         } else {
-            WorkStates.setState(WorkType.DOWNLOAD_POST, WorkInfo.State.FAILED)
+            scope.launch(Dispatchers.IO) {
+                ExperimentalWorkStates.generalizedSetState(WorkType.DOWNLOAD_POST, WorkInfo.State.FAILED)
 
-            Timber.i("$DBL: VOLLEY: ERROR WHEN DOWNLOAD: ${downloadResponse?.error}")
+                Timber.i("$DBL: VOLLEY: ERROR WHEN DOWNLOAD: ${downloadResponse?.error}")
+            }
         }
     }
 }
 
-private val downloadErrorHandler = Response.ErrorListener { error ->
-    if (error.toString() != "null") {
-        Timber.e("$DBL: VOLLEY $error")
-        WorkStates.setState(WorkType.DOWNLOAD_POST, WorkInfo.State.FAILED)
+private fun downloadErrorHandler(scope: CoroutineScope) = Response.ErrorListener { error ->
+    scope.launch(Dispatchers.IO) {
+        if (error.toString() != "null") {
+            Timber.e("$DBL: VOLLEY $error")
+            ExperimentalWorkStates.generalizedSetState(WorkType.DOWNLOAD_POST, WorkInfo.State.FAILED)
+        }
     }
 }

@@ -9,6 +9,7 @@ import com.telefender.phone.data.server_related.json_classes.ServerResponseType
 import com.telefender.phone.data.server_related.json_classes.UploadResponse
 import com.telefender.phone.data.server_related.json_classes.toServerResponse
 import com.telefender.phone.data.tele_database.ClientRepository
+import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.misc_helpers.DBL
@@ -43,7 +44,7 @@ class UploadErrorRequestGen(
                 method = method,
                 url = url,
                 listener = uploadErrorResponseHandler(context, repository, scope, errorCount),
-                errorListener = uploadErrorErrorHandler,
+                errorListener = uploadErrorErrorHandler(scope),
                 requestJson = requestJson,
             )
         }
@@ -51,6 +52,9 @@ class UploadErrorRequestGen(
 }
 
 /**
+ * TODO: Is it possible / do we need to make the Response lambda tail recursive?
+ *  -> Apparently not necessary.
+ *
  * TODO: Is it correct to use deleteQTUExclusive for partial upload error?
  *
  * Basically checks response from server for lastUploadRow and deletes the successfully uploaded
@@ -111,20 +115,24 @@ private fun uploadErrorResponseHandler(
                 } else {
                     Timber.i("$DBL: VOLLEY: ALL ERROR LOG UPLOADS COMPLETE")
 
-                    WorkStates.setState(WorkType.UPLOAD_ERROR_POST, WorkInfo.State.SUCCEEDED)
+                    ExperimentalWorkStates.generalizedSetState(WorkType.UPLOAD_ERROR_POST, null)
                 }
             }
         } else {
-            WorkStates.setState(WorkType.UPLOAD_ERROR_POST, WorkInfo.State.FAILED)
+            scope.launch(Dispatchers.IO) {
+                ExperimentalWorkStates.generalizedSetState(WorkType.UPLOAD_ERROR_POST, WorkInfo.State.FAILED)
 
-            Timber.i("$DBL: VOLLEY: ERROR WHEN UPLOAD_ERROR: ${uploadResponse?.error}")
+                Timber.i("$DBL: VOLLEY: ERROR WHEN UPLOAD_ERROR: ${uploadResponse?.error}")
+            }
         }
     }
 }
 
-private val uploadErrorErrorHandler = Response.ErrorListener { error ->
-    if (error.toString() != "null") {
-        Timber.e("$DBL: VOLLEY $error")
-        WorkStates.setState(WorkType.UPLOAD_ERROR_POST, WorkInfo.State.FAILED)
+private fun uploadErrorErrorHandler(scope: CoroutineScope) = Response.ErrorListener { error ->
+    scope.launch(Dispatchers.IO) {
+        if (error.toString() != "null") {
+            Timber.e("$DBL: VOLLEY $error")
+            ExperimentalWorkStates.generalizedSetState(WorkType.UPLOAD_ERROR_POST, WorkInfo.State.FAILED)
+        }
     }
 }

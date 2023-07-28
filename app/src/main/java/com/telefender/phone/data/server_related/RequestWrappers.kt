@@ -5,10 +5,9 @@ import androidx.work.WorkInfo
 import com.telefender.phone.data.server_related.RemoteDebug.incrementExchangeErrorCounter
 import com.telefender.phone.data.server_related.RemoteDebug.resetExchangeCounters
 import com.telefender.phone.data.tele_database.ClientRepository
-import com.telefender.phone.data.tele_database.background_tasks.WorkStates
+import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.misc_helpers.DBL
-import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import timber.log.Timber
@@ -28,16 +27,20 @@ object RequestWrappers {
         workerName: String
     ) {
         for (i in 1..retryAmount) {
-            WorkStates.setState(WorkType.DOWNLOAD_POST, WorkInfo.State.RUNNING)
+            ExperimentalWorkStates.generalizedSetState(WorkType.DOWNLOAD_POST, WorkInfo.State.RUNNING)
             DataRequests.downloadDataRequest(context, repository, scope)
 
-            val success = WorkStates.workWaiter(
+            val success = ExperimentalWorkStates.generalizedWorkWaiter(
                 workType = WorkType.DOWNLOAD_POST,
                 runningMsg = "DOWNLOAD",
                 stopOnFail = true,
                 certainFinish = true
             )
-            if (success) break
+            /*
+            Success can be null in the odd case that the request somehow finishes by the time the
+            waiter is called.
+             */
+            if (success == true || success == null) break
             Timber.i("$DBL: $workerName - DOWNLOAD RETRYING")
             delay(retryDelayTime)
         }
@@ -56,11 +59,12 @@ object RequestWrappers {
         workerName: String
     ) {
 
-        WorkStates.setState(WorkType.UPLOAD_CHANGE_POST, WorkInfo.State.RUNNING)
+        ExperimentalWorkStates.generalizedSetState(WorkType.UPLOAD_CHANGE_POST, WorkInfo.State.RUNNING)
         if (repository.hasChangeQTU()) {
             DataRequests.uploadChangeRequest(context, repository, scope, errorCount = 0)
         } else {
-            WorkStates.setState(WorkType.UPLOAD_CHANGE_POST, WorkInfo.State.SUCCEEDED)
+            ExperimentalWorkStates.generalizedSetState(WorkType.UPLOAD_CHANGE_POST, null)
+            return
         }
 
         /*
@@ -69,13 +73,13 @@ object RequestWrappers {
         NOTE: failures have more to do with the request being faulty / the server having
         connection issues or execution problems.
          */
-        if (!WorkStates.workWaiter(
-                workType = WorkType.UPLOAD_CHANGE_POST,
-                runningMsg = "UPLOAD_CHANGE",
-                stopOnFail = true,
-                certainFinish = true
-            )
-        ) {
+        val success = ExperimentalWorkStates.generalizedWorkWaiter(
+            workType = WorkType.UPLOAD_CHANGE_POST,
+            runningMsg = "UPLOAD_CHANGE",
+            stopOnFail = true,
+            certainFinish = true
+        )
+        if (success == false) {
             Timber.e("$DBL: INSIDE $workerName WORKER. PROBLEM WITH UPLOAD_CHANGE.")
         }
     }
@@ -99,11 +103,12 @@ object RequestWrappers {
             return
         }
 
-        WorkStates.setState(WorkType.UPLOAD_ANALYZED_POST, WorkInfo.State.RUNNING)
+        ExperimentalWorkStates.generalizedSetState(WorkType.UPLOAD_ANALYZED_POST, WorkInfo.State.RUNNING)
         if (repository.hasAnalyzedQTU()) {
             DataRequests.uploadAnalyzedRequest(context, repository, scope, errorCount = 0)
         } else {
-            WorkStates.setState(WorkType.UPLOAD_ANALYZED_POST, WorkInfo.State.SUCCEEDED)
+            ExperimentalWorkStates.generalizedSetState(WorkType.UPLOAD_ANALYZED_POST, null)
+            return
         }
 
         /*
@@ -112,13 +117,13 @@ object RequestWrappers {
         NOTE: failures have more to do with the request being faulty / the server having
         connection issues or execution problems.
          */
-        if (!WorkStates.workWaiter(
-                workType = WorkType.UPLOAD_ANALYZED_POST,
-                runningMsg = "UPLOAD_ANALYZED",
-                stopOnFail = true,
-                certainFinish = true
-            )
-        ) {
+        val success = ExperimentalWorkStates.generalizedWorkWaiter(
+            workType = WorkType.UPLOAD_ANALYZED_POST,
+            runningMsg = "UPLOAD_ANALYZED",
+            stopOnFail = true,
+            certainFinish = true
+        )
+        if (success == false) {
             Timber.e("$DBL: INSIDE $workerName WORKER. PROBLEM WITH UPLOAD_ANALYZED.")
         }
     }
@@ -136,11 +141,12 @@ object RequestWrappers {
         workerName: String
     ) {
 
-        WorkStates.setState(WorkType.UPLOAD_ERROR_POST, WorkInfo.State.RUNNING)
+        ExperimentalWorkStates.generalizedSetState(WorkType.UPLOAD_ERROR_POST, WorkInfo.State.RUNNING)
         if (repository.hasErrorLog()) {
             DataRequests.uploadErrorRequest(context, repository, scope, errorCount = 0)
         } else {
-            WorkStates.setState(WorkType.UPLOAD_ERROR_POST, WorkInfo.State.SUCCEEDED)
+            ExperimentalWorkStates.generalizedSetState(WorkType.UPLOAD_ERROR_POST, null)
+            return
         }
 
         /*
@@ -149,13 +155,13 @@ object RequestWrappers {
         NOTE: failures have more to do with the request being faulty / the server having
         connection issues or execution problems.
          */
-        if (!WorkStates.workWaiter(
-                workType = WorkType.UPLOAD_ERROR_POST,
-                runningMsg = "UPLOAD_ERROR",
-                stopOnFail = true,
-                certainFinish = true
-            )
-        ) {
+        val success = ExperimentalWorkStates.generalizedWorkWaiter(
+            workType = WorkType.UPLOAD_ERROR_POST,
+            runningMsg = "UPLOAD_ERROR",
+            stopOnFail = true,
+            certainFinish = true
+        )
+        if (success == false) {
             Timber.e("$DBL: INSIDE $workerName WORKER. PROBLEM WITH UPLOAD_ERROR.")
         }
     }
@@ -174,7 +180,7 @@ object RequestWrappers {
         scope: CoroutineScope,
         number: String
     ) {
-        WorkStates.setState(WorkType.SMS_VERIFY_POST, WorkInfo.State.RUNNING)
+        ExperimentalWorkStates.generalizedSetState(WorkType.SMS_VERIFY_POST, WorkInfo.State.RUNNING)
         DataRequests.smsVerifyRequest(context, repository, scope, number)
     }
 
@@ -188,16 +194,20 @@ object RequestWrappers {
         workerName: String
     ) {
         for (i in 1..retryAmount) {
-            WorkStates.setState(WorkType.DEBUG_CHECK_POST, WorkInfo.State.RUNNING)
+            ExperimentalWorkStates.generalizedSetState(WorkType.DEBUG_CHECK_POST, WorkInfo.State.RUNNING)
             RemoteDebug.debugCheckRequest(context, repository, scope)
 
-            val success = WorkStates.workWaiter(
+            val success = ExperimentalWorkStates.generalizedWorkWaiter(
                 workType = WorkType.DEBUG_CHECK_POST,
                 runningMsg = "DEBUG_CHECK",
                 stopOnFail = true,
                 certainFinish = true
             )
-            if (success) break
+            /*
+            Success can be null in the odd case that the request somehow finishes by the time the
+            waiter is called.
+             */
+            if (success == true || success == null) break
             Timber.i("$DBL: $workerName - DEBUG_CHECK RETRYING")
             delay(retryDelayTime)
         }
@@ -215,16 +225,20 @@ object RequestWrappers {
         workerName: String
     ) {
         for (i in 1..retryAmount) {
-            WorkStates.setState(WorkType.DEBUG_SESSION_POST, WorkInfo.State.RUNNING)
+            ExperimentalWorkStates.generalizedSetState(WorkType.DEBUG_SESSION_POST, WorkInfo.State.RUNNING)
             RemoteDebug.debugSessionRequest(context, repository, scope)
 
-            val success = WorkStates.workWaiter(
+            val success = ExperimentalWorkStates.generalizedWorkWaiter(
                 workType = WorkType.DEBUG_SESSION_POST,
                 runningMsg = "DEBUG_SESSION",
                 stopOnFail = true,
                 certainFinish = true
             )
-            if (success) break
+            /*
+            Success can be null in the odd case that the request somehow finishes by the time the
+            waiter is called.
+             */
+            if (success == true || success == null) break
             Timber.i("$DBL: $workerName - DEBUG_SESSION RETRYING")
             delay(retryDelayTime)
         }
@@ -244,16 +258,20 @@ object RequestWrappers {
         while (RemoteDebug.exchangeErrorCounter < retryAmount
             && RemoteDebug.invTokenCounter < retryAmount
         ) {
-            WorkStates.setState(WorkType.DEBUG_EXCHANGE_POST, WorkInfo.State.RUNNING)
+            ExperimentalWorkStates.generalizedSetState(WorkType.DEBUG_EXCHANGE_POST, WorkInfo.State.RUNNING)
             RemoteDebug.debugExchangeRequest(context, repository, scope, workerName)
 
-            val success = WorkStates.workWaiter(
+            val success = ExperimentalWorkStates.generalizedWorkWaiter(
                 workType = WorkType.DEBUG_EXCHANGE_POST,
                 runningMsg = null,
                 stopOnFail = true,
                 certainFinish = true
             )
-            if (success) break
+            /*
+            Success can be null in the odd case that the request somehow finishes by the time the
+            waiter is called.
+             */
+            if (success == true || success == null) break
 
             if (RemoteDebug.invTokenCounter < retryAmount) {
                 Timber.i("$DBL: $workerName - DEBUG_EXCHANGE RETRYING")
@@ -274,7 +292,7 @@ object RequestWrappers {
         repository: ClientRepository,
         scope: CoroutineScope
     ) {
-        WorkStates.setState(WorkType.DEBUG_CALL_STATE_POST, WorkInfo.State.RUNNING)
+        ExperimentalWorkStates.generalizedSetState(WorkType.DEBUG_CALL_STATE_POST, WorkInfo.State.RUNNING)
         RemoteDebug.debugCallStateRequest(context, repository, scope)
     }
 }

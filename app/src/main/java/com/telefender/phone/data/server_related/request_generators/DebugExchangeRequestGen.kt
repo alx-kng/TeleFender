@@ -11,6 +11,7 @@ import com.telefender.phone.data.server_related.json_classes.DefaultResponse
 import com.telefender.phone.data.server_related.json_classes.ServerResponseType
 import com.telefender.phone.data.server_related.json_classes.toServerResponse
 import com.telefender.phone.data.tele_database.ClientRepository
+import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.misc_helpers.DBL
@@ -45,14 +46,19 @@ class DebugExchangeRequestGen(
                 method = method,
                 url = url,
                 listener = debugExchangeResponseHandler(context, repository, scope, workerName),
-                errorListener = debugExchangeErrorHandler,
+                errorListener = debugExchangeErrorHandler(scope),
                 requestJson = requestJson,
             )
         }
     }
 }
 
-// TODO: Check handling of InvToken error and see if infinite loop is possible.
+/**
+ * TODO: Check handling of InvToken error and see if infinite loop is possible.
+ *
+ * TODO: Is it possible / do we need to make the Response lambda tail recursive?
+ *  -> Apparently not necessary.
+ */
 private fun debugExchangeResponseHandler(
     context: Context,
     repository: ClientRepository,
@@ -95,7 +101,7 @@ private fun debugExchangeResponseHandler(
                     Timber.i("$DBL: %s",
                         "VOLLEY: DEBUG EXCHANGE - STOPPING - TOO MANY INV TOKEN ERRORS!")
 
-                    WorkStates.setState(WorkType.DEBUG_EXCHANGE_POST, WorkInfo.State.FAILED)
+                    ExperimentalWorkStates.generalizedSetState(WorkType.DEBUG_EXCHANGE_POST, WorkInfo.State.FAILED)
                     return@launch
                 }
 
@@ -114,16 +120,20 @@ private fun debugExchangeResponseHandler(
                 RemoteDebug.debugExchangeRequest(context, repository, scope, workerName)
             }
         } else {
-            WorkStates.setState(WorkType.DEBUG_EXCHANGE_POST, WorkInfo.State.FAILED)
+            scope.launch(Dispatchers.IO) {
+                ExperimentalWorkStates.generalizedSetState(WorkType.DEBUG_EXCHANGE_POST, WorkInfo.State.FAILED)
 
-            Timber.i("$DBL: VOLLEY: DEBUG EXCHANGE - ERROR: ${debugExchangeResponse?.error}")
+                Timber.i("$DBL: VOLLEY: DEBUG EXCHANGE - ERROR: ${debugExchangeResponse?.error}")
+            }
         }
     }
 }
 
-private val debugExchangeErrorHandler = Response.ErrorListener { error ->
-    if (error.toString() != "null") {
-        Timber.e("$DBL: VOLLEY $error")
-        WorkStates.setState(WorkType.DEBUG_EXCHANGE_POST, WorkInfo.State.FAILED)
+private fun debugExchangeErrorHandler(scope: CoroutineScope) = Response.ErrorListener { error ->
+    scope.launch(Dispatchers.IO) {
+        if (error.toString() != "null") {
+            Timber.e("$DBL: VOLLEY $error")
+            ExperimentalWorkStates.generalizedSetState(WorkType.DEBUG_EXCHANGE_POST, WorkInfo.State.FAILED)
+        }
     }
 }

@@ -6,6 +6,7 @@ import androidx.work.*
 import com.telefender.phone.App
 import com.telefender.phone.data.server_related.DataRequests
 import com.telefender.phone.data.tele_database.ClientRepository
+import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.misc_helpers.DBL
@@ -19,8 +20,8 @@ object TokenScheduler{
     val tokenOneTag = "oneTimeTokenWorker"
     val tokenPeriodTag = "periodicTokenWorker"
 
-    fun initiateOneTimeTokenWorker(context : Context) : UUID {
-        WorkStates.setState(
+    suspend fun initiateOneTimeTokenWorker(context : Context) : UUID {
+        ExperimentalWorkStates.generalizedSetState(
             workType = WorkType.ONE_TIME_TOKEN,
             workState = WorkInfo.State.RUNNING,
             context = context,
@@ -42,8 +43,8 @@ object TokenScheduler{
         return tokenRequest.id
     }
 
-    fun initiatePeriodicTokenWorker(context : Context) : UUID {
-        WorkStates.setState(
+    suspend fun initiatePeriodicTokenWorker(context : Context) : UUID {
+        ExperimentalWorkStates.generalizedSetState(
             workType = WorkType.PERIODIC_TOKEN,
             workState = WorkInfo.State.RUNNING,
             context = context,
@@ -97,7 +98,7 @@ class CoroutineTokenWorker(
                  * worker DOES start, we still need to make sure the state accurately reflects the
                  * actually RUNNING state of the worker.
                  */
-                WorkStates.setState(WorkType.PERIODIC_TOKEN, WorkInfo.State.RUNNING)
+                ExperimentalWorkStates.generalizedSetState(WorkType.PERIODIC_TOKEN, WorkInfo.State.RUNNING)
             }
             else -> {
                 Timber.i("$DBL: TOKEN WORKER THREAD: Worker state variable name is wrong")
@@ -112,8 +113,8 @@ class CoroutineTokenWorker(
         DataRequests.tokenPostRequest(context, repository, scope, token!!)
 
         when (stateVarString) {
-            "oneTimeTokenState" ->  WorkStates.setState(WorkType.ONE_TIME_TOKEN, WorkInfo.State.SUCCEEDED)
-            "periodicTokenState" -> WorkStates.setState(WorkType.PERIODIC_TOKEN, WorkInfo.State.SUCCEEDED)
+            "oneTimeTokenState" ->  ExperimentalWorkStates.generalizedSetState(WorkType.ONE_TIME_TOKEN, null)
+            "periodicTokenState" -> ExperimentalWorkStates.generalizedSetState(WorkType.PERIODIC_TOKEN, null)
             else -> {
                 Timber.i("$DBL: TOKEN WORKER THREAD: Worker state variable name is wrong")
             }

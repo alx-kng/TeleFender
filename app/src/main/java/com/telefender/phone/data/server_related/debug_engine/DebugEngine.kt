@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.WorkInfo
 import com.telefender.phone.data.server_related.RemoteDebug
 import com.telefender.phone.data.tele_database.ClientRepository
+import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.misc_helpers.DBL
@@ -44,7 +45,7 @@ object DebugEngine {
                 "REMOTE - Max idle period reached! Ending debug exchange!")
 
             RemoteDebug.resetStates()
-            WorkStates.setState(WorkType.DEBUG_EXCHANGE_POST, WorkInfo.State.SUCCEEDED)
+            ExperimentalWorkStates.generalizedSetState(WorkType.DEBUG_EXCHANGE_POST, null)
             return
         }
 
@@ -81,7 +82,7 @@ object DebugEngine {
             // Reset error to null after we send it up to the server.
             RemoteDebug.error = null
         } else {
-            WorkStates.setState(WorkType.DEBUG_EXCHANGE_POST, WorkInfo.State.SUCCEEDED)
+            ExperimentalWorkStates.generalizedSetState(WorkType.DEBUG_EXCHANGE_POST, null)
         }
     }
 

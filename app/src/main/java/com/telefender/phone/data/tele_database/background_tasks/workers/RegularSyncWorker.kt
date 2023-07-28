@@ -3,6 +3,7 @@ package com.telefender.phone.data.tele_database.background_tasks.workers
 import android.content.Context
 import androidx.work.*
 import com.telefender.phone.App
+import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
 import com.telefender.phone.data.tele_database.background_tasks.TableSynchronizer
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
@@ -22,13 +23,13 @@ object RegularSyncScheduler{
     val syncOneTag = "oneTimeSyncWorker"
     val syncPeriodicTag = "periodicSyncWorker"
 
-    fun initiateOneTimeSyncWorker(context : Context) : UUID? {
+    suspend fun initiateOneTimeSyncWorker(context : Context) : UUID? {
         if (!TeleHelpers.hasValidStatus(context, logRequired = true)) {
             Timber.e("$DBL: Invalid status in initiateOneTimeSyncWorker()")
             return null
         }
 
-        WorkStates.setState(
+        ExperimentalWorkStates.generalizedSetState(
             workType = WorkType.ONE_TIME_SYNC,
             workState = WorkInfo.State.RUNNING,
             context = context,
@@ -51,13 +52,13 @@ object RegularSyncScheduler{
         return syncRequest.id
     }
 
-    fun initiatePeriodicSyncWorker(context : Context) : UUID? {
+    suspend fun initiatePeriodicSyncWorker(context : Context) : UUID? {
         if (!TeleHelpers.hasValidStatus(context, logRequired = true)) {
             Timber.e("$DBL: Invalid status in initiatePeriodicSyncWorker()")
             return null
         }
 
-        WorkStates.setState(
+        ExperimentalWorkStates.generalizedSetState(
             workType = WorkType.PERIODIC_SYNC,
             workState = WorkInfo.State.RUNNING,
             context = context,
@@ -118,7 +119,7 @@ class CoroutineSyncWorker(
                  * worker DOES start, we still need to make sure the state accurately reflects the
                  * actually RUNNING state of the worker.
                  */
-                WorkStates.setState(WorkType.PERIODIC_SYNC, WorkInfo.State.RUNNING)
+                ExperimentalWorkStates.generalizedSetState(WorkType.PERIODIC_SYNC, WorkInfo.State.RUNNING)
             }
             else -> {
                 Timber.i("$DBL: SYNC WORKER THREAD: Worker state variable name is wrong")
@@ -136,8 +137,8 @@ class CoroutineSyncWorker(
         Timber.i("$DBL: SYNC ENDED")
 
         when (stateVarString) {
-            "oneTimeSyncState" ->  WorkStates.setState(WorkType.ONE_TIME_SYNC, WorkInfo.State.SUCCEEDED)
-            "periodicSyncState" -> WorkStates.setState(WorkType.PERIODIC_SYNC, WorkInfo.State.SUCCEEDED)
+            "oneTimeSyncState" ->  ExperimentalWorkStates.generalizedSetState(WorkType.ONE_TIME_SYNC, null)
+            "periodicSyncState" -> ExperimentalWorkStates.generalizedSetState(WorkType.PERIODIC_SYNC, null)
             else -> {
                 Timber.i("$DBL: SYNC WORKER THREAD: Worker state variable name is wrong")
             }

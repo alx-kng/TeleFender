@@ -16,6 +16,7 @@ import com.telefender.phone.data.server_related.request_generators.DebugSessionR
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks
+import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.gui.InCallActivity
@@ -160,7 +161,7 @@ object RemoteDebug {
         if (instanceNumber == null || key == null) {
             Timber.i("$DBL: VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
 
-            WorkStates.setState(WorkType.DEBUG_CHECK_POST, WorkInfo.State.FAILED)
+            ExperimentalWorkStates.generalizedSetState(WorkType.DEBUG_CHECK_POST, WorkInfo.State.FAILED)
             return
         }
 
@@ -194,7 +195,7 @@ object RemoteDebug {
     ) {
         if (!isEnabled) {
             Timber.i("$DBL: debugSessionRequest() - Not enabled")
-            WorkStates.setState(WorkType.DEBUG_SESSION_POST, WorkInfo.State.SUCCEEDED)
+            ExperimentalWorkStates.generalizedSetState(WorkType.DEBUG_SESSION_POST, null)
             return
         }
 
@@ -205,7 +206,7 @@ object RemoteDebug {
         if (instanceNumber == null || key == null) {
             Timber.i("$DBL: VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
 
-            WorkStates.setState(WorkType.DEBUG_SESSION_POST, WorkInfo.State.FAILED)
+            ExperimentalWorkStates.generalizedSetState(WorkType.DEBUG_SESSION_POST, WorkInfo.State.FAILED)
             return
         }
 
@@ -240,7 +241,7 @@ object RemoteDebug {
         if (remoteSessionID == null || remoteSessionToken == null) {
             Timber.i("$DBL: %s",
                 "debugExchangeRequest() - No remoteSessionID or remoteSessionToken")
-            WorkStates.setState(WorkType.DEBUG_EXCHANGE_POST, WorkInfo.State.SUCCEEDED)
+            ExperimentalWorkStates.generalizedSetState(WorkType.DEBUG_EXCHANGE_POST, null)
             return
         }
 
@@ -251,7 +252,7 @@ object RemoteDebug {
         if (instanceNumber == null || key == null) {
             Timber.i("$DBL: VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
 
-            WorkStates.setState(WorkType.DEBUG_EXCHANGE_POST, WorkInfo.State.FAILED)
+            ExperimentalWorkStates.generalizedSetState(WorkType.DEBUG_EXCHANGE_POST, WorkInfo.State.FAILED)
             return
         }
 
@@ -306,7 +307,7 @@ object RemoteDebug {
         if (instanceNumber == null || key == null) {
             Timber.i("$DBL: VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | CLIENT KEY = $key")
 
-            WorkStates.setState(WorkType.DEBUG_CALL_STATE_POST, WorkInfo.State.FAILED)
+            ExperimentalWorkStates.generalizedSetState(WorkType.DEBUG_CALL_STATE_POST, WorkInfo.State.FAILED)
             return
         }
 

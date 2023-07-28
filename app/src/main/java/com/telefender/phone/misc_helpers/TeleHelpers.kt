@@ -9,10 +9,9 @@ import android.telephony.TelephonyManager
 import com.google.i18n.phonenumbers.PhoneNumberUtil
 import com.telefender.phone.App
 import com.telefender.phone.call_related.SimCarrier
-import com.telefender.phone.data.tele_database.entities.*
+import com.telefender.phone.data.tele_database.entities.NotifyItem
+import com.telefender.phone.data.tele_database.entities.Parameters
 import com.telefender.phone.permissions.Permissions
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
 import timber.log.Timber
 import java.time.Instant
 
@@ -34,11 +33,12 @@ object TeleHelpers {
     }
 
     /**
-     * TODO: See if these tiny runBlocking{} usages are very bad?
+     * TODO: See if these tiny runBlocking{} usages are very bad? -> Removed for now and made
+     *  calling functions suspend.
      *
      * Checks if database is initialized, user is setup, and that the wanted permissions are given.
      */
-    fun hasValidStatus(
+    suspend fun hasValidStatus(
         context: Context,
         initializedRequired: Boolean = true,
         setupRequired: Boolean = true,
@@ -54,12 +54,10 @@ object TeleHelpers {
         if (contactRequired && !Permissions.hasContactPermissions(context)) return false
 
         val repository = (context.applicationContext as App).repository
-        return runBlocking(Dispatchers.Default) {
-            val databaseCondition = !initializedRequired || repository.databaseInitialized()
-            val setupCondition = !setupRequired || repository.hasClientKey()
+        val databaseCondition = !initializedRequired || repository.databaseInitialized()
+        val setupCondition = !setupRequired || repository.hasClientKey()
 
-            databaseCondition && setupCondition
-        }
+        return databaseCondition && setupCondition
     }
 
     /**
@@ -89,10 +87,8 @@ object TeleHelpers {
      * using permissions.
      */
     @SuppressLint("MissingPermission")
-    fun getUserNumberUncertain(context: Context) : String? {
-        val databaseNumber = runBlocking(Dispatchers.Default) {
-            getUserNumberStored(context)
-        }
+    suspend fun getUserNumberUncertain(context: Context) : String? {
+        val databaseNumber = getUserNumberStored(context)
 
         return databaseNumber ?:
             if (!Permissions.hasPhoneStatePermissions(context)) {
@@ -117,34 +113,6 @@ object TeleHelpers {
 
                 return normalizedNumber(number) ?: bareNumber(number)
             }
-    }
-
-    fun getAnalyzedNumber(context: Context, normalizedNumber: String) : AnalyzedNumber? {
-        val repository = (context.applicationContext as App).repository
-        return runBlocking(Dispatchers.Default) {
-            repository.getAnalyzedNum(number = normalizedNumber)
-        }
-    }
-
-    fun getParameters(context: Context) : Parameters? {
-        val repository = (context.applicationContext as App).repository
-        return runBlocking(Dispatchers.Default) {
-            repository.getParameters()
-        }
-    }
-
-    fun getStoredMap(context: Context) : StoredMap? {
-        val repository = (context.applicationContext as App).repository
-        return runBlocking(Dispatchers.Default) {
-            repository.getStoredMap()
-        }
-    }
-
-    fun getNotifyItem(context: Context, normalizedNumber: String) : NotifyItem? {
-        val repository = (context.applicationContext as App).repository
-        return runBlocking(Dispatchers.Default) {
-            repository.getNotifyItem(normalizedNumber)
-        }
     }
 
     /**

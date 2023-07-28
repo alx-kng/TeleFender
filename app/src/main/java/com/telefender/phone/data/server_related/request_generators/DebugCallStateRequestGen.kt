@@ -7,10 +7,13 @@ import com.telefender.phone.data.server_related.json_classes.DefaultResponse
 import com.telefender.phone.data.server_related.json_classes.ServerResponseType
 import com.telefender.phone.data.server_related.json_classes.toServerResponse
 import com.telefender.phone.data.tele_database.ClientRepository
+import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.misc_helpers.DBL
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import timber.log.Timber
 
 
@@ -36,7 +39,7 @@ class DebugCallStateRequestGen(
                 method = method,
                 url = url,
                 listener = debugCallStateResponseHandler(context, repository, scope),
-                errorListener = debugCallStateErrorHandler,
+                errorListener = debugCallStateErrorHandler(scope),
                 requestJson = requestJson
             )
         }
@@ -54,19 +57,23 @@ private fun debugCallStateResponseHandler(
 
         val debugCallStateResponse : DefaultResponse? = response.toServerResponse(ServerResponseType.DEFAULT)
 
-        if (debugCallStateResponse != null && debugCallStateResponse.status == "ok") {
-            WorkStates.setState(WorkType.DEBUG_CALL_STATE_POST, WorkInfo.State.SUCCEEDED)
-        } else {
-            WorkStates.setState(WorkType.DEBUG_CALL_STATE_POST, WorkInfo.State.FAILED)
+        scope.launch(Dispatchers.IO) {
+            if (debugCallStateResponse != null && debugCallStateResponse.status == "ok") {
+                ExperimentalWorkStates.generalizedSetState(WorkType.DEBUG_CALL_STATE_POST, null)
+            } else {
+                ExperimentalWorkStates.generalizedSetState(WorkType.DEBUG_CALL_STATE_POST, WorkInfo.State.FAILED)
 
-            Timber.i("$DBL: VOLLEY: ERROR WHEN DEBUG CALL_STATE: ${debugCallStateResponse?.error}")
+                Timber.i("$DBL: VOLLEY: ERROR WHEN DEBUG CALL_STATE: ${debugCallStateResponse?.error}")
+            }
         }
     }
 }
 
-private val debugCallStateErrorHandler = Response.ErrorListener { error ->
-    if (error.toString() != "null") {
-        Timber.e("$DBL: VOLLEY $error")
-        WorkStates.setState(WorkType.DEBUG_CALL_STATE_POST, WorkInfo.State.FAILED)
+private fun debugCallStateErrorHandler(scope: CoroutineScope) = Response.ErrorListener { error ->
+    scope.launch(Dispatchers.IO) {
+        if (error.toString() != "null") {
+            Timber.e("$DBL: VOLLEY $error")
+            ExperimentalWorkStates.generalizedSetState(WorkType.DEBUG_CALL_STATE_POST, WorkInfo.State.FAILED)
+        }
     }
 }

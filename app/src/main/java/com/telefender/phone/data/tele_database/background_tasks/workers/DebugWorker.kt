@@ -6,10 +6,9 @@ import androidx.work.*
 import com.telefender.phone.App
 import com.telefender.phone.data.server_related.RequestWrappers
 import com.telefender.phone.data.tele_database.ClientRepository
-import com.telefender.phone.data.tele_database.background_tasks.WorkStates
+import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.misc_helpers.DBL
-import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import timber.log.Timber
@@ -34,8 +33,9 @@ object DebugScheduler {
     const val oneTimeDebugTag = "oneTimeDebugTag"
     const val periodicDebugTag = "periodicDebugTag"
 
-    fun initiateOneTimeDebugWorker(context : Context) : UUID {
-        WorkStates.setState(
+    // TODO: Why no running?
+    suspend fun initiateOneTimeDebugWorker(context : Context) : UUID {
+        ExperimentalWorkStates.generalizedSetState(
             workType = WorkType.ONE_TIME_DEBUG,
             workState = WorkInfo.State.RUNNING,
             context = context,
@@ -59,8 +59,8 @@ object DebugScheduler {
         return debugRequest.id
     }
 
-    fun initiatePeriodicDebugWorker(context : Context) : UUID {
-        WorkStates.setState(
+    suspend fun initiatePeriodicDebugWorker(context : Context) : UUID {
+        ExperimentalWorkStates.generalizedSetState(
             workType = WorkType.PERIODIC_DEBUG,
             workState = WorkInfo.State.RUNNING,
             context = context,
@@ -109,7 +109,7 @@ class CoroutineDebugWorker(
                 // No need to set the state again for one time workers.
 
                 // Makes sure that both debug workers aren't running at the same time.
-                if (WorkStates.mutuallyExclusiveWork(WorkType.PERIODIC_DEBUG, WorkType.ONE_TIME_DEBUG)) {
+                if (ExperimentalWorkStates.mutuallyExclusiveGeneralizedWork(WorkType.PERIODIC_DEBUG, WorkType.ONE_TIME_DEBUG)) {
                     return Result.success()
                 }
             }
@@ -124,10 +124,10 @@ class CoroutineDebugWorker(
                  * worker DOES start, we still need to make sure the state accurately reflects the
                  * actually RUNNING state of the worker.
                  */
-                WorkStates.setState(WorkType.PERIODIC_DEBUG, WorkInfo.State.RUNNING)
+                ExperimentalWorkStates.generalizedSetState(WorkType.PERIODIC_DEBUG, WorkInfo.State.RUNNING)
 
                 // Makes sure that both debug workers aren't running at the same time.
-                if (WorkStates.mutuallyExclusiveWork(WorkType.ONE_TIME_DEBUG, WorkType.PERIODIC_DEBUG)) {
+                if (ExperimentalWorkStates.mutuallyExclusiveGeneralizedWork(WorkType.ONE_TIME_DEBUG, WorkType.PERIODIC_DEBUG)) {
                     return Result.success()
                 }
             }
@@ -167,11 +167,11 @@ class CoroutineDebugWorker(
         when (stateVarString) {
             "oneTimeDebugState" -> {
                 Timber.i("$DBL: ONE TIME DEBUG ENDED")
-                WorkStates.setState(WorkType.ONE_TIME_DEBUG, WorkInfo.State.SUCCEEDED)
+                ExperimentalWorkStates.generalizedSetState(WorkType.ONE_TIME_DEBUG, null)
             }
             "periodicDebugState" -> {
                 Timber.i("$DBL: PERIODIC DEBUG ENDED")
-                WorkStates.setState(WorkType.PERIODIC_DEBUG, WorkInfo.State.SUCCEEDED)
+                ExperimentalWorkStates.generalizedSetState(WorkType.PERIODIC_DEBUG, null)
             }
             else -> {
                 Timber.i("$DBL: DEBUG WORKER: Worker state variable name is wrong")

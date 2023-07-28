@@ -13,54 +13,6 @@ import java.beans.PropertyChangeSupport
 import java.util.*
 
 
-enum class WorkType(val isWorker : Boolean = false) {
-    // Workers
-    ONE_TIME_EXEC(true),
-    PERIODIC_EXEC(true),
-
-    ONE_TIME_UPLOAD(true),
-    PERIODIC_UPLOAD(true),
-
-    ONE_TIME_DOWNLOAD(true),
-    PERIODIC_DOWNLOAD(true),
-
-    ONE_TIME_SYNC(true),
-    PERIODIC_SYNC(true),
-    CATCH_SYNC(true),
-
-    ONE_TIME_OMEGA(true),
-    PERIODIC_OMEGA(true),
-
-    ONE_TIME_TOKEN(true),
-    PERIODIC_TOKEN(true),
-
-    ONE_TIME_SMS_VERIFY(true),
-
-    ONE_TIME_DEBUG(true),
-    PERIODIC_DEBUG(true),
-
-    // Post requests
-    SETUP,
-
-    DOWNLOAD_POST,
-    UPLOAD_CHANGE_POST,
-    UPLOAD_ANALYZED_POST,
-    UPLOAD_LOG_POST,
-    UPLOAD_ERROR_POST,
-    UPLOAD_TOKEN,
-    SMS_VERIFY_POST,
-
-    DEBUG_CHECK_POST,
-    DEBUG_SESSION_POST,
-    DEBUG_EXCHANGE_POST,
-    DEBUG_CALL_STATE_POST,
-
-    // Other processes
-    SYNC_CONTACTS,
-    SYNC_LOGS,
-}
-
-
 /**
  * TODO: Maybe convert to promises or jobs OR MAYBE NOT.
  *
@@ -76,7 +28,7 @@ object WorkStates {
     private val allowedStates = listOf(
         WorkInfo.State.RUNNING,
         WorkInfo.State.FAILED,
-        WorkInfo.State.SUCCEEDED
+        null
     )
 
     /**
@@ -134,7 +86,7 @@ object WorkStates {
         waiterMutex.withLock { changeNumWaiters(workType, 1) }
 
         state = getState(workType)
-        while(state != WorkInfo.State.SUCCEEDED && state != null) {
+        while(state != null && state != null) {
             if (state == WorkInfo.State.FAILED && stopOnFail) {
                 break
             }
@@ -152,7 +104,7 @@ object WorkStates {
          *      then stop all waiters by cleaning state (prevents waiters who don't stop on fail
          *      from running indefinitely).
          */
-        val success = state == WorkInfo.State.SUCCEEDED
+        val success = state == null
         waiterMutex.withLock { changeNumWaiters(workType, -1) }
         if (getNumWaiters(workType) == 0 || (!success && certainFinish)) {
             setState(workType, null)
@@ -181,7 +133,7 @@ object WorkStates {
 
             if (getState(originalWork) == WorkInfo.State.RUNNING) {
                 Timber.i("$DBL: $newWork ENDED - $originalWork RUNNING")
-                setState(newWork, WorkInfo.State.SUCCEEDED)
+                setState(newWork, null)
                 return true
             }
 

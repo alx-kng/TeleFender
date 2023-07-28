@@ -5,6 +5,7 @@ import androidx.work.*
 import com.telefender.phone.App
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.server_related.RequestWrappers
+import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.misc_helpers.DBL
@@ -18,9 +19,9 @@ import java.util.concurrent.TimeUnit
 object UploadScheduler {
     val uploadOneTag = "oneTimeUploadWorker"
     val uploadPeriodTag = "periodicUploadWorker"
-    
-    fun initiateOneTimeUploadWorker(context : Context) : UUID {
-        WorkStates.setState(
+
+    suspend fun initiateOneTimeUploadWorker(context : Context) : UUID {
+        ExperimentalWorkStates.generalizedSetState(
             workType = WorkType.ONE_TIME_UPLOAD,
             workState = WorkInfo.State.RUNNING,
             context = context,
@@ -44,8 +45,8 @@ object UploadScheduler {
         return uploadRequest.id
     }
 
-    fun initiatePeriodicUploadWorker(context : Context) : UUID {
-        WorkStates.setState(
+    suspend fun initiatePeriodicUploadWorker(context : Context) : UUID {
+        ExperimentalWorkStates.generalizedSetState(
             workType = WorkType.PERIODIC_UPLOAD,
             workState = WorkInfo.State.RUNNING,
             context = context,
@@ -111,7 +112,7 @@ class CoroutineUploadWorker(
                  * worker DOES start, we still need to make sure the state accurately reflects the
                  * actually RUNNING state of the worker.
                  */
-                WorkStates.setState(WorkType.PERIODIC_UPLOAD, WorkInfo.State.RUNNING)
+                ExperimentalWorkStates.generalizedSetState(WorkType.PERIODIC_UPLOAD, WorkInfo.State.RUNNING)
             }
             else -> {
                 Timber.i("$DBL: UPLOAD_CHANGE WORKER THREAD: Worker state variable name is wrong")
@@ -143,8 +144,8 @@ class CoroutineUploadWorker(
         RequestWrappers.uploadError(context, repository, scope, "OMEGA")
 
         when (stateVarString) {
-            "oneTimeUploadState" ->  WorkStates.setState(WorkType.ONE_TIME_UPLOAD, WorkInfo.State.SUCCEEDED)
-            "periodicUploadState" -> WorkStates.setState(WorkType.PERIODIC_UPLOAD, WorkInfo.State.SUCCEEDED)
+            "oneTimeUploadState" ->  ExperimentalWorkStates.generalizedSetState(WorkType.ONE_TIME_UPLOAD, null)
+            "periodicUploadState" -> ExperimentalWorkStates.generalizedSetState(WorkType.PERIODIC_UPLOAD, null)
             else -> {
                 Timber.i("$DBL: UPLOAD_CHANGE WORKER THREAD: Worker state variable name is wrong")
             }

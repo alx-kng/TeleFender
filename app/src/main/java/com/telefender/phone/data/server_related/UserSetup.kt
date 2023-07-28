@@ -8,6 +8,7 @@ import com.telefender.phone.data.server_related.json_classes.VerifyRequest
 import com.telefender.phone.data.server_related.request_generators.InitialRequestGen
 import com.telefender.phone.data.server_related.request_generators.VerifyRequestGen
 import com.telefender.phone.data.tele_database.ClientRepository
+import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.misc_helpers.DBL
@@ -30,7 +31,7 @@ object UserSetup {
         if (instanceNumber == null) {
             Timber.i("$DBL: VOLLEY: ERROR - INSTANCE NUMBER is null")
 
-            WorkStates.setState(WorkType.SETUP, WorkInfo.State.FAILED)
+            ExperimentalWorkStates.generalizedSetState(WorkType.SETUP, WorkInfo.State.FAILED)
             return
         }
 
@@ -68,7 +69,7 @@ object UserSetup {
             Timber.i("$DBL: " +
                 "VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | SETUP_SESSION ID = $sessionID")
 
-            WorkStates.setState(WorkType.SETUP, WorkInfo.State.FAILED)
+            ExperimentalWorkStates.generalizedSetState(WorkType.SETUP, WorkInfo.State.FAILED)
             return
         }
 

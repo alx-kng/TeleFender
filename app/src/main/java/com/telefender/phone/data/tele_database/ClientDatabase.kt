@@ -14,6 +14,7 @@ import com.google.firebase.messaging.ktx.messaging
 import com.telefender.phone.App
 import com.telefender.phone.data.default_database.TestContacts
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
+import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
 import com.telefender.phone.data.tele_database.background_tasks.TableInitializers
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
@@ -169,7 +170,7 @@ abstract class ClientDatabase : RoomDatabase() {
         if (!isInitialized()) return
 
         SetupScheduler.initiateSetupWorker(context)
-        WorkStates.workWaiter(WorkType.SETUP)
+        ExperimentalWorkStates.generalizedWorkWaiter(WorkType.SETUP)
     }
 
     /**
@@ -292,7 +293,7 @@ abstract class ClientDatabase : RoomDatabase() {
             delay(500)
             Timber.i("$DBL: getDatabase() - USER SETUP = FALSE")
 
-            if (WorkStates.getState(WorkType.SETUP) == null) {
+            if (ExperimentalWorkStates.generalizedGetState(WorkType.SETUP) == null) {
                 SetupScheduler.initiateSetupWorker(context)
             }
         }
@@ -370,6 +371,13 @@ abstract class ClientDatabase : RoomDatabase() {
 
             Timber.i("$DBL: GET DATABASE CALLED!")
 
+            /**
+             * TODO: Double check this? Why is there scope.launch here too? -> nvm, may not need
+             *  runBlocking!!!
+             *
+             * Pretty sure this is one of the few (if not only) justified use case of runBlocking,
+             * as we need to make sure that the database is initialized before returning it.
+             */
             runBlocking {
                 scope.launch {
                     instanceTemp.waitForCorePermissions(context, "getDatabase()")
@@ -392,7 +400,7 @@ abstract class ClientDatabase : RoomDatabase() {
                     }
 
                     OmegaScheduler.initiateOneTimeOmegaWorker(context)
-                    WorkStates.workWaiter(WorkType.ONE_TIME_OMEGA)
+                    ExperimentalWorkStates.generalizedWorkWaiter(WorkType.ONE_TIME_OMEGA)
 
                     val loggerJob = DatabaseLogger.omegaLogger(
                         database = instanceTemp,
@@ -414,7 +422,7 @@ abstract class ClientDatabase : RoomDatabase() {
 
                     // Initialize Omega Periodic Worker (sync, download, execute, upload)
                     OmegaScheduler.initiatePeriodicOmegaWorker(context)
-                    WorkStates.workWaiter(WorkType.PERIODIC_OMEGA, "OMEGA PERIODIC WAIT")
+                    ExperimentalWorkStates.generalizedWorkWaiter(WorkType.PERIODIC_OMEGA, "OMEGA PERIODIC WAIT")
 
                     /*
                     TODO: See if there's a need for a one time debug worker later on.

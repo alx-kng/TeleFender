@@ -7,6 +7,7 @@ import com.telefender.phone.data.server_related.json_classes.KeyResponse
 import com.telefender.phone.data.server_related.json_classes.ServerResponseType
 import com.telefender.phone.data.server_related.json_classes.toServerResponse
 import com.telefender.phone.data.tele_database.ClientRepository
+import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.misc_helpers.DBL
@@ -38,7 +39,7 @@ class VerifyRequestGen(
                 method = method,
                 url = url,
                 listener = verifyPostResponseHandler(repository, scope),
-                errorListener = verifyPostErrorHandler,
+                errorListener = verifyPostErrorHandler(scope),
                 requestJson = requestJson
             )
         }
@@ -67,20 +68,25 @@ private fun verifyPostResponseHandler(
                 val key = repository.getClientKey()
                 Timber.i("$DBL: key = $key")
 
-                WorkStates.setState(WorkType.SETUP, WorkInfo.State.SUCCEEDED)
+                ExperimentalWorkStates.generalizedSetState(WorkType.SETUP, null)
             }
         } else {
-            WorkStates.setState(WorkType.SETUP, WorkInfo.State.FAILED)
+            scope.launch(Dispatchers.IO) {
+                ExperimentalWorkStates.generalizedSetState(WorkType.SETUP, WorkInfo.State.FAILED)
 
-            Timber.i("$DBL: VOLLEY: ERROR WHEN VERIFY INSTALLATION: ${keyResponse?.error}")
+                Timber.i("$DBL: VOLLEY: ERROR WHEN VERIFY INSTALLATION: ${keyResponse?.error}")
+            }
         }
     }
 }
 
-private val verifyPostErrorHandler = Response.ErrorListener { error ->
-    if (error.toString() != "null") {
-        Timber.e("$DBL: VOLLEY $error")
-        WorkStates.setState(WorkType.SETUP, WorkInfo.State.FAILED)
+private fun verifyPostErrorHandler(scope: CoroutineScope) = Response.ErrorListener { error ->
+    scope.launch(Dispatchers.IO) {
+        if (error.toString() != "null") {
+            Timber.e("$DBL: VOLLEY $error")
+            ExperimentalWorkStates.generalizedSetState(WorkType.SETUP, WorkInfo.State.FAILED)
+        }
     }
 }
+
 

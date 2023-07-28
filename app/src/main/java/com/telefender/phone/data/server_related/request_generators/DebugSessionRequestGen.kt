@@ -6,11 +6,14 @@ import com.android.volley.Response
 import com.telefender.phone.data.server_related.RemoteDebug
 import com.telefender.phone.data.server_related.json_classes.*
 import com.telefender.phone.data.tele_database.ClientRepository
+import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import timber.log.Timber
 
 
@@ -36,7 +39,7 @@ class DebugSessionRequestGen(
                 method = method,
                 url = url,
                 listener = debugSessionResponseHandler(context, repository, scope),
-                errorListener = debugSessionErrorHandler,
+                errorListener = debugSessionErrorHandler(scope),
                 requestJson = requestJson
             )
         }
@@ -61,18 +64,24 @@ private fun debugSessionResponseHandler(
             RemoteDebug.remoteSessionID = debugSessionResponse.remoteSessionID
             RemoteDebug.remoteSessionToken = debugSessionResponse.remoteSessionToken
 
-            WorkStates.setState(WorkType.DEBUG_SESSION_POST, WorkInfo.State.SUCCEEDED)
+            scope.launch(Dispatchers.IO) {
+                ExperimentalWorkStates.generalizedSetState(WorkType.DEBUG_SESSION_POST, null)
+            }
         } else {
-            WorkStates.setState(WorkType.DEBUG_SESSION_POST, WorkInfo.State.FAILED)
+            scope.launch(Dispatchers.IO) {
+                ExperimentalWorkStates.generalizedSetState(WorkType.DEBUG_SESSION_POST, WorkInfo.State.FAILED)
 
-            Timber.i("$DBL: VOLLEY: ERROR WHEN GET DEBUG SESSION: ${debugSessionResponse?.error}")
+                Timber.i("$DBL: VOLLEY: ERROR WHEN GET DEBUG SESSION: ${debugSessionResponse?.error}")
+            }
         }
     }
 }
 
-private val debugSessionErrorHandler = Response.ErrorListener { error ->
-    if (error.toString() != "null") {
-        Timber.e("$DBL: VOLLEY $error")
-        WorkStates.setState(WorkType.DEBUG_SESSION_POST, WorkInfo.State.FAILED)
+private fun debugSessionErrorHandler(scope: CoroutineScope) = Response.ErrorListener { error ->
+    scope.launch(Dispatchers.IO) {
+        if (error.toString() != "null") {
+            Timber.e("$DBL: VOLLEY $error")
+            ExperimentalWorkStates.generalizedSetState(WorkType.DEBUG_SESSION_POST, WorkInfo.State.FAILED)
+        }
     }
 }

@@ -42,41 +42,46 @@ object TeleCallDetails {
      * NOTE: You should call insertCallDetail() AS CLOSE TO THE END OF CALL AS POSSIBLE so that
      * calculated call duration is more accurate.
      */
-    fun insertCallDetail(context: Context, call: Call, unallowed: Boolean, direction: Int) {
-        if (!TeleHelpers.hasValidStatus(context, setupRequired = false)) { return }
+    fun insertCallDetail(
+        context: Context,
+        call: Call,
+        unallowed: Boolean,
+        direction: Int
+    )
+    = CoroutineScope(Dispatchers.Default).launch {
+
+        if (!TeleHelpers.hasValidStatus(context, setupRequired = false)) return@launch
 
         val repository = (context.applicationContext as App).repository
 
-        CoroutineScope(Dispatchers.Default).launch {
-            val instanceNumber = TeleHelpers.getUserNumberStored(context) ?: return@launch
-            val rawNumber = call.number()
-            val normalizedNumber = TeleHelpers.normalizedNumber(rawNumber)
-                ?: TeleHelpers.bareNumber(rawNumber)
-            val epochDate = call.createTime()
-            val duration = call.callDurationMILLI()
+        val instanceNumber = TeleHelpers.getUserNumberStored(context) ?: return@launch
+        val rawNumber = call.number()
+        val normalizedNumber = TeleHelpers.normalizedNumber(rawNumber)
+            ?: TeleHelpers.bareNumber(rawNumber)
+        val epochDate = call.createTime()
+        val duration = call.callDurationMILLI()
 
-            val callDetail = CallDetail(
-                rawNumber = rawNumber ?: TeleHelpers.UNKNOWN_NUMBER,
-                normalizedNumber = normalizedNumber,
-                callType = null,
-                callEpochDate = epochDate,
-                callDuration = duration,
-                callLocation = null,
-                callDirection = direction,
-                instanceNumber = instanceNumber,
-                unallowed = unallowed
-            )
+        val callDetail = CallDetail(
+            rawNumber = rawNumber ?: TeleHelpers.UNKNOWN_NUMBER,
+            normalizedNumber = normalizedNumber,
+            callType = null,
+            callEpochDate = epochDate,
+            callDuration = duration,
+            callLocation = null,
+            callDirection = direction,
+            instanceNumber = instanceNumber,
+            unallowed = unallowed
+        )
 
-            Timber.e("$DBL: $callDetail")
+        Timber.e("$DBL: $callDetail")
 
-            for (i in 1..retryAmount) {
-                try {
-                    repository.insertCallDetailSkeleton(callDetail)
-                    break
-                } catch (e: Exception) {
-                    Timber.i("$DBL: insertCallDetail() RETRYING...")
-                    delay(2000)
-                }
+        for (i in 1..retryAmount) {
+            try {
+                repository.insertCallDetailSkeleton(callDetail)
+                break
+            } catch (e: Exception) {
+                Timber.i("$DBL: insertCallDetail() RETRYING...")
+                delay(2000)
             }
         }
     }

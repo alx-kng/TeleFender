@@ -8,6 +8,7 @@ import com.telefender.phone.data.server_related.json_classes.SMSVerifyResponse
 import com.telefender.phone.data.server_related.json_classes.ServerResponseType
 import com.telefender.phone.data.server_related.json_classes.toServerResponse
 import com.telefender.phone.data.tele_database.ClientRepository
+import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.data.tele_database.entities.Change
@@ -47,7 +48,7 @@ class SMSVerifyRequestGen(
                 method = method,
                 url = url,
                 listener = smsVerifyResponseHandler(context, repository, scope, number),
-                errorListener = smsVerifyErrorHandler,
+                errorListener = smsVerifyErrorHandler(scope),
                 requestJson = requestJson
             )
         }
@@ -77,15 +78,6 @@ private fun smsVerifyResponseHandler(
          */
         if (smsVerifyResponse != null && smsVerifyResponse.status == "ok" && smsVerifyResponse is SMSVerifyResponse) {
 
-            val responseNumber = TeleHelpers.normalizedNumber(smsVerifyResponse.number)
-
-            // Makes sure that the server checked the sms verified status for the right number.
-            if (responseNumber != number) {
-                Timber.e("$DBL: SMS_VERIFY - Returned wrong number!")
-                WorkStates.setState(WorkType.SMS_VERIFY_POST, WorkInfo.State.FAILED)
-                return@Listener
-            }
-
             /**
              * If number is verified, then create a SMS_VERIFY event.
              * If server says sms was sent, then create a SMS_SENT event.
@@ -100,6 +92,15 @@ private fun smsVerifyResponseHandler(
              * should launch another coroutine to do database work or launch another post request.
              */
             scope.launch(Dispatchers.IO) {
+                val responseNumber = TeleHelpers.normalizedNumber(smsVerifyResponse.number)
+
+                // Makes sure that the server checked the sms verified status for the right number.
+                if (responseNumber != number) {
+                    Timber.e("$DBL: SMS_VERIFY - Returned wrong number!")
+                    ExperimentalWorkStates.generalizedSetState(WorkType.SMS_VERIFY_POST, WorkInfo.State.FAILED)
+                    return@launch
+                }
+
                 val changeID = UUID.randomUUID().toString()
                 val changeTime = Instant.now().toEpochMilli()
 
@@ -129,19 +130,23 @@ private fun smsVerifyResponseHandler(
                     )
                 )
 
-                WorkStates.setState(WorkType.SMS_VERIFY_POST, WorkInfo.State.SUCCEEDED)
+                ExperimentalWorkStates.generalizedSetState(WorkType.SMS_VERIFY_POST, null)
             }
         } else {
-            WorkStates.setState(WorkType.SMS_VERIFY_POST, WorkInfo.State.FAILED)
+            scope.launch(Dispatchers.IO) {
+                ExperimentalWorkStates.generalizedSetState(WorkType.SMS_VERIFY_POST, WorkInfo.State.FAILED)
 
-            Timber.i("$DBL: VOLLEY: ERROR WHEN SMS_VERIFY: ${smsVerifyResponse?.error}")
+                Timber.i("$DBL: VOLLEY: ERROR WHEN SMS_VERIFY: ${smsVerifyResponse?.error}")
+            }
         }
     }
 }
 
-private val smsVerifyErrorHandler = Response.ErrorListener { error ->
-    if (error.toString() != "null") {
-        Timber.e("$DBL: VOLLEY $error")
-        WorkStates.setState(WorkType.SMS_VERIFY_POST, WorkInfo.State.FAILED)
+private fun smsVerifyErrorHandler(scope: CoroutineScope) = Response.ErrorListener { error ->
+    scope.launch(Dispatchers.IO) {
+        if (error.toString() != "null") {
+            Timber.e("$DBL: VOLLEY $error")
+            ExperimentalWorkStates.generalizedSetState(WorkType.SMS_VERIFY_POST, WorkInfo.State.FAILED)
+        }
     }
 }

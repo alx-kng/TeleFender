@@ -3,13 +3,11 @@ package com.telefender.phone.call_related
 import android.content.Context
 import com.telefender.phone.App
 import com.telefender.phone.data.server_related.RequestWrappers
+import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.workers.SMSVerifyScheduler
 import com.telefender.phone.data.tele_database.entities.*
 import com.telefender.phone.misc_helpers.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
 import timber.log.Timber
 import java.time.Instant
 
@@ -33,7 +31,11 @@ object RuleChecker {
      * Returns whether or not number should be allowed. Read "TeleFender - Algorithm Overview" for
      * more info.
      */
-    fun isSafe(context: Context, number: String?): Boolean {
+    suspend fun isSafe(
+        context: Context,
+        scope: CoroutineScope,
+        number: String?
+    ): Boolean {
 
         //Requires that app is initialized and setup before using algorithm.
         if (!TeleHelpers.hasValidStatus(context)) {
@@ -44,7 +46,6 @@ object RuleChecker {
         }
 
         val repository = (context.applicationContext as App).repository
-        val applicationScope = (context.applicationContext as App).applicationScope
         val currentTime = Instant.now().toEpochMilli()
 
         val normalizedNumber = TeleHelpers.normalizedNumber(number)
@@ -58,10 +59,10 @@ object RuleChecker {
         val storedMap: StoredMap
 
         try {
-            analyzedNumber = TeleHelpers.getAnalyzedNumber(context, normalizedNumber)!!
+            analyzedNumber = repository.getAnalyzedNum(number = normalizedNumber)!!
             analyzed = analyzedNumber.getAnalyzed()
-            parameters = TeleHelpers.getParameters(context)!!
-            storedMap = TeleHelpers.getStoredMap(context)!!
+            parameters = repository.getParameters()!!
+            storedMap = repository.getStoredMap()!!
         } catch (e: Exception) {
             /*
             Allow number through if some huge internal error occurs so that the user isn't hard locked
@@ -112,38 +113,37 @@ object RuleChecker {
         AudioHelpers.setRingerMode(context, RingerMode.SILENT)
 
         // If should send sms request, then continue, otherwise just deem number unsafe.
-        if (!shouldSendSMSRequest(context, normalizedNumber, analyzed, parameters)) return false
+        if (!shouldSendSMSRequest(context, repository, normalizedNumber, analyzed, parameters)) return false
 
-        applicationScope.launch {
+        scope.launch {
             RequestWrappers.smsVerify(
                 context = context,
                 repository = repository,
-                scope = applicationScope,
+                scope = scope,
                 number = normalizedNumber
             )
         }
 
         // If there is no verify result within 2 seconds, then unallow number. Otherwise, allow.
-        return runBlocking(Dispatchers.Default) {
-            delay(parameters.smsImmediateWaitTime)
+        delay(parameters.smsImmediateWaitTime)
 
-            val newAnalyzed = repository.getAnalyzedNum(normalizedNumber)?.getAnalyzed()
-                ?: return@runBlocking false
+        val newAnalyzed = repository.getAnalyzedNum(normalizedNumber)?.getAnalyzed()
+            ?: return false
 
-            /*
-            If not verified, then send another SMS request to server after a around minute. This is
-            mostly for server load optimization.
-             */
-            if (!newAnalyzed.smsVerified) {
-                SMSVerifyScheduler.initiateSMSVerifyWorker(context, normalizedNumber)
-            }
-
-            return@runBlocking newAnalyzed.smsVerified
+        /*
+        If not verified, then send another SMS request to server after a around minute. This is
+        mostly for server load optimization.
+         */
+        if (!newAnalyzed.smsVerified) {
+            SMSVerifyScheduler.initiateSMSVerifyWorker(context, normalizedNumber)
         }
+
+        return newAnalyzed.smsVerified
     }
 
-    private fun shouldSendSMSRequest(
+    private suspend fun shouldSendSMSRequest(
         context: Context,
+        repository: ClientRepository,
         normalizedNumber: String,
         analyzed: Analyzed,
         parameters: Parameters
@@ -169,7 +169,7 @@ object RuleChecker {
 
         // Updated NotifyItem for shouldRemoveNotifyItem() check. Conforms with ExecuteAgent.
         val newNotifyItem = TeleHelpers.updatedNotifyItem(
-            oldNotifyItem = TeleHelpers.getNotifyItem(context, normalizedNumber),
+            oldNotifyItem = repository.getNotifyItem(normalizedNumber = normalizedNumber),
             callEpochDate = currentTime,
             newNotifyWindow = newNotifyWindow,
             qualifies = qualifies

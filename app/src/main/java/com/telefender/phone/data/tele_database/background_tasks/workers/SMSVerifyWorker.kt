@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.*
 import com.telefender.phone.App
 import com.telefender.phone.data.server_related.RequestWrappers
+import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.misc_helpers.DBL
@@ -28,9 +29,9 @@ object SMSVerifyScheduler{
      * TODO: We just changed initiateSMSVerifyWorker() to not enqueue unique work in order to send
      *  multiple SMSVerify requests at one time. --> Double check this!
      */
-    fun initiateSMSVerifyWorker(context : Context, number: String) : UUID? {
+    suspend fun initiateSMSVerifyWorker(context : Context, number: String) : UUID? {
         // Currently not doing worker check here since there can be multiple requests.
-        WorkStates.setState(WorkType.ONE_TIME_SMS_VERIFY, WorkInfo.State.RUNNING)
+        ExperimentalWorkStates.generalizedSetState(WorkType.ONE_TIME_SMS_VERIFY, WorkInfo.State.RUNNING)
 
         val smsVerifyRequest = OneTimeWorkRequestBuilder<CoroutineSMSVerifyWorker>()
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
@@ -91,7 +92,7 @@ class CoroutineSMSVerifyWorker(
 
         Timber.i("$DBL: SMS VERIFY WORKER ENDED FOR - $number")
 
-        WorkStates.setState(WorkType.ONE_TIME_SMS_VERIFY, WorkInfo.State.SUCCEEDED)
+        ExperimentalWorkStates.generalizedSetState(WorkType.ONE_TIME_SMS_VERIFY, null)
         return Result.success()
     }
 

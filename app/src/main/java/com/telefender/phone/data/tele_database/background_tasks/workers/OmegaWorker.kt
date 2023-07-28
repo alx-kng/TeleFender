@@ -7,6 +7,7 @@ import com.telefender.phone.data.tele_database.ClientDatabase
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.TableSynchronizer
 import com.telefender.phone.data.server_related.RequestWrappers
+import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.misc_helpers.DBL
@@ -37,8 +38,8 @@ object OmegaScheduler {
     const val oneTimeOmegaWorkerTag = "oneTimeOmegaWorker"
     const val periodicOmegaWorkerTag = "periodicOmegaWorker"
 
-    fun initiateOneTimeOmegaWorker(context : Context) : UUID {
-        WorkStates.setState(
+    suspend fun initiateOneTimeOmegaWorker(context : Context) : UUID {
+        ExperimentalWorkStates.generalizedSetState(
             workType = WorkType.ONE_TIME_OMEGA,
             workState = WorkInfo.State.RUNNING,
             context = context,
@@ -62,8 +63,8 @@ object OmegaScheduler {
         return omegaRequest.id
     }
 
-    fun initiatePeriodicOmegaWorker(context : Context) : UUID {
-        WorkStates.setState(
+    suspend fun initiatePeriodicOmegaWorker(context : Context) : UUID {
+        ExperimentalWorkStates.generalizedSetState(
             workType = WorkType.PERIODIC_OMEGA,
             workState = WorkInfo.State.RUNNING,
             context = context,
@@ -87,16 +88,16 @@ object OmegaScheduler {
         return omegaRequest.id
     }
 
-    fun cancelOneTimeOmegaWorker(context: Context) {
-        WorkStates.setState(WorkType.ONE_TIME_OMEGA, null)
+    suspend fun cancelOneTimeOmegaWorker(context: Context) {
+        ExperimentalWorkStates.generalizedSetState(WorkType.ONE_TIME_OMEGA, null)
 
         WorkManager
             .getInstance(context)
             .cancelAllWorkByTag(oneTimeOmegaWorkerTag)
     }
 
-    fun cancelPeriodicOmegaWorker(context: Context) {
-        WorkStates.setState(WorkType.PERIODIC_OMEGA, null)
+    suspend fun cancelPeriodicOmegaWorker(context: Context) {
+        ExperimentalWorkStates.generalizedSetState(WorkType.PERIODIC_OMEGA, null)
 
         WorkManager
             .getInstance(context)
@@ -148,7 +149,7 @@ class CoroutineOmegaWorker(
                  * worker DOES start, we still need to make sure the state accurately reflects the
                  * actually RUNNING state of the worker.
                  */
-                WorkStates.setState(WorkType.PERIODIC_OMEGA, WorkInfo.State.RUNNING)
+                ExperimentalWorkStates.generalizedSetState(WorkType.PERIODIC_OMEGA, WorkInfo.State.RUNNING)
             }
             else -> {
                 Timber.i("$DBL: OMEGA WORKER: Worker state variable name is wrong")
@@ -202,11 +203,11 @@ class CoroutineOmegaWorker(
         when (stateVarString) {
             "oneTimeOmegaState" -> {
                 Timber.i("$DBL: OMEGA ONE TIME ENDED")
-                WorkStates.setState(WorkType.ONE_TIME_OMEGA, WorkInfo.State.SUCCEEDED)
+                ExperimentalWorkStates.generalizedSetState(WorkType.ONE_TIME_OMEGA, null)
             }
             "periodicOmegaState" -> {
                 Timber.i("$DBL: OMEGA PERIODIC ENDED")
-                WorkStates.setState(WorkType.PERIODIC_OMEGA, WorkInfo.State.SUCCEEDED)
+                ExperimentalWorkStates.generalizedSetState(WorkType.PERIODIC_OMEGA, null)
             }
             else -> {
                 Timber.i("$DBL: OMEGA WORKER THREAD: Worker state variable name is wrong")

@@ -7,6 +7,7 @@ import android.os.Looper
 import androidx.work.*
 import com.telefender.phone.App
 import com.telefender.phone.data.tele_database.TeleCallDetails
+import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.misc_helpers.DBL
@@ -30,8 +31,8 @@ object CatchSyncScheduler{
 
     val syncCatchTag = "catchSyncWorker"
 
-    fun initiateCatchSyncWorker(context : Context) : UUID? {
-        if (!TeleHelpers.hasValidStatus(context, logRequired = true)) {
+    suspend fun initiateCatchSyncWorker(applicationContext : Context) : UUID? {
+        if (!TeleHelpers.hasValidStatus(applicationContext, logRequired = true)) {
             Timber.e("$DBL: Invalid status in initiateCatchSyncWorker()")
             return null
         }
@@ -42,7 +43,7 @@ object CatchSyncScheduler{
         set, even though we're about to replace the worker. It's not actually a big deal either way,
         but this seems to be a little safer.
          */
-        WorkStates.setState(WorkType.CATCH_SYNC, WorkInfo.State.RUNNING)
+        ExperimentalWorkStates.generalizedSetState(WorkType.CATCH_SYNC, WorkInfo.State.RUNNING)
 
         val syncRequest = OneTimeWorkRequestBuilder<CoroutineCatchSyncWorker>()
             .setInputData(workDataOf("notificationID" to "5556"))
@@ -55,7 +56,7 @@ object CatchSyncScheduler{
 
         // ExistingWorkPolicy set to REPLACE so that sync observing period starts fresh after call.
         WorkManager
-            .getInstance(context)
+            .getInstance(applicationContext)
             .enqueueUniqueWork(syncCatchTag, ExistingWorkPolicy.REPLACE, syncRequest)
 
         return syncRequest.id
@@ -89,7 +90,7 @@ class CoroutineCatchSyncWorker(
         }
 
         val syncObserver = SyncWorkerObserver(context, scope, callLogObserverSync)
-        WorkStates.addPropertyChangeListener(syncObserver)
+        ExperimentalWorkStates.addPropertyChangeListener(syncObserver)
 
         Timber.i("$DBL: SYNC CATCHER OBSERVER STARTED")
 
@@ -114,11 +115,11 @@ class CoroutineCatchSyncWorker(
 
         Timber.i("$DBL: SYNC CATCHER OBSERVER ENDED")
 
-        WorkStates.removePropertyChangeListener(syncObserver)
+        ExperimentalWorkStates.removePropertyChangeListener(syncObserver)
         applicationContext.contentResolver.unregisterContentObserver(callLogObserverSync)
 
         // TODO: We set state to state to null here at one point. Maybe there was a reason?
-        WorkStates.setState(WorkType.CATCH_SYNC, WorkInfo.State.SUCCEEDED)
+        ExperimentalWorkStates.generalizedSetState(WorkType.CATCH_SYNC, null)
         return Result.success()
     }
 
@@ -188,7 +189,7 @@ class CoroutineCatchSyncWorker(
                     contentResolver.unregisterContentObserver(logObserver)
 
                     // If we unregister logObserver, remove this sync observer from WorkStates.
-                    WorkStates.removePropertyChangeListener(this@SyncWorkerObserver)
+                    ExperimentalWorkStates.removePropertyChangeListener(this@SyncWorkerObserver)
                 }
             }
         }
