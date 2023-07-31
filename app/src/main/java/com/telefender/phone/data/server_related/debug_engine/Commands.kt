@@ -531,9 +531,19 @@ class ConsoleTestCommand(
                         RemoteDebug.enqueueData("upload - end = ${Instant.now().toEpochMilli()}")
                     }
                     ConsoleTestType.WORK_STATES -> {
+                        RemoteDebug.enqueueData("Generalized Work States:")
+                        RemoteDebug.enqueueData("-----------------------")
                         for (workType in WorkType.values()) {
                             RemoteDebug.enqueueData(
                                 "$workType = ${ExperimentalWorkStates.generalizedGetState(workType)}"
+                            )
+                        }
+                        RemoteDebug.enqueueData("-----------------------")
+                        RemoteDebug.enqueueData("Localized Work States:")
+                        RemoteDebug.enqueueData("-----------------------")
+                        for (workType in WorkType.values()) {
+                            RemoteDebug.enqueueData(
+                                "$workType = ${ExperimentalWorkStates.localizedGetStatesByType(workType)}"
                             )
                         }
                     }

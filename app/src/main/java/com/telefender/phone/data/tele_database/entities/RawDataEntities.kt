@@ -136,7 +136,11 @@ data class Contact(
             onDelete = ForeignKey.NO_ACTION
         )],
     indices = [
-        // Enforce unique because this is actually "true" PK.
+        /*
+        Enforce unique because this is actually "true" PK.
+        NOTE: CID is automatically indexed individually by virtue of being the first value in the
+        combined index.
+         */
         Index(value = ["CID", "normalizedNumber"], unique = true),
         Index(value = ["normalizedNumber"]),
         Index(value = ["rawNumber"]),

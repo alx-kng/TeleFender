@@ -292,20 +292,21 @@ object ExperimentalWorkStates {
             return null
         }
 
-        /*
-        If the work instance key is not null, then the work instance already exists. Moreover, if
-        the work instance is already running, then there is no need to compete, so return.
-         */
-        if (workInstanceKey != null
-            && localizedGetState(workType, workInstanceKey) == WorkInfo.State.RUNNING
-        ) {
-            Timber.i("$DBL: localizedCompete() for $workType - %s",
-                "$workInstanceKey is already RUNNING, no need to compete. Probably due to retry!")
-            return workInstanceKey
-        }
-
         val workKey = if (newWorkInstance) UUID.randomUUID() else workInstanceKey!!
         val competeQueue = localizedCompeteQueues[workType.ordinal]
+
+        /*
+        If the work instance we're using to compete (given by workKey) already exists and is
+        running, then there is no need to compete, so return. Note that if newWorkInstance = true,
+        then the following check will automatically be ignored (as workKey would have no associated
+        state yet).
+         */
+        if (localizedGetState(workType, workKey) == WorkInfo.State.RUNNING
+        ) {
+            Timber.i("$DBL: localizedCompete() for $workType - %s",
+                "$workKey is already RUNNING, no need to compete. Probably due to retry!")
+            return workKey
+        }
 
         queueMutex.withLock {
             competeQueue.add(workKey)
@@ -412,9 +413,9 @@ object ExperimentalWorkStates {
     }
 
     /**
-     * TODO: Seems to be some issues here.
+     * TODO: Seems to be some issues here. -> what specifically?
      * TODO: When setting state to anything but running, make sure that there are no other ones
-     *  running.
+     *  running. -> is this still a problem?
      *
      * Sets the state of a certain WorkType.
      */
@@ -600,6 +601,10 @@ object ExperimentalWorkStates {
 
     fun localizedGetState(workType: WorkType, workInstanceKey: UUID) : WorkInfo.State? {
         return localizedStates[workType.ordinal][workInstanceKey]
+    }
+
+    fun localizedGetStatesByType(workType: WorkType) : Map<UUID, WorkInfo.State> {
+        return localizedStates[workType.ordinal]
     }
 
     private fun localizedHasOtherRunning(workType: WorkType, workInstanceKey: UUID) : Boolean {

@@ -207,11 +207,11 @@ abstract class ChangeAgentDao: ExecuteAgentDao, ExecuteQueueDao, UploadChangeQue
      * in instanceNumber no matter what, so that we know whether the change was associated with
      * users direct contacts or with tree contacts.
      *
-     * NOTE: When a direct contact change occurs, the
-     * change is locked with mutexSync to prevent any parallelism problems with the sync process.
-     * Since tree contact changes don't affect sync, we have no need to wrap with mutexSync (which
-     * also practically restricts to one client side change at a time), which also makes the rare
-     * case of a tree instance delete not super blocking to the database.
+     * NOTE: When a direct contact change occurs, the change is locked with mutexSync to prevent
+     * any parallelism problems with the sync process. Since tree contact changes don't affect sync,
+     * we have no need to wrap with mutexSync (which also practically restricts to one client side
+     * change at a time), which also makes the rare case of a tree instance delete not super
+     * blocking to the database.
      *
      * NOTE: If changeFromClient() fails [retryAmount], then it also throws an error if
      * [bubbleError] is true so that the enclosing function can do a larger retry (for the

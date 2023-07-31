@@ -7,14 +7,63 @@ import android.provider.ContactsContract
  * For ChangeContactFragment / ChangeContactAdapter
  **************************************************************************************************/
 
-sealed interface ChangeContactItem
+class PackagedDataLists(
+    val originalUpdatedDataList: MutableList<ContactData>,
+    val updatedDataList: MutableList<ChangeContactItem>,
+    val originalDataList: MutableList<ContactData>,
+    val nonContactDataList: List<ChangeContactItem>
+)
+
+sealed class ChangeContactItem(open val mimeType: ContactDataMimeType)
+
+object ChangeContactItemComparator : Comparator<ChangeContactItem> {
+    override fun compare (o1: ChangeContactItem, o2: ChangeContactItem) : Int {
+        // Only compare by ChangeContactItem or finer when MIME types are the same.
+        if (o1.mimeType.ordinal != o2.mimeType.ordinal) {
+            return o1.mimeType.ordinal - o2.mimeType.ordinal
+        } else {
+            // SectionHeader always goes first.
+            if (o1 is SectionHeader) return -1
+            if (o2 is SectionHeader) return 1
+
+            // BlankEdit always goes last.
+            if (o1 is BlankEdit) return 1
+            if (o2 is BlankEdit) return -1
+
+            // If the code reaches here, then o1 and o2 must be ContactData
+            return ContactDataComparator.compare(o1 as ContactData, o2 as ContactData)
+        }
+    }
+}
 
 /**
  * Used to separate the different types of Data in adapter list.
  */
-data class SectionHeader(val mimeType: String)
+data class SectionHeader(override val mimeType: ContactDataMimeType) : ChangeContactItem(mimeType)
 
 /**
+ * Used as the empty edit ContactData in the adapter list.
+ */
+data class BlankEdit(
+    override val mimeType: ContactDataMimeType,
+    var valueType: ContactDataValueType? = null,
+    var value: String = "",
+) : ChangeContactItem(mimeType) {
+
+    init {
+        valueType = valueType ?: when (mimeType) {
+            ContactDataMimeType.PHONE -> ContactDataValueType.PHONE_TYPE_MOBILE
+            ContactDataMimeType.EMAIL -> ContactDataValueType.EMAIL_TYPE_HOME
+            ContactDataMimeType.ADDRESS -> ContactDataValueType.ADDRESS_TYPE_HOME
+            else -> null
+        }
+    }
+}
+
+
+/**
+ * TODO: Check if we need to implement custom equals? Currently think not since it compares by value.
+ *
  * Data rows from the database are converted into ContactData items, which are used by our contact
  * update procedure (read the Google Docs) to both drive the RecyclerView UI and find the required
  * database change operations.
@@ -27,9 +76,9 @@ data class SectionHeader(val mimeType: String)
  */
 data class ContactData(
     val compactRowInfoList: MutableList<CompactRowInfo>,
-    val mimeType: ContactDataMimeType,
+    override val mimeType: ContactDataMimeType,
     var value: String,
-) : ChangeContactItem {
+) : ChangeContactItem(mimeType) {
 
     /**
      * Returns the lowest Data rowID from [compactRowInfoList] if possible.
@@ -59,6 +108,14 @@ data class ContactData(
         return compactRowInfoList.minWithOrNull(CompactRowInfoComparator)
     }
 
+    fun deepCopy() : ContactData {
+        return ContactData(
+            compactRowInfoList = compactRowInfoList.map { it.deepCopy() }.toMutableList(),
+            mimeType = this.mimeType, // Assuming this is immutable
+            value = this.value // Assuming this is a primitive or immutable object
+        )
+    }
+
     override fun toString(): String {
         return "ContactData - { compactRowInfoList = $compactRowInfoList, mimeType = $mimeType, " +
             "value = $value }"
@@ -83,6 +140,13 @@ data class CompactRowInfo(
 ) {
     fun getRawCID() = pairID?.first
     fun getDataID() = pairID?.second
+
+    fun deepCopy(): CompactRowInfo {
+        return CompactRowInfo(
+            pairID = this.pairID?.let { Pair(it.first, it.second) }, // Creating a new Pair instance
+            valueType = this.valueType // Assuming this is immutable
+        )
+    }
 
     override fun toString(): String {
         return if (pairID != null) {

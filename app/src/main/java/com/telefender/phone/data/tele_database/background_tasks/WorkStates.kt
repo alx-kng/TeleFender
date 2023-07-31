@@ -14,10 +14,13 @@ import java.util.*
 
 
 /**
+ * TODO: Remove this.
+ *
  * TODO: Maybe convert to promises or jobs OR MAYBE NOT.
  *
  * TODO: Fix this to use WorkManagerHelper
  */
+@Deprecated("Use ExperimentalWorkStates instead.")
 object WorkStates {
 
     private val propertyChangeSupport = PropertyChangeSupport(this)

@@ -14,6 +14,7 @@ import com.telefender.phone.data.tele_database.entities.Parameters
 import com.telefender.phone.permissions.Permissions
 import timber.log.Timber
 import java.time.Instant
+import java.util.*
 
 
 /**
@@ -30,6 +31,16 @@ object TeleHelpers {
      */
     fun assert(success: Boolean, from: String? = null) {
         if (!success) throw Exception("assert() FAILURE from $from")
+    }
+
+    /**
+     * Converts default aggregate Contact ID to our Tele database CID.
+     */
+    fun defaultCIDToTeleCID(
+        defaultCID: String,
+        instanceNumber: String
+    ) : String {
+        return UUID.nameUUIDFromBytes((defaultCID + instanceNumber).toByteArray()).toString()
     }
 
     /**

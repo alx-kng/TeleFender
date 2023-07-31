@@ -11,7 +11,6 @@ import com.telefender.phone.data.tele_database.ClientDatabase
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
-import com.telefender.phone.data.tele_database.background_tasks.workers.OmegaScheduler
 import com.telefender.phone.data.tele_database.entities.*
 import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
@@ -142,11 +141,17 @@ object TableSynchronizer {
         }
     }
 
+    suspend fun syncContactsMini(
+        context: Context,
+        database: ClientDatabase,
+        contentResolver: ContentResolver,
+    ) {
+
+    }
+
     /**********************************************************************************************
      * TODO: HAVING THE EXISTING SYNC LOCK MECHANISM (IF YOU ALSO USE IF FOR THE OTHER FUNCTIONS)
-     *  MAY MAKE OVERLAPPING SYNCS SAFE.
-     *
-     * TODO: Put in sync work state (different from worker).
+     *  MAY MAKE OVERLAPPING SYNCS SAFE. -> Which should we go with?
      *
      * TODO: We seem to very occasionally get a default cnUpdate() for every contact number?
      *  Specifically, everytime the app is run (on some instances) all the contact numbers are
@@ -158,17 +163,20 @@ object TableSynchronizer {
      *  same (since we think it's a duplicate), the versionNumber never gets updated. As a result,
      *  it continues to get the cnUpdate() execution command, as we never made the versionNumber
      *  current.
+     *  ->
+     *  Verify whether this has been fixed
      *
      * TODO: RETRIEVE DEFAULT CONTACT BY DEFAULT CID USING SAME METHOD AS syncCallLogs(). Also,
      *  summarize in document.
      *
      * TODO: Need to include default blocked update.
      *
-     * Syncs our Contact / ContactNumber database with Android's default Contact / PhoneNumbers database
+     * Syncs our Contact / ContactNumber database with Android's default Contact / PhoneNumbers
+     * database.
      *
-     * Idea is that we iterate through our database and see if any changes to corresponding
-     * rows in default database (checks for updates and deletes), and then we iterate through the default database and see
-     * if the corresponding rows exist in our database (checks for inserts).
+     * Idea is that we iterate through our database and see if any changes to corresponding rows in
+     * default database (checks for updates and deletes), and then we iterate through the default
+     * database and see if the corresponding rows exist in our database (checks for inserts).
      *
      * NOTE: When the algorithm determines that an insert / update / delete is in order, we double
      * check the default database and change our database using one mutexSync. The basic idea is
@@ -186,7 +194,7 @@ object TableSynchronizer {
      * without numbers to our Tele database. However, this should not be an issue to the algorithm,
      * as only contacts with contact numbers affect the algorithm.
      *
-     * NOTE: At most two SYNC_CONTACTS processes should be competing with each other at any given
+     * NOTE: At most three SYNC_CONTACTS processes should be competing with each other at any given
      * time. Specifically, the only time SYNC_CONTACTS processes should need to wait for each other
      * is when the user initiated mini-sync and full sync (either ONE_TIME or PERIODIC or both)
      * overlap with each other.
@@ -212,7 +220,7 @@ object TableSynchronizer {
             // When retrying, the instance re-competes for the RUNNING state if not already RUNNING.
             ExperimentalWorkStates.localizedCompete(
                 workType = WorkType.SYNC_CONTACTS,
-                runningMsg = "SYNC_CONTACTS",
+                runningMsg = "SYNC_CONTACTS - syncContacts()",
                 workInstanceKey = workInstanceKey
             )
 
@@ -291,7 +299,7 @@ object TableSynchronizer {
                  * same as the CIDs we store in our Contacts / ContactNumber tables
                  */
                 val defaultCID = curs.getString(0)
-                val teleCID = UUID.nameUUIDFromBytes((defaultCID + instanceNumber).toByteArray()).toString()
+                val teleCID = TeleHelpers.defaultCIDToTeleCID(defaultCID, instanceNumber)
                 val rawNumber = curs.getString(1)
                 val normalizedNumber = curs.getString(2)
                     ?: TeleHelpers.normalizedNumber(rawNumber)
@@ -314,7 +322,7 @@ object TableSynchronizer {
                  */
                 if (matchCID.isEmpty()) {
                     mutexSync.withLock {
-                        if (firstAccess || DefaultContacts.rawContactExists(contentResolver, defaultCID)) {
+                        if (firstAccess || DefaultContacts.aggregateContactExists(contentResolver, defaultCID)) {
                             val changeID = UUID.randomUUID().toString()
                             val changeTime = Instant.now().toEpochMilli()
 
@@ -406,8 +414,11 @@ object TableSynchronizer {
     }
 
     /**
+     * TODO: Is it possible that the DELC might happen twice if there are two ContactNumbers under
+     *  same CID. -> think it might be fixed, double check
+     *
      * TODO: Double check logic.
-     * TODO: Handle case where multiple contact numbers with same PK.
+     * TODO: Handle case where multiple contact numbers with same PK. -> might not be possible
      */
     private suspend fun checkForUpdatesAndDeletes(
         context: Context,
@@ -436,7 +447,10 @@ object TableSynchronizer {
              */
             if (matchCID == null || matchCID.size == 0) {
                 mutexSync.withLock {
-                    if (!DefaultContacts.rawContactExists(contentResolver, defaultCID)) {
+                    val teleCIDStillExists = database.contactDao().getContactRow(CID = teleCID) != null
+                    val defaultCIDStillExists = DefaultContacts.aggregateContactExists(contentResolver, defaultCID)
+
+                    if (teleCIDStillExists && !defaultCIDStillExists) {
                         val changeID = UUID.randomUUID().toString()
                         val changeTime = Instant.now().toEpochMilli()
 

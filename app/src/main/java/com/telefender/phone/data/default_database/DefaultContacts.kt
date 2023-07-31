@@ -2,19 +2,27 @@ package com.telefender.phone.data.default_database
 
 import android.content.*
 import android.database.Cursor
-import android.net.Uri
-import android.os.RemoteException
 import android.provider.ContactsContract
 import android.provider.ContactsContract.CommonDataKinds.Phone
-import android.provider.ContactsContract.PhoneLookup
 import android.provider.ContactsContract.RawContacts
+import androidx.work.WorkInfo
+import com.telefender.phone.App
 import com.telefender.phone.data.server_related.debug_engine.command_subtypes.NumberUpdate
+import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
+import com.telefender.phone.data.tele_database.background_tasks.WorkType
+import com.telefender.phone.data.tele_database.entities.Change
+import com.telefender.phone.data.tele_database.entities.ChangeLog
+import com.telefender.phone.data.tele_database.entities.ChangeType
+import com.telefender.phone.data.tele_database.entities.ContactNumber
 import com.telefender.phone.gui.adapters.recycler_view_items.*
 import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
+import java.time.Instant
+import java.util.*
+import kotlin.collections.ArrayList
 
 
 /**
@@ -74,8 +82,10 @@ object DefaultContacts {
      *
      * Returns two lists of all Data rows under the given [contactID] or [rawContactID] in the form
      * of [ContactData] depending on whether [rawContactID] is non-null. The first list is the
-     * updated data list (formatted for UI) and the second list is the original data list
-     * (formatted for comparison).
+     * updated data list (almost formatted for UI) and the second list is the original data list
+     * (formatted for comparison). Also returns a third list containing references to the
+     * non-ContactData ChangeContactItems and a fourth list containing the fully UI formatted
+     * updated data list.
      *
      * NOTE: The updated / original data lists are explained in more detail in Android - Default
      * Contact Change Protocol.
@@ -90,7 +100,7 @@ object DefaultContacts {
         contentResolver: ContentResolver,
         contactID: String,
         rawContactID: String? = null
-    ) : Pair<MutableList<ContactData>, MutableList<ContactData>> {
+    ) : PackagedDataLists {
 
         val shouldUseRawCID = rawContactID != null
 
@@ -188,15 +198,39 @@ object DefaultContacts {
             e.printStackTrace()
         }
 
+        // ChangeContactItems associated with the non-data parts of the UI.
+        val nonContactDataItems = listOf(
+            SectionHeader(ContactDataMimeType.NAME),
+            BlankEdit(ContactDataMimeType.NAME),
+            SectionHeader(ContactDataMimeType.PHONE),
+            BlankEdit(ContactDataMimeType.PHONE),
+            SectionHeader(ContactDataMimeType.EMAIL),
+            BlankEdit(ContactDataMimeType.EMAIL),
+            SectionHeader(ContactDataMimeType.ADDRESS),
+            BlankEdit(ContactDataMimeType.ADDRESS),
+        )
+
         /*
-        Sorts updated data list by MIME type and then by Data rowID. This way, the list is in
-        order to be displayed on the UI.
+        1. Casts ContactData list to ChangeContactItem list.
+        2. Adds non-ContactData items (like the headers and blank edits).
+        3. Sorts updated data list by MIME type, and then by ChangeContactItem type, and then by
+         Data rowID if the item is a ContactData. This way, the list is in order to be displayed on
+         the UI.
 
         NOTE: We don't need to sort the original data list since it's not used for the UI.
          */
-        updatedDataList.sortWith(ContactDataComparator)
+        val castedUpdatedDataList = updatedDataList
+            .map { it.deepCopy() as ChangeContactItem }
+            .toMutableList()
+        castedUpdatedDataList.addAll(nonContactDataItems)
+        castedUpdatedDataList.sortWith(ChangeContactItemComparator)
 
-        return Pair(updatedDataList, originalDataList)
+        return PackagedDataLists(
+            originalUpdatedDataList = updatedDataList,
+            updatedDataList = castedUpdatedDataList,
+            originalDataList = originalDataList,
+            nonContactDataList = nonContactDataItems
+        )
     }
 
     /**
@@ -429,6 +463,9 @@ object DefaultContacts {
         }
     }
 
+    /**
+     * TODO: Remove non-ContactData items.
+     */
     fun cleanUpdatedDataList() : Unit {
         // TODO: Stub!
     }
@@ -518,11 +555,12 @@ object DefaultContacts {
     /**
      * TODO: Double check logic.
      *
-     * Check if raw contact exists in default database given the RawContact _ID (our defaultCID).
+     * Check if aggregate contact exists in default database given the aggregate Contact _ID (our
+     * defaultCID).
      *
      * NOTE: If app doesn't have contact permissions, this code will throw an exception.
      */
-    fun rawContactExists(
+    fun aggregateContactExists(
         contentResolver: ContentResolver,
         defaultCID: String
     ) : Boolean {
@@ -532,7 +570,7 @@ object DefaultContacts {
 
         val selection = "${ContactsContract.Contacts._ID} = ?"
 
-        val curs = contentResolver.query(
+        val cur = contentResolver.query(
             ContactsContract.Contacts.CONTENT_URI,
             projection,
             selection,
@@ -540,8 +578,8 @@ object DefaultContacts {
             null
         )
 
-        val exists = curs != null && curs.moveToFirst()
-        curs?.close()
+        val exists = cur != null && cur.moveToFirst()
+        cur?.close()
         return exists
     }
 
@@ -565,7 +603,7 @@ object DefaultContacts {
             "${Phone.CONTACT_ID} = ? AND " +
             "${Phone.NUMBER} = ?"
 
-        val curs = contentResolver.query(
+        val cur = contentResolver.query(
             Phone.CONTENT_URI,
             projection,
             selection,
@@ -573,19 +611,671 @@ object DefaultContacts {
             null
         )
 
-        Timber.e("$DBL: contactNumber: $rawNumber exists = ${curs != null && curs.moveToFirst()}")
+        Timber.e("$DBL: contactNumber: $rawNumber exists = ${cur != null && cur.moveToFirst()}")
 
-        val exists = curs != null && curs.moveToFirst()
-        curs?.close()
+        val exists = cur != null && cur.moveToFirst()
+        cur?.close()
         return exists
     }
 
     /***********************************************************************************************
-     * Regular queries. The following queries are mostly used by the normal contact modification
-     * process, where the user drives the changes.
+     * Default change queries. The following queries are used to actually modify the default
+     * contacts. They are mostly used by the normal contact modification process, where the user
+     * drives the changes.
      **********************************************************************************************/
 
     /**
+     * TODO: Should calculation AND execution of CPOs fall under the SYNC_CONTACTS Work? That way,
+     *  the calculated CPOs won't have overlapped with any other sync process?
+     *
+     * 1. Gets the list of CPOs corresponding to the UI changes (given by the difference in
+     *  [originalDataList] and [updatedDataList]).
+     * 2. Executes the list of CPOs (which are the actual default row operations).
+     * 3. Does a specialized mini-sync to update our Tele database with the new changes.
+     * 4. Returns whether or not the whole process was successful.
+     *
+     * NOTE: If there were no changes in the UI, then don't call [executeChanges]. One way to tell
+     * if there were changes is by comparing the original updatedDataList to the final clean
+     * updatedDataList.
+     *
+     * NOTE: Requires that [updatedDataList] is clean.
+     */
+    suspend fun executeChanges(
+        context: Context,
+        contentResolver: ContentResolver,
+        originalCID: String? = null,
+        originalDataList: List<ContactData>,
+        updatedDataList: List<ContactData>,
+        accountName: String? = null,
+        accountType: String? = null
+    ) : Boolean {
+        // Waits for any possible duplicate SYNC_CONTACTS processes to finish before continuing.
+        val workInstanceKey = ExperimentalWorkStates.localizedCompete(
+            workType = WorkType.SYNC_CONTACTS,
+            runningMsg = "SYNC_CONTACTS - executeChanges()",
+            newWorkInstance = true
+        )
+
+        try {
+            /*
+            If the originalDataList is empty, then the user must have added a completely new
+            contact. This is used so we can retrieve the correct info from the batch results, which
+            will be used in the mini-sync.
+             */
+            val isNewContact = originalDataList.isEmpty()
+            val originalRawCIDs = getRawCIDs(contentResolver, originalCID)
+            val operations = calculatedCPOList(
+                originalDataList = originalDataList,
+                updatedDataList = updatedDataList,
+                accountName = accountName,
+                accountType = accountType
+            )
+
+            val results = contentResolver.applyBatch(ContactsContract.AUTHORITY, operations)
+
+            /*
+            Does the corresponding mini-sync to update our Tele database. Note that even if the
+            mini-sync fails, we still return that the whole process was successful, as the periodic
+            full-sync will still eventually update our Tele database.
+             */
+            if (isNewContact) {
+                /*
+                If the user inserted a completely new contact, then use [insertMiniSync] to update
+                our Tele database with the new changes. Note that if the newly created RawContact
+                ID doesn't exist, then the batch query insert failed.
+                 */
+                val newRawCID = results[0].uri
+                    ?.let { ContentUris.parseId(it).toString() }
+                    ?: throw Exception("Default insert contact failed! New rowID is null!")
+
+                /*
+                Execute the mini-sync, but don't let a sync failure mark the whole process as failed.
+                 */
+                try {
+                    insertMiniSync(context, contentResolver, newRawCID)
+                } catch (e: Exception) {
+                    Timber.e("$DBL: insertMiniSync() failed! - ${e.stackTrace}")
+                }
+
+            } else {
+                /*
+                If the user edited an existing contact, then use [updateMiniSync] to update our
+                Tele database with the new changes. Note that if the number of Data rows affected
+                (given by results[0].count) is 0, then the batch query update failed.
+                 */
+                if (results[0].count == 0) {
+                    throw Exception("Default update contact failed! No updated rows!")
+                }
+
+                /*
+                Execute the mini-sync, but don't let a sync failure mark the whole process as failed.
+                 */
+                try {
+                    updatedMiniSync(context, contentResolver, originalRawCIDs)
+                } catch (e: Exception) {
+                    Timber.e("$DBL: updatedMiniSync() failed! - ${e.stackTrace}")
+                }
+            }
+
+            ExperimentalWorkStates.localizedRemoveState(
+                workType = WorkType.SYNC_CONTACTS,
+                workInstanceKey = workInstanceKey
+            )
+            return true
+        } catch (e: Exception) {
+            Timber.e("$DBL: executeChanges() failed!")
+
+            ExperimentalWorkStates.localizedSetStateKey(
+                workType = WorkType.SYNC_CONTACTS,
+                workState = WorkInfo.State.FAILED,
+                workInstanceKey = workInstanceKey
+            )
+            return false
+        }
+    }
+
+    /**
+     * TODO: Do we even need mutexSync if we're going to use the competing SYNC_CONTACTS work?
+     *  Make a decision.
+     */
+    private suspend fun insertMiniSync(
+        context: Context,
+        contentResolver: ContentResolver,
+        rawContactID: String
+    ) {
+        val instanceNumber = TeleHelpers.getUserNumberStored(context)!!
+        val database = (context.applicationContext as App).database
+        val dataRows = getNumberDataUnderRawCID(contentResolver, rawContactID)
+
+        /*
+        The defaultCID and corresponding TeleCID should be shared by all Data rows under the same
+        RawContact. These are null if there are no phone number Data rows.
+         */
+        val defaultCID = dataRows.firstOrNull()?.first
+        val teleCID = defaultCID?.let {
+            TeleHelpers.defaultCIDToTeleCID(it, instanceNumber)
+        }
+
+        // Insert one Contact row into our Tele database if phone number Data rows exist.
+        if (defaultCID != null) {
+            val changeID = UUID.randomUUID().toString()
+            val changeTime = Instant.now().toEpochMilli()
+
+            val change = Change.create(
+                CID = teleCID
+            )
+
+            database.changeAgentDao().changeFromClient(
+                ChangeLog.create(
+                    changeID = changeID,
+                    changeTime = changeTime,
+                    type = ChangeType.CONTACT_INSERT,
+                    instanceNumber = instanceNumber,
+                    changeJson = change.toJson()
+                ),
+                fromSync = false,
+                bubbleError = true
+            )
+        }
+
+        // Insert ContactNumber row into our Tele database for each corresponding Data row.
+        for (dataRow in dataRows) {
+            val rawNumber = dataRow.second
+            val normalizedNumber = TeleHelpers.normalizedNumber(rawNumber)
+                ?: TeleHelpers.bareNumber(rawNumber)
+            val versionNumber = dataRow.third
+
+            val changeID = UUID.randomUUID().toString()
+            val changeTime = Instant.now().toEpochMilli()
+
+            val change = Change.create(
+                CID = teleCID,
+                normalizedNumber = normalizedNumber,
+                defaultCID = defaultCID,
+                rawNumber = rawNumber,
+                degree = 0,
+                counterValue = versionNumber
+            )
+
+            database.changeAgentDao().changeFromClient(
+                ChangeLog.create(
+                    changeID = changeID,
+                    changeTime = changeTime,
+                    type = ChangeType.CONTACT_NUMBER_INSERT,
+                    instanceNumber = instanceNumber,
+                    changeJson = change.toJson()
+                ),
+                fromSync = false,
+                bubbleError = true
+            )
+        }
+    }
+
+    /**
+     * TODO: Do we even need mutexSync if we're going to use the competing SYNC_CONTACTS work?
+     *  Make a decision.
+     */
+    private suspend fun updatedMiniSync(
+        context: Context,
+        contentResolver: ContentResolver,
+        originalRawCIDs: List<String>
+    ) {
+        val instanceNumber = TeleHelpers.getUserNumberStored(context)!!
+        val database = (context.applicationContext as App).database
+        val aggregatedDataRows = mutableListOf<Triple<String, String, Int>>()
+        val aggregatedMatchCIDs = mutableSetOf<ContactNumber>()
+
+        /***************************************************************************************
+         * Check for inserts
+         **************************************************************************************/
+
+        for (rawCID in originalRawCIDs) {
+            val dataRows = getNumberDataUnderRawCID(contentResolver, rawCID)
+            aggregatedDataRows.addAll(dataRows)
+
+            /*
+            The defaultCID and corresponding TeleCID should be shared by all Data rows under the
+            same RawContact.
+             */
+            val defaultCID = getAggregateCIDFromRawCID(contentResolver, rawCID)
+            val teleCID = defaultCID?.let {
+                TeleHelpers.defaultCIDToTeleCID(it, instanceNumber)
+            }
+
+            // Corresponding contact numbers (by CID) in our database
+            val matchCID: List<ContactNumber> = teleCID?.let {
+                database.contactNumberDao().getContactNumbersByCID(it)
+            } ?: listOf()
+            aggregatedMatchCIDs.addAll(matchCID)
+
+            /*
+            Insert one Contact row into our Tele database if phone number Data rows exist and there
+            is no existing Tele CID corresponding to the defaultCID. The only time this would ever
+            happen is if the user initiated change somehow caused a split in an aggregate contact.
+             */
+            if (dataRows.isNotEmpty() && matchCID.isEmpty()) {
+                val changeID = UUID.randomUUID().toString()
+                val changeTime = Instant.now().toEpochMilli()
+
+                val change = Change.create(
+                    CID = teleCID
+                )
+
+                database.changeAgentDao().changeFromClient(
+                    ChangeLog.create(
+                        changeID = changeID,
+                        changeTime = changeTime,
+                        type = ChangeType.CONTACT_INSERT,
+                        instanceNumber = instanceNumber,
+                        changeJson = change.toJson()
+                    ),
+                    fromSync = false,
+                    bubbleError = true
+                )
+            }
+
+            for (dataRow in dataRows) {
+                val rawNumber = dataRow.second
+                val normalizedNumber = TeleHelpers.normalizedNumber(rawNumber)
+                    ?: TeleHelpers.bareNumber(rawNumber)
+                val versionNumber = dataRow.third
+
+                // Corresponding contact numbers (by PK) in our database
+                val matchPK: ContactNumber? = database.contactNumberDao().getContactNumberRow(
+                    teleCID!!, // Non-null since dataRows is non-empty if the code reaches here.
+                    normalizedNumber
+                )
+
+                /*
+                If there already exists a ContactNumber in our database that corresponds to the
+                Data row, then don't create a ChangeLog.
+                 */
+                if (matchPK != null) continue
+
+                val changeID = UUID.randomUUID().toString()
+                val changeTime = Instant.now().toEpochMilli()
+
+                val change = Change.create(
+                    CID = teleCID,
+                    normalizedNumber = normalizedNumber,
+                    defaultCID = defaultCID,
+                    rawNumber = rawNumber,
+                    degree = 0,
+                    counterValue = versionNumber
+                )
+
+                database.changeAgentDao().changeFromClient(
+                    ChangeLog.create(
+                        changeID = changeID,
+                        changeTime = changeTime,
+                        type = ChangeType.CONTACT_NUMBER_INSERT,
+                        instanceNumber = instanceNumber,
+                        changeJson = change.toJson()
+                    ),
+                    fromSync = false,
+                    bubbleError = true
+                )
+            }
+        }
+
+        /***************************************************************************************
+         * Check for updates / deletes
+         *
+         * NOTE: We don't do any Contact deletes here, as they are not immediately necessary for the
+         * algorithm and are a little cumbersome to implement. Moreover, the Contact deletes will
+         * still eventually be taken care of by the periodic full-sync.
+         **************************************************************************************/
+
+        for (contactNumber in aggregatedMatchCIDs) {
+            val matchDataRow = aggregatedDataRows.find {
+                val dataRowNormalizedNum = TeleHelpers.normalizedNumber(it.second)
+                    ?: TeleHelpers.bareNumber(it.second)
+
+                it.first == contactNumber.defaultCID
+                    && dataRowNormalizedNum == contactNumber.normalizedNumber
+            }
+
+            /*
+            If no Data row under any of the original RawContacts has the same default CID and
+            normalized number as the current contactNumber, then it means that the original Data
+            row corresponding to the contactNumber was deleted, so we also delete the contactNumber.
+             */
+            if (matchDataRow == null) {
+                val changeID = UUID.randomUUID().toString()
+                val changeTime = Instant.now().toEpochMilli()
+
+                val change = Change.create(
+                    CID = contactNumber.CID,
+                    normalizedNumber = contactNumber.normalizedNumber,
+                    degree = 0
+                )
+
+                database.changeAgentDao().changeFromClient(
+                    ChangeLog.create(
+                        changeID = changeID,
+                        changeTime = changeTime,
+                        type = ChangeType.CONTACT_NUMBER_DELETE,
+                        instanceNumber = instanceNumber,
+                        changeJson = change.toJson()
+                    ),
+                    fromSync = false,
+                    bubbleError = true
+                )
+
+                continue
+            }
+
+            /*
+            If there is a matching Data row, but the rawNumber is different, then update our
+            ContactNumber with the new rawNumber and versionNumber.
+             */
+            if (matchDataRow.second != contactNumber.rawNumber) {
+                val changeID = UUID.randomUUID().toString()
+                val changeTime = Instant.now().toEpochMilli()
+
+                val change = Change.create(
+                    CID = contactNumber.CID,
+                    normalizedNumber = contactNumber.normalizedNumber,
+                    rawNumber = matchDataRow.second,
+                    counterValue = matchDataRow.third
+                )
+
+                database.changeAgentDao().changeFromClient(
+                    ChangeLog.create(
+                        changeID = changeID,
+                        changeTime = changeTime,
+                        type = ChangeType.CONTACT_NUMBER_UPDATE,
+                        instanceNumber = instanceNumber,
+                        changeJson = change.toJson()
+                    ),
+                    fromSync = false,
+                    bubbleError = true
+                )
+            }
+        }
+    }
+
+    /**
+     * Returns the rowIDs of the RawContact rows under the given [aggregateCID].
+     */
+    private fun getRawCIDs(
+        contentResolver: ContentResolver,
+        aggregateCID: String?
+    ) : List<String> {
+        if (aggregateCID == null) {
+            return listOf()
+        }
+
+        val rawCIDList = mutableListOf<String>()
+
+        val projection = arrayOf(
+            RawContacts._ID
+        )
+
+        val selection = "${RawContacts.CONTACT_ID} = ? "
+
+        try {
+            val cur = contentResolver.query(
+                RawContacts.CONTENT_URI,
+                projection,
+                selection,
+                arrayOf(aggregateCID),
+                null
+            )!!
+
+            while (cur.moveToNext()) {
+                rawCIDList.add(cur.getString(0))
+            }
+
+            cur.close()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        return rawCIDList
+    }
+
+    private fun getAggregateCIDFromRawCID(
+        contentResolver: ContentResolver,
+        rawContactID: String
+    ) : String? {
+        val projection = arrayOf(
+            RawContacts.CONTACT_ID,
+        )
+
+        val selection = "${RawContacts._ID} = ? "
+
+        try {
+            val cur = contentResolver.query(
+                RawContacts.CONTENT_URI,
+                projection,
+                selection,
+                arrayOf(rawContactID),
+                null
+            )!!
+
+            val aggregateCID = if (cur.moveToFirst()) {
+                cur.getString(0)
+            } else {
+                null
+            }
+
+            cur.close()
+            return aggregateCID
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        return null
+    }
+
+    /**
+     * Returns the phone number Data rows under the given [rawContactID]. Return format is a list
+     * of triples, where each triple represents a phone number Data row, with the first element as
+     * the aggregate CID, the second element as the actual phone number, and the third element as
+     * the data version int.
+     */
+    private fun getNumberDataUnderRawCID(
+        contentResolver: ContentResolver,
+        rawContactID: String
+    ) : List<Triple<String, String, Int>> {
+        val numberDataList = mutableListOf<Triple<String, String, Int>>()
+
+        val projection = arrayOf(
+            Phone.CONTACT_ID,
+            Phone.NUMBER,
+            Phone.DATA_VERSION
+        )
+
+        val selection = "${Phone.RAW_CONTACT_ID} = ? "
+
+        try {
+            val cur = contentResolver.query(
+                Phone.CONTENT_URI,
+                projection,
+                selection,
+                arrayOf(rawContactID),
+                null
+            )!!
+
+            while (cur.moveToNext()) {
+                numberDataList.add(
+                    Triple(
+                        first = cur.getString(0), // Aggregate CID
+                        second = cur.getString(1), // Raw number
+                        third = cur.getString(2).toInt() // Data version
+                    )
+                )
+            }
+
+            cur.close()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        return numberDataList
+    }
+
+    /**
+     * Gets CPO list from clean updated and original data lists.
+     */
+    private fun calculatedCPOList(
+        originalDataList: List<ContactData>,
+        updatedDataList: List<ContactData>,
+        accountName: String?,
+        accountType: String?
+    ) : ArrayList<ContentProviderOperation> {
+
+        val operations = ArrayList<ContentProviderOperation> ()
+
+        /*
+        If the originalDataList is empty, then the user must have added a completely new contact,
+        which means we have to add a RawContact insert CPO to the beginning of the operations list.
+         */
+        if (originalDataList.isEmpty()) {
+            operations.add(
+                getRawContactInsertCPO(
+                    accountName = accountName,
+                    accountType = accountType
+                )
+            )
+        }
+
+        // Checks for row inserts and row updates.
+        for (updatedData in updatedDataList) {
+            if (updatedData.hasNullPairID()) {
+                /*
+                May be MOBILE, HOME, WORK, etc. if it exists (e.g., should be null for name data).
+                Note that since the updated data has a CompactRowInfo with a null pairID, the first
+                row info should be the only one (null pairID row infos are grouped separately).
+                 */
+                val valueTypeInt = updatedData.compactRowInfoList.first().valueType?.typeInt
+
+                val cpo = when(updatedData.mimeType) {
+                    ContactDataMimeType.NAME -> {
+                        getNameDataInsertCPO(name = updatedData.value)
+                    }
+                    ContactDataMimeType.PHONE -> {
+                        getNumberDataInsertCPO(
+                            number = updatedData.value,
+                            type = valueTypeInt!!
+                        )
+                    }
+                    ContactDataMimeType.EMAIL -> {
+                        getEmailDataInsertCPO(
+                            email = updatedData.value,
+                            type = valueTypeInt!!
+                        )
+                    }
+                    ContactDataMimeType.ADDRESS -> {
+                        getAddressDataInsertCPO(
+                            address = updatedData.value,
+                            type = valueTypeInt!!
+                        )
+                    }
+                }
+
+                operations.add(cpo)
+                continue
+            }
+
+            /*
+            If the code reaches here, then the updated data does not have a row info with null
+            pairID and therefore only contains row infos for existing rows. This means that all of
+            the contained row infos are also in the original data list (just with possibly different
+            values and value types).
+             */
+            for (updatedRowInfo in updatedData.compactRowInfoList) {
+                /*
+                Finds the ContactData in the original data list that contains [updatedRowInfo]. As
+                mentioned above, we know it exists.
+                 */
+                val originalData = originalDataList.find { data ->
+                    data.compactRowInfoList.find { it.pairID == updatedRowInfo.pairID } != null
+                }!!
+
+                val originalRowInfo = originalData.compactRowInfoList
+                    .find { it.pairID == updatedRowInfo.pairID }!!
+
+                // If the value or value type was changed, then add a corresponding update cpo.
+                if (originalData.value != updatedData.value
+                    || originalRowInfo.valueType != updatedRowInfo.valueType
+                ) {
+                    val valueDiff = originalData.value != updatedData.value
+                    val typeDiff = originalRowInfo.valueType != updatedRowInfo.valueType
+
+                    val cpo = when(updatedData.mimeType) {
+                        ContactDataMimeType.NAME -> {
+                            getNameDataUpdateCPO_DataID(
+                                newName = updatedData.value,
+                                dataID = updatedRowInfo.getDataID().toString()
+                            )
+                        }
+                        ContactDataMimeType.PHONE -> {
+                            // Note that this should be non-null, as we already know there is a diff.
+                            getNumberDataUpdateCPO_DataID(
+                                newNumber = if (valueDiff) updatedData.value else null,
+                                newType = if (typeDiff) updatedRowInfo.valueType?.typeInt else null,
+                                dataID = updatedRowInfo.getDataID().toString()
+                            )!!
+                        }
+                        ContactDataMimeType.EMAIL -> {
+                            // Note that this should be non-null, as we already know there is a diff.
+                            getEmailDataUpdateCPO_DataID(
+                                newEmail = if (valueDiff) updatedData.value else null,
+                                newType = if (typeDiff) updatedRowInfo.valueType?.typeInt else null,
+                                dataID = updatedRowInfo.getDataID().toString()
+                            )!!
+                        }
+                        ContactDataMimeType.ADDRESS -> {
+                            getAddressDataUpdateCPO_DataID(
+                                newAddress = if (valueDiff) updatedData.value else null,
+                                newType = if (typeDiff) updatedRowInfo.valueType?.typeInt else null,
+                                dataID = updatedRowInfo.getDataID().toString()
+                            )!!
+                        }
+                    }
+
+                   operations.add(cpo)
+                }
+            }
+        }
+
+        for (originalData in originalDataList) {
+            for (originalRowInfo in originalData.compactRowInfoList) {
+                /*
+                Finds the ContactData in the updated data list that contains [originalRowInfo] if it
+                exists.
+                 */
+                val updatedData = updatedDataList.find { data ->
+                    data.compactRowInfoList.find { it.pairID == originalRowInfo.pairID } != null
+                }
+
+                /*
+                If there is no ContactData in the updated data list that contains [originalRowInfo],
+                then it means that the row corresponding to [originalRowInfo] was deleted, so we
+                add a delete CPO to the list of operations.
+                 */
+                if (updatedData == null) {
+                    operations.add(
+                        getDataDeleteCPO_DataID(dataID = originalRowInfo.getDataID().toString())
+                    )
+                }
+            }
+        }
+
+        return operations
+    }
+
+    fun updatedDataListChanged(
+        originalUpdatedDataList: List<ContactData>,
+        finalUpdatedDataList: List<ContactData>
+    ) : Boolean {
+        return originalUpdatedDataList == finalUpdatedDataList
+    }
+
+    /**
+     * TODO: REMOVE THIS
      * TODO: PREDICT CHANGES AND START MINI TABLE SYNC FOR THOSE ROWS
      *
      * Inserts a contact with the given fields. Returns the rowID of the newly inserted RawContact
@@ -634,7 +1324,10 @@ object DefaultContacts {
 
         if (email != "") {
             operations.add(
-                getAddressDataInsertCPO(address = address)
+                getAddressDataInsertCPO(
+                    address = address,
+                    type = ContactsContract.CommonDataKinds.StructuredPostal.TYPE_HOME
+                )
             )
         }
 
@@ -884,7 +1577,25 @@ object DefaultContacts {
      **********************************************************************************************/
 
     /**
-     * Deletes a row from the RawContacts table given the [rawContactID].
+     * Returns a ContentProviderOperation that insert a row into the RawContacts table with the
+     * given [accountName] and [accountType].
+     *
+     * NOTE: [accountName] = null and [accountType] = null corresponds to the default phone account.
+     */
+    private fun getRawContactInsertCPO(
+        accountName: String?,
+        accountType: String?
+    ) : ContentProviderOperation {
+        return ContentProviderOperation
+            .newInsert(RawContacts.CONTENT_URI)
+            .withValue(RawContacts.ACCOUNT_TYPE, accountName)
+            .withValue(RawContacts.ACCOUNT_NAME, accountType)
+            .build()
+    }
+
+    /**
+     * Returns a ContentProviderOperation which deletes a row from the RawContacts table given the
+     * [rawContactID].
      *
      * NOTE: Deleting a RawContact automatically deletes the Data rows linked to it. Moreover,
      * once all of the RawContacts under an aggregated Contact are deleted, the aggregated Contact
@@ -901,7 +1612,7 @@ object DefaultContacts {
     }
 
     /**
-     * Deletes a row from the Data table given the [dataID].
+     * Returns a ContentProviderOperation which deletes a row from the Data table given the [dataID].
      */
     private fun getDataDeleteCPO_DataID(dataID: String) : ContentProviderOperation {
         return ContentProviderOperation
@@ -914,8 +1625,9 @@ object DefaultContacts {
     }
 
     /**
-     * Deletes all of the Data rows with number = [number] that are linked to the RawContact
-     * specified by [rawContactID]. Should pass in non-empty string for [number].
+     * Return a ContentProviderOperation which deletes all of the Data rows with number = [number]
+     * that are linked to the RawContact specified by [rawContactID]. Should pass in non-empty
+     * string for [number].
      *
      * NOTE: This is mostly used for the debug console, as the normal contact delete process uses
      * specific Data rowIDs.
@@ -1201,6 +1913,7 @@ object DefaultContacts {
      */
     private fun getAddressDataInsertCPO(
         address: String,
+        type: Int,
         rawContactID: String? = null
     ) : ContentProviderOperation {
         val cpo = ContentProviderOperation
@@ -1212,6 +1925,10 @@ object DefaultContacts {
             .withValue(
                 ContactsContract.CommonDataKinds.StructuredPostal.FORMATTED_ADDRESS,
                 address
+            )
+            .withValue(
+                ContactsContract.CommonDataKinds.StructuredPostal.TYPE,
+                type
             )
 
         if (rawContactID != null) {
@@ -1236,19 +1953,35 @@ object DefaultContacts {
      * NOTE: This only updates the specific Data row specified by [dataID].
      */
     private fun getAddressDataUpdateCPO_DataID(
-        newAddress: String,
+        newAddress: String? = null,
+        newType: Int? = null,
         dataID: String
-    ) : ContentProviderOperation {
-        return ContentProviderOperation
+    ) : ContentProviderOperation? {
+        if (newAddress == null && newType == null) {
+            return null
+        }
+
+        val cpo = ContentProviderOperation
             .newUpdate(ContactsContract.Data.CONTENT_URI)
             .withSelection(
                 "${ContactsContract.Data._ID} = ?",
                 arrayOf(dataID)
             )
-            .withValue(
+
+        if (newAddress != null) {
+            cpo.withValue(
                 ContactsContract.CommonDataKinds.StructuredPostal.FORMATTED_ADDRESS,
                 newAddress
             )
-            .build()
+        }
+
+        if (newType != null) {
+            cpo.withValue(
+                ContactsContract.CommonDataKinds.StructuredPostal.TYPE,
+                newType
+            )
+        }
+
+        return cpo.build()
     }
 }

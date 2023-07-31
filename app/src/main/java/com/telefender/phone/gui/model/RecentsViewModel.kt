@@ -141,7 +141,7 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
     // TODO: Consider not querying all call logs when updating from observer for performance.
     //  Also, consider canceling viewModelScope in onCleared() if the RecentsViewModel is destroyed.
     fun updateCallLogs() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.Default) {
             val tempLogs = DefaultCallDetails.getDefaultCallDetails(context)
             groupCallLogs(tempLogs)
 
@@ -225,7 +225,8 @@ data class GroupedCallDetail(
     val callDirection: Int,
     val unallowed: Boolean,
     var amount: Int,
-    var firstEpochID: Long) {
+    var firstEpochID: Long
+    ) {
 
     override fun toString() : String {
         return "rawNumber: $rawNumber callEpochDate: $callEpochDate" +
@@ -235,8 +236,8 @@ data class GroupedCallDetail(
 }
 
 class RecentsViewModelFactory(
-    private val app: Application)
-    : ViewModelProvider.Factory {
+    private val app: Application,
+) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {

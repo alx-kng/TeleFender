@@ -7,9 +7,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
 import com.telefender.phone.data.default_database.DefaultContacts
 import com.telefender.phone.databinding.FragmentChangeContactOldBinding
 import com.telefender.phone.gui.MainActivity
+import com.telefender.phone.gui.model.*
 
 
 /**
@@ -27,6 +30,9 @@ class ChangeContactFragment : Fragment() {
 
     private var _binding: FragmentChangeContactOldBinding? = null
     private val binding get() = _binding!!
+    private val contactsViewModel: ContactsViewModel by activityViewModels {
+        ChangeContactViewModelFactory(requireActivity().application)
+    }
 
     /**
      * Makes sure you can't submit an empty Contact.

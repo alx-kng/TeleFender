@@ -4,15 +4,14 @@ import android.annotation.SuppressLint
 import android.app.Application
 import androidx.lifecycle.*
 import com.telefender.phone.data.default_database.*
-import com.telefender.phone.gui.adapters.recycler_view_items.AggregateContact
-import com.telefender.phone.gui.adapters.recycler_view_items.ContactFooter
-import com.telefender.phone.gui.adapters.recycler_view_items.BaseContactItem
-import com.telefender.phone.gui.adapters.recycler_view_items.Divider
+import com.telefender.phone.gui.adapters.recycler_view_items.*
 import com.telefender.phone.misc_helpers.DBL
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
+import kotlin.text.Typography.section
 
 
 /**
@@ -30,13 +29,34 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
     // TODO: THIS MIGHT BE CAUSE OF A MEMORY LEAK!!! -> maybe, maybe not
     @SuppressLint("StaticFieldLeak")
     private val context = getApplication<Application>().applicationContext
+    private val scope = CoroutineScope(Dispatchers.IO)
 
     private var _contacts = MutableLiveData<List<AggregateContact>>()
     val contacts : LiveData<List<AggregateContact>> = _contacts
 
-    private var _dividedContacts : MutableList<BaseContactItem> = mutableListOf()
+    private var _dividedContacts = mutableListOf<BaseContactItem>()
     val dividedContacts : List<BaseContactItem>
         get() = _dividedContacts
+
+    /**
+     * Selected aggregate CID for the ChangeContact screen. Info retrieved from selected contact or
+     * Add button.
+     */
+    private var _selectCID: String? = null
+    val selectCID : String?
+        get() = _selectCID
+
+    private var _originalUpdatedDataList = mutableListOf<ContactData>()
+    val originalUpdatedDataList = _originalUpdatedDataList
+
+    private var _updatedDataList = mutableListOf<ChangeContactItem>()
+    val updatedDataList = _updatedDataList
+
+    private var _originalDataList = mutableListOf<ContactData>()
+    val originalDataList = _originalDataList
+
+    private var _nonContactDataList = listOf<ChangeContactItem>()
+    val nonContactDataList = _nonContactDataList
 
     /**
      * Preloads contacts when ViewModel is first created.
@@ -94,7 +114,7 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun updateContacts() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.Default) {
             val tempContacts = DefaultContacts.getAggregateContacts(context)
             addDividers(tempContacts)
 
@@ -102,11 +122,74 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
             _contacts.value = tempContacts
         }
     }
+
+    /**
+     * Called when starting the ChangeContactFragment. Given the selected aggregate CID [selectCID],
+     * this loads the corresponding data lists necessary for the UI.
+     */
+    fun setDataLists(selectCID: String?) {
+        _selectCID = selectCID
+
+        if (selectCID == null) {
+            val initialUIList = mutableListOf(
+                SectionHeader(ContactDataMimeType.NAME),
+                BlankEdit(ContactDataMimeType.NAME),
+                SectionHeader(ContactDataMimeType.PHONE),
+                BlankEdit(ContactDataMimeType.PHONE),
+                SectionHeader(ContactDataMimeType.EMAIL),
+                BlankEdit(ContactDataMimeType.EMAIL),
+                SectionHeader(ContactDataMimeType.ADDRESS),
+                BlankEdit(ContactDataMimeType.ADDRESS),
+            )
+
+            _originalUpdatedDataList = mutableListOf()
+            _updatedDataList = initialUIList
+            _originalDataList = mutableListOf()
+            _nonContactDataList = initialUIList
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.Default) {
+            val packagedDataLists = DefaultContacts.getContactData(context.contentResolver, selectCID)
+
+            _originalUpdatedDataList = packagedDataLists.originalUpdatedDataList
+            _updatedDataList = packagedDataLists.updatedDataList
+            _originalDataList = packagedDataLists.originalDataList
+            _nonContactDataList = packagedDataLists.nonContactDataList
+        }
+    }
+
+    /**
+     * TODO: Finish
+     *
+     * Submits the changes in the UI to the default database.
+     */
+    fun submitChanges() {
+        scope.launch {
+            /*
+            1. Convert updatedDataList to be all ContactData by removing SectionHeaders and
+             converting the non-blank BlankEdits to ContactData (with null pairID).
+            2. Clean converted updatedDataList
+            3. Compare with originalUpdatedDataList to see if they are different.
+            4. If different, then call [executeChanges] in DefaultContacts.
+             */
+            val cleanUpdatedDataList = listOf<ContactData>()
+            DefaultContacts.executeChanges(
+                context = context,
+                contentResolver = context.contentResolver,
+                originalCID = selectCID,
+                originalDataList = originalDataList,
+                updatedDataList = cleanUpdatedDataList,
+                accountName = null,
+                accountType = null,
+            )
+        }
+    }
 }
 
 class ContactsViewModelFactory(
-    private val app: Application)
-    : ViewModelProvider.Factory {
+    private val app: Application,
+) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
