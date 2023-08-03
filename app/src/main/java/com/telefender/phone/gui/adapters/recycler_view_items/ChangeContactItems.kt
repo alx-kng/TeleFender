@@ -1,6 +1,8 @@
 package com.telefender.phone.gui.adapters.recycler_view_items
 
 import android.provider.ContactsContract
+import com.telefender.phone.misc_helpers.getUniqueLong
+import java.util.*
 
 
 /***************************************************************************************************
@@ -11,10 +13,13 @@ class PackagedDataLists(
     val originalUpdatedDataList: MutableList<ContactData>,
     val updatedDataList: MutableList<ChangeContactItem>,
     val originalDataList: MutableList<ContactData>,
-    val nonContactDataList: List<ChangeContactItem>
+    val nonContactDataList: MutableList<ChangeContactItem>
 )
 
-sealed class ChangeContactItem(open val mimeType: ContactDataMimeType)
+sealed class ChangeContactItem(
+    open val mimeType: ContactDataMimeType,
+    val longUUID: Long = getUniqueLong()
+)
 
 object ChangeContactItemComparator : Comparator<ChangeContactItem> {
     override fun compare (o1: ChangeContactItem, o2: ChangeContactItem) : Int {

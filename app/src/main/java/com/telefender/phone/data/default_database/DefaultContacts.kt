@@ -199,7 +199,7 @@ object DefaultContacts {
         }
 
         // ChangeContactItems associated with the non-data parts of the UI.
-        val nonContactDataItems = listOf(
+        val nonContactDataItems = mutableListOf(
             SectionHeader(ContactDataMimeType.NAME),
             BlankEdit(ContactDataMimeType.NAME),
             SectionHeader(ContactDataMimeType.PHONE),

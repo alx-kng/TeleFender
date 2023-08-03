@@ -290,9 +290,10 @@ object RequestWrappers {
     suspend fun debugCallState(
         context: Context,
         repository: ClientRepository,
-        scope: CoroutineScope
+        scope: CoroutineScope,
+        logLocation: String
     ) {
         ExperimentalWorkStates.generalizedSetState(WorkType.DEBUG_CALL_STATE_POST, WorkInfo.State.RUNNING)
-        RemoteDebug.debugCallStateRequest(context, repository, scope)
+        RemoteDebug.debugCallStateRequest(context, repository, scope, logLocation)
     }
 }

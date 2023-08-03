@@ -65,17 +65,17 @@ class ContactsAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         return when (viewType) {
             TYPE_CONTACT -> {
-                val adapterLayout = LayoutInflater.from(parent.context).inflate(R.layout.contact_item,
+                val adapterLayout = LayoutInflater.from(parent.context).inflate(R.layout.item_contact,
                     parent, false)
                 ContactViewHolder(adapterLayout)
             }
             TYPE_DIVIDER -> {
-                val adapterLayout = LayoutInflater.from(parent.context).inflate(R.layout.divider_contact_item,
+                val adapterLayout = LayoutInflater.from(parent.context).inflate(R.layout.item_contact_divider,
                     parent, false)
                 DividerViewHolder(adapterLayout)
             }
             TYPE_FOOTER -> {
-                val adapterLayout = LayoutInflater.from(parent.context).inflate(R.layout.footer_contact_item,
+                val adapterLayout = LayoutInflater.from(parent.context).inflate(R.layout.item_contact_footer,
                     parent, false)
                 FooterViewHolder(adapterLayout)
             }

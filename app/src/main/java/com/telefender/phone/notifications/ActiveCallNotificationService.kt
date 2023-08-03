@@ -3,22 +3,17 @@ package com.telefender.phone.notifications
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
-import android.content.Context.NOTIFICATION_SERVICE
 import android.content.Intent
 import android.os.Build
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
-import androidx.core.app.ServiceCompat.stopForeground
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.Observer
 import com.telefender.phone.R
 import com.telefender.phone.call_related.*
 import com.telefender.phone.gui.InCallActivity
 import com.telefender.phone.misc_helpers.DBL
-import com.telefender.phone.notifications.IncomingCallService.Companion.createNotification
-import com.telefender.phone.notifications.IncomingCallService.Companion.updateNotification
 import com.telefender.phone.notifications.NotificationChannels.IN_CALL_CHANNEL_ID
 import timber.log.Timber
 
@@ -164,7 +159,7 @@ class ActiveCallNotificationService : LifecycleService() {
 
             val contentView = RemoteViews(
                 applicationContext.packageName,
-                R.layout.notification_active_call
+                R.layout.notification_call_active
             ).apply {
                 setOnClickPendingIntent(R.id.active_notification_speaker_button, speakerPendingIntent)
                 setOnClickPendingIntent(R.id.active_notification_mute_button, mutePendingIntent)

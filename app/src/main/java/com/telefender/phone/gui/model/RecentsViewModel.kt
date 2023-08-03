@@ -146,7 +146,7 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
             groupCallLogs(tempLogs)
 
             Timber.i("$DBL: ABOUT TO ASSIGN LOGS VALUE")
-            _callLogs.value = tempLogs
+            _callLogs.postValue(tempLogs)
         }
     }
 

@@ -72,7 +72,7 @@ class RecentsAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecentsViewHolder {
         // create a new view
         val adapterLayout = LayoutInflater.from(parent.context)
-            .inflate(R.layout.recents_item, parent, false)
+            .inflate(R.layout.item_recents, parent, false)
 
         val viewHolder = RecentsViewHolder(adapterLayout,
             { pos ->

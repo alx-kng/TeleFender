@@ -299,6 +299,7 @@ object RemoteDebug {
         context: Context,
         repository: ClientRepository,
         scope: CoroutineScope,
+        logLocation: String,
     ) {
         val url = "https://dev.scribblychat.com/callbook/uploadTeleConnections"
         val instanceNumber = TeleHelpers.getUserNumberStored(context)
@@ -311,27 +312,18 @@ object RemoteDebug {
             return
         }
 
-        val decisionState = IncomingCallService.context?.getDecisionState()
-
         val debugRequestJson = DebugCallStateRequest(
             instanceNumber = instanceNumber,
             key = key,
             debugCallState = with(CallManager) {
                 DebugCallState(
-                    currentMode = currentMode.serverString,
-                    lastAnsweredCall = lastAnsweredCall.toSimpleString(),
+                    logLocation = logLocation,
                     calls = calls.map { it.toSimpleString() },
                     connections = connections.map { it.toString() },
-                    focusedConnection = focusedConnection.value.toString(),
+                    currentMode = currentMode.serverString,
                     focusedCall = focusedCall.toSimpleString(),
-                    incomingActivityRunning = IncomingCallActivity.running,
-                    inCallActivityRunning = InCallActivity.running,
-                    incomingCallServiceRunning = IncomingCallService.context != null,
-                    activeCallServiceRunning = ActiveCallNotificationService.running,
-                    incomingSafe = decisionState?.get(0),
-                    incomingUnallowed = decisionState?.get(1),
-                    incomingAnswered = decisionState?.get(2),
-                    incomingRejected = decisionState?.get(3),
+                    focusedConnection = focusedConnection.value.toString(),
+                    lastAnsweredCall = lastAnsweredCall.toSimpleString(),
                 ).toJson()
             }
         ).toJson()

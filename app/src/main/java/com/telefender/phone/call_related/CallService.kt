@@ -67,6 +67,8 @@ class CallService : InCallService() {
     }
 
     /**
+     * TODO: LOG CALL HERE -> Still need?
+     *
      * TODO: Debug doesn't always accurately reflect which components are running since the
      *  launchCallDebugState() is launched before the components are actually created.
      *

@@ -1,7 +1,9 @@
 package com.telefender.phone.misc_helpers
 
 import android.content.Context
+import java.time.Instant
 import kotlin.math.roundToInt
+import kotlin.random.Random
 
 
 /***********************************************************************************************
@@ -34,3 +36,7 @@ fun Context.dpToPx(dp: Int): Int {
     val density: Float = resources.displayMetrics.density
     return (dp * density).roundToInt()
 }
+
+// Gets a UUID-like Long. Mostly used for RecyclerView adapters.
+fun getUniqueLong() : Long =
+    (Instant.now().toEpochMilli() shl 20) or (Random.nextLong() and ((1L shl 20) - 1))

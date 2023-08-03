@@ -5,6 +5,7 @@ import android.provider.CallLog
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
@@ -14,39 +15,28 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.telefender.phone.R
 import com.telefender.phone.data.tele_database.entities.CallDetail
-import com.telefender.phone.gui.adapters.recycler_view_items.CallDetailItem
-import com.telefender.phone.gui.adapters.recycler_view_items.CallHistoryFooter
-import com.telefender.phone.gui.adapters.recycler_view_items.CallHistoryHeader
+import com.telefender.phone.gui.adapters.recycler_view_items.*
 import com.telefender.phone.misc_helpers.TeleHelpers
 import java.text.SimpleDateFormat
 import java.util.*
 
 
-class CallHistoryAdapter (
+class ChangeContactAdapter (
     private val context: Context,
-    private val selectNumber: String,
-    private val selectTime : String,
-) : ListAdapter<CallDetailItem, RecyclerView.ViewHolder>(CombinedComparator()) {
+) : ListAdapter<ChangeContactItem, RecyclerView.ViewHolder>(CombinedComparator()) {
 
-    val INFO_VIEW_TYPE = 1
-    val CALL_VIEW_TYPE = 2
-    val FOOTER_VIEW_TYPE = 3
+    val SECTION_HEADER_VIEW_TYPE = 1
+    val BLANK_EDIT_VIEW_TYPE = 2
+    val CONTACT_DATA_VIEW_TYPE = 3
 
-    val INFO_UUID = -1L
-    val FOOTER_UUID = -2L
+    class CombinedComparator : DiffUtil.ItemCallback<ChangeContactItem>() {
 
-    class CombinedComparator : DiffUtil.ItemCallback<CallDetailItem>() {
-
-       override fun areItemsTheSame(oldItem: CallDetailItem, newItem: CallDetailItem): Boolean {
+        override fun areItemsTheSame(oldItem: ChangeContactItem, newItem: ChangeContactItem): Boolean {
             return oldItem === newItem
         }
 
-        override fun areContentsTheSame(oldItem: CallDetailItem, newItem: CallDetailItem): Boolean {
-            return if (oldItem is CallDetail && newItem is CallDetail) {
-                oldItem.callEpochDate == newItem.callEpochDate
-            } else {
-                oldItem == newItem
-            }
+        override fun areContentsTheSame(oldItem: ChangeContactItem, newItem: ChangeContactItem): Boolean {
+            return oldItem.longUUID == newItem.longUUID
         }
     }
 
@@ -74,6 +64,17 @@ class CallHistoryAdapter (
         view: View
     ) : RecyclerView.ViewHolder(view)
 
+    class HeaderViewHolder(
+        view: View
+    ) : RecyclerView.ViewHolder(view)
+
+    class EditViewHolder(
+        view: View
+    ) : RecyclerView.ViewHolder(view) {
+
+        val icon: ImageView = view.findViewById(R.id.icon)
+    }
+
     /**
      * To disable recycler view blinking. Needs to provide unique id for each data list item so
      * that recycler view knows which items it needs to update (otherwise all of the items update,
@@ -82,21 +83,14 @@ class CallHistoryAdapter (
      * should suffice as a unique ID.
      */
     override fun getItemId(position: Int): Long {
-        val current = getItem(position)
-        return when (current) {
-            is CallDetail -> current.callEpochDate
-            is CallHistoryHeader -> INFO_UUID
-            is CallHistoryFooter -> FOOTER_UUID
-            else -> throw Exception("Bad Item Type")
-        }
+        return getItem(position).longUUID
     }
 
     override fun getItemViewType(position: Int): Int {
         return when (getItem(position)) {
-            is CallDetail -> CALL_VIEW_TYPE
-            is CallHistoryHeader -> INFO_VIEW_TYPE
-            is CallHistoryFooter -> FOOTER_VIEW_TYPE
-            else -> throw Exception("Bad Item Type")
+            is SectionHeader -> SECTION_HEADER_VIEW_TYPE
+            is BlankEdit -> BLANK_EDIT_VIEW_TYPE
+            is ContactData -> CONTACT_DATA_VIEW_TYPE
         }
     }
 
@@ -105,22 +99,16 @@ class CallHistoryAdapter (
      * Create new views (invoked by the layout manager)
      */
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-
         return when (viewType) {
-            INFO_VIEW_TYPE -> {
+            SECTION_HEADER_VIEW_TYPE -> {
                 val adapterLayout = LayoutInflater.from(parent.context)
-                    .inflate(R.layout.item_call_history_info, parent, false)
-                InfoHistoryViewHolder(adapterLayout)
+                    .inflate(R.layout.item_change_contact_header, parent, false)
+                HeaderViewHolder(adapterLayout)
             }
-            CALL_VIEW_TYPE -> {
+            BLANK_EDIT_VIEW_TYPE, CONTACT_DATA_VIEW_TYPE-> {
                 val adapterLayout = LayoutInflater.from(parent.context)
-                    .inflate(R.layout.item_call_history_call, parent, false)
-                CallHistoryViewHolder(adapterLayout)
-            }
-            FOOTER_VIEW_TYPE -> {
-                val adapterLayout = LayoutInflater.from(parent.context)
-                    .inflate(R.layout.item_call_history_footer, parent, false)
-                FooterHistoryViewHolder(adapterLayout)
+                    .inflate(R.layout.item_change_contact_edit, parent, false)
+                EditViewHolder(adapterLayout)
             }
             else -> {
                 throw Exception("Bad View Type")
@@ -154,9 +142,9 @@ class CallHistoryAdapter (
             }
             is InfoHistoryViewHolder -> {
 
-                holder.number.text = if(selectNumber.isNotEmpty()) selectNumber else "Unknown"
+//                holder.number.text = if(selectNumber.isNotEmpty()) selectNumber else "Unknown"
 
-                holder.date.text = selectTime
+//                holder.date.text = selectTime
 
                 /**
                  * Handle block button

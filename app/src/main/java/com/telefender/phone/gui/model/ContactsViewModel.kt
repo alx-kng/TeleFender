@@ -11,7 +11,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
-import kotlin.text.Typography.section
 
 
 /**
@@ -55,8 +54,8 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
     private var _originalDataList = mutableListOf<ContactData>()
     val originalDataList = _originalDataList
 
-    private var _nonContactDataList = listOf<ChangeContactItem>()
-    val nonContactDataList = _nonContactDataList
+    private var _lastNonContactDataList = mutableListOf<ChangeContactItem>()
+    val lastNonContactDataList = _lastNonContactDataList
 
     /**
      * Preloads contacts when ViewModel is first created.
@@ -119,7 +118,7 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
             addDividers(tempContacts)
 
             Timber.i("$DBL: ABOUT TO ASSIGN CONTACTS VALUE")
-            _contacts.value = tempContacts
+            _contacts.postValue(tempContacts)
         }
     }
 
@@ -145,7 +144,7 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
             _originalUpdatedDataList = mutableListOf()
             _updatedDataList = initialUIList
             _originalDataList = mutableListOf()
-            _nonContactDataList = initialUIList
+            _lastNonContactDataList = initialUIList
             return
         }
 
@@ -155,7 +154,7 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
             _originalUpdatedDataList = packagedDataLists.originalUpdatedDataList
             _updatedDataList = packagedDataLists.updatedDataList
             _originalDataList = packagedDataLists.originalDataList
-            _nonContactDataList = packagedDataLists.nonContactDataList
+            _lastNonContactDataList = packagedDataLists.nonContactDataList
         }
     }
 

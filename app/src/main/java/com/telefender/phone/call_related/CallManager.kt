@@ -1,6 +1,5 @@
 package com.telefender.phone.call_related
 
-import android.content.Context
 import android.telecom.Call
 import android.telecom.VideoProfile
 import androidx.lifecycle.LiveData
@@ -205,7 +204,7 @@ object CallManager {
      *
      * Launches post request to server to upload the current call / UI states.
      */
-    fun launchDebugCallState() {
+    fun launchDebugCallState(logLocation: String = "Update") {
         debugScope.launch {
             Timber.i("$DBL: launchDebugCallState()")
 
@@ -214,7 +213,8 @@ object CallManager {
                 RequestWrappers.debugCallState(
                     context = it,
                     repository = (it as App).repository,
-                    scope = debugScope
+                    scope = debugScope,
+                    logLocation = logLocation
                 )
             }
         }
@@ -332,10 +332,15 @@ object CallManager {
     /*********************************************************************************************/
 
     /**
+     * TODO: Make patch for OS duplicate call.
+     *
      * Only adds a new connection for the call if there isn't an existing connection with the same
      * number and the call is not a child of a conference connection.
      */
     fun addCall(call: Call) {
+        // Log before adding call (in addition to update focused connection).
+        launchDebugCallState(logLocation = "Pre-add")
+
         val conference = conferenceConnection()
         if (conference == null || call !in (conference.call?.children ?: emptyList())) {
             if (!existingConnection(call)) {
@@ -372,6 +377,9 @@ object CallManager {
      * Removes a Connection from [connections] only if the Connection wraps the [call].
      */
     fun removeCall(call: Call) {
+        // Log before removing call (in addition to update focused connection).
+        launchDebugCallState(logLocation = "Pre-remove")
+
         if (existingConnection(call)) {
             connections.removeIf { it.call == call }
         }

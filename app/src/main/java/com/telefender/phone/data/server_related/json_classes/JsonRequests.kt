@@ -3,6 +3,8 @@ package com.telefender.phone.data.server_related.json_classes
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
+import com.telefender.phone.call_related.CallManager.currentMode
+import com.telefender.phone.call_related.CallManager.lastAnsweredCall
 import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
 import com.telefender.phone.data.tele_database.entities.CallDetail
 import com.telefender.phone.data.tele_database.entities.ChangeLog
@@ -257,20 +259,13 @@ class DebugCallStateRequest(
 
 @JsonClass(generateAdapter = true)
 class DebugCallState(
-    val currentMode : String,
-    val lastAnsweredCall : String?,
+    val logLocation : String,
     val calls : List<String?>,
     val connections : List<String>,
-    val focusedConnection : String?,
+    val currentMode : String,
     val focusedCall : String?,
-    val incomingActivityRunning : Boolean,
-    val inCallActivityRunning : Boolean,
-    val incomingCallServiceRunning : Boolean,
-    val activeCallServiceRunning : Boolean,
-    val incomingSafe : Boolean?,
-    val incomingUnallowed : Boolean?,
-    val incomingAnswered : Boolean?,
-    val incomingRejected : Boolean?,
+    val focusedConnection : String?,
+    val lastAnsweredCall : String?,
 ) {
     fun toJson() : String {
         val moshi = Moshi.Builder().build()
@@ -280,11 +275,9 @@ class DebugCallState(
     }
 
     override fun toString() : String {
-        return "currentMode: $currentMode, lastAnsweredCall: $lastAnsweredCall, calls: $calls " +
-            "connections: $connections, focusedConnection: $focusedConnection, " +
-            "focusedCall $focusedCall, incomingActivityRunning: $incomingActivityRunning" +
-            "inCallActivityRunning: $inCallActivityRunning, incomingCallServiceRunning: $incomingCallServiceRunning, " +
-            "activeCallServiceRunning: $activeCallServiceRunning"
+        return "logLocation: $logLocation, currentMode: $currentMode, " +
+            "lastAnsweredCall: $lastAnsweredCall, calls: $calls connections: $connections, " +
+            "focusedConnection: $focusedConnection, focusedCall $focusedCall"
     }
 }
 

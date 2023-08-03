@@ -10,8 +10,10 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import com.telefender.phone.data.default_database.DefaultContacts
+import com.telefender.phone.databinding.FragmentChangeContactBinding
 import com.telefender.phone.databinding.FragmentChangeContactOldBinding
 import com.telefender.phone.gui.MainActivity
+import com.telefender.phone.gui.adapters.CallHistoryAdapter
 import com.telefender.phone.gui.model.*
 
 
@@ -28,10 +30,10 @@ import com.telefender.phone.gui.model.*
  */
 class ChangeContactFragment : Fragment() {
 
-    private var _binding: FragmentChangeContactOldBinding? = null
+    private var _binding: FragmentChangeContactBinding? = null
     private val binding get() = _binding!!
     private val contactsViewModel: ContactsViewModel by activityViewModels {
-        ChangeContactViewModelFactory(requireActivity().application)
+        ContactsViewModelFactory(requireActivity().application)
     }
 
     /**
@@ -50,7 +52,7 @@ class ChangeContactFragment : Fragment() {
         }
 
         override fun afterTextChanged(s: Editable?) {
-            updatedDoneEnabled()
+//            updatedDoneEnabled()
         }
 
     }
@@ -59,7 +61,7 @@ class ChangeContactFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        _binding = FragmentChangeContactOldBinding.inflate(inflater, container, false)
+        _binding = FragmentChangeContactBinding.inflate(inflater, container, false)
         return binding.root
     }
 
@@ -74,12 +76,14 @@ class ChangeContactFragment : Fragment() {
         setupAppBar()
         hideBottomNavigation()
 
-        updatedDoneEnabled()
+        val recyclerView = binding.recyclerView
 
-        binding.changeContactNameEdit.addTextChangedListener(doneTextWatcher)
-        binding.changeContactNumberEdit.addTextChangedListener(doneTextWatcher)
-        binding.changeContactEmailEdit.addTextChangedListener(doneTextWatcher)
-        binding.changeContactAddressEdit.addTextChangedListener(doneTextWatcher)
+//        updatedDoneEnabled()
+//
+//        binding.changeContactNameEdit.addTextChangedListener(doneTextWatcher)
+//        binding.changeContactNumberEdit.addTextChangedListener(doneTextWatcher)
+//        binding.changeContactEmailEdit.addTextChangedListener(doneTextWatcher)
+//        binding.changeContactAddressEdit.addTextChangedListener(doneTextWatcher)
     }
 
     override fun onDestroyView() {
@@ -87,29 +91,29 @@ class ChangeContactFragment : Fragment() {
         _binding = null
     }
 
-    private fun submitContact() {
-        DefaultContacts.insertContact(
-            contentResolver = requireContext().contentResolver,
-            name = binding.changeContactNameEdit.text.toString(),
-            number = binding.changeContactNumberEdit.text.toString(),
-            email = binding.changeContactEmailEdit.text.toString(),
-            address = binding.changeContactAddressEdit.text.toString()
-        )
-    }
-
-    private fun updatedDoneEnabled() {
-        if (activity is MainActivity) {
-            val act = activity as MainActivity
-            act.setEnabledAppBarTextButton(enabled2 = validContactEntries())
-        }
-    }
-
-    private fun validContactEntries() : Boolean {
-        return binding.changeContactNameEdit.text.toString() != ""
-            || binding.changeContactNumberEdit.text.toString() != ""
-            || binding.changeContactEmailEdit.text.toString() != ""
-            || binding.changeContactAddressEdit.text.toString() != ""
-    }
+//    private fun submitContact() {
+//        DefaultContacts.insertContact(
+//            contentResolver = requireContext().contentResolver,
+//            name = binding.changeContactNameEdit.text.toString(),
+//            number = binding.changeContactNumberEdit.text.toString(),
+//            email = binding.changeContactEmailEdit.text.toString(),
+//            address = binding.changeContactAddressEdit.text.toString()
+//        )
+//    }
+//
+//    private fun updatedDoneEnabled() {
+//        if (activity is MainActivity) {
+//            val act = activity as MainActivity
+//            act.setEnabledAppBarTextButton(enabled2 = validContactEntries())
+//        }
+//    }
+//
+//    private fun validContactEntries() : Boolean {
+//        return binding.changeContactNameEdit.text.toString() != ""
+//            || binding.changeContactNumberEdit.text.toString() != ""
+//            || binding.changeContactEmailEdit.text.toString() != ""
+//            || binding.changeContactAddressEdit.text.toString() != ""
+//    }
 
     private fun setupAppBar() {
         if (activity is MainActivity) {
@@ -133,7 +137,7 @@ class ChangeContactFragment : Fragment() {
                     requireActivity().onBackPressedDispatcher.onBackPressed()
                 },
                 onClickListener2 = {
-                    submitContact()
+//                    submitContact()
                     requireActivity().onBackPressedDispatcher.onBackPressed()
                 }
             )

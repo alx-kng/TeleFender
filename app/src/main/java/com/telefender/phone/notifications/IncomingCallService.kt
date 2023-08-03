@@ -18,8 +18,6 @@ import com.telefender.phone.data.tele_database.TeleCallDetails
 import com.telefender.phone.gui.InCallActivity
 import com.telefender.phone.gui.IncomingCallActivity
 import com.telefender.phone.misc_helpers.DBL
-import com.telefender.phone.notifications.ActiveCallNotificationService.Companion.createNotification
-import com.telefender.phone.notifications.ActiveCallNotificationService.Companion.updateNotification
 import com.telefender.phone.notifications.NotificationChannels.IN_CALL_CHANNEL_ID
 import kotlinx.coroutines.*
 import timber.log.Timber
@@ -324,7 +322,7 @@ class IncomingCallService : LifecycleService() {
 
             val contentView = RemoteViews(
                 applicationContext.packageName,
-                R.layout.notification_incoming_call
+                R.layout.notification_call_incoming
             ).apply {
                 setOnClickPendingIntent(R.id.incoming_notification_answer_button, answerPendingIntent)
                 setOnClickPendingIntent(R.id.incoming_notification_hangup_button, hangupPendingIntent)

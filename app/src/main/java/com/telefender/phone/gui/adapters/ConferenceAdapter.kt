@@ -57,7 +57,7 @@ class ConferenceAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ConferenceViewHolder {
         // create a new view
         val adapterLayout = LayoutInflater.from(parent.context)
-            .inflate(R.layout.conference_item, parent, false)
+            .inflate(R.layout.item_conference, parent, false)
 
         return ConferenceViewHolder(adapterLayout) {pos -> CallManager.hangupArg(getItem(pos)) }
     }
