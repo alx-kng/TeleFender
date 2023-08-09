@@ -170,12 +170,12 @@ class CoroutineOmegaWorker(
          * Downloads changes from server
          */
         Timber.i("$DBL: OMEGA DOWNLOAD STARTED")
-//        RequestWrappers.downloadData(context, repository, scope, "OMEGA")
+        RequestWrappers.downloadData(context, repository, scope, "OMEGA")
 
         /**
          * Executes logs in ExecuteQueue
          */
-        Timber.i("$DBL: OMEGA EXECUTE STARTED")
+        Timber.i("$DBL: OMEGA EXECUTE_CHANGES STARTED")
         repository.executeAll()
 
         /**

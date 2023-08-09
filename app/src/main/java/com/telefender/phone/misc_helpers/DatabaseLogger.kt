@@ -165,7 +165,7 @@ object DatabaseLogger {
                 ?: repository?.getAllQTE()
                 ?: listOf()
 
-            Timber.i("$DBL: EXECUTE LOG SIZE: ${executeLogs.size}")
+            Timber.i("$DBL: EXECUTE_CHANGES LOG SIZE: ${executeLogs.size}")
 
             for (executeLog in executeLogs) {
                 Timber.i("$DBL: $executeLog")

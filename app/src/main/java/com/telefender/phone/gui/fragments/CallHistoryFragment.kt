@@ -45,7 +45,7 @@ class CallHistoryFragment : Fragment() {
 
         val recyclerView = binding.recyclerView
 
-        val adapter = CallHistoryAdapter(requireContext(), number, time)
+        val adapter = CallHistoryAdapter(requireContext().applicationContext, number, time)
         // To disable recycler view blinking (smooth reloading experience).
         adapter.setHasStableIds(true)
         recyclerView.adapter = adapter

@@ -13,7 +13,7 @@ class PackagedDataLists(
     val originalUpdatedDataList: MutableList<ContactData>,
     val updatedDataList: MutableList<ChangeContactItem>,
     val originalDataList: MutableList<ContactData>,
-    val nonContactDataList: MutableList<ChangeContactItem>
+    val nonContactDataList: List<ChangeContactItem>
 )
 
 sealed class ChangeContactItem(
@@ -31,11 +31,15 @@ object ChangeContactItemComparator : Comparator<ChangeContactItem> {
             if (o1 is SectionHeader) return -1
             if (o2 is SectionHeader) return 1
 
-            // BlankEdit always goes last.
-            if (o1 is BlankEdit) return 1
-            if (o2 is BlankEdit) return -1
+            // ChangeFooter always goes last.
+            if (o1 is ChangeFooter) return 1
+            if (o2 is ChangeFooter) return -1
 
-            // If the code reaches here, then o1 and o2 must be ContactData
+            // If not against a SectionHeader or ChangeFooter, ItemAdder always goes last.
+            if (o1 is ItemAdder) return 1
+            if (o2 is ItemAdder) return -1
+
+            // If the code reaches here, then o v 1 and o2 must be ContactData
             return ContactDataComparator.compare(o1 as ContactData, o2 as ContactData)
         }
     }
@@ -47,24 +51,18 @@ object ChangeContactItemComparator : Comparator<ChangeContactItem> {
 data class SectionHeader(override val mimeType: ContactDataMimeType) : ChangeContactItem(mimeType)
 
 /**
- * Used as the empty edit ContactData in the adapter list.
+ * Inserted at the bottom of the adapter list for some footer space in the RecyclerView.
  */
-data class BlankEdit(
+data class ChangeFooter(
+    override val mimeType: ContactDataMimeType = lastContactDataMimeType(),
+) : ChangeContactItem(mimeType)
+
+/**
+ * Used ot add new ContactData in the adapter list
+ */
+data class ItemAdder(
     override val mimeType: ContactDataMimeType,
-    var valueType: ContactDataValueType? = null,
-    var value: String = "",
-) : ChangeContactItem(mimeType) {
-
-    init {
-        valueType = valueType ?: when (mimeType) {
-            ContactDataMimeType.PHONE -> ContactDataValueType.PHONE_TYPE_MOBILE
-            ContactDataMimeType.EMAIL -> ContactDataValueType.EMAIL_TYPE_HOME
-            ContactDataMimeType.ADDRESS -> ContactDataValueType.ADDRESS_TYPE_HOME
-            else -> null
-        }
-    }
-}
-
+) : ChangeContactItem(mimeType)
 
 /**
  * TODO: Check if we need to implement custom equals? Currently think not since it compares by value.
@@ -124,6 +122,21 @@ data class ContactData(
     override fun toString(): String {
         return "ContactData - { compactRowInfoList = $compactRowInfoList, mimeType = $mimeType, " +
             "value = $value }"
+    }
+
+    companion object {
+        fun createNullPairContactData(mimeType: ContactDataMimeType) : ContactData {
+            return ContactData(
+                compactRowInfoList = mutableListOf(
+                    CompactRowInfo(
+                        pairID = null,
+                        valueType = defaultValueType(mimeType)
+                    )
+                ),
+                mimeType = mimeType,
+                value = ""
+            )
+        }
     }
 }
 
@@ -215,11 +228,19 @@ object ContactDataComparator : Comparator<ContactData> {
     }
 }
 
-enum class ContactDataMimeType(val typeString: String) {
-    NAME(ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE),
+enum class ContactDataMimeType(val typeString: String, val singleValue: Boolean = false) {
+    NAME(ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE, true),
     PHONE(ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE),
     EMAIL(ContactsContract.CommonDataKinds.Email.CONTENT_ITEM_TYPE),
     ADDRESS(ContactsContract.CommonDataKinds.StructuredPostal.CONTENT_ITEM_TYPE)
+}
+
+/**
+ * Gets the ContactDataMimeType that would be sorted to be last. Currently used to set the
+ * ContactDataMimeType of the [ChangeFooter].
+ */
+fun lastContactDataMimeType() : ContactDataMimeType {
+    return ContactDataMimeType.values().last()
 }
 
 /**
@@ -280,6 +301,18 @@ enum class ContactDataValueType(val mimeType: ContactDataMimeType, val typeInt: 
         ContactDataMimeType.ADDRESS,
         ContactsContract.CommonDataKinds.StructuredPostal.TYPE_OTHER
     ),
+}
+
+/**
+ * Returns the default value type (e.g., MOBILE, HOME, etc) based off the [mimeType].
+ */
+fun defaultValueType(mimeType: ContactDataMimeType) : ContactDataValueType? {
+    return when (mimeType) {
+        ContactDataMimeType.NAME -> null
+        ContactDataMimeType.PHONE -> ContactDataValueType.PHONE_TYPE_MOBILE
+        ContactDataMimeType.EMAIL -> ContactDataValueType.EMAIL_TYPE_HOME
+        ContactDataMimeType.ADDRESS -> ContactDataValueType.ADDRESS_TYPE_HOME
+    }
 }
 
 /**

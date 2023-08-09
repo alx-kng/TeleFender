@@ -11,7 +11,8 @@ enum class ConsoleTestType(val serverString: String, val requiresParam: Boolean 
     SYNC_LOGS(serverString = "sync_logs"),
     DOWNLOAD_DATA(serverString = "download"),
     UPLOAD_DATA(serverString = "upload"),
-    WORK_STATES(serverString = "work_states")
+    WORK_STATES(serverString = "work_states"),
+    EXECUTE_CHANGES(serverString = "execute")
 }
 
 /**

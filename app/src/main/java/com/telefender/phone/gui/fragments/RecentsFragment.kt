@@ -49,16 +49,16 @@ class RecentsFragment : Fragment() {
         setupAppBar()
         showBottomNavigation()
 
-        val context = requireContext()
+        val applicationContext = requireContext().applicationContext
         val recyclerView = binding.recentsRecyclerView
 
         /**
          * First lambda passed to initiate CallActivity when Recycler View item is clicked.
          * Second lambda passed to initiate CallHistory Fragment when info button is clicked
          */
-        val adapter = RecentsAdapter(context,
+        val adapter = RecentsAdapter(applicationContext,
             { number ->
-                CallHelpers.makeCall(requireContext(), number)
+                CallHelpers.makeCall(applicationContext, number)
             },
             { number, epochTime ->
                 recentsViewModel.retrieveDayLogs(number, epochTime)

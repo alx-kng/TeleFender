@@ -27,7 +27,7 @@
         tools:layout="@layout/fragment_contacts">
         <action
             android:id="@+id/action_contactsFragment_to_changeContactFragment_Old"
-            app:destination="@id/changeContactFragmentOld"
+            app:destination="@id/changeContactFragment"
             />
         <action
             android:id="@+id/action_contactsFragment_to_changeContactFragment"

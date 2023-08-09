@@ -547,6 +547,11 @@ class ConsoleTestCommand(
                             )
                         }
                     }
+                    ConsoleTestType.EXECUTE_CHANGES -> {
+                        RemoteDebug.enqueueData("execute - start = ${Instant.now().toEpochMilli()}")
+                        repository.executeAll()
+                        RemoteDebug.enqueueData("execute - end = ${Instant.now().toEpochMilli()}")
+                    }
                 }
 
                 break

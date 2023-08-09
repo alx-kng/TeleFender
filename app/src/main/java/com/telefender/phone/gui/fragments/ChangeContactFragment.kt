@@ -1,20 +1,31 @@
 package com.telefender.phone.gui.fragments
 
+import android.content.Context
 import android.os.Bundle
-import android.text.Editable
-import android.text.TextWatcher
+import android.text.InputType
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.fragment.app.viewModels
-import com.telefender.phone.data.default_database.DefaultContacts
+import androidx.lifecycle.viewModelScope
+import androidx.recyclerview.widget.RecyclerView
 import com.telefender.phone.databinding.FragmentChangeContactBinding
-import com.telefender.phone.databinding.FragmentChangeContactOldBinding
 import com.telefender.phone.gui.MainActivity
-import com.telefender.phone.gui.adapters.CallHistoryAdapter
-import com.telefender.phone.gui.model.*
+import com.telefender.phone.gui.adapters.ChangeContactAdapter
+import com.telefender.phone.gui.adapters.recycler_view_items.ChangeContactItem
+import com.telefender.phone.gui.adapters.recycler_view_items.ContactData
+import com.telefender.phone.gui.adapters.recycler_view_items.ItemAdder
+import com.telefender.phone.gui.model.ContactsViewModel
+import com.telefender.phone.gui.model.ContactsViewModelFactory
+import com.telefender.phone.misc_helpers.DBL
+import com.telefender.phone.misc_helpers.diffStrings
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import timber.log.Timber
 
 
 /**
@@ -23,8 +34,6 @@ import com.telefender.phone.gui.model.*
  * TODO: NEEDS TO BE RECYCLER VIEW IN THE LONG RUN!
  *
  * TODO: Need a contact detail screen (analogous to CallHistoryFragment)
- *
- * TODO: ALLOW TAP OUTSIDE KEYPAD TO STOP TEXT EDIT!
  *
  * Represents the screen for both adding a new contact and editing an existing contact.
  */
@@ -36,25 +45,65 @@ class ChangeContactFragment : Fragment() {
         ContactsViewModelFactory(requireActivity().application)
     }
 
+    private var recyclerView: RecyclerView? = null
+    private var adapter: ChangeContactAdapter? = null
+    private val adapterScope = CoroutineScope(Dispatchers.Main)
+
+    private val maxAdapterDelay = 2000L
+
     /**
-     * Makes sure you can't submit an empty Contact.
+     * Observer used to change the TextInputEditText focus to a ContactData that was newly added by
+     * an ItemAdder.
      */
-    private val doneTextWatcher = object : TextWatcher {
+    private val adapterObserver = object : RecyclerView.AdapterDataObserver() {
 
-        // No use currently
-        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-            return
+        // This method is called when new items are inserted.
+        override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+            super.onItemRangeInserted(positionStart, itemCount)
+
+            /*
+            By this point, the new adapter list, should have the newly inserted item at the
+            inserted position (which is positionStart). However, just because the currentList has
+            the newItem, it DOES NOT meant that the corresponding ViewHolder has been created yet.
+             */
+            val currentItem = adapter?.currentList?.get(positionStart) ?: return
+
+            adapterScope.launch {
+                /*
+                Wait for ViewHolder to be added, but as a safeguard, make sure that this won't wait
+                here forever.
+                 */
+                var totalDelay = 0
+                while(recyclerView?.findViewHolderForItemId(currentItem.longUUID) == null
+                    && totalDelay < maxAdapterDelay
+                ) {
+                    delay(50)
+                    totalDelay += 50
+                }
+
+                val viewHolder = recyclerView?.findViewHolderForItemId(currentItem.longUUID)
+                Timber.e("$DBL: item = ${adapter?.currentList?.get(positionStart)}, viewHolder = $viewHolder")
+                if (viewHolder is ChangeContactAdapter.EditViewHolder) {
+                    /*
+                    Focuses the blinking text bar onto the editText. Click is necessary to set the
+                    current focus variable in the adapter.
+                     */
+                    viewHolder.editText.callOnClick()
+                    viewHolder.editText.requestFocus()
+
+                    val inputMethodManager = this@ChangeContactFragment
+                        .requireContext()
+                        .applicationContext
+                        .getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+
+                    // Shows input keyboard.
+                    inputMethodManager.showSoftInput(
+                        viewHolder.editText,
+                        InputMethodManager.SHOW_IMPLICIT
+                    )
+                }
+            }
         }
-
-        // No use currently
-        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-            return
-        }
-
-        override fun afterTextChanged(s: Editable?) {
-//            updatedDoneEnabled()
-        }
-
     }
 
     override fun onCreateView(
@@ -67,8 +116,6 @@ class ChangeContactFragment : Fragment() {
 
     /**
      * TODO: Fill in values with existing contact if there is one.
-     *
-     * TODO: Cancel and Done buttons shoudld be moved to App Bar or something,
      */
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -76,44 +123,187 @@ class ChangeContactFragment : Fragment() {
         setupAppBar()
         hideBottomNavigation()
 
-        val recyclerView = binding.recyclerView
+        recyclerView = binding.recyclerView
+        adapter = ChangeContactAdapter(
+            applicationContext = requireContext().applicationContext,
+            lastNonContactDataList = contactsViewModel.nonContactDataList,
+            adderClickListener = { item ->
+                Timber.e("$DBL: AdderViewHolder onClick!")
 
-//        updatedDoneEnabled()
-//
-//        binding.changeContactNameEdit.addTextChangedListener(doneTextWatcher)
-//        binding.changeContactNumberEdit.addTextChangedListener(doneTextWatcher)
-//        binding.changeContactEmailEdit.addTextChangedListener(doneTextWatcher)
-//        binding.changeContactAddressEdit.addTextChangedListener(doneTextWatcher)
+                when (item) {
+                    is ItemAdder -> contactsViewModel.viewModelScope.launch {
+                        contactsViewModel.addToUpdatedDataList(
+                            newContactItem = ContactData.createNullPairContactData(item.mimeType),
+                            beforeItem = item,
+                        )
+                    }
+                    else -> {}
+                }
+            },
+            onTextChangedLambda = ::onTextChangedFunction,
+            removeClickListener = { item ->
+                Timber.e("$DBL: Remove onClick!")
+
+                when (item) {
+                    is ContactData -> contactsViewModel.viewModelScope.launch {
+                        contactsViewModel.removeFromUpdatedDataList(contactItem = item)
+                    }
+                    else -> {}
+                }
+            }
+        )
+
+        adapter?.setHasStableIds(true)
+        recyclerView?.adapter = adapter
+
+        adapter?.submitList(contactsViewModel.updatedDataList)
+        contactsViewModel.updatedIndicatorLiveData.observe(viewLifecycleOwner) {
+            Timber.e("$DBL - Current | Size = ${adapter?.currentList?.size}, List = ${adapter?.currentList}")
+            Timber.e("$DBL - Updated | Size = ${contactsViewModel.updatedDataList.size}, List = ${contactsViewModel.updatedDataList}")
+            /*
+            Must submit new instance of list (with the same ChangeContactItem elements), otherwise
+            the adapter can't tell when there is an update in the list. Creating a new list instance
+            like this shouldn't be a big deal performance wise, as the updatedDataList is usually
+            very small.
+             */
+            adapter?.submitList(contactsViewModel.updatedDataList.toList())
+        }
+
+        adapter?.registerAdapterDataObserver(adapterObserver)
+
+        /*
+        Update the Done button in case the updatedDataList is non-empty (i.e., editing an existing
+        contact).
+         */
+        updatedDoneEnabled()
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        adapter?.unregisterAdapterDataObserver(adapterObserver)
         _binding = null
     }
 
-//    private fun submitContact() {
-//        DefaultContacts.insertContact(
-//            contentResolver = requireContext().contentResolver,
-//            name = binding.changeContactNameEdit.text.toString(),
-//            number = binding.changeContactNumberEdit.text.toString(),
-//            email = binding.changeContactEmailEdit.text.toString(),
-//            address = binding.changeContactAddressEdit.text.toString()
-//        )
-//    }
-//
-//    private fun updatedDoneEnabled() {
-//        if (activity is MainActivity) {
-//            val act = activity as MainActivity
-//            act.setEnabledAppBarTextButton(enabled2 = validContactEntries())
-//        }
-//    }
-//
-//    private fun validContactEntries() : Boolean {
-//        return binding.changeContactNameEdit.text.toString() != ""
-//            || binding.changeContactNumberEdit.text.toString() != ""
-//            || binding.changeContactEmailEdit.text.toString() != ""
-//            || binding.changeContactAddressEdit.text.toString() != ""
-//    }
+    /**
+     * TODO: Maybe there is a cleaner way to do the string diff.
+     *
+     * Called when the UI text is changed in the EditViewHolder. Necessary not only to update the
+     * actual ContactData, but also to prevent non-focused items on the UI from being edited.
+     */
+    private fun onTextChangedFunction(
+        currentItem: ChangeContactItem,
+        newValue: String
+    ) {
+        val focusedItemID = adapter?.currentFocusedItemID
+
+        val focusedPosition = adapter?.currentList
+            ?.indexOfFirst { it.longUUID == focusedItemID }
+
+        val focusedItem = adapter?.currentList
+            ?.find { it.longUUID == focusedItemID }
+            as ContactData?
+
+        Timber.i("$DBL: EditViewHolder onTextChanged! newValue = $newValue, " +
+            "currentItem = ${currentItem.longUUID}, focusedItem = ${focusedItem?.longUUID}")
+
+        when (currentItem) {
+            is ContactData -> {
+                if (currentItem == focusedItem) {
+                    currentItem.value = newValue
+                } else {
+                    // Requires non-null focusedItem.
+                    val focusedInputType = focusedItem?.let {
+                        ChangeContactAdapter.getInputType(it.mimeType)
+                    } ?: return
+
+                    val stringDiffs = diffStrings(newValue, currentItem.value)
+                    for (diff in stringDiffs) {
+                        Timber.e("$DBL: StringDiff = $diff | newValue = $newValue, oldValue = ${currentItem.value}")
+
+                        if (diff.first == null) {
+                            val newString = focusedItem.value.dropLast(1)
+                            newString.let {
+                                focusedItem.value = newString
+                            }
+
+                            continue
+                        }
+
+                        /*
+                        Prevents text with the wrong input type from being added to the focused item
+                        (e.g., no text in phone numbers).
+                         */
+                        val validInputType = ChangeContactAdapter.isValidForInputType(
+                            inputType = focusedInputType,
+                            text = diff.first.toString()
+                        )
+
+                        if (diff.second == null && validInputType) {
+                            val newString = focusedItem.value.plus(diff.first)
+                            newString.let {
+                                focusedItem.value = newString
+                            }
+                        }
+                    }
+
+                    Timber.e("$DBL: focusedPosition = $focusedPosition, itemCount = ${adapter?.itemCount}")
+                    if (focusedPosition != null
+                        && focusedPosition in 0 until (adapter?.itemCount ?: 0)
+                    ) {
+                        /*
+                        We need to post the scrolling action, which delays the execution just long
+                        enough to let any pending operations finish (e.g., setting up the previous
+                        ViewHolders. This prevents the need for two onTextChanged events in order
+                         to scroll.
+                         */
+                        recyclerView?.post {
+                            recyclerView?.smoothScrollToPosition(focusedPosition)
+
+                            /*
+                            Only edit text of ViewHolder if it's still visible after the scroll.
+                            Scroll listener waits for the scroll to complete before doing anything.
+                            This is here because if the scroll doesn't complete before modifying the
+                            ViewHolder, sometimes the scroll just completely fails.
+                             */
+                            recyclerView?.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                                override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                                    if (newState == RecyclerView.SCROLL_STATE_IDLE) {
+                                        // Scroll has basically completed.
+                                        val viewHolder = recyclerView.findViewHolderForItemId(currentItem.longUUID)
+                                        if (viewHolder is ChangeContactAdapter.EditViewHolder) {
+                                            val textWatcher = adapter?.textWatcherMap?.get(currentItem.longUUID)
+
+                                            /*
+                                            Set non-focused item to original value without notifying
+                                            the TextChanged listeners.
+                                             */
+                                            viewHolder.editText.removeTextChangedListener(textWatcher)
+                                            viewHolder.editText.setText(currentItem.value)
+                                            viewHolder.editText.addTextChangedListener(textWatcher)
+                                        }
+
+                                        // Removes this scroll listener to prevent it from being called again.
+                                        recyclerView.removeOnScrollListener(this)
+                                    }
+                                }
+                            })
+                        }
+                    }
+                }
+
+                // Update Done button in the app bar.
+                updatedDoneEnabled()
+            }
+            else -> {}
+        }
+    }
+
+    private fun updatedDoneEnabled() {
+        if (activity is MainActivity) {
+            val act = activity as MainActivity
+            act.setEnabledAppBarTextButton(enabled2 = contactsViewModel.validEntries())
+        }
+    }
 
     private fun setupAppBar() {
         if (activity is MainActivity) {
@@ -137,7 +327,7 @@ class ChangeContactFragment : Fragment() {
                     requireActivity().onBackPressedDispatcher.onBackPressed()
                 },
                 onClickListener2 = {
-//                    submitContact()
+                    contactsViewModel.submitChanges()
                     requireActivity().onBackPressedDispatcher.onBackPressed()
                 }
             )

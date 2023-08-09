@@ -23,7 +23,7 @@ import java.util.*
 
 
 class CallHistoryAdapter (
-    private val context: Context,
+    private val applicationContext: Context,
     private val selectNumber: String,
     private val selectTime : String,
 ) : ListAdapter<CallDetailItem, RecyclerView.ViewHolder>(CombinedComparator()) {
@@ -145,11 +145,11 @@ class CallHistoryAdapter (
                 holder.duration.text = current.callDuration.toString() + " seconds"
 
                 if (position == 1) {
-                    holder.parent.background = context.getDrawable(R.drawable.grey_top_rounded)
+                    holder.parent.background = applicationContext.getDrawable(R.drawable.grey_top_rounded)
                 } else if (position == currentList.size - 2) {
-                    holder.parent.background = context.getDrawable(R.drawable.grey_bottom_rounded)
+                    holder.parent.background = applicationContext.getDrawable(R.drawable.grey_bottom_rounded)
                 } else {
-                    holder.parent.background = context.getDrawable(R.drawable.grey_background)
+                    holder.parent.background = applicationContext.getDrawable(R.drawable.grey_background)
                 }
             }
             is InfoHistoryViewHolder -> {
@@ -167,15 +167,15 @@ class CallHistoryAdapter (
                         button.text = "Unblock"
                         if (holder.businessButton.text.toString().lowercase() == "unmark organization") {
                             holder.businessButton.text = "Mark Organization"
-                            holder.businessButton.setTextColor(ContextCompat.getColor(context, R.color.business_green))
+                            holder.businessButton.setTextColor(ContextCompat.getColor(applicationContext, R.color.business_green))
                         }
-                        button.setTextColor(ContextCompat.getColor(context, R.color.business_blue))
+                        button.setTextColor(ContextCompat.getColor(applicationContext, R.color.business_blue))
 
                         // Set info image outline to show block status
                         holder.infoImage.setStrokeColorResource(R.color.block_red)
                     } else {
                         button.text = "Block"
-                        button.setTextColor(ContextCompat.getColor(context, R.color.block_red))
+                        button.setTextColor(ContextCompat.getColor(applicationContext, R.color.block_red))
 
                         // Set info image outline to show unblocked status
                         holder.infoImage.setStrokeColorResource(R.color.grey)
@@ -191,15 +191,15 @@ class CallHistoryAdapter (
                         button.text = "Unsafe"
                         if (holder.blockButton.text.toString().lowercase() == "unblock") {
                             holder.blockButton.text = "Block"
-                            holder.blockButton.setTextColor(ContextCompat.getColor(context, R.color.block_red))
+                            holder.blockButton.setTextColor(ContextCompat.getColor(applicationContext, R.color.block_red))
                         }
-                        button.setTextColor(ContextCompat.getColor(context, R.color.business_blue))
+                        button.setTextColor(ContextCompat.getColor(applicationContext, R.color.business_blue))
 
                         // Set info image outline to show organization status
                         holder.infoImage.setStrokeColorResource(R.color.business_blue)
                     } else {
                         button.text = "Safe"
-                        button.setTextColor(ContextCompat.getColor(context, R.color.business_blue))
+                        button.setTextColor(ContextCompat.getColor(applicationContext, R.color.business_blue))
 
                         // Set info image outline to show not organization status
                         holder.infoImage.setStrokeColorResource(R.color.grey)
@@ -214,7 +214,7 @@ class CallHistoryAdapter (
     }
 
     private fun getDirectionString(direction: Int, rawNumber: String): String {
-        val trueDirection = TeleHelpers.getTrueDirection(context, direction, rawNumber)
+        val trueDirection = TeleHelpers.getTrueDirection(applicationContext, direction, rawNumber)
 
         val directionString = when (trueDirection) {
             CallLog.Calls.INCOMING_TYPE  -> "Incoming Call"

@@ -40,6 +40,7 @@
 
         <activity
             android:name="com.telefender.phone.gui.MainActivity"
+            android:windowSoftInputMode="adjustResize"
             android:exported="true"
             android:launchMode="standard"
             android:screenOrientation="portrait"

@@ -59,6 +59,7 @@ enum class WorkType(val isWorker : Boolean = false) {
     // Other processes
     SYNC_CONTACTS,
     SYNC_LOGS,
+    EXECUTE_CHANGES
 }
 
 /**

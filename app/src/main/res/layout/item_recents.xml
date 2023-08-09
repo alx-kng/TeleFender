@@ -74,6 +74,7 @@
                 app:iconGravity="textStart"
                 app:iconPadding="0dp"
                 app:iconSize="@dimen/log_info_button"
+                app:strokeWidth="0dp"
                 android:padding="0dp"
                 android:insetLeft="0dp"
                 android:insetTop="0dp"

@@ -23,7 +23,7 @@ import java.util.*
 
 
 class RecentsAdapter(
-    private val context: Context,
+    private val applicationContext: Context,
     private val viewClickListener: (String) -> Unit,
     private val infoClickListener: (String, Long) -> Unit
 ) : ListAdapter<GroupedCallDetail, RecentsAdapter.RecentsViewHolder>(RecentsComparator()) {
@@ -93,13 +93,13 @@ class RecentsAdapter(
     override fun onBindViewHolder(holder: RecentsViewHolder, position: Int) {
         val current = getItem(position)
         holder.number.text = getFormattedNumber(current.rawNumber, current.amount)
-        holder.number.setTextColor(ContextCompat.getColor(context, R.color.icon_white))
+        holder.number.setTextColor(ContextCompat.getColor(applicationContext, R.color.icon_white))
 
         if (holder.number.currentTextColor != R.color.icon_white) {
-            holder.number.setTextColor(ContextCompat.getColor(context, R.color.icon_white))
+            holder.number.setTextColor(ContextCompat.getColor(applicationContext, R.color.icon_white))
         }
         if (isRed(current.callDirection)) {
-            holder.number.setTextColor(ContextCompat.getColor(context, R.color.missed_red))
+            holder.number.setTextColor(ContextCompat.getColor(applicationContext, R.color.missed_red))
         }
 
         holder.location.text = current.callLocation ?: "Unknown location"
@@ -159,7 +159,7 @@ class RecentsAdapter(
     }
 
     private fun getDirectionIcon(direction: Int, rawNumber: String): Int {
-        val trueDirection = TeleHelpers.getTrueDirection(context, direction, rawNumber)
+        val trueDirection = TeleHelpers.getTrueDirection(applicationContext, direction, rawNumber)
 
         val icon = when (trueDirection) {
             CallLog.Calls.INCOMING_TYPE -> R.drawable.ic_baseline_call_received_24

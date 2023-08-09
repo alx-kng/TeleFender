@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="?android:attr/colorControlHighlight">
+    <item android:id="@android:id/mask">
+        <color android:color="@color/grey"/>
+    </item>
+    <item>
+        <selector>
+            <item android:state_pressed="true" android:drawable="@color/ripple_grey"/>
+            <item android:drawable="@color/grey"/>
+        </selector>
+    </item>
+</ripple>

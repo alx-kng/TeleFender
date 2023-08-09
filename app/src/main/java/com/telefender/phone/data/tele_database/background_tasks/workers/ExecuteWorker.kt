@@ -82,7 +82,7 @@ class CoroutineExecuteWorker(
         stateVarString = inputData.getString("variableName")
         NOTIFICATION_ID = inputData.getString("notificationID")?.toInt()
 
-        Timber.i("$DBL: EXECUTE STARTED")
+        Timber.i("$DBL: EXECUTE_CHANGES STARTED")
 
         try {
             setForeground(getForegroundInfo())
@@ -92,11 +92,11 @@ class CoroutineExecuteWorker(
 
         when (stateVarString) {
             "oneTimeExecState" -> {
-                Timber.i("$DBL: EXECUTE ONE TIME STARTED")
+                Timber.i("$DBL: EXECUTE_CHANGES ONE TIME STARTED")
                 // No need to set the state again for one time workers.
             }
             "periodicExecState" -> {
-                Timber.i("$DBL: EXECUTE PERIODIC STARTED")
+                Timber.i("$DBL: EXECUTE_CHANGES PERIODIC STARTED")
 
                 /**
                  * Although this may seem redundant, we need to set the state to running here,
@@ -109,7 +109,7 @@ class CoroutineExecuteWorker(
                 ExperimentalWorkStates.generalizedSetState(WorkType.PERIODIC_EXEC, WorkInfo.State.RUNNING)
             }
             else -> {
-                Timber.i("$DBL: EXECUTE WORKER THREAD: Worker state variable name is wrong")
+                Timber.i("$DBL: EXECUTE_CHANGES WORKER THREAD: Worker state variable name is wrong")
             }
         }
 
@@ -118,22 +118,22 @@ class CoroutineExecuteWorker(
         /**
          * Executes logs in ExecuteQueue
          */
-        Timber.i("$DBL: EXECUTE WORKER STARTED")
+        Timber.i("$DBL: EXECUTE_CHANGES WORKER STARTED")
         repository.executeAll()
 
         when (stateVarString) {
             "oneTimeExecState" -> ExperimentalWorkStates.generalizedSetState(WorkType.ONE_TIME_EXEC, null)
             "periodicExecState" -> ExperimentalWorkStates.generalizedSetState(WorkType.PERIODIC_EXEC, null)
             else -> {
-                Timber.i("$DBL: EXECUTE WORKER THREAD: Worker state variable name is wrong")
+                Timber.i("$DBL: EXECUTE_CHANGES WORKER THREAD: Worker state variable name is wrong")
             }
         }
-        Timber.i("$DBL: EXECUTE ENDED")
+        Timber.i("$DBL: EXECUTE_CHANGES ENDED")
         return Result.success()
     }
 
     override suspend fun getForegroundInfo() : ForegroundInfo {
-        Timber.i("$DBL: EXECUTE WORKER FOREGROUND")
+        Timber.i("$DBL: EXECUTE_CHANGES WORKER FOREGROUND")
 
         return ForegroundInfoCreator.createForegroundInfo(
             applicationContext = applicationContext,

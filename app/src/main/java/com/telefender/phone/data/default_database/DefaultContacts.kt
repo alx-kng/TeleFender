@@ -201,13 +201,12 @@ object DefaultContacts {
         // ChangeContactItems associated with the non-data parts of the UI.
         val nonContactDataItems = mutableListOf(
             SectionHeader(ContactDataMimeType.NAME),
-            BlankEdit(ContactDataMimeType.NAME),
             SectionHeader(ContactDataMimeType.PHONE),
-            BlankEdit(ContactDataMimeType.PHONE),
+            ItemAdder(ContactDataMimeType.PHONE),
             SectionHeader(ContactDataMimeType.EMAIL),
-            BlankEdit(ContactDataMimeType.EMAIL),
+            ItemAdder(ContactDataMimeType.EMAIL),
             SectionHeader(ContactDataMimeType.ADDRESS),
-            BlankEdit(ContactDataMimeType.ADDRESS),
+            ChangeFooter()
         )
 
         /*
@@ -222,7 +221,22 @@ object DefaultContacts {
         val castedUpdatedDataList = updatedDataList
             .map { it.deepCopy() as ChangeContactItem }
             .toMutableList()
+
         castedUpdatedDataList.addAll(nonContactDataItems)
+
+        val singleValueMimeTypes = ContactDataMimeType.values().filter { it.singleValue }
+        for (mimeType in singleValueMimeTypes) {
+            /*
+            If there is already an existing ContactData with the single value mimeType, then don't
+            add a new null-pair ContactData.
+             */
+            if (!castedUpdatedDataList.any { it.mimeType == mimeType && it is ContactData }) {
+                castedUpdatedDataList.add(
+                    ContactData.createNullPairContactData(mimeType)
+                )
+            }
+        }
+
         castedUpdatedDataList.sortWith(ChangeContactItemComparator)
 
         return PackagedDataLists(
@@ -315,7 +329,7 @@ object DefaultContacts {
      * - Adding to updated data list on clean
      *      - Means that there CAN BE ContactData with null pairID
      *      - Duplicate ContactData (same value and RawCID) is NOT allowed
-     *      - [compactRowInfo] param CAN have null pairID
+     *      - [compactRowInfo] param CAN have null pairID (kinda same as bullet 1)
      *
      *
      * NOTE: If you're using this for the updated data list cleaning process. MAKE SURE THE RECEIVER
@@ -464,10 +478,24 @@ object DefaultContacts {
     }
 
     /**
-     * TODO: Remove non-ContactData items.
+     * TODO: Document
      */
-    fun cleanUpdatedDataList() : Unit {
-        // TODO: Stub!
+    suspend fun cleanUpdatedDataList(
+        uncleanList: MutableList<ContactData>
+    ) : List<ContactData> {
+        val cleanList = mutableListOf<ContactData>()
+
+        for (contactData in uncleanList) {
+            for (compactRowInfo in contactData.compactRowInfoList) {
+                cleanList.addToContactDataList(
+                    compactRowInfo = compactRowInfo,
+                    mimeType = contactData.mimeType,
+                    value = contactData.value
+                )
+            }
+        }
+
+        return cleanList
     }
 
     /***********************************************************************************************

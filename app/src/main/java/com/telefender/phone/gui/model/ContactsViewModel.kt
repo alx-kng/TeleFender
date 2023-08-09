@@ -9,8 +9,11 @@ import com.telefender.phone.misc_helpers.DBL
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import timber.log.Timber
+import java.util.*
 
 
 /**
@@ -30,12 +33,25 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
     private val context = getApplication<Application>().applicationContext
     private val scope = CoroutineScope(Dispatchers.IO)
 
+    /**********************************************************************************************
+     * For ContactsFragment
+     **********************************************************************************************/
+
+    // TODO: Should this be get()?
+
     private var _contacts = MutableLiveData<List<AggregateContact>>()
     val contacts : LiveData<List<AggregateContact>> = _contacts
 
     private var _dividedContacts = mutableListOf<BaseContactItem>()
     val dividedContacts : List<BaseContactItem>
         get() = _dividedContacts
+
+    /**********************************************************************************************
+     * TODO: See if there is a better solution for observing updated data list than using our
+     *  indicator live data.
+     *
+     * For ChangeContactFragment
+     **********************************************************************************************/
 
     /**
      * Selected aggregate CID for the ChangeContact screen. Info retrieved from selected contact or
@@ -45,17 +61,25 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
     val selectCID : String?
         get() = _selectCID
 
-    private var _originalUpdatedDataList = mutableListOf<ContactData>()
-    val originalUpdatedDataList = _originalUpdatedDataList
+    private var originalUpdatedDataList = mutableListOf<ContactData>()
+
+    val updatedIndicatorLiveData = MutableLiveData<UUID>()
 
     private var _updatedDataList = mutableListOf<ChangeContactItem>()
-    val updatedDataList = _updatedDataList
+    val updatedDataList : List<ChangeContactItem>
+        get() = _updatedDataList
 
-    private var _originalDataList = mutableListOf<ContactData>()
-    val originalDataList = _originalDataList
+    private var originalDataList = mutableListOf<ContactData>()
 
-    private var _lastNonContactDataList = mutableListOf<ChangeContactItem>()
-    val lastNonContactDataList = _lastNonContactDataList
+    private var _nonContactDataList = listOf<ChangeContactItem>()
+    val nonContactDataList : List<ChangeContactItem>
+        get() = _nonContactDataList
+
+    private val mutexUpdated = Mutex()
+
+    /**********************************************************************************************
+     * For ContactsFragment
+     **********************************************************************************************/
 
     /**
      * Preloads contacts when ViewModel is first created.
@@ -122,6 +146,10 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**********************************************************************************************
+     * For ChangeContactFragment
+     **********************************************************************************************/
+
     /**
      * Called when starting the ChangeContactFragment. Given the selected aggregate CID [selectCID],
      * this loads the corresponding data lists necessary for the UI.
@@ -129,32 +157,37 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
     fun setDataLists(selectCID: String?) {
         _selectCID = selectCID
 
-        if (selectCID == null) {
-            val initialUIList = mutableListOf(
-                SectionHeader(ContactDataMimeType.NAME),
-                BlankEdit(ContactDataMimeType.NAME),
-                SectionHeader(ContactDataMimeType.PHONE),
-                BlankEdit(ContactDataMimeType.PHONE),
-                SectionHeader(ContactDataMimeType.EMAIL),
-                BlankEdit(ContactDataMimeType.EMAIL),
-                SectionHeader(ContactDataMimeType.ADDRESS),
-                BlankEdit(ContactDataMimeType.ADDRESS),
-            )
-
-            _originalUpdatedDataList = mutableListOf()
-            _updatedDataList = initialUIList
-            _originalDataList = mutableListOf()
-            _lastNonContactDataList = initialUIList
-            return
-        }
-
         viewModelScope.launch(Dispatchers.Default) {
+            if (selectCID == null) {
+                val initialUIList = mutableListOf(
+                    SectionHeader(ContactDataMimeType.NAME),
+                    ContactData.createNullPairContactData(ContactDataMimeType.NAME),
+                    SectionHeader(ContactDataMimeType.PHONE),
+                    ItemAdder(ContactDataMimeType.PHONE),
+                    SectionHeader(ContactDataMimeType.EMAIL),
+                    ItemAdder(ContactDataMimeType.EMAIL),
+                    SectionHeader(ContactDataMimeType.ADDRESS),
+                    ItemAdder(ContactDataMimeType.ADDRESS),
+                    ChangeFooter()
+                )
+
+                originalUpdatedDataList = mutableListOf()
+                setUpdatedDataList(initialUIList.toMutableList())
+                originalDataList = mutableListOf()
+
+                // _nonContactDataList should not contain the initial null-pair ContactData.
+                initialUIList.removeAt(1)
+                _nonContactDataList = initialUIList
+
+                return@launch
+            }
+
             val packagedDataLists = DefaultContacts.getContactData(context.contentResolver, selectCID)
 
-            _originalUpdatedDataList = packagedDataLists.originalUpdatedDataList
-            _updatedDataList = packagedDataLists.updatedDataList
-            _originalDataList = packagedDataLists.originalDataList
-            _lastNonContactDataList = packagedDataLists.nonContactDataList
+            originalUpdatedDataList = packagedDataLists.originalUpdatedDataList
+            setUpdatedDataList(packagedDataLists.updatedDataList)
+            originalDataList = packagedDataLists.originalDataList
+            _nonContactDataList = packagedDataLists.nonContactDataList
         }
     }
 
@@ -166,13 +199,21 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
     fun submitChanges() {
         scope.launch {
             /*
-            1. Convert updatedDataList to be all ContactData by removing SectionHeaders and
-             converting the non-blank BlankEdits to ContactData (with null pairID).
+            1. Filter updatedDataList to only have ContactData and get rid of ContactData with an
+             empty string value.
             2. Clean converted updatedDataList
             3. Compare with originalUpdatedDataList to see if they are different.
             4. If different, then call [executeChanges] in DefaultContacts.
              */
-            val cleanUpdatedDataList = listOf<ContactData>()
+            val pureContactData = updatedDataList
+                .filterIsInstance<ContactData>()
+                .filter { it.value.trim() != "" }
+                .toMutableList()
+
+            val cleanUpdatedDataList = DefaultContacts.cleanUpdatedDataList(
+                uncleanList = pureContactData
+            )
+
             DefaultContacts.executeChanges(
                 context = context,
                 contentResolver = context.contentResolver,
@@ -182,6 +223,79 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
                 accountName = null,
                 accountType = null,
             )
+        }
+    }
+
+    /**
+     * ChangeContactFragment entries are valid if there is at least one non-empty string value.
+     */
+    fun validEntries() : Boolean {
+        for (item in updatedDataList) {
+            when (item) {
+                is ContactData -> if (item.value.trim() != "") return true
+                else -> continue
+            }
+        }
+
+        return false
+    }
+
+    /**
+     * TODO: Should we make these more generic extension functions? That is, add / remove to list
+     *  by object reference?
+     */
+    suspend fun setUpdatedDataList(newUpdatedDataList: MutableList<ChangeContactItem>) {
+        mutexUpdated.withLock {
+            Timber.e("$DBL: ${this.updatedDataList}")
+            _updatedDataList = newUpdatedDataList
+            updatedIndicatorLiveData.postValue(UUID.randomUUID())
+        }
+    }
+
+    /**
+     * Adds by reference and notifies indicator LiveData.
+     */
+    suspend fun addToUpdatedDataList(
+        newContactItem: ChangeContactItem,
+        beforeItem: ChangeContactItem? = null,
+    ) {
+        mutexUpdated.withLock {
+            if (beforeItem != null) {
+                val index = _updatedDataList.indexOfFirst { it === beforeItem }
+                if (index >= 0) {
+                    _updatedDataList.add(index, newContactItem)
+                    updatedIndicatorLiveData.postValue(UUID.randomUUID())
+                }
+            } else {
+                _updatedDataList.add(newContactItem)
+                updatedIndicatorLiveData.postValue(UUID.randomUUID())
+            }
+        }
+    }
+
+    /**
+     * Removes by reference and notifies indicator LiveData.
+     */
+    suspend fun removeFromUpdatedDataList(contactItem: ChangeContactItem) {
+        mutexUpdated.withLock {
+            val index = _updatedDataList.indexOfFirst { it === contactItem }
+            if (index >= 0) {
+                _updatedDataList.removeAt(index)
+                updatedIndicatorLiveData.postValue(UUID.randomUUID())
+            }
+        }
+    }
+
+    suspend fun replaceInUpdatedDataList(
+        oldContactItem: ChangeContactItem,
+        newContactItem: ChangeContactItem
+    ) {
+        mutexUpdated.withLock {
+            val index = _updatedDataList.indexOfFirst { it === oldContactItem }
+            if (index >= 0) {
+                _updatedDataList[index] = newContactItem
+                updatedIndicatorLiveData.postValue(UUID.randomUUID())
+            }
         }
     }
 }

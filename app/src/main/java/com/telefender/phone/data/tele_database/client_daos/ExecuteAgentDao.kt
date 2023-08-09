@@ -5,6 +5,8 @@ import androidx.room.Dao
 import androidx.room.Transaction
 import com.telefender.phone.data.tele_database.MutexType
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
+import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
+import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.data.tele_database.entities.*
 import com.telefender.phone.misc_helpers.*
 import kotlinx.coroutines.Dispatchers
@@ -35,9 +37,21 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
 
     suspend fun executeAll(){
         withContext(Dispatchers.IO) {
+            // Waits for any possible duplicate EXECUTE_CHANGES processes to finish before continuing.
+            val workInstanceKey = ExperimentalWorkStates.localizedCompete(
+                workType = WorkType.EXECUTE_CHANGES,
+                runningMsg = "EXECUTE_CHANGES",
+                newWorkInstance = true
+            )
+
             while (hasQTE()) {
                 executeFirst()
             }
+
+            ExperimentalWorkStates.localizedRemoveState(
+                workType = WorkType.EXECUTE_CHANGES,
+                workInstanceKey = workInstanceKey
+            )
         }
     }
 

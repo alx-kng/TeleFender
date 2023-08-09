@@ -92,6 +92,7 @@ class ContactsFragment : Fragment() {
             act.setTitle(getString(R.string.contacts_title))
             act.displayAppBarTextButton(show2 = true, text2 = "Add")
             act.setAppBarTextButtonOnClickListener(onClickListener2 = {
+                contactsViewModel.setDataLists(selectCID = null)
                 val action = ContactsFragmentDirections.actionContactsFragmentToChangeContactFragment()
                 findNavController().navigate(action)
             })
