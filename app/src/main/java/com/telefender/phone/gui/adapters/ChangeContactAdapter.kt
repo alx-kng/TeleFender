@@ -1,6 +1,7 @@
 package com.telefender.phone.gui.adapters
 
 import android.content.Context
+import android.provider.ContactsContract
 import android.text.Editable
 import android.text.InputType
 import android.text.TextWatcher
@@ -28,6 +29,9 @@ import org.w3c.dom.Text
 import timber.log.Timber
 
 /**
+ * TODO: Later on when displaying value type, make sure to use default value type for mimetype if
+ *  the value type in the ContactData is null.
+ *
  * TODO: Clean up code.
  *
  * TODO: Auto change focus to new field when ItemAdder is pressed! -> Think it's done.
@@ -54,7 +58,7 @@ import timber.log.Timber
  */
 class ChangeContactAdapter (
     private val applicationContext: Context,
-    private var lastNonContactDataList: List<ChangeContactItem>,
+    var lastNonContactDataList: List<ChangeContactItem>,
     private val adderClickListener: (ChangeContactItem) -> Unit,
     private val onTextChangedLambda: (ChangeContactItem, String) -> Unit,
     private val removeClickListener: (ChangeContactItem) -> Unit
@@ -259,7 +263,7 @@ class ChangeContactAdapter (
                     holder.removeButton.isClickable = true
                 }
 
-                holder.editLayout.hint = getEditHint(current.mimeType)
+                holder.editLayout.hint = getEditHint(current.mimeType, current.columnInfo?.second)
                 holder.editText.inputType = getInputType(current.mimeType)
                 holder.editText.setText(current.value)
 
@@ -331,9 +335,13 @@ class ChangeContactAdapter (
     }
 
     companion object {
-        fun getEditHint(mimeType: ContactDataMimeType) : String {
+        fun getEditHint(mimeType: ContactDataMimeType, column: String?) : String {
             return when (mimeType) {
-                ContactDataMimeType.NAME -> "Name"
+                ContactDataMimeType.NAME -> when (column) {
+                    ContactsContract.CommonDataKinds.StructuredName.GIVEN_NAME -> "First Name"
+                    ContactsContract.CommonDataKinds.StructuredName.FAMILY_NAME -> "Last Name"
+                    else -> "Bad Name"
+                }
                 ContactDataMimeType.PHONE -> "Phone Number"
                 ContactDataMimeType.EMAIL -> "Email"
                 ContactDataMimeType.ADDRESS -> "Address"

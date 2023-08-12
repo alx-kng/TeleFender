@@ -3,14 +3,15 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/item_contact_aggregate_parent"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:clickable="true"
     android:focusable="true"
-    app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.CardView.Square">
+    app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.CardView.Square"
+    >
 
     <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/contact_parent"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:paddingTop="15sp"
@@ -18,7 +19,7 @@
         android:background="@drawable/top_bottom_border">
 
         <TextView
-            android:id="@+id/contact_name"
+            android:id="@+id/item_contact_aggregate_name"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="20dp"

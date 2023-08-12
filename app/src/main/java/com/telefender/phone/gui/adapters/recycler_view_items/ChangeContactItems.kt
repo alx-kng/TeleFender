@@ -73,7 +73,11 @@ data class ItemAdder(
  *
  * [compactRowInfoList] - List of [CompactRowInfo] associated with [value] (represents each actual row).
  * [mimeType] - MIME_TYPE of [value]
- * [value] - Actual value associated with Data row (e.g., number as 716-570-0686)
+ * [value] - Actual value associated with Data row (e.g., number as 716-570-0686).
+ * [columnInfo] - Specifically for rows like name Data rows, where the first and last name from the
+ *  same Data row will be split into two separate ContactData. The first element of the Pair
+ *  represents the ordering of the ContactData (e.g., first name ContactData should go before
+ *  last name ContactData). The second element is the actual column name string.
  *
  * NOTE: [compactRowInfoList] technically should never be empty. Moreover, [compactRowInfoList]
  */
@@ -81,6 +85,7 @@ data class ContactData(
     val compactRowInfoList: MutableList<CompactRowInfo>,
     override val mimeType: ContactDataMimeType,
     var value: String,
+    val columnInfo: Pair<Int, String>? = null
 ) : ChangeContactItem(mimeType) {
 
     /**
@@ -115,17 +120,21 @@ data class ContactData(
         return ContactData(
             compactRowInfoList = compactRowInfoList.map { it.deepCopy() }.toMutableList(),
             mimeType = this.mimeType, // Assuming this is immutable
-            value = this.value // Assuming this is a primitive or immutable object
+            value = this.value, // Assuming this is a primitive or immutable object
+            columnInfo = this.columnInfo
         )
     }
 
     override fun toString(): String {
         return "ContactData - { compactRowInfoList = $compactRowInfoList, mimeType = $mimeType, " +
-            "value = $value }"
+            "value = $value, column = ${columnInfo?.second} }"
     }
 
     companion object {
-        fun createNullPairContactData(mimeType: ContactDataMimeType) : ContactData {
+        fun createNullPairContactData(
+            mimeType: ContactDataMimeType,
+            columnInfo: Pair<Int, String>? = null
+        ) : ContactData {
             return ContactData(
                 compactRowInfoList = mutableListOf(
                     CompactRowInfo(
@@ -134,7 +143,8 @@ data class ContactData(
                     )
                 ),
                 mimeType = mimeType,
-                value = ""
+                value = "",
+                columnInfo = columnInfo
             )
         }
     }
@@ -212,8 +222,19 @@ object ContactDataComparator : Comparator<ContactData> {
             val o2Lowest = o2.lowestDataID()
 
             return if (o1Lowest != null && o2Lowest != null) {
-                // Lower Data rowID goes first.
-                o1Lowest - o2Lowest
+                if (o1Lowest - o2Lowest == 0
+                    && o1.columnInfo != null
+                    && o2.columnInfo != null
+                ) {
+                    /*
+                    If same lowest DataID, then probably from same Data row (e.g., name). In that
+                    case, we use the column orderings if they exist.
+                     */
+                    o1.columnInfo.first - o2.columnInfo.first
+                } else {
+                    // Lower Data rowID goes first.
+                    o1Lowest - o2Lowest
+                }
             } else if (o1Lowest == null && o2Lowest == null) {
                 // No preference over which goes first.
                 0

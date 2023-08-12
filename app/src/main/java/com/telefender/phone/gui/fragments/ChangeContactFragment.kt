@@ -166,16 +166,19 @@ class ChangeContactFragment : Fragment() {
             like this shouldn't be a big deal performance wise, as the updatedDataList is usually
             very small.
              */
+            adapter?.lastNonContactDataList = contactsViewModel.nonContactDataList
             adapter?.submitList(contactsViewModel.updatedDataList.toList())
+
+            /*
+            Update the Done button in case the updatedDataList is non-empty (i.e., editing an
+            existing contact).
+             */
+            updatedDoneEnabled()
         }
 
         adapter?.registerAdapterDataObserver(adapterObserver)
 
-        /*
-        Update the Done button in case the updatedDataList is non-empty (i.e., editing an existing
-        contact).
-         */
-        updatedDoneEnabled()
+//        updatedDoneEnabled()
     }
 
     override fun onDestroyView() {

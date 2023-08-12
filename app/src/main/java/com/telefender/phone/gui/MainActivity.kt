@@ -387,6 +387,11 @@ class MainActivity : AppCompatActivity() {
             override fun handleOnBackPressed() {
                 Timber.i("$DBL: Back pressed in MainActivity!")
 
+                // Clear data lists when coming back from ChangeContactFragment
+                if (navController.currentDestination?.id == R.id.changeContactFragment) {
+                    contactsViewModel.clearDataLists()
+                }
+
                 isEnabled = false
                 onBackPressedDispatcher.onBackPressed()
                 updateBottomHighlight()

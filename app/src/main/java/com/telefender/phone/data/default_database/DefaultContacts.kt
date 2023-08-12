@@ -2,9 +2,11 @@ package com.telefender.phone.data.default_database
 
 import android.content.*
 import android.database.Cursor
+import android.os.Build.VERSION_CODES.S
 import android.provider.ContactsContract
 import android.provider.ContactsContract.CommonDataKinds.Phone
 import android.provider.ContactsContract.RawContacts
+import androidx.core.database.getStringOrNull
 import androidx.work.WorkInfo
 import com.telefender.phone.App
 import com.telefender.phone.data.server_related.debug_engine.command_subtypes.NumberUpdate
@@ -26,6 +28,8 @@ import kotlin.collections.ArrayList
 
 
 /**
+ * TODO: Switch cursors to use instead of close?
+ *
  * TODO: Consider changing this default database retrieval structure to a ContentProvider, but it
  *  may or may not be necessary seeing as that ContentProvider is often used to expose data to
  *  other applications. --> This prompt might not even make sense. Probably just do as normal.
@@ -78,6 +82,13 @@ object DefaultContacts {
     }
 
     /**
+     * TODO: Maybe don't do UI formatting here. This way, it can be used for both the View and
+     *  Edit screens. OR, add a fifth list to [PackagedDataLists] so that we don't need to call this
+     *  twice.
+     *
+     * TODO: Should we use the default value type in the rare case that the value type is null for
+     *  Data that should have value type (e.g., number, email, address)?
+     *
      * TODO: Check if we should change coroutine context for safety (like in getAggregateContacts())
      *
      * Returns two lists of all Data rows under the given [contactID] or [rawContactID] in the form
@@ -110,8 +121,10 @@ object DefaultContacts {
         // Adds primary name data to the lists if not querying under RawContactID.
         if (!shouldUseRawCID) {
             getContactPrimaryNameData(contentResolver, contactID)?.let {
-                updatedDataList.add(it)
-                originalDataList.add(it)
+                updatedDataList.add(it.first)
+                updatedDataList.add(it.second)
+                originalDataList.add(it.first)
+                originalDataList.add(it.second)
             }
         }
 
@@ -137,7 +150,7 @@ object DefaultContacts {
         val selection = if (shouldUseRawCID) {
             "${ContactsContract.Data.RAW_CONTACT_ID} = ? "
         } else {
-            "${ContactsContract.Data.CONTACT_ID} = ? " +
+            "${ContactsContract.Data.CONTACT_ID} = ? AND " +
                 "${ContactsContract.Data.MIMETYPE} != ? "
         }
 
@@ -157,14 +170,21 @@ object DefaultContacts {
                 selection,
                 selectionArgs,
                 ContactsContract.Data._ID + " ASC"
-            )!!
+            )
 
-            while(cur.moveToNext()) {
+            while(cur?.moveToNext() == true) {
                 val rawCID = cur.getString(0).toInt()
                 val dataID = cur.getString(1).toInt()
                 val mimeType = cur.getString(2).toContactDataMimeType()
-                val value = cur.getString(3)
-                val valueType = cur.getString(4).toIntOrNull()?.toContactDataValueType(mimeType)
+                val value = cur.getStringOrNull(3) ?: ""
+
+                /*
+                Don't use default value type even if type happens to be null for some reason.
+                Unexpected null value types will be handled in the adapter and in calculateCPOList().
+                 */
+                val valueType = cur.getStringOrNull(4)
+                    ?.toIntOrNull()
+                    ?.toContactDataValueType(mimeType)
 
                 /**
                  * For now, we are only dealing with the Data rows that have a MIME_TYPE listed in
@@ -179,7 +199,7 @@ object DefaultContacts {
                         valueType = valueType
                     ),
                     mimeType = mimeType,
-                    value = value
+                    value = value,
                 )
 
                 originalDataList.addToContactDataList(
@@ -193,7 +213,7 @@ object DefaultContacts {
                 )
             }
 
-            cur.close()
+            cur?.close()
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -206,6 +226,7 @@ object DefaultContacts {
             SectionHeader(ContactDataMimeType.EMAIL),
             ItemAdder(ContactDataMimeType.EMAIL),
             SectionHeader(ContactDataMimeType.ADDRESS),
+            ItemAdder(ContactDataMimeType.ADDRESS),
             ChangeFooter()
         )
 
@@ -231,9 +252,28 @@ object DefaultContacts {
             add a new null-pair ContactData.
              */
             if (!castedUpdatedDataList.any { it.mimeType == mimeType && it is ContactData }) {
-                castedUpdatedDataList.add(
-                    ContactData.createNullPairContactData(mimeType)
-                )
+                when (mimeType) {
+                    ContactDataMimeType.NAME -> {
+                        castedUpdatedDataList.add(
+                            ContactData.createNullPairContactData(
+                                mimeType = mimeType,
+                                columnInfo = Pair(1, ContactsContract.CommonDataKinds.StructuredName.GIVEN_NAME)
+                            )
+                        )
+
+                        castedUpdatedDataList.add(
+                            ContactData.createNullPairContactData(
+                                mimeType = mimeType,
+                                columnInfo = Pair(2, ContactsContract.CommonDataKinds.StructuredName.FAMILY_NAME)
+                            )
+                        )
+                    }
+                    else -> {
+                        castedUpdatedDataList.add(
+                            ContactData.createNullPairContactData(mimeType = mimeType)
+                        )
+                    }
+                }
             }
         }
 
@@ -248,18 +288,25 @@ object DefaultContacts {
     }
 
     /**
-     * Returns the primary name data row. Name data is retrieved in a special manner, since we
-     * only want to retrieve the primary (displayed) name data row.
+     * Returns the primary name data row as two ContactData. One for the first name and another for
+     * the last name. Name data is retrieved in a special manner, since we only want to retrieve the
+     * primary (displayed) name data row.
      */
     private suspend fun getContactPrimaryNameData(
         contentResolver: ContentResolver,
         contactID: String
-    ) : ContactData? {
+    ) : Pair<ContactData, ContactData>? {
+
+        val primaryNameRawCID = getPrimaryNameRawCID(
+            contentResolver = contentResolver,
+            contactID = contactID
+        ) ?: return null
 
         val projection = arrayOf(
             ContactsContract.CommonDataKinds.StructuredName.RAW_CONTACT_ID,
             ContactsContract.CommonDataKinds.StructuredName._ID,
-            ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME
+            ContactsContract.CommonDataKinds.StructuredName.GIVEN_NAME,
+            ContactsContract.CommonDataKinds.StructuredName.FAMILY_NAME,
         )
 
         /**
@@ -269,8 +316,8 @@ object DefaultContacts {
          */
         val selection =
             "${ContactsContract.CommonDataKinds.StructuredName.CONTACT_ID} = ? AND " +
-                "${ContactsContract.CommonDataKinds.StructuredName.IS_PRIMARY} = ? AND " +
-                "${ContactsContract.CommonDataKinds.StructuredName.RAW_CONTACT_ID} = ?"
+                "${ContactsContract.CommonDataKinds.StructuredName.RAW_CONTACT_ID} = ? AND " +
+                "${ContactsContract.Data.MIMETYPE} = ? "
 
         try {
             val cur = contentResolver.query(
@@ -279,35 +326,71 @@ object DefaultContacts {
                 selection,
                 arrayOf(
                     contactID,
-                    selection,
-                    ContactsContract.CommonDataKinds.StructuredName.NAME_RAW_CONTACT_ID
+                    primaryNameRawCID,
+                    ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE
                 ),
                 null
             )
 
-            cur?.moveToFirst()
-            val contactData = cur?.let {
-                ContactData(
-                    compactRowInfoList = mutableListOf(
-                        CompactRowInfo(
-                            pairID = Pair(
-                                first = it.getString(0).toInt(),
-                                second = it.getString(1).toInt()
-                            ),
-                            valueType = null
-                        )
+            if (cur?.moveToFirst() == true) {
+                val sharedRowInfo = CompactRowInfo(
+                    pairID = Pair(
+                        first = cur.getString(0).toInt(),
+                        second = cur.getString(1).toInt()
                     ),
-                    mimeType = ContactDataMimeType.NAME,
-                    value = it.getString(2), // Actual name
+                    valueType = null
                 )
+
+                val firstNameContactData = ContactData(
+                    compactRowInfoList = mutableListOf(sharedRowInfo),
+                    mimeType = ContactDataMimeType.NAME,
+                    value = cur.getStringOrNull(2) ?: "", // Actual first name
+                    columnInfo = Pair(1, ContactsContract.CommonDataKinds.StructuredName.GIVEN_NAME)
+                )
+
+                val lastNameContactData = ContactData(
+                    compactRowInfoList = mutableListOf(sharedRowInfo),
+                    mimeType = ContactDataMimeType.NAME,
+                    value = cur.getStringOrNull(3) ?: "", // Actual last name
+                    columnInfo = Pair(2, ContactsContract.CommonDataKinds.StructuredName.FAMILY_NAME)
+                )
+
+                cur.close()
+                return Pair(firstNameContactData, lastNameContactData)
             }
+
             cur?.close()
-            return contactData
         } catch (e: Exception) {
+            Timber.e("$DBL: getContactPrimaryNameData() Error! ${e.message}")
             e.printStackTrace()
         }
 
         return null
+    }
+
+    private suspend fun getPrimaryNameRawCID(
+        contentResolver: ContentResolver,
+        contactID: String
+    ) : String? {
+        val projection = arrayOf(
+            ContactsContract.Contacts.NAME_RAW_CONTACT_ID
+        )
+
+        val selection = "${ContactsContract.Contacts._ID} = ?"
+
+        return contentResolver.query(
+            ContactsContract.Contacts.CONTENT_URI,
+            projection,
+            selection,
+            arrayOf(contactID),
+            null
+        )?.use {
+            if (it.moveToFirst()) {
+                it.getString(0)
+            } else {
+                null
+            }
+        }
     }
 
     /**
@@ -331,7 +414,6 @@ object DefaultContacts {
      *      - Duplicate ContactData (same value and RawCID) is NOT allowed
      *      - [compactRowInfo] param CAN have null pairID (kinda same as bullet 1)
      *
-     *
      * NOTE: If you're using this for the updated data list cleaning process. MAKE SURE THE RECEIVER
      * LIST IS THE NEW CLEAN LIST. This means that there cannot be any two ContactData items with
      * the same value (e.g., two different ContactData items with null pairIDs).
@@ -350,17 +432,19 @@ object DefaultContacts {
         compactRowInfo: CompactRowInfo,
         mimeType: ContactDataMimeType,
         value: String,
+        columnInfo: Pair<Int, String>? = null
     ) {
         // New ContactData item with params. May or may not be added depending existing data.
         val newContactData = ContactData(
             compactRowInfoList = mutableListOf(compactRowInfo),
             mimeType = mimeType,
             value = value,
+            columnInfo = columnInfo
         )
 
         // All ContactData with same data (compactRowInfoList will be different though).
         val existingContactDataList = this.filter {
-            it.mimeType == mimeType && it.value == value
+            it.mimeType == mimeType && it.value == value && it.columnInfo == columnInfo
         }
 
         /*
@@ -471,6 +555,7 @@ object DefaultContacts {
                         compactRowInfoList = mutableListOf(existingCompactRowInfo),
                         mimeType = mimeType,
                         value = value,
+                        columnInfo = columnInfo
                     )
                 )
             }
@@ -490,7 +575,8 @@ object DefaultContacts {
                 cleanList.addToContactDataList(
                     compactRowInfo = compactRowInfo,
                     mimeType = contactData.mimeType,
-                    value = contactData.value
+                    value = contactData.value,
+                    columnInfo = contactData.columnInfo
                 )
             }
         }
@@ -696,7 +782,8 @@ object DefaultContacts {
                 originalDataList = originalDataList,
                 updatedDataList = updatedDataList,
                 accountName = accountName,
-                accountType = accountType
+                accountType = accountType,
+                originalRawCIDs = originalRawCIDs
             )
 
             val results = contentResolver.applyBatch(ContactsContract.AUTHORITY, operations)
@@ -712,7 +799,7 @@ object DefaultContacts {
                 our Tele database with the new changes. Note that if the newly created RawContact
                 ID doesn't exist, then the batch query insert failed.
                  */
-                val newRawCID = results[0].uri
+                val newRawCID = results.getOrNull(0)?.uri
                     ?.let { ContentUris.parseId(it).toString() }
                     ?: throw Exception("Default insert contact failed! New rowID is null!")
 
@@ -731,7 +818,8 @@ object DefaultContacts {
                 Tele database with the new changes. Note that if the number of Data rows affected
                 (given by results[0].count) is 0, then the batch query update failed.
                  */
-                if (results[0].count == 0) {
+                val rowsAffected = results.getOrNull(0)?.count ?: 0
+                if (rowsAffected == 0) {
                     throw Exception("Default update contact failed! No updated rows!")
                 }
 
@@ -751,7 +839,8 @@ object DefaultContacts {
             )
             return true
         } catch (e: Exception) {
-            Timber.e("$DBL: executeChanges() failed!")
+            Timber.e("$DBL: executeChanges() failed! ${e.message}")
+            e.printStackTrace()
 
             ExperimentalWorkStates.localizedSetStateKey(
                 workType = WorkType.SYNC_CONTACTS,
@@ -846,7 +935,7 @@ object DefaultContacts {
     private suspend fun updatedMiniSync(
         context: Context,
         contentResolver: ContentResolver,
-        originalRawCIDs: List<String>
+        originalRawCIDs: List<String>,
     ) {
         val instanceNumber = TeleHelpers.getUserNumberStored(context)!!
         val database = (context.applicationContext as App).database
@@ -1049,13 +1138,13 @@ object DefaultContacts {
                 selection,
                 arrayOf(aggregateCID),
                 null
-            )!!
+            )
 
-            while (cur.moveToNext()) {
+            while (cur?.moveToNext() == true) {
                 rawCIDList.add(cur.getString(0))
             }
 
-            cur.close()
+            cur?.close()
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -1080,15 +1169,15 @@ object DefaultContacts {
                 selection,
                 arrayOf(rawContactID),
                 null
-            )!!
+            )
 
-            val aggregateCID = if (cur.moveToFirst()) {
+            val aggregateCID = if (cur?.moveToFirst() == true) {
                 cur.getString(0)
             } else {
                 null
             }
 
-            cur.close()
+            cur?.close()
             return aggregateCID
         } catch (e: Exception) {
             e.printStackTrace()
@@ -1124,9 +1213,9 @@ object DefaultContacts {
                 selection,
                 arrayOf(rawContactID),
                 null
-            )!!
+            )
 
-            while (cur.moveToNext()) {
+            while (cur?.moveToNext() == true) {
                 numberDataList.add(
                     Triple(
                         first = cur.getString(0), // Aggregate CID
@@ -1136,7 +1225,7 @@ object DefaultContacts {
                 )
             }
 
-            cur.close()
+            cur?.close()
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -1151,16 +1240,15 @@ object DefaultContacts {
         originalDataList: List<ContactData>,
         updatedDataList: List<ContactData>,
         accountName: String?,
-        accountType: String?
+        accountType: String?,
+        originalRawCIDs: List<String>
     ) : ArrayList<ContentProviderOperation> {
 
         val operations = ArrayList<ContentProviderOperation> ()
 
-        /*
-        If the originalDataList is empty, then the user must have added a completely new contact,
-        which means we have to add a RawContact insert CPO to the beginning of the operations list.
-         */
-        if (originalDataList.isEmpty()) {
+        // If the originalDataList is empty, then the user must have added a completely new contact.
+        val isNewContact = originalDataList.isEmpty()
+        if (isNewContact) {
             operations.add(
                 getRawContactInsertCPO(
                     accountName = accountName,
@@ -1179,31 +1267,95 @@ object DefaultContacts {
                  */
                 val valueTypeInt = updatedData.compactRowInfoList.first().valueType?.typeInt
 
-                val cpo = when(updatedData.mimeType) {
-                    ContactDataMimeType.NAME -> {
-                        getNameDataInsertCPO(name = updatedData.value)
+                if (isNewContact) {
+                    val cpo = when(updatedData.mimeType) {
+                        ContactDataMimeType.NAME -> {
+                            /*
+                            Since we need to combine the two name ContactData together for the single
+                            Data row insert, we combine on the first column ordered name ContactData
+                            (corresponding to the GIVEN_NAME column).
+                             */
+                            if (updatedData.columnInfo?.first == 1) {
+                                val otherData = updatedDataList.find {
+                                    it.mimeType == ContactDataMimeType.NAME
+                                        && it.columnInfo?.first == 2
+                                }
+
+                                getNameDataInsertCPO(
+                                    firstName = updatedData.value,
+                                    lastName = otherData?.value ?: ""
+                                )
+                            } else {
+                                null
+                            }
+                        }
+                        ContactDataMimeType.PHONE -> {
+                            getNumberDataInsertCPO(
+                                number = updatedData.value,
+                                type = valueTypeInt!!
+                            )
+                        }
+                        ContactDataMimeType.EMAIL -> {
+                            getEmailDataInsertCPO(
+                                email = updatedData.value,
+                                type = valueTypeInt!!
+                            )
+                        }
+                        ContactDataMimeType.ADDRESS -> {
+                            getAddressDataInsertCPO(
+                                address = updatedData.value,
+                                type = valueTypeInt!!
+                            )
+                        }
                     }
-                    ContactDataMimeType.PHONE -> {
-                        getNumberDataInsertCPO(
-                            number = updatedData.value,
-                            type = valueTypeInt!!
-                        )
-                    }
-                    ContactDataMimeType.EMAIL -> {
-                        getEmailDataInsertCPO(
-                            email = updatedData.value,
-                            type = valueTypeInt!!
-                        )
-                    }
-                    ContactDataMimeType.ADDRESS -> {
-                        getAddressDataInsertCPO(
-                            address = updatedData.value,
-                            type = valueTypeInt!!
-                        )
+
+                    cpo?.let { operations.add(it) }
+                } else {
+                    for (rawCID in originalRawCIDs) {
+                        val cpo = when(updatedData.mimeType) {
+                            ContactDataMimeType.NAME -> {
+                                if (updatedData.columnInfo?.first == 1) {
+                                    val otherData = updatedDataList.find {
+                                        it.mimeType == ContactDataMimeType.NAME
+                                            && it.columnInfo?.first == 2
+                                    }
+
+                                    getNameDataInsertCPO(
+                                        firstName = updatedData.value,
+                                        lastName = otherData?.value ?: "",
+                                        rawContactID = rawCID
+                                    )
+                                } else {
+                                    null
+                                }
+                            }
+                            ContactDataMimeType.PHONE -> {
+                                getNumberDataInsertCPO(
+                                    number = updatedData.value,
+                                    type = valueTypeInt!!,
+                                    rawContactID = rawCID
+                                )
+                            }
+                            ContactDataMimeType.EMAIL -> {
+                                getEmailDataInsertCPO(
+                                    email = updatedData.value,
+                                    type = valueTypeInt!!,
+                                    rawContactID = rawCID
+                                )
+                            }
+                            ContactDataMimeType.ADDRESS -> {
+                                getAddressDataInsertCPO(
+                                    address = updatedData.value,
+                                    type = valueTypeInt!!,
+                                    rawContactID = rawCID
+                                )
+                            }
+                        }
+
+                        cpo?.let { operations.add(it) }
                     }
                 }
 
-                operations.add(cpo)
                 continue
             }
 
@@ -1215,11 +1367,12 @@ object DefaultContacts {
              */
             for (updatedRowInfo in updatedData.compactRowInfoList) {
                 /*
-                Finds the ContactData in the original data list that contains [updatedRowInfo]. As
-                mentioned above, we know it exists.
+                Finds the ContactData in the original data list that contains [updatedRowInfo] and
+                has the same columnInfo. As mentioned above, we know it exists.
                  */
                 val originalData = originalDataList.find { data ->
                     data.compactRowInfoList.find { it.pairID == updatedRowInfo.pairID } != null
+                        && data.columnInfo == updatedData.columnInfo
                 }!!
 
                 val originalRowInfo = originalData.compactRowInfoList
@@ -1229,13 +1382,21 @@ object DefaultContacts {
                 if (originalData.value != updatedData.value
                     || originalRowInfo.valueType != updatedRowInfo.valueType
                 ) {
+                    /*
+                    Here's where we fix the row if the value type is null when it shouldn't, as we
+                    just use the default value type.
+                     */
+                    val adjustedType = updatedRowInfo.valueType
+                        ?: defaultValueType(updatedData.mimeType)
+
                     val valueDiff = originalData.value != updatedData.value
-                    val typeDiff = originalRowInfo.valueType != updatedRowInfo.valueType
+                    val typeDiff = originalRowInfo.valueType != adjustedType
 
                     val cpo = when(updatedData.mimeType) {
                         ContactDataMimeType.NAME -> {
                             getNameDataUpdateCPO_DataID(
-                                newName = updatedData.value,
+                                newNamePart = updatedData.value,
+                                column = updatedData.columnInfo?.second!!,
                                 dataID = updatedRowInfo.getDataID().toString()
                             )
                         }
@@ -1243,7 +1404,7 @@ object DefaultContacts {
                             // Note that this should be non-null, as we already know there is a diff.
                             getNumberDataUpdateCPO_DataID(
                                 newNumber = if (valueDiff) updatedData.value else null,
-                                newType = if (typeDiff) updatedRowInfo.valueType?.typeInt else null,
+                                newType = if (typeDiff) adjustedType?.typeInt else null,
                                 dataID = updatedRowInfo.getDataID().toString()
                             )!!
                         }
@@ -1251,14 +1412,14 @@ object DefaultContacts {
                             // Note that this should be non-null, as we already know there is a diff.
                             getEmailDataUpdateCPO_DataID(
                                 newEmail = if (valueDiff) updatedData.value else null,
-                                newType = if (typeDiff) updatedRowInfo.valueType?.typeInt else null,
+                                newType = if (typeDiff) adjustedType?.typeInt else null,
                                 dataID = updatedRowInfo.getDataID().toString()
                             )!!
                         }
                         ContactDataMimeType.ADDRESS -> {
                             getAddressDataUpdateCPO_DataID(
                                 newAddress = if (valueDiff) updatedData.value else null,
-                                newType = if (typeDiff) updatedRowInfo.valueType?.typeInt else null,
+                                newType = if (typeDiff) adjustedType?.typeInt else null,
                                 dataID = updatedRowInfo.getDataID().toString()
                             )!!
                         }
@@ -1295,13 +1456,6 @@ object DefaultContacts {
         return operations
     }
 
-    fun updatedDataListChanged(
-        originalUpdatedDataList: List<ContactData>,
-        finalUpdatedDataList: List<ContactData>
-    ) : Boolean {
-        return originalUpdatedDataList == finalUpdatedDataList
-    }
-
     /**
      * TODO: REMOVE THIS
      * TODO: PREDICT CHANGES AND START MINI TABLE SYNC FOR THOSE ROWS
@@ -1327,8 +1481,15 @@ object DefaultContacts {
         )
 
         if (name != "") {
+            val parts = name.split(" ", limit = 2)
+            val firstName = parts.getOrElse(0) { "" }
+            val lastName = parts.getOrElse(1) { "" }
+
             operations.add(
-                getNameDataInsertCPO(name = name)
+                getNameDataInsertCPO(
+                    firstName = firstName,
+                    lastName = lastName
+                )
             )
         }
 
@@ -1405,8 +1566,15 @@ object DefaultContacts {
         )
 
         if (name != null && name != "") {
+            val parts = name.split(" ", limit = 2)
+            val firstName = parts.getOrElse(0) { "" }
+            val lastName = parts.getOrElse(1) { "" }
+
             operations.add(
-                getNameDataInsertCPO(name = name)
+                getNameDataInsertCPO(
+                    firstName = firstName,
+                    lastName = lastName
+                )
             )
         }
 
@@ -1678,13 +1846,14 @@ object DefaultContacts {
     }
 
     /**
-     * Returns ContentProviderOperation for name Data row insert. Should pass in non-empty string.
+     * Returns ContentProviderOperation for name Data row insert.
      * If no explicit RawContact rowID is given, we assume that the CPO is being added to a batch
      * with a RawContact insert as the FIRST CPO in the batch, so we back reference the
      * RAW_CONTACT_ID column value to the first CPO result.
      */
     private fun getNameDataInsertCPO(
-        name: String,
+        firstName: String,
+        lastName: String,
         rawContactID: String? = null
     ) : ContentProviderOperation {
         val cpo = ContentProviderOperation
@@ -1694,8 +1863,12 @@ object DefaultContacts {
                 ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE
             )
             .withValue(
-                ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME,
-                name
+                ContactsContract.CommonDataKinds.StructuredName.GIVEN_NAME,
+                firstName
+            )
+            .withValue(
+                ContactsContract.CommonDataKinds.StructuredName.FAMILY_NAME,
+                lastName
             )
 
         if (rawContactID != null) {
@@ -1714,13 +1887,13 @@ object DefaultContacts {
     }
 
     /**
-     * Returns ContentProviderOperation for number Data row update. Should pass in non-empty string
-     * for [newName]. Requires Data rowID to update.
+     * Returns ContentProviderOperation for number Data row update. Requires Data rowID to update.
      *
      * NOTE: This only updates the specific Data row specified by [dataID].
      */
     private fun getNameDataUpdateCPO_DataID(
-        newName: String,
+        newNamePart: String,
+        column: String,
         dataID: String
     ) : ContentProviderOperation {
         return ContentProviderOperation
@@ -1730,8 +1903,8 @@ object DefaultContacts {
                 arrayOf(dataID)
             )
             .withValue(
-                ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME,
-                newName
+                column,
+                newNamePart
             )
             .build()
     }

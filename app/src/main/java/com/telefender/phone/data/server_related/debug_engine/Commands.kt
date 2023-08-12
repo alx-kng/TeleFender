@@ -3,6 +3,7 @@ package com.telefender.phone.data.server_related.debug_engine
 import android.content.Context
 import com.telefender.phone.App
 import com.telefender.phone.data.default_database.DefaultContacts
+import com.telefender.phone.data.default_database.TestContacts
 import com.telefender.phone.data.server_related.RemoteDebug
 import com.telefender.phone.data.server_related.RequestWrappers
 import com.telefender.phone.data.server_related.debug_engine.command_subtypes.*
@@ -551,6 +552,21 @@ class ConsoleTestCommand(
                         RemoteDebug.enqueueData("execute - start = ${Instant.now().toEpochMilli()}")
                         repository.executeAll()
                         RemoteDebug.enqueueData("execute - end = ${Instant.now().toEpochMilli()}")
+                    }
+                    ConsoleTestType.LOG_CONTACTS_AGGR -> {
+                        RemoteDebug.enqueueList(
+                            TestContacts.printContactDataTable(context, contentResolver)
+                        )
+                    }
+                    ConsoleTestType.LOG_CONTACTS_RAW -> {
+                        RemoteDebug.enqueueList(
+                            TestContacts.printRawContactsTable(context)
+                        )
+                    }
+                    ConsoleTestType.LOG_CONTACTS_DATA -> {
+                        RemoteDebug.enqueueList(
+                            TestContacts.printContactDataTable(context, contentResolver)
+                        )
                     }
                 }
 

@@ -2,6 +2,7 @@ package com.telefender.phone.gui.model
 
 import android.annotation.SuppressLint
 import android.app.Application
+import android.provider.ContactsContract
 import androidx.lifecycle.*
 import com.telefender.phone.data.default_database.*
 import com.telefender.phone.gui.adapters.recycler_view_items.*
@@ -17,6 +18,8 @@ import java.util.*
 
 
 /**
+ * TODO: Context may be part of memory leak!!! -> maybe, maybe not
+ *
  * TODO: Contact sorting algorithm has some issues.
  *
  * TODO: Probably / Maybe refactor ContactsViewModel to use repository to actually query the data
@@ -24,11 +27,11 @@ import java.util.*
  *
  * TODO: LOOK INTO PAGING FOR RECENTS AND CONTACTS
  *
- * TODO: Leftover gray divider bar when there are no contacts.
+ * TODO: Leftover gray divider bar when there are no contacts. -> Need to get rid of decoration
+ *  if that's the case.
  */
 class ContactsViewModel(app: Application) : AndroidViewModel(app) {
 
-    // TODO: THIS MIGHT BE CAUSE OF A MEMORY LEAK!!! -> maybe, maybe not
     @SuppressLint("StaticFieldLeak")
     private val context = getApplication<Application>().applicationContext
     private val scope = CoroutineScope(Dispatchers.IO)
@@ -36,8 +39,6 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
     /**********************************************************************************************
      * For ContactsFragment
      **********************************************************************************************/
-
-    // TODO: Should this be get()?
 
     private var _contacts = MutableLiveData<List<AggregateContact>>()
     val contacts : LiveData<List<AggregateContact>> = _contacts
@@ -93,53 +94,67 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun activateDummy() {}
 
-    private suspend fun addDividers(contacts: List<AggregateContact>) {
-        val tempDividers =  mutableListOf<BaseContactItem>()
+    /**
+     * Given the list of aggregate contacts, [formatForDividedUI] automatically adds [BaseDivider] items
+     * and a [BaseFooter] (for UI), sorts the list, and assigns it to [_dividedContacts] to be used
+     * for the UI.
+     */
+    private suspend fun formatForDividedUI(contacts: List<AggregateContact>) {
+        val tempDivided =  mutableListOf<BaseContactItem>()
 
         withContext(Dispatchers.Default) {
-            val miscContacts = mutableListOf<BaseContactItem>()
-            var currLetter: Char? = null
+            val existingDividers = mutableListOf<BaseDivider>()
+            var currChar: Char? = null
 
             for (contact in contacts) {
-                // First non-whitespace character. Guaranteed to exist.
-                val firstNonWhiteSpace = contact.name.find { !it.isWhitespace() }
-                val firstLetter = firstNonWhiteSpace!!.uppercaseChar()
+                /*
+                First non-whitespace character adjusted to fit our divider grouping pattern. Also,
+                technically guaranteed to exist since even if there's no name, some other piece of
+                data is used.
+                 */
+                val adjustedFirstChar = getAdjustedFirstChar(contact.name)
 
-                // If first letter isn't A through Z or #, then add to misc contacts.
-                if (firstLetter !in 'A'..'Z' && firstLetter != '#') {
-                    miscContacts.add(contact)
-                    continue
+                /*
+                The only time a new divider is added if the first letter is different from before.
+                Although, that's only a necessary condition (for efficiency). We still need to make
+                sure that there isn't an existing divider (e.g., these edge cases come from the way
+                lowercase and uppercase names are sorted).
+                 */
+                if (adjustedFirstChar != currChar) {
+                    currChar = adjustedFirstChar
+
+                    val existingDivider = existingDividers.find {
+                        it.adjustedFirstChar == adjustedFirstChar
+                    }
+
+                    // Only add new divider if no existing divider.
+                    if (existingDivider == null) {
+                        val newDivider = BaseDivider(adjustedFirstChar)
+                        tempDivided.add(newDivider)
+                        existingDividers.add(newDivider)
+                    }
                 }
 
-                // New divider is added if the first letter is different from before.
-                if (currLetter == null || firstLetter != currLetter) {
-                    currLetter = firstLetter
-                    tempDividers.add(Divider(currLetter.toString()))
-                }
-
-                tempDividers.add(contact)
+                tempDivided.add(contact)
             }
-
-            // Only adds in misc divider if there are misc contacts.
-            if (miscContacts.isNotEmpty()) {
-                tempDividers.add(Divider("Misc"))
-                miscContacts.forEach { tempDividers.add(it) }
-            }
-
-            // Always adds footer to end of list.
-            tempDividers.add(ContactFooter)
-
-            // Removes the first divider since the sticky header overlay always has the top header.
-            tempDividers.removeFirst()
         }
 
-        _dividedContacts = tempDividers
+        // Sorted with the dividers.
+        tempDivided.sortWith(BaseContactItemComparator)
+
+        // Removes the first divider since the sticky header overlay always has the top header.
+        tempDivided.removeFirst()
+
+        // Always add footer to end of list.
+        tempDivided.add(BaseFooter)
+
+        _dividedContacts = tempDivided
     }
 
     fun updateContacts() {
         viewModelScope.launch(Dispatchers.Default) {
             val tempContacts = DefaultContacts.getAggregateContacts(context)
-            addDividers(tempContacts)
+            formatForDividedUI(tempContacts)
 
             Timber.i("$DBL: ABOUT TO ASSIGN CONTACTS VALUE")
             _contacts.postValue(tempContacts)
@@ -161,7 +176,14 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
             if (selectCID == null) {
                 val initialUIList = mutableListOf(
                     SectionHeader(ContactDataMimeType.NAME),
-                    ContactData.createNullPairContactData(ContactDataMimeType.NAME),
+                    ContactData.createNullPairContactData(
+                        mimeType = ContactDataMimeType.NAME,
+                        columnInfo = Pair(1, ContactsContract.CommonDataKinds.StructuredName.GIVEN_NAME)
+                    ),
+                    ContactData.createNullPairContactData(
+                        mimeType = ContactDataMimeType.NAME,
+                        columnInfo = Pair(2, ContactsContract.CommonDataKinds.StructuredName.FAMILY_NAME)
+                    ),
                     SectionHeader(ContactDataMimeType.PHONE),
                     ItemAdder(ContactDataMimeType.PHONE),
                     SectionHeader(ContactDataMimeType.EMAIL),
@@ -172,53 +194,90 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
                 )
 
                 originalUpdatedDataList = mutableListOf()
-                setUpdatedDataList(initialUIList.toMutableList())
                 originalDataList = mutableListOf()
+
+                /*
+                We don't use the set function here, since setNonContactDataList will already notify
+                the adapter after setting this. Prevents double blinking update.
+                 */
+                mutexUpdated.withLock {
+                    _updatedDataList = initialUIList.toMutableList()
+                }
 
                 // _nonContactDataList should not contain the initial null-pair ContactData.
                 initialUIList.removeAt(1)
-                _nonContactDataList = initialUIList
+                initialUIList.removeAt(1)
+                setNonContactDataList(initialUIList)
 
                 return@launch
             }
 
-            val packagedDataLists = DefaultContacts.getContactData(context.contentResolver, selectCID)
+            val packagedDataLists = DefaultContacts.getContactData(
+                contentResolver = context.contentResolver,
+                contactID = selectCID
+            )
 
             originalUpdatedDataList = packagedDataLists.originalUpdatedDataList
-            setUpdatedDataList(packagedDataLists.updatedDataList)
             originalDataList = packagedDataLists.originalDataList
-            _nonContactDataList = packagedDataLists.nonContactDataList
+
+            /*
+            We don't use the set function here, since setNonContactDataList will already notify
+            the adapter after setting this. Prevents double blinking update.
+             */
+            mutexUpdated.withLock {
+                _updatedDataList = packagedDataLists.updatedDataList
+            }
+
+            setNonContactDataList(packagedDataLists.nonContactDataList)
         }
     }
 
     /**
-     * TODO: Finish
+     * TODO: Finish / double check
      *
      * Submits the changes in the UI to the default database.
      */
     fun submitChanges() {
+        val dataListsSnapshot = PackagedDataLists(
+            originalUpdatedDataList = originalUpdatedDataList,
+            updatedDataList = _updatedDataList,
+            originalDataList = originalDataList,
+            nonContactDataList = _nonContactDataList
+        )
+
         scope.launch {
             /*
             1. Filter updatedDataList to only have ContactData and get rid of ContactData with an
-             empty string value.
+             empty string value unless it's a Name ContactData (special handling due first and last
+             name).
             2. Clean converted updatedDataList
             3. Compare with originalUpdatedDataList to see if they are different.
             4. If different, then call [executeChanges] in DefaultContacts.
              */
-            val pureContactData = updatedDataList
+            val pureContactData = dataListsSnapshot.updatedDataList
                 .filterIsInstance<ContactData>()
-                .filter { it.value.trim() != "" }
+                .filter { it.value.trim() != "" || it.mimeType == ContactDataMimeType.NAME }
                 .toMutableList()
+
+            Timber.i("$DBL: originalUpdatedDataList = ${dataListsSnapshot.originalUpdatedDataList}")
+            Timber.i("$DBL: pureUpdatedDataList = $pureContactData")
+
+            if (originalUpdatedDataList == pureContactData) {
+                return@launch
+            }
+
 
             val cleanUpdatedDataList = DefaultContacts.cleanUpdatedDataList(
                 uncleanList = pureContactData
             )
 
+            Timber.i("$DBL: cleanUpdatedDataList = $cleanUpdatedDataList")
+
             DefaultContacts.executeChanges(
                 context = context,
                 contentResolver = context.contentResolver,
                 originalCID = selectCID,
-                originalDataList = originalDataList,
+                originalDataList = dataListsSnapshot.originalDataList,
                 updatedDataList = cleanUpdatedDataList,
                 accountName = null,
                 accountType = null,
@@ -240,16 +299,27 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
         return false
     }
 
+    fun clearDataLists() {
+        originalDataList = mutableListOf()
+        originalUpdatedDataList = mutableListOf()
+        _updatedDataList = mutableListOf()
+        _nonContactDataList = listOf()
+    }
+
     /**
      * TODO: Should we make these more generic extension functions? That is, add / remove to list
      *  by object reference?
      */
     suspend fun setUpdatedDataList(newUpdatedDataList: MutableList<ChangeContactItem>) {
         mutexUpdated.withLock {
-            Timber.e("$DBL: ${this.updatedDataList}")
             _updatedDataList = newUpdatedDataList
             updatedIndicatorLiveData.postValue(UUID.randomUUID())
         }
+    }
+
+    suspend fun setNonContactDataList(newNonContactDataList: List<ChangeContactItem>) {
+        _nonContactDataList = newNonContactDataList
+        updatedIndicatorLiveData.postValue(UUID.randomUUID())
     }
 
     /**

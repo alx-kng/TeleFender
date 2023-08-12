@@ -11,6 +11,7 @@ import com.telefender.phone.R
 import com.telefender.phone.databinding.FragmentContactsBinding
 import com.telefender.phone.gui.MainActivity
 import com.telefender.phone.gui.adapters.ContactsAdapter
+import com.telefender.phone.gui.adapters.recycler_view_items.AggregateContact
 import com.telefender.phone.gui.decoration.ContactHeaderDecoration
 import com.telefender.phone.gui.model.ContactsViewModel
 import com.telefender.phone.gui.model.ContactsViewModelFactory
@@ -55,7 +56,22 @@ class ContactsFragment : Fragment() {
 
         val recyclerView = binding.contactsRecyclerView
 
-        val adapter = ContactsAdapter(requireContext())
+        val adapter = ContactsAdapter(requireContext().applicationContext) { item ->
+            /*
+            TODO: For now, this goes to the ChangeContactFragment for testing, but later, we'll
+             make it go to the Contact detail fragment.
+             */
+            Timber.e("$DBL: Contact onClick! Contact = $item")
+
+            when(item) {
+                is AggregateContact -> {
+                    contactsViewModel.setDataLists(selectCID = item.aggregateID.toString())
+                    val action = ContactsFragmentDirections.actionContactsFragmentToChangeContactFragment()
+                    findNavController().navigate(action)
+                }
+                else -> {}
+            }
+        }
         adapter.setHasStableIds(true)
         recyclerView.adapter = adapter
 
