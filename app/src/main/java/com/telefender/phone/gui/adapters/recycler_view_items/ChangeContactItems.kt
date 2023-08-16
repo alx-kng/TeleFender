@@ -13,7 +13,8 @@ class PackagedDataLists(
     val originalUpdatedDataList: MutableList<ContactData>,
     val updatedDataList: MutableList<ChangeContactItem>,
     val originalDataList: MutableList<ContactData>,
-    val nonContactDataList: List<ChangeContactItem>
+    val nonContactDataList: List<ChangeContactItem>,
+    val viewFormattedList: MutableList<ViewContactItem>
 )
 
 sealed class ChangeContactItem(
@@ -27,19 +28,23 @@ object ChangeContactItemComparator : Comparator<ChangeContactItem> {
         if (o1.mimeType.ordinal != o2.mimeType.ordinal) {
             return o1.mimeType.ordinal - o2.mimeType.ordinal
         } else {
-            // SectionHeader always goes first.
-            if (o1 is SectionHeader) return -1
-            if (o2 is SectionHeader) return 1
+            // ChangeContactHeader always goes first.
+            if (o1 is ChangeContactHeader) return -1
+            if (o2 is ChangeContactHeader) return 1
 
-            // ChangeFooter always goes last.
-            if (o1 is ChangeFooter) return 1
-            if (o2 is ChangeFooter) return -1
+            // ChangeContactDeleter always goes last.
+            if (o1 is ChangeContactDeleter) return 1
+            if (o2 is ChangeContactDeleter) return -1
 
-            // If not against a SectionHeader or ChangeFooter, ItemAdder always goes last.
-            if (o1 is ItemAdder) return 1
-            if (o2 is ItemAdder) return -1
+            // ChangeContactFooter always goes last, after the ChangeContactDeleter.
+            if (o1 is ChangeContactFooter) return 1
+            if (o2 is ChangeContactFooter) return -1
 
-            // If the code reaches here, then o v 1 and o2 must be ContactData
+            // If not against a ChangeContactHeader or ChangeContactFooter, ChangeContactAdder always goes last.
+            if (o1 is ChangeContactAdder) return 1
+            if (o2 is ChangeContactAdder) return -1
+
+            // If the code reaches here, then o1 and o2 must be ContactData
             return ContactDataComparator.compare(o1 as ContactData, o2 as ContactData)
         }
     }
@@ -48,19 +53,28 @@ object ChangeContactItemComparator : Comparator<ChangeContactItem> {
 /**
  * Used to separate the different types of Data in adapter list.
  */
-data class SectionHeader(override val mimeType: ContactDataMimeType) : ChangeContactItem(mimeType)
+data class ChangeContactHeader(
+    override val mimeType: ContactDataMimeType,
+) : ChangeContactItem(mimeType)
 
 /**
  * Inserted at the bottom of the adapter list for some footer space in the RecyclerView.
  */
-data class ChangeFooter(
+data class ChangeContactFooter(
+    override val mimeType: ContactDataMimeType = lastContactDataMimeType(),
+) : ChangeContactItem(mimeType)
+
+/**
+ * Inserted near the bottom of the adapter list to delete existing contacts.
+ */
+data class ChangeContactDeleter(
     override val mimeType: ContactDataMimeType = lastContactDataMimeType(),
 ) : ChangeContactItem(mimeType)
 
 /**
  * Used ot add new ContactData in the adapter list
  */
-data class ItemAdder(
+data class ChangeContactAdder(
     override val mimeType: ContactDataMimeType,
 ) : ChangeContactItem(mimeType)
 
@@ -121,7 +135,7 @@ data class ContactData(
             compactRowInfoList = compactRowInfoList.map { it.deepCopy() }.toMutableList(),
             mimeType = this.mimeType, // Assuming this is immutable
             value = this.value, // Assuming this is a primitive or immutable object
-            columnInfo = this.columnInfo
+            columnInfo = this.columnInfo?.let { Pair(it.first, it.second) }
         )
     }
 
@@ -258,7 +272,7 @@ enum class ContactDataMimeType(val typeString: String, val singleValue: Boolean 
 
 /**
  * Gets the ContactDataMimeType that would be sorted to be last. Currently used to set the
- * ContactDataMimeType of the [ChangeFooter].
+ * ContactDataMimeType of the [ChangeContactFooter].
  */
 fun lastContactDataMimeType() : ContactDataMimeType {
     return ContactDataMimeType.values().last()
@@ -277,50 +291,65 @@ fun String.toContactDataMimeType() : ContactDataMimeType? {
     return null
 }
 
-enum class ContactDataValueType(val mimeType: ContactDataMimeType, val typeInt: Int) {
+enum class ContactDataValueType(
+    val mimeType: ContactDataMimeType,
+    val typeInt: Int,
+    val displayString: String
+    ) {
     PHONE_TYPE_HOME(
-        ContactDataMimeType.PHONE,
-        ContactsContract.CommonDataKinds.Phone.TYPE_HOME
+        mimeType = ContactDataMimeType.PHONE,
+        typeInt = ContactsContract.CommonDataKinds.Phone.TYPE_HOME,
+        displayString = "Home"
     ),
     PHONE_TYPE_MOBILE(
-        ContactDataMimeType.PHONE,
-        ContactsContract.CommonDataKinds.Phone.TYPE_MOBILE
+        mimeType = ContactDataMimeType.PHONE,
+        typeInt = ContactsContract.CommonDataKinds.Phone.TYPE_MOBILE,
+        displayString = "Mobile"
     ),
     PHONE_TYPE_WORK(
-        ContactDataMimeType.PHONE,
-        ContactsContract.CommonDataKinds.Phone.TYPE_WORK
+        mimeType = ContactDataMimeType.PHONE,
+        typeInt = ContactsContract.CommonDataKinds.Phone.TYPE_WORK,
+        displayString = "Work"
     ),
     PHONE_TYPE_OTHER(
-        ContactDataMimeType.PHONE,
-        ContactsContract.CommonDataKinds.Phone.TYPE_OTHER
+        mimeType = ContactDataMimeType.PHONE,
+        typeInt = ContactsContract.CommonDataKinds.Phone.TYPE_OTHER,
+        displayString = "Other"
     ),
     EMAIL_TYPE_HOME(
-        ContactDataMimeType.EMAIL,
-        ContactsContract.CommonDataKinds.Email.TYPE_HOME
+        mimeType = ContactDataMimeType.EMAIL,
+        typeInt = ContactsContract.CommonDataKinds.Email.TYPE_HOME,
+        displayString = "Home"
     ),
     EMAIL_TYPE_WORK(
-        ContactDataMimeType.EMAIL,
-        ContactsContract.CommonDataKinds.Email.TYPE_WORK
+        mimeType = ContactDataMimeType.EMAIL,
+        typeInt = ContactsContract.CommonDataKinds.Email.TYPE_WORK,
+        displayString = "Work"
     ),
     EMAIL_TYPE_OTHER(
         ContactDataMimeType.EMAIL,
-        ContactsContract.CommonDataKinds.Email.TYPE_OTHER
+        ContactsContract.CommonDataKinds.Email.TYPE_OTHER,
+        "Other"
     ),
     EMAIL_TYPE_MOBILE(
-        ContactDataMimeType.EMAIL,
-        ContactsContract.CommonDataKinds.Email.TYPE_MOBILE
+        mimeType = ContactDataMimeType.EMAIL,
+        typeInt = ContactsContract.CommonDataKinds.Email.TYPE_MOBILE,
+        displayString = "Mobile"
     ),
     ADDRESS_TYPE_HOME(
-        ContactDataMimeType.ADDRESS,
-        ContactsContract.CommonDataKinds.StructuredPostal.TYPE_HOME
+        mimeType = ContactDataMimeType.ADDRESS,
+        typeInt = ContactsContract.CommonDataKinds.StructuredPostal.TYPE_HOME,
+        displayString = "Home"
     ),
     ADDRESS_TYPE_WORK(
-        ContactDataMimeType.ADDRESS,
-        ContactsContract.CommonDataKinds.StructuredPostal.TYPE_WORK
+        mimeType = ContactDataMimeType.ADDRESS,
+        typeInt = ContactsContract.CommonDataKinds.StructuredPostal.TYPE_WORK,
+        displayString = "Work"
     ),
     ADDRESS_TYPE_OTHER(
-        ContactDataMimeType.ADDRESS,
-        ContactsContract.CommonDataKinds.StructuredPostal.TYPE_OTHER
+        mimeType = ContactDataMimeType.ADDRESS,
+        typeInt = ContactsContract.CommonDataKinds.StructuredPostal.TYPE_OTHER,
+        displayString = "Other"
     ),
 }
 

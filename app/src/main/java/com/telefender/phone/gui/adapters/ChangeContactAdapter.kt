@@ -2,11 +2,9 @@ package com.telefender.phone.gui.adapters
 
 import android.content.Context
 import android.provider.ContactsContract
-import android.text.Editable
 import android.text.InputType
 import android.text.TextWatcher
 import android.view.LayoutInflater
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -23,9 +21,6 @@ import com.telefender.phone.gui.adapters.recycler_view_items.*
 import com.telefender.phone.misc_helpers.DBL
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import org.w3c.dom.Text
 import timber.log.Timber
 
 /**
@@ -34,7 +29,7 @@ import timber.log.Timber
  *
  * TODO: Clean up code.
  *
- * TODO: Auto change focus to new field when ItemAdder is pressed! -> Think it's done.
+ * TODO: Auto change focus to new field when ChangeContactAdder is pressed! -> Think it's done.
  *
  * TODO: EditText should still stay in focus even after scrolling away from edit text. -> Think
  *  it's fixed, but double check. -> occasionally doesn't work when scrolling fast or slow -> prob
@@ -61,7 +56,8 @@ class ChangeContactAdapter (
     var lastNonContactDataList: List<ChangeContactItem>,
     private val adderClickListener: (ChangeContactItem) -> Unit,
     private val onTextChangedLambda: (ChangeContactItem, String) -> Unit,
-    private val removeClickListener: (ChangeContactItem) -> Unit
+    private val removeClickListener: (ChangeContactItem) -> Unit,
+    private val deleterClickListener: () -> Unit
 ) : ListAdapter<ChangeContactItem, RecyclerView.ViewHolder>(CombinedComparator()) {
 
     val scope = CoroutineScope(Dispatchers.Default)
@@ -72,7 +68,8 @@ class ChangeContactAdapter (
     val SECTION_HEADER_VIEW_TYPE = 1
     val ITEM_ADDER_VIEW_TYPE = 2
     val CONTACT_DATA_VIEW_TYPE = 3
-    val FOOTER_DATA_VIEW_TYPE = 4
+    val FOOTER_VIEW_TYPE = 4
+    val DELETER_VIEW_TYPE = 5
 
     class CombinedComparator : DiffUtil.ItemCallback<ChangeContactItem>() {
 
@@ -83,9 +80,10 @@ class ChangeContactAdapter (
         override fun areContentsTheSame(oldItem: ChangeContactItem, newItem: ChangeContactItem): Boolean {
             return when (oldItem) {
                 is ContactData -> newItem is ContactData && oldItem == newItem
-                is ItemAdder -> newItem is ItemAdder && oldItem == newItem
-                is SectionHeader -> newItem is SectionHeader && oldItem == newItem
-                is ChangeFooter -> newItem is ChangeFooter
+                is ChangeContactAdder -> newItem is ChangeContactAdder && oldItem == newItem
+                is ChangeContactHeader -> newItem is ChangeContactHeader && oldItem == newItem
+                is ChangeContactFooter -> newItem is ChangeContactFooter
+                is ChangeContactDeleter -> newItem is ChangeContactDeleter
             }
         }
     }
@@ -159,6 +157,21 @@ class ChangeContactAdapter (
         view: View
     ) : RecyclerView.ViewHolder(view)
 
+    class DeleterViewHolder(
+        view: View,
+        deleterClickListener: () -> Unit
+    ) : RecyclerView.ViewHolder(view) {
+
+        val deleterView: View = view.findViewById(R.id.item_change_contact_deleter_subview)
+        val deleterText: TextView = view.findViewById(R.id.item_change_contact_deleter_text)
+
+        init {
+            deleterView.setOnClickListener {
+                deleterClickListener()
+            }
+        }
+    }
+
     /**
      * To disable recycler view blinking. Needs to provide unique id for each data list item so
      * that recycler view knows which items it needs to update (otherwise all of the items update,
@@ -172,10 +185,11 @@ class ChangeContactAdapter (
 
     override fun getItemViewType(position: Int): Int {
         return when (getItem(position)) {
-            is SectionHeader -> SECTION_HEADER_VIEW_TYPE
-            is ItemAdder -> ITEM_ADDER_VIEW_TYPE
+            is ChangeContactHeader -> SECTION_HEADER_VIEW_TYPE
+            is ChangeContactAdder -> ITEM_ADDER_VIEW_TYPE
             is ContactData -> CONTACT_DATA_VIEW_TYPE
-            is ChangeFooter -> FOOTER_DATA_VIEW_TYPE
+            is ChangeContactFooter -> FOOTER_VIEW_TYPE
+            is ChangeContactDeleter -> DELETER_VIEW_TYPE
         }
     }
 
@@ -203,10 +217,15 @@ class ChangeContactAdapter (
                     removeClickListener(getItem(pos))
                 }
             }
-            FOOTER_DATA_VIEW_TYPE -> {
+            FOOTER_VIEW_TYPE -> {
                 val adapterLayout = LayoutInflater.from(parent.context)
                     .inflate(R.layout.item_change_contact_footer, parent, false)
                 FooterViewHolder(adapterLayout)
+            }
+            DELETER_VIEW_TYPE -> {
+                val adapterLayout = LayoutInflater.from(parent.context)
+                    .inflate(R.layout.item_change_contact_deleter, parent, false)
+                DeleterViewHolder(adapterLayout, deleterClickListener)
             }
             else -> {
                 throw Exception("Bad View Type")
@@ -277,6 +296,7 @@ class ChangeContactAdapter (
                 }
             }
             is FooterViewHolder -> {}
+            is DeleterViewHolder -> {}
             else -> {
                 throw Exception("Bad Holder / View Type")
             }

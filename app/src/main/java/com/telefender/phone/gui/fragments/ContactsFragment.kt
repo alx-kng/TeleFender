@@ -66,7 +66,7 @@ class ContactsFragment : Fragment() {
             when(item) {
                 is AggregateContact -> {
                     contactsViewModel.setDataLists(selectCID = item.aggregateID.toString())
-                    val action = ContactsFragmentDirections.actionContactsFragmentToChangeContactFragment()
+                    val action = ContactsFragmentDirections.actionContactsFragmentToViewContactFragment()
                     findNavController().navigate(action)
                 }
                 else -> {}
@@ -107,11 +107,13 @@ class ContactsFragment : Fragment() {
             // New app bar stuff
             act.setTitle(getString(R.string.contacts_title))
             act.displayAppBarTextButton(show2 = true, text2 = "Add")
-            act.setAppBarTextButtonOnClickListener(onClickListener2 = {
-                contactsViewModel.setDataLists(selectCID = null)
-                val action = ContactsFragmentDirections.actionContactsFragmentToChangeContactFragment()
-                findNavController().navigate(action)
-            })
+            act.setAppBarTextButtonOnClickListener(
+                onClickListener2 = {
+                    contactsViewModel.setDataLists(selectCID = null)
+                    val action = ContactsFragmentDirections.actionContactsFragmentToChangeContactFragment()
+                    findNavController().navigate(action)
+                }
+            )
 
             // Actually show app bar
             act.displayAppBar(true)

@@ -8,6 +8,7 @@
     <string name="previous">Previous</string>
 
     <string name="recents_title">Recents</string>
+    <string name="duration_format">%1$d seconds</string>
     <string name="contacts_title">Contacts</string>
     <string name="add_contact_title">Add Contact</string>
     <string name="dialer_title">Dialer</string>

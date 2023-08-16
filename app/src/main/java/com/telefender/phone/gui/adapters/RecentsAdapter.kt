@@ -111,7 +111,6 @@ class RecentsAdapter(
     }
 
     private fun getFormattedNumber(number: String, amount: Int): String {
-
         return if (number.isEmpty()) {
             "Unknown"
         } else if (amount == 1) {

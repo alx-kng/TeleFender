@@ -10,7 +10,7 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="12sp"
+        android:padding="12dp"
         android:background="@drawable/top_bottom_border"
         tools:background="@color/white">
 
@@ -18,7 +18,7 @@
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:orientation="vertical"
-            android:layout_marginStart="15sp"
+            android:layout_marginStart="15dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent">
@@ -46,8 +46,8 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/hangup_item"
             style="?attr/materialButtonStyle"
-            android:layout_width="60sp"
-            android:layout_height="40sp"
+            android:layout_width="60dp"
+            android:layout_height="40dp"
             android:backgroundTint="@color/hangup_red"
             android:insetLeft="0dp"
             android:insetTop="0dp"
@@ -57,7 +57,7 @@
             app:icon="@drawable/ic_baseline_call_end_24"
             app:iconGravity="textStart"
             app:iconPadding="0dp"
-            app:iconSize="30sp"
+            app:iconSize="30dp"
             app:iconTint="@color/icon_white"
             app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.LessRounded"
             app:layout_constraintBottom_toBottomOf="parent"

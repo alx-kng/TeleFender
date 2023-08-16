@@ -10,22 +10,23 @@
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="10sp"
+        android:padding="10dp"
         android:clickable="true"
-        android:focusable="true">
+        android:focusable="true"
+        >
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="10sp"
+            android:padding="10dp"
             android:background="@drawable/top_bottom_border"
-            tools:background="@color/white">
+            >
 
             <ImageView
                 android:id="@+id/item_direction"
-                android:layout_width="20sp"
-                android:layout_height="20sp"
-                android:layout_marginStart="15sp"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginStart="15dp"
                 android:importantForAccessibility="no"
                 tools:srcCompat="@drawable/ic_baseline_call_made_24"
                 app:layout_constraintBottom_toBottomOf="@id/item_number"
@@ -36,10 +37,9 @@
                 android:id="@+id/item_number"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="15sp"
+                android:layout_marginStart="15dp"
                 android:textSize="20sp"
                 android:textColor="@color/icon_white"
-                tools:textColor="@color/black"
                 tools:text="Sijun Kang (3)"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintStart_toEndOf="@id/item_direction" />
@@ -48,8 +48,9 @@
                 android:id="@+id/item_location"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="15sp"
+                android:layout_marginStart="15dp"
                 android:textSize="15sp"
+                android:textColor="@color/holding_grey"
                 tools:text="Tonawanda, NY"
                 app:layout_constraintTop_toBottomOf="@id/item_number"
                 app:layout_constraintStart_toEndOf="@id/item_direction" />
@@ -58,8 +59,9 @@
                 android:id="@+id/item_call_time"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="15sp"
+                android:layout_marginEnd="15dp"
                 android:textSize="15sp"
+                android:textColor="@color/holding_grey"
                 tools:text="5:00 PM"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
@@ -68,8 +70,8 @@
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/item_call_info"
                 style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="35sp"
-                android:layout_height="35sp"
+                android:layout_width="35dp"
+                android:layout_height="35dp"
                 app:icon="@drawable/ic_baseline_info_24"
                 app:iconGravity="textStart"
                 app:iconPadding="0dp"

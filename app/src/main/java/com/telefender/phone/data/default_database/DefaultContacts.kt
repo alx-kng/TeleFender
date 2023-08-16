@@ -2,7 +2,6 @@ package com.telefender.phone.data.default_database
 
 import android.content.*
 import android.database.Cursor
-import android.os.Build.VERSION_CODES.S
 import android.provider.ContactsContract
 import android.provider.ContactsContract.CommonDataKinds.Phone
 import android.provider.ContactsContract.RawContacts
@@ -218,19 +217,44 @@ object DefaultContacts {
             e.printStackTrace()
         }
 
-        // ChangeContactItems associated with the non-data parts of the UI.
-        val nonContactDataItems = mutableListOf(
-            SectionHeader(ContactDataMimeType.NAME),
-            SectionHeader(ContactDataMimeType.PHONE),
-            ItemAdder(ContactDataMimeType.PHONE),
-            SectionHeader(ContactDataMimeType.EMAIL),
-            ItemAdder(ContactDataMimeType.EMAIL),
-            SectionHeader(ContactDataMimeType.ADDRESS),
-            ItemAdder(ContactDataMimeType.ADDRESS),
-            ChangeFooter()
+        /*
+        For ViewContactFragment / Adapter
+
+        1. Converts updatedDataList into part of the viewFormattedList by filtering out it's name
+         ContactData (which is currently segmented into first and last name if it exists) and
+         converting the ContactData to ViewContactData.
+        2. Adds non-ViewContactData items (like the headers and footers).
+        3. Sorts view formatted list by ViewContactItem type, and then by MIME type, and then by
+         Data rowID (slightly different from the way we sort the updated data list).
+         */
+        val viewFormattedList : MutableList<ViewContactItem> = updatedDataList
+            .filter { it.mimeType != ContactDataMimeType.NAME }
+            .map { ViewContactData(contactData = it) }
+            .toMutableList()
+
+        // ViewContactItems associated with the non-data parts of the UI.
+        val nonViewContactDataItems = mutableListOf(
+            ViewContactHeader(
+                displayName = getContactDisplayName(
+                    contentResolver = contentResolver,
+                    contactID = contactID
+                ),
+                primaryNumber = updatedDataList
+                    .find { it.mimeType == ContactDataMimeType.PHONE }
+                    ?.value,
+                primaryEmail = updatedDataList
+                    .find { it.mimeType == ContactDataMimeType.EMAIL }
+                    ?.value
+            ),
+            ViewContactFooter()
         )
 
+        viewFormattedList.addAll(nonViewContactDataItems)
+        viewFormattedList.sortWith(ViewContactItemComparator)
+
         /*
+        For ChangeContactFragment / Adapter
+
         1. Casts ContactData list to ChangeContactItem list.
         2. Adds non-ContactData items (like the headers and blank edits).
         3. Sorts updated data list by MIME type, and then by ChangeContactItem type, and then by
@@ -239,9 +263,22 @@ object DefaultContacts {
 
         NOTE: We don't need to sort the original data list since it's not used for the UI.
          */
-        val castedUpdatedDataList = updatedDataList
-            .map { it.deepCopy() as ChangeContactItem }
+        val castedUpdatedDataList : MutableList<ChangeContactItem> = updatedDataList
+            .map { it.deepCopy() }
             .toMutableList()
+
+        // ChangeContactItems associated with the non-data parts of the UI.
+        val nonContactDataItems = mutableListOf(
+            ChangeContactHeader(ContactDataMimeType.NAME),
+            ChangeContactHeader(ContactDataMimeType.PHONE),
+            ChangeContactAdder(ContactDataMimeType.PHONE),
+            ChangeContactHeader(ContactDataMimeType.EMAIL),
+            ChangeContactAdder(ContactDataMimeType.EMAIL),
+            ChangeContactHeader(ContactDataMimeType.ADDRESS),
+            ChangeContactAdder(ContactDataMimeType.ADDRESS),
+            ChangeContactFooter(),
+            ChangeContactDeleter()
+        )
 
         castedUpdatedDataList.addAll(nonContactDataItems)
 
@@ -283,8 +320,47 @@ object DefaultContacts {
             originalUpdatedDataList = updatedDataList,
             updatedDataList = castedUpdatedDataList,
             originalDataList = originalDataList,
-            nonContactDataList = nonContactDataItems
+            nonContactDataList = nonContactDataItems,
+            viewFormattedList = viewFormattedList
         )
+    }
+
+    /**
+     * Returns the display name given the [contactID]. Note that the display name is not necessarily
+     * associated with a Data row with name mime type. For example, if there is no name Data row,
+     * but there is a phone Data row, then the phone number will be used as the display name.
+     */
+    private suspend fun getContactDisplayName(
+        contentResolver: ContentResolver,
+        contactID: String
+    ) : String {
+        val projection = arrayOf(
+            ContactsContract.Contacts.DISPLAY_NAME_PRIMARY,
+        )
+
+        val selection = "${ContactsContract.Contacts._ID} = ? "
+
+        try {
+            val cur = contentResolver.query(
+                ContactsContract.Contacts.CONTENT_URI,
+                projection,
+                selection,
+                arrayOf(contactID),
+                null
+            )
+            if (cur?.moveToFirst() == true) {
+                val displayName = cur.getStringOrNull(0) ?: ""
+                cur.close()
+                return displayName
+            }
+
+            cur?.close()
+        } catch (e: Exception) {
+            Timber.e("$DBL: getContactDisplayName() Error! ${e.message}")
+            e.printStackTrace()
+        }
+
+        return ""
     }
 
     /**
@@ -341,17 +417,20 @@ object DefaultContacts {
                     valueType = null
                 )
 
+                val firstName = cur.getStringOrNull(2) ?: ""
+                val lastName = cur.getStringOrNull(3) ?: ""
+
                 val firstNameContactData = ContactData(
                     compactRowInfoList = mutableListOf(sharedRowInfo),
                     mimeType = ContactDataMimeType.NAME,
-                    value = cur.getStringOrNull(2) ?: "", // Actual first name
+                    value = firstName,
                     columnInfo = Pair(1, ContactsContract.CommonDataKinds.StructuredName.GIVEN_NAME)
                 )
 
                 val lastNameContactData = ContactData(
                     compactRowInfoList = mutableListOf(sharedRowInfo),
                     mimeType = ContactDataMimeType.NAME,
-                    value = cur.getStringOrNull(3) ?: "", // Actual last name
+                    value = lastName,
                     columnInfo = Pair(2, ContactsContract.CommonDataKinds.StructuredName.FAMILY_NAME)
                 )
 
@@ -738,6 +817,46 @@ object DefaultContacts {
      * drives the changes.
      **********************************************************************************************/
 
+    suspend fun deleteContact(
+        context: Context,
+        contentResolver: ContentResolver,
+        aggregateCID: String?,
+    ) : Boolean {
+
+        val operations = ArrayList<ContentProviderOperation>()
+        val underlyingRawCIDs = getRawCIDs(contentResolver, aggregateCID)
+
+        for (rawCID in underlyingRawCIDs) {
+            operations.add(
+                getRawContactDeleteCPO(
+                    rawContactID = rawCID
+                )
+            )
+        }
+
+        try {
+            val results = contentResolver.applyBatch(ContactsContract.AUTHORITY, operations)
+
+            /*
+            Out of convenience, we don't do a mini-sync here, since the numbers added under the
+            deleted contact are probably safe (spam-wise). Moreover, a full-sync will probably
+            happen within the next 15 min. Note that if the number of Data rows affected
+            (given by results[0].count) is 0, then the batch query delete failed.
+             */
+            val rowsAffected = results.getOrNull(0)?.count ?: 0
+            if (rowsAffected == 0) {
+                throw Exception("Default delete contact failed! No deleted rows!")
+            }
+
+            return true
+        } catch (e: Exception) {
+            Timber.e("$DBL: deleteContact() failed! ${e.message}")
+            e.printStackTrace()
+
+            return false
+        }
+    }
+
     /**
      * TODO: Should calculation AND execution of CPOs fall under the SYNC_CONTACTS Work? That way,
      *  the calculated CPOs won't have overlapped with any other sync process?
@@ -746,7 +865,8 @@ object DefaultContacts {
      *  [originalDataList] and [updatedDataList]).
      * 2. Executes the list of CPOs (which are the actual default row operations).
      * 3. Does a specialized mini-sync to update our Tele database with the new changes.
-     * 4. Returns whether or not the whole process was successful.
+     * 4. Returns a Pair containing whether or not the whole process was successful and the newly
+     *  inserted RawContact ID if it exists (for updates we return null).
      *
      * NOTE: If there were no changes in the UI, then don't call [executeChanges]. One way to tell
      * if there were changes is by comparing the original updatedDataList to the final clean
@@ -762,7 +882,7 @@ object DefaultContacts {
         updatedDataList: List<ContactData>,
         accountName: String? = null,
         accountType: String? = null
-    ) : Boolean {
+    ) : Pair<Boolean, String?> {
         // Waits for any possible duplicate SYNC_CONTACTS processes to finish before continuing.
         val workInstanceKey = ExperimentalWorkStates.localizedCompete(
             workType = WorkType.SYNC_CONTACTS,
@@ -788,6 +908,8 @@ object DefaultContacts {
 
             val results = contentResolver.applyBatch(ContactsContract.AUTHORITY, operations)
 
+            var newRawCID: String? = null
+
             /*
             Does the corresponding mini-sync to update our Tele database. Note that even if the
             mini-sync fails, we still return that the whole process was successful, as the periodic
@@ -799,7 +921,7 @@ object DefaultContacts {
                 our Tele database with the new changes. Note that if the newly created RawContact
                 ID doesn't exist, then the batch query insert failed.
                  */
-                val newRawCID = results.getOrNull(0)?.uri
+                newRawCID = results.getOrNull(0)?.uri
                     ?.let { ContentUris.parseId(it).toString() }
                     ?: throw Exception("Default insert contact failed! New rowID is null!")
 
@@ -816,11 +938,13 @@ object DefaultContacts {
                 /*
                 If the user edited an existing contact, then use [updateMiniSync] to update our
                 Tele database with the new changes. Note that if the number of Data rows affected
-                (given by results[0].count) is 0, then the batch query update failed.
+                (given by results[0].count) is 0 AND no rows were added, then the batch query update
+                failed.
                  */
+                val rowAdded = results.getOrNull(0)?.uri
                 val rowsAffected = results.getOrNull(0)?.count ?: 0
-                if (rowsAffected == 0) {
-                    throw Exception("Default update contact failed! No updated rows!")
+                if (rowAdded == null && rowsAffected == 0) {
+                    throw Exception("Default update contact failed! No added / updated / deleted rows!")
                 }
 
                 /*
@@ -837,7 +961,7 @@ object DefaultContacts {
                 workType = WorkType.SYNC_CONTACTS,
                 workInstanceKey = workInstanceKey
             )
-            return true
+            return Pair(true, newRawCID)
         } catch (e: Exception) {
             Timber.e("$DBL: executeChanges() failed! ${e.message}")
             e.printStackTrace()
@@ -847,7 +971,7 @@ object DefaultContacts {
                 workState = WorkInfo.State.FAILED,
                 workInstanceKey = workInstanceKey
             )
-            return false
+            return Pair(false, null)
         }
     }
 
@@ -913,6 +1037,8 @@ object DefaultContacts {
                 degree = 0,
                 counterValue = versionNumber
             )
+
+            Timber.e("$DBL: insertMiniSync() - Inserting contact number! - $normalizedNumber")
 
             database.changeAgentDao().changeFromClient(
                 ChangeLog.create(
@@ -1021,6 +1147,8 @@ object DefaultContacts {
                     counterValue = versionNumber
                 )
 
+                Timber.e("$DBL: updatedMiniSync() - Adding contact number! - $normalizedNumber")
+
                 database.changeAgentDao().changeFromClient(
                     ChangeLog.create(
                         changeID = changeID,
@@ -1066,6 +1194,8 @@ object DefaultContacts {
                     normalizedNumber = contactNumber.normalizedNumber,
                     degree = 0
                 )
+
+                Timber.e("$DBL: updatedMiniSync() - Deleting contact number - ${contactNumber.normalizedNumber}!")
 
                 database.changeAgentDao().changeFromClient(
                     ChangeLog.create(
@@ -1152,7 +1282,7 @@ object DefaultContacts {
         return rawCIDList
     }
 
-    private fun getAggregateCIDFromRawCID(
+    fun getAggregateCIDFromRawCID(
         contentResolver: ContentResolver,
         rawContactID: String
     ) : String? {
@@ -1244,7 +1374,7 @@ object DefaultContacts {
         originalRawCIDs: List<String>
     ) : ArrayList<ContentProviderOperation> {
 
-        val operations = ArrayList<ContentProviderOperation> ()
+        val operations = ArrayList<ContentProviderOperation>()
 
         // If the originalDataList is empty, then the user must have added a completely new contact.
         val isNewContact = originalDataList.isEmpty()

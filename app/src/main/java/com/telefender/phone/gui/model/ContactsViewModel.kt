@@ -20,8 +20,6 @@ import java.util.*
 /**
  * TODO: Context may be part of memory leak!!! -> maybe, maybe not
  *
- * TODO: Contact sorting algorithm has some issues.
- *
  * TODO: Probably / Maybe refactor ContactsViewModel to use repository to actually query the data
  *  as the "good" app architecture suggests the repository should be a single source of truth.
  *
@@ -33,7 +31,7 @@ import java.util.*
 class ContactsViewModel(app: Application) : AndroidViewModel(app) {
 
     @SuppressLint("StaticFieldLeak")
-    private val context = getApplication<Application>().applicationContext
+    private val applicationContext = getApplication<Application>().applicationContext
     private val scope = CoroutineScope(Dispatchers.IO)
 
     /**********************************************************************************************
@@ -51,7 +49,7 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
      * TODO: See if there is a better solution for observing updated data list than using our
      *  indicator live data.
      *
-     * For ChangeContactFragment
+     * For ChangeContactFragment and ViewContactFragment
      **********************************************************************************************/
 
     /**
@@ -62,21 +60,37 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
     val selectCID : String?
         get() = _selectCID
 
-    private var originalUpdatedDataList = mutableListOf<ContactData>()
-
-    val updatedIndicatorLiveData = MutableLiveData<UUID>()
-
-    private var _updatedDataList = mutableListOf<ChangeContactItem>()
-    val updatedDataList : List<ChangeContactItem>
-        get() = _updatedDataList
-
     private var originalDataList = mutableListOf<ContactData>()
+    private var originalUpdatedDataList = mutableListOf<ContactData>()
 
     private var _nonContactDataList = listOf<ChangeContactItem>()
     val nonContactDataList : List<ChangeContactItem>
         get() = _nonContactDataList
 
+    private var _updatedDataList = mutableListOf<ChangeContactItem>()
+    val updatedDataList : List<ChangeContactItem>
+        get() = _updatedDataList
+
+    private var _viewFormattedList = mutableListOf<ViewContactItem>()
+    val viewFormattedList: List<ViewContactItem>
+        get() = _viewFormattedList
+
+    val updatedIndicatorLiveData = MutableLiveData<UUID>()
+    val viewFormattedIndicatorLiveData = MutableLiveData<UUID>()
+
     private val mutexUpdated = Mutex()
+
+    private val mutexFormatted = Mutex()
+
+    /**********************************************************************************************
+     * Callback used for both the ContactsFragment and ViewContactFragment. This is called when we
+     * detect a change in the default contacts.
+     **********************************************************************************************/
+
+    fun onContactsUpdate() {
+        updateContactsList()
+        updatePackagedDataLists()
+    }
 
     /**********************************************************************************************
      * For ContactsFragment
@@ -86,13 +100,23 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
      * Preloads contacts when ViewModel is first created.
      */
     init {
-        updateContacts()
+        updateContactsList()
     }
 
     /**
      * Dummy method to initialize ViewModel.
      */
     fun activateDummy() {}
+
+    private fun updateContactsList() {
+        viewModelScope.launch(Dispatchers.Default) {
+            val tempContacts = DefaultContacts.getAggregateContacts(applicationContext)
+            formatForDividedUI(tempContacts)
+
+            Timber.i("$DBL: ABOUT TO ASSIGN CONTACTS VALUE")
+            _contacts.postValue(tempContacts)
+        }
+    }
 
     /**
      * Given the list of aggregate contacts, [formatForDividedUI] automatically adds [BaseDivider] items
@@ -151,19 +175,37 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
         _dividedContacts = tempDivided
     }
 
-    fun updateContacts() {
-        viewModelScope.launch(Dispatchers.Default) {
-            val tempContacts = DefaultContacts.getAggregateContacts(context)
-            formatForDividedUI(tempContacts)
+    /**********************************************************************************************
+     * TODO: Maybe allow for ChangeContactFragment to also update according to default contact
+     *  changes one day (a little cumbersome). It would be for the case where the user is on the
+     *  change contact screen but goes to the default edit contact screen and modifies something
+     *  there. Right now, we're not updating the updatedList even if something was changed, as it
+     *  would mess up the UI.
+     *
+     * For ChangeContactFragment and ViewContactFragment
+     **********************************************************************************************/
 
-            Timber.i("$DBL: ABOUT TO ASSIGN CONTACTS VALUE")
-            _contacts.postValue(tempContacts)
+    /**
+     * As mentioned earlier in the section comment, for now, we will just update the view formatted
+     * data list used by the ViewContactFragment.
+     */
+    private fun updatePackagedDataLists() {
+        Timber.e("$DBL: Default contact change detected!")
+
+        val selectCIDSnapShot = _selectCID
+
+        viewModelScope.launch(Dispatchers.Default) {
+            // Don't update the data lists if the selected CID is null.
+            if (selectCIDSnapShot != null) {
+                val newPackagedDataLists = DefaultContacts.getContactData(
+                    contentResolver = applicationContext.contentResolver,
+                    contactID = selectCIDSnapShot
+                )
+
+                setViewFormattedList(newPackagedDataLists.viewFormattedList)
+            }
         }
     }
-
-    /**********************************************************************************************
-     * For ChangeContactFragment
-     **********************************************************************************************/
 
     /**
      * Called when starting the ChangeContactFragment. Given the selected aggregate CID [selectCID],
@@ -174,8 +216,8 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
 
         viewModelScope.launch(Dispatchers.Default) {
             if (selectCID == null) {
-                val initialUIList = mutableListOf(
-                    SectionHeader(ContactDataMimeType.NAME),
+                val initialChangeUIList = mutableListOf(
+                    ChangeContactHeader(ContactDataMimeType.NAME),
                     ContactData.createNullPairContactData(
                         mimeType = ContactDataMimeType.NAME,
                         columnInfo = Pair(1, ContactsContract.CommonDataKinds.StructuredName.GIVEN_NAME)
@@ -184,13 +226,13 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
                         mimeType = ContactDataMimeType.NAME,
                         columnInfo = Pair(2, ContactsContract.CommonDataKinds.StructuredName.FAMILY_NAME)
                     ),
-                    SectionHeader(ContactDataMimeType.PHONE),
-                    ItemAdder(ContactDataMimeType.PHONE),
-                    SectionHeader(ContactDataMimeType.EMAIL),
-                    ItemAdder(ContactDataMimeType.EMAIL),
-                    SectionHeader(ContactDataMimeType.ADDRESS),
-                    ItemAdder(ContactDataMimeType.ADDRESS),
-                    ChangeFooter()
+                    ChangeContactHeader(ContactDataMimeType.PHONE),
+                    ChangeContactAdder(ContactDataMimeType.PHONE),
+                    ChangeContactHeader(ContactDataMimeType.EMAIL),
+                    ChangeContactAdder(ContactDataMimeType.EMAIL),
+                    ChangeContactHeader(ContactDataMimeType.ADDRESS),
+                    ChangeContactAdder(ContactDataMimeType.ADDRESS),
+                    ChangeContactFooter(),
                 )
 
                 originalUpdatedDataList = mutableListOf()
@@ -201,48 +243,71 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
                 the adapter after setting this. Prevents double blinking update.
                  */
                 mutexUpdated.withLock {
-                    _updatedDataList = initialUIList.toMutableList()
+                    _updatedDataList = initialChangeUIList.toMutableList()
                 }
 
                 // _nonContactDataList should not contain the initial null-pair ContactData.
-                initialUIList.removeAt(1)
-                initialUIList.removeAt(1)
-                setNonContactDataList(initialUIList)
+                initialChangeUIList.removeAt(1)
+                initialChangeUIList.removeAt(1)
+                setNonContactDataList(initialChangeUIList)
+
+                /*
+                If selectCID is null, the ViewContactFragment technically shouldn't even be showing,
+                but we set a basic adapter list here just in case it causes a smoother UI transition
+                when coming back from the ChangeContactFragment after adding a new Contact.
+                 */
+                setViewFormattedList(
+                    mutableListOf(
+                        ViewContactHeader(
+                            displayName = null,
+                            primaryNumber = null,
+                            primaryEmail = null
+                        ),
+                        ViewContactFooter()
+                    )
+                )
 
                 return@launch
             }
 
-            val packagedDataLists = DefaultContacts.getContactData(
-                contentResolver = context.contentResolver,
-                contactID = selectCID
+            setListsGivenPackagedLists(
+                DefaultContacts.getContactData(
+                    contentResolver = applicationContext.contentResolver,
+                    contactID = selectCID
+                )
             )
-
-            originalUpdatedDataList = packagedDataLists.originalUpdatedDataList
-            originalDataList = packagedDataLists.originalDataList
-
-            /*
-            We don't use the set function here, since setNonContactDataList will already notify
-            the adapter after setting this. Prevents double blinking update.
-             */
-            mutexUpdated.withLock {
-                _updatedDataList = packagedDataLists.updatedDataList
-            }
-
-            setNonContactDataList(packagedDataLists.nonContactDataList)
         }
     }
 
+    private suspend fun setListsGivenPackagedLists(packagedDataLists: PackagedDataLists) {
+        originalUpdatedDataList = packagedDataLists.originalUpdatedDataList
+        originalDataList = packagedDataLists.originalDataList
+
+        /*
+        We don't use the set function here, since setNonContactDataList will already notify
+        the adapter after setting this. Prevents double blinking update.
+         */
+        mutexUpdated.withLock {
+            _updatedDataList = packagedDataLists.updatedDataList
+        }
+
+        setNonContactDataList(packagedDataLists.nonContactDataList)
+        setViewFormattedList(packagedDataLists.viewFormattedList)
+    }
+
     /**
-     * TODO: Finish / double check
+     * TODO: Double check
      *
      * Submits the changes in the UI to the default database.
      */
     fun submitChanges() {
+        val selectCIDSnapshot = _selectCID
         val dataListsSnapshot = PackagedDataLists(
             originalUpdatedDataList = originalUpdatedDataList,
             updatedDataList = _updatedDataList,
             originalDataList = originalDataList,
-            nonContactDataList = _nonContactDataList
+            nonContactDataList = _nonContactDataList,
+            viewFormattedList = _viewFormattedList
         )
 
         scope.launch {
@@ -260,12 +325,10 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
                 .toMutableList()
 
             Timber.i("$DBL: originalUpdatedDataList = ${dataListsSnapshot.originalUpdatedDataList}")
-            Timber.i("$DBL: pureUpdatedDataList = $pureContactData")
 
-            if (originalUpdatedDataList == pureContactData) {
+            if (dataListsSnapshot.originalUpdatedDataList == pureContactData) {
                 return@launch
             }
-
 
             val cleanUpdatedDataList = DefaultContacts.cleanUpdatedDataList(
                 uncleanList = pureContactData
@@ -273,14 +336,63 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
 
             Timber.i("$DBL: cleanUpdatedDataList = $cleanUpdatedDataList")
 
-            DefaultContacts.executeChanges(
-                context = context,
-                contentResolver = context.contentResolver,
+            val resultPair = DefaultContacts.executeChanges(
+                context = applicationContext,
+                contentResolver = applicationContext.contentResolver,
                 originalCID = selectCID,
                 originalDataList = dataListsSnapshot.originalDataList,
                 updatedDataList = cleanUpdatedDataList,
                 accountName = null,
                 accountType = null,
+            )
+
+            val success = resultPair.first
+            val newRawCID = resultPair.second
+
+            if (success) {
+                if (selectCIDSnapshot != null) {
+                    setListsGivenPackagedLists(
+                        DefaultContacts.getContactData(
+                            contentResolver = applicationContext.contentResolver,
+                            contactID = selectCIDSnapshot
+                        )
+                    )
+                } else if (newRawCID != null) {
+                    val correspondingCID = DefaultContacts.getAggregateCIDFromRawCID(
+                        contentResolver = applicationContext.contentResolver,
+                        rawContactID = newRawCID
+                    )
+
+                    correspondingCID?.let {
+                        /*
+                        Set selectCID as newCID so that going back to the edit screen and editing
+                        will update the data lists through the selectCIDSnapshot != null check.
+                         */
+                        _selectCID = it
+
+                        setListsGivenPackagedLists(
+                            DefaultContacts.getContactData(
+                                contentResolver = applicationContext.contentResolver,
+                                contactID = it
+                            )
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Deletes Contact given by [_selectCID] by deleting all of the underlying RawContacts.
+     */
+    fun deleteContact() {
+        val selectCIDSnapShot = _selectCID
+
+        scope.launch {
+            DefaultContacts.deleteContact(
+                context = applicationContext,
+                contentResolver = applicationContext.contentResolver,
+                aggregateCID = selectCIDSnapShot
             )
         }
     }
@@ -300,15 +412,20 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun clearDataLists() {
+        _selectCID = null
         originalDataList = mutableListOf()
         originalUpdatedDataList = mutableListOf()
         _updatedDataList = mutableListOf()
         _nonContactDataList = listOf()
+        _viewFormattedList = mutableListOf()
+
+        Timber.e("$DBL: Clearing contact data lists!")
     }
 
     /**
      * TODO: Should we make these more generic extension functions? That is, add / remove to list
-     *  by object reference?
+     *  by object reference? -> Maybe, maybe not. It would require wrapping the lists in an object
+     *  or making list type enums, which is probably more cumbersome than having these few functions.
      */
     suspend fun setUpdatedDataList(newUpdatedDataList: MutableList<ChangeContactItem>) {
         mutexUpdated.withLock {
@@ -320,6 +437,21 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
     suspend fun setNonContactDataList(newNonContactDataList: List<ChangeContactItem>) {
         _nonContactDataList = newNonContactDataList
         updatedIndicatorLiveData.postValue(UUID.randomUUID())
+    }
+
+    suspend fun setViewFormattedList(newViewFormattedList: MutableList<ViewContactItem>) {
+        /*
+        Mutex check here is to prevent blinking from overlapping updates (e.g., contact observer
+        update and submit changes update).
+         */
+        mutexFormatted.withLock {
+            Timber.e("$DBL: setViewFormattedList() - Was same = ${viewFormattedList == newViewFormattedList}")
+
+            if (viewFormattedList != newViewFormattedList) {
+                _viewFormattedList = newViewFormattedList
+                viewFormattedIndicatorLiveData.postValue(UUID.randomUUID())
+            }
+        }
     }
 
     /**
@@ -351,19 +483,6 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
             val index = _updatedDataList.indexOfFirst { it === contactItem }
             if (index >= 0) {
                 _updatedDataList.removeAt(index)
-                updatedIndicatorLiveData.postValue(UUID.randomUUID())
-            }
-        }
-    }
-
-    suspend fun replaceInUpdatedDataList(
-        oldContactItem: ChangeContactItem,
-        newContactItem: ChangeContactItem
-    ) {
-        mutexUpdated.withLock {
-            val index = _updatedDataList.indexOfFirst { it === oldContactItem }
-            if (index >= 0) {
-                _updatedDataList[index] = newContactItem
                 updatedIndicatorLiveData.postValue(UUID.randomUUID())
             }
         }

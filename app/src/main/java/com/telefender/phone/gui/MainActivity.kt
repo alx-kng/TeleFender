@@ -9,7 +9,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.ContentObserver
 import android.os.Build
-import android.os.Build.VERSION_CODES.P
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -23,7 +22,6 @@ import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
@@ -229,7 +227,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onSupportNavigateUp(): Boolean {
-        return navController.navigateUp() || super.onSupportNavigateUp()
+        when(navController.currentDestination?.id) {
+            R.id.viewContactFragment -> {
+                /*
+                Clear data lists when coming back from ViewContactFragment (prevents
+                blinking update when pressing on another contact).
+                 */
+                contactsViewModel.clearDataLists()
+            }
+        }
+
+        val navigationHandled = navController.navigateUp() || super.onSupportNavigateUp()
+        updateBottomHighlight()
+        return navigationHandled
     }
 
     /**
@@ -387,9 +397,26 @@ class MainActivity : AppCompatActivity() {
             override fun handleOnBackPressed() {
                 Timber.i("$DBL: Back pressed in MainActivity!")
 
-                // Clear data lists when coming back from ChangeContactFragment
-                if (navController.currentDestination?.id == R.id.changeContactFragment) {
-                    contactsViewModel.clearDataLists()
+                when(navController.currentDestination?.id) {
+                    R.id.viewContactFragment -> {
+                        /*
+                        Clear data lists when coming back from ViewContactFragment (prevents
+                        blinking update when pressing on another contact).
+                         */
+                        contactsViewModel.clearDataLists()
+                    }
+                    R.id.changeContactFragment -> {
+                        /*
+                        Clear data lists if not going back to ViewContactFragment (happens when
+                        cancelling a new contact). This prevents a blinking update when pressing on
+                        another contact. Don't clear lists when going back to ViewContactFragment,
+                        cause it still needs the lists.
+                         */
+                        val previousDestination = navController.previousBackStackEntry?.destination?.id
+                        if (previousDestination != R.id.viewContactFragment) {
+                            contactsViewModel.clearDataLists()
+                        }
+                    }
                 }
 
                 isEnabled = false
@@ -606,7 +633,7 @@ class MainActivity : AppCompatActivity() {
             super.onChange(selfChange)
             Timber.i("$DBL: ContactsFragment - New Contact!")
 
-            contactsViewModel.updateContacts()
+            contactsViewModel.onContactsUpdate()
         }
     }
     

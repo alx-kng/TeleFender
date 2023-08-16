@@ -35,7 +35,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="20dp"
             android:layout_marginTop="10dp"
-            android:layout_marginEnd="75sp"
+            android:layout_marginEnd="75dp"
             android:textColor="@color/icon_white"
             tools:text="Placeholder Text"
             />
@@ -44,7 +44,7 @@
             android:id="@+id/active_notification_speaker_button"
             android:layout_width="45dp"
             android:layout_height="45dp"
-            android:layout_marginEnd="10sp"
+            android:layout_marginEnd="10dp"
             android:foreground="?android:selectableItemBackground"
             android:background="@drawable/rounded_box_black"
             android:src="@drawable/ic_baseline_volume_up_24"
@@ -56,7 +56,7 @@
             android:id="@+id/active_notification_mute_button"
             android:layout_width="45dp"
             android:layout_height="45dp"
-            android:layout_marginEnd="10sp"
+            android:layout_marginEnd="10dp"
             android:foreground="?android:selectableItemBackground"
             android:background="@drawable/rounded_box_black"
             android:src="@drawable/ic_baseline_mic_24"
@@ -68,7 +68,7 @@
             android:id="@+id/active_notification_hangup_button"
             android:layout_width="45dp"
             android:layout_height="45dp"
-            android:layout_marginEnd="10sp"
+            android:layout_marginEnd="10dp"
             android:foreground="?android:selectableItemBackground"
             android:background="@drawable/rounded_box_red"
             android:src="@drawable/ic_baseline_call_end_24_white"
@@ -79,8 +79,8 @@
 <!--        <Button-->
 <!--            android:id="@+id/hangup_button"-->
 <!--            style="?attr/materialButtonStyle"-->
-<!--            android:layout_width="43sp"-->
-<!--            android:layout_height="43sp"-->
+<!--            android:layout_width="43dp"-->
+<!--            android:layout_height="43dp"-->
 <!--            android:backgroundTint="@color/hangup_red"-->
 <!--            android:foreground="?android:selectableItemBackground"-->
 <!--            android:insetLeft="0dp"-->
@@ -91,7 +91,7 @@
 <!--            app:icon="@drawable/ic_baseline_call_end_24"-->
 <!--            app:iconGravity="textStart"-->
 <!--            app:iconPadding="0dp"-->
-<!--            app:iconSize="30sp"-->
+<!--            app:iconSize="30dp"-->
 <!--            app:iconTint="@color/icon_white"-->
 <!--            app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.Rounded"-->
 <!--            />-->

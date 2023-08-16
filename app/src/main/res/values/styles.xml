@@ -15,12 +15,12 @@
 
     <style name="ShapeAppearanceOverlay.Tele.Button.Rounded" parent="">
         <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">15sp</item>
+        <item name="cornerSize">15dp</item>
     </style>
 
     <style name="ShapeAppearanceOverlay.Tele.Button.LessRounded" parent="">
         <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">10sp</item>
+        <item name="cornerSize">10dp</item>
     </style>
 
     <style name="ShapeAppearanceOverlay.Tele.CardView.Square" parent="">
@@ -28,16 +28,21 @@
         <item name="cornerSize">0dp</item>
     </style>
 
+    <style name="ShapeAppearanceOverlay.Tele.CardView.Rounded" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">10dp</item>
+    </style>
+
     <style name="ShapeAppearanceOverlay.Tele.Button.LeftRounded" parent="">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSizeTopLeft">10dp</item>
-        <item name="cornerSizeBottomLeft">10sp</item>
+        <item name="cornerSizeBottomLeft">10dp</item>
     </style>
 
     <style name="ShapeAppearanceOverlay.Tele.Button.RightRounded" parent="">
         <item name="cornerFamily">rounded</item>
-        <item name="cornerSizeBottomRight">10sp</item>
-        <item name="cornerSizeTopRight">10sp</item>
+        <item name="cornerSizeBottomRight">10dp</item>
+        <item name="cornerSizeTopRight">10dp</item>
     </style>
 
     <style name="Widget.Tele.Toolbar.Primary" parent="@style/Widget.MaterialComponents.Toolbar.Primary">

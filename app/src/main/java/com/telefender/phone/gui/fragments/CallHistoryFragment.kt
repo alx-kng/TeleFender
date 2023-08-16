@@ -15,6 +15,9 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 
+/**
+ * TODO: Actually check if is contact in [setupAppBar].
+ */
 class CallHistoryFragment : Fragment() {
 
     private var _binding: FragmentCallHistoryBinding? = null
@@ -39,7 +42,8 @@ class CallHistoryFragment : Fragment() {
 
         val number = recentsViewModel.selectNumber
 
-        val simpleDate = SimpleDateFormat("MM/dd/yy")
+        val locale = Locale.getDefault()
+        val simpleDate = SimpleDateFormat("MM/dd/yy", locale)
         val date = Date(recentsViewModel.selectTime)
         val time = simpleDate.format(date)
 

@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
@@ -134,22 +135,27 @@ class CallHistoryAdapter (
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (holder) {
             is CallHistoryViewHolder -> {
-                val current = getItem(position)!! as CallDetail
+                val prev = getItem(position - 1)
+                val current = getItem(position) as CallDetail
+                val next = getItem(position + 1)
 
-                val simpleDate = SimpleDateFormat("hh:mm a")
+                val locale = Locale.getDefault()
+                val simpleDate = SimpleDateFormat("hh:mm a", locale)
                 val date = Date(current.callEpochDate)
                 holder.date.text = simpleDate.format(date)
 
                 holder.direction.text = getDirectionString(current.callDirection, current.rawNumber)
 
-                holder.duration.text = current.callDuration.toString() + " seconds"
+                holder.duration.text = applicationContext.getString(R.string.duration_format, current.callDuration)
 
-                if (position == 1) {
-                    holder.parent.background = applicationContext.getDrawable(R.drawable.grey_top_rounded)
+                holder.parent.background = if (prev is CallHistoryHeader && next is CallHistoryFooter) {
+                    AppCompatResources.getDrawable(applicationContext, R.drawable.grey_rounded)
+                } else if(position == 1) {
+                    AppCompatResources.getDrawable(applicationContext, R.drawable.grey_top_rounded)
                 } else if (position == currentList.size - 2) {
-                    holder.parent.background = applicationContext.getDrawable(R.drawable.grey_bottom_rounded)
+                    AppCompatResources.getDrawable(applicationContext, R.drawable.grey_bottom_rounded)
                 } else {
-                    holder.parent.background = applicationContext.getDrawable(R.drawable.grey_background)
+                    AppCompatResources.getDrawable(applicationContext, R.drawable.grey_background)
                 }
             }
             is InfoHistoryViewHolder -> {

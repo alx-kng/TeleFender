@@ -6,15 +6,15 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:paddingTop="2sp"
-    android:paddingBottom="2sp"
+    android:paddingTop="2dp"
+    android:paddingBottom="2dp"
     android:background="@drawable/top_bottom_border_grey">
 
     <TextView
         android:id="@+id/letter"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="20sp"
+        android:layout_marginStart="20dp"
         android:textSize="20sp"
         android:textColor="@color/icon_white"
         android:textStyle="bold"

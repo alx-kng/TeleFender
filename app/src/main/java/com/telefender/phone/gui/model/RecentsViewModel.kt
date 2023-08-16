@@ -37,7 +37,7 @@ import java.time.ZoneId
 class RecentsViewModel(app: Application) : AndroidViewModel(app) {
 
     @SuppressLint("StaticFieldLeak")
-    private val context = getApplication<Application>().applicationContext
+    private val applicationContext = getApplication<Application>().applicationContext
 
     private var _callLogs = MutableLiveData<List<CallDetail>>()
     val callLogs : LiveData<List<CallDetail>> = _callLogs
@@ -142,7 +142,7 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
     //  Also, consider canceling viewModelScope in onCleared() if the RecentsViewModel is destroyed.
     fun updateCallLogs() {
         viewModelScope.launch(Dispatchers.Default) {
-            val tempLogs = DefaultCallDetails.getDefaultCallDetails(context)
+            val tempLogs = DefaultCallDetails.getDefaultCallDetails(applicationContext)
             groupCallLogs(tempLogs)
 
             Timber.i("$DBL: ABOUT TO ASSIGN LOGS VALUE")

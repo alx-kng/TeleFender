@@ -2,7 +2,6 @@ package com.telefender.phone.gui.fragments
 
 import android.content.Context
 import android.os.Bundle
-import android.text.InputType
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -10,13 +9,15 @@ import android.view.inputmethod.InputMethodManager
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.RecyclerView
+import com.telefender.phone.R
 import com.telefender.phone.databinding.FragmentChangeContactBinding
 import com.telefender.phone.gui.MainActivity
 import com.telefender.phone.gui.adapters.ChangeContactAdapter
 import com.telefender.phone.gui.adapters.recycler_view_items.ChangeContactItem
 import com.telefender.phone.gui.adapters.recycler_view_items.ContactData
-import com.telefender.phone.gui.adapters.recycler_view_items.ItemAdder
+import com.telefender.phone.gui.adapters.recycler_view_items.ChangeContactAdder
 import com.telefender.phone.gui.model.ContactsViewModel
 import com.telefender.phone.gui.model.ContactsViewModelFactory
 import com.telefender.phone.misc_helpers.DBL
@@ -25,13 +26,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.select
 import timber.log.Timber
 
 
 /**
- * TODO: NEW CONTACT ISN'T ALWAYS ADDED ALPHABETICALLY IN CONTACTS VIEW
- *
- * TODO: NEEDS TO BE RECYCLER VIEW IN THE LONG RUN!
+ * TODO: Show a pop up window to get user confirmation when the delete contact button is pressed.
  *
  * TODO: Need a contact detail screen (analogous to CallHistoryFragment)
  *
@@ -53,7 +53,7 @@ class ChangeContactFragment : Fragment() {
 
     /**
      * Observer used to change the TextInputEditText focus to a ContactData that was newly added by
-     * an ItemAdder.
+     * an ChangeContactAdder.
      */
     private val adapterObserver = object : RecyclerView.AdapterDataObserver() {
 
@@ -114,9 +114,6 @@ class ChangeContactFragment : Fragment() {
         return binding.root
     }
 
-    /**
-     * TODO: Fill in values with existing contact if there is one.
-     */
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -128,10 +125,10 @@ class ChangeContactFragment : Fragment() {
             applicationContext = requireContext().applicationContext,
             lastNonContactDataList = contactsViewModel.nonContactDataList,
             adderClickListener = { item ->
-                Timber.e("$DBL: AdderViewHolder onClick!")
+                Timber.e("$DBL: Adder onClick!")
 
                 when (item) {
-                    is ItemAdder -> contactsViewModel.viewModelScope.launch {
+                    is ChangeContactAdder -> contactsViewModel.viewModelScope.launch {
                         contactsViewModel.addToUpdatedDataList(
                             newContactItem = ContactData.createNullPairContactData(item.mimeType),
                             beforeItem = item,
@@ -142,7 +139,7 @@ class ChangeContactFragment : Fragment() {
             },
             onTextChangedLambda = ::onTextChangedFunction,
             removeClickListener = { item ->
-                Timber.e("$DBL: Remove onClick!")
+                Timber.e("$DBL: Remove item onClick!")
 
                 when (item) {
                     is ContactData -> contactsViewModel.viewModelScope.launch {
@@ -150,6 +147,13 @@ class ChangeContactFragment : Fragment() {
                     }
                     else -> {}
                 }
+            },
+            deleterClickListener = {
+                Timber.e("$DBL: Delete contact onClick!")
+
+                contactsViewModel.deleteContact()
+                findNavController().popBackStack(R.id.contactsFragment, false)
+                contactsViewModel.clearDataLists()
             }
         )
 
@@ -177,8 +181,6 @@ class ChangeContactFragment : Fragment() {
         }
 
         adapter?.registerAdapterDataObserver(adapterObserver)
-
-//        updatedDoneEnabled()
     }
 
     override fun onDestroyView() {
@@ -311,6 +313,7 @@ class ChangeContactFragment : Fragment() {
     private fun setupAppBar() {
         if (activity is MainActivity) {
             val act = activity as MainActivity
+            val navController = findNavController()
 
             // Cleans old app bar before setting up new app bar
             act.revertAppBar()
@@ -330,8 +333,31 @@ class ChangeContactFragment : Fragment() {
                     requireActivity().onBackPressedDispatcher.onBackPressed()
                 },
                 onClickListener2 = {
+                    Timber.e("$DBL: Submit contact changes!")
+
                     contactsViewModel.submitChanges()
-                    requireActivity().onBackPressedDispatcher.onBackPressed()
+
+                    /*
+                    When submitting a Contact change, we want to bring the user to the ViewContact
+                    screen (while maintaining a clean / predictable backstack).
+                     */
+                    val previousDestination = navController.previousBackStackEntry?.destination?.id
+                    if (previousDestination == R.id.viewContactFragment) {
+                        /*
+                        If the ChangeContactFragment was navigated to from the ViewContactFragment, then
+                        just do a back press to get back to the ViewContactFragment.
+                         */
+                        requireActivity().onBackPressedDispatcher.onBackPressed()
+                    } else {
+                        /*
+                        If the ChangeContactFragment wasn't navigated to from the
+                        ViewContactFragment, then navigate to the ViewContactFragment while making
+                        sure to remove the ChangeContactFragment from the backstack (e.g., we don't
+                        want back button to take user back to edit screen). Moreover,
+                         */
+                        val action = ChangeContactFragmentDirections.actionChangeContactFragmentToViewContactFragment()
+                        navController.navigate(action)
+                    }
                 }
             )
 

@@ -11,13 +11,13 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/call_history_item_parent"
-        android:padding="10sp">
+        android:padding="10dp">
 
         <TextView
             android:id="@+id/item_call_time"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="15sp"
+            android:layout_marginStart="15dp"
             android:textSize="15sp"
             tools:text="5:00 PM"
             app:layout_constraintTop_toTopOf="parent"
@@ -27,7 +27,7 @@
             android:id="@+id/item_direction"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="15sp"
+            android:layout_marginStart="15dp"
             android:textSize="15sp"
             android:textColor="@color/icon_white"
             tools:textColor="@color/black"

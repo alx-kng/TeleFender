@@ -11,10 +11,10 @@
     >
 
     <ImageView
-        android:layout_width="30sp"
-        android:layout_height="30sp"
-        android:layout_marginStart="16sp"
-        android:layout_marginEnd="16sp"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
         android:importantForAccessibility="no"
         app:srcCompat="@drawable/ic_baseline_add_24"
         app:tint="@color/white"
@@ -24,12 +24,12 @@
         android:id="@+id/item_change_contact_adder_text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:paddingTop="8sp"
-        android:paddingBottom="8sp"
-        android:layout_marginStart="16sp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:layout_marginStart="16dp"
         android:textSize="16sp"
         android:textColor="@color/white"
-        tools:text="Add Name"
+        tools:text="Add Phone"
         />
 
 </LinearLayout>
