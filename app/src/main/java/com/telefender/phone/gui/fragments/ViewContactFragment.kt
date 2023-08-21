@@ -9,9 +9,11 @@ import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import com.telefender.phone.call_related.CallHelpers
 import com.telefender.phone.databinding.FragmentViewContactBinding
+import com.telefender.phone.gui.CommonIntentsForUI
 import com.telefender.phone.gui.MainActivity
 import com.telefender.phone.gui.adapters.ViewContactAdapter
 import com.telefender.phone.gui.adapters.recycler_view_items.ContactDataMimeType
+import com.telefender.phone.gui.adapters.recycler_view_items.ViewContactBlockedStatus
 import com.telefender.phone.gui.adapters.recycler_view_items.ViewContactData
 import com.telefender.phone.gui.adapters.recycler_view_items.ViewContactHeader
 import com.telefender.phone.gui.model.ContactsViewModel
@@ -21,13 +23,18 @@ import timber.log.Timber
 
 
 /**
+ * TODO: We either need to give the option to send sms / email to each specific data item, or do
+ *  a long hold on he top call / sms / email buttons to show a drop down menu to let the user
+ *  choose.
+ *
  * TODO: Do we need to observe the contacts database for changes -> could just rely on
- *  updateContacts (or make a more generic wrapper function like notifyChange).
+ *  updateContacts (or make a more generic wrapper function like notifyChange). -> Mostly done
  */
 class ViewContactFragment : Fragment() {
 
     private var _binding: FragmentViewContactBinding? = null
     private val binding get() = _binding!!
+
     private val contactsViewModel: ContactsViewModel by activityViewModels {
         ContactsViewModelFactory(requireActivity().application)
     }
@@ -45,6 +52,8 @@ class ViewContactFragment : Fragment() {
 
         setupAppBar()
         hideBottomNavigation()
+
+        Timber.e("$DBL: viewFormattedList start = ${contactsViewModel.viewFormattedList}")
 
         val applicationContext = requireContext().applicationContext
         val recyclerView = binding.recyclerView
@@ -67,7 +76,10 @@ class ViewContactFragment : Fragment() {
                 when (item) {
                     is ViewContactHeader -> {
                         item.primaryNumber?.let {
-                            CallHelpers.makeCall(applicationContext, it)
+                            CallHelpers.makeCall(
+                                context = applicationContext,
+                                number = it
+                            )
                         }
                     }
                     else -> {}
@@ -78,7 +90,12 @@ class ViewContactFragment : Fragment() {
 
                 when (item) {
                     is ViewContactHeader -> {
-                        // TODO: Implement the messaging intent.
+                        item.primaryNumber?.let {
+                            CommonIntentsForUI.sendSMSIntent(
+                                activity = requireActivity(),
+                                number = it
+                            )
+                        }
                     }
                     else -> {}
                 }
@@ -88,7 +105,22 @@ class ViewContactFragment : Fragment() {
 
                 when (item) {
                     is ViewContactHeader -> {
-                        // TODO: Implement the email intent.
+                        item.primaryEmail?.let {
+                            CommonIntentsForUI.sendEmailIntent(
+                                activity = requireActivity(),
+                                email = it
+                            )
+                        }
+                    }
+                    else -> {}
+                }
+            },
+            blockOnClickListener = { item ->
+                Timber.e("$DBL: ViewContact block button onClick!")
+
+                when (item) {
+                    is ViewContactBlockedStatus -> {
+                        contactsViewModel.changeIsBlockedWrapper(viewContactBlockedStatus = item)
                     }
                     else -> {}
                 }
@@ -105,7 +137,10 @@ class ViewContactFragment : Fragment() {
                                 CallHelpers.makeCall(applicationContext, data.value)
                             }
                             ContactDataMimeType.EMAIL -> {
-                                // TODO: Implement the email intent.
+                                CommonIntentsForUI.sendEmailIntent(
+                                    activity = requireActivity(),
+                                    email = data.value
+                                )
                             }
                             ContactDataMimeType.ADDRESS -> {
                                 // TODO: Implement the map intent.

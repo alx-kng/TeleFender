@@ -7,6 +7,12 @@
     <string name="next">Next</string>
     <string name="previous">Previous</string>
 
+    <string name="item_detail_spam">Spam</string>
+    <string name="item_detail_default">Default</string>
+    <string name="item_detail_safe">Safe</string>
+    <string name="item_detail_block">Block this Caller</string>
+    <string name="item_detail_unblock">Unblock this Caller</string>
+
     <string name="recents_title">Recents</string>
     <string name="duration_format">%1$d seconds</string>
     <string name="contacts_title">Contacts</string>

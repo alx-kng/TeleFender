@@ -20,12 +20,15 @@ import com.telefender.phone.misc_helpers.DatabaseLogger
 import com.telefender.phone.misc_helpers.PrintTypes
 import timber.log.Timber
 
-/*
-TODO: Handle case where permissions aren't given (or default dialer isn't granted).
 
-TODO: Sometimes Voicemail is sorted incorrectly in recents list. Particularly when you
- call back the +1 number. In general, sometimes Voicemail number is sorted below the
- associated missed / rejected / blocked call... But maybe we can't change this.
+/**
+ * TODO: Do an all and missed section at top of recents screen.
+ *
+ * TODO: Handle case where permissions aren't given (or default dialer isn't granted).
+ *
+ * TODO: Sometimes Voicemail is sorted incorrectly in recents list. Particularly when you
+ *  call back the +1 number. In general, sometimes Voicemail number is sorted below the
+ *   associated missed / rejected / blocked call... But maybe we can't change this.
  */
 class RecentsFragment : Fragment() {
 
@@ -74,16 +77,6 @@ class RecentsFragment : Fragment() {
         recentsViewModel.callLogs.observe(viewLifecycleOwner) {
             adapter.submitList(recentsViewModel.groupedCallLogs)
         }
-    }
-
-    /**
-     * TODO: Currently just here for checking in on status of AnalyzedNumber. Remove / find better
-     *  way to check status later.
-     */
-    override fun onStart() {
-        super.onStart()
-
-        val repository = (requireContext().applicationContext as App).repository
     }
 
     override fun onDestroyView() {

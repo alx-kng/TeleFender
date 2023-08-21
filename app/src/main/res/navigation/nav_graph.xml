@@ -69,7 +69,12 @@
         android:id="@+id/callHistoryFragment"
         android:name="com.telefender.phone.gui.fragments.CallHistoryFragment"
         android:label="CallHistoryFragment"
-        tools:layout="@layout/fragment_call_history"/>
+        tools:layout="@layout/fragment_call_history">
+        <action
+            android:id="@+id/action_callHistoryFragment_to_changeContactFragment"
+            app:destination="@id/changeContactFragment"
+            />
+    </fragment>
 
     <fragment
         android:id="@+id/viewContactFragment"

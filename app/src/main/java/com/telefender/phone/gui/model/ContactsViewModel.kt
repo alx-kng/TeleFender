@@ -79,7 +79,6 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
     val viewFormattedIndicatorLiveData = MutableLiveData<UUID>()
 
     private val mutexUpdated = Mutex()
-
     private val mutexFormatted = Mutex()
 
     /**********************************************************************************************
@@ -199,7 +198,8 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
             if (selectCIDSnapShot != null) {
                 val newPackagedDataLists = DefaultContacts.getContactData(
                     contentResolver = applicationContext.contentResolver,
-                    contactID = selectCIDSnapShot
+                    contactID = selectCIDSnapShot,
+                    context = applicationContext
                 )
 
                 setViewFormattedList(newPackagedDataLists.viewFormattedList)
@@ -261,8 +261,9 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
                         ViewContactHeader(
                             displayName = null,
                             primaryNumber = null,
-                            primaryEmail = null
+                            primaryEmail = null,
                         ),
+                        ViewContactBlockedStatus(isBlocked = false),
                         ViewContactFooter()
                     )
                 )
@@ -273,26 +274,11 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
             setListsGivenPackagedLists(
                 DefaultContacts.getContactData(
                     contentResolver = applicationContext.contentResolver,
-                    contactID = selectCID
+                    contactID = selectCID,
+                    context = applicationContext
                 )
             )
         }
-    }
-
-    private suspend fun setListsGivenPackagedLists(packagedDataLists: PackagedDataLists) {
-        originalUpdatedDataList = packagedDataLists.originalUpdatedDataList
-        originalDataList = packagedDataLists.originalDataList
-
-        /*
-        We don't use the set function here, since setNonContactDataList will already notify
-        the adapter after setting this. Prevents double blinking update.
-         */
-        mutexUpdated.withLock {
-            _updatedDataList = packagedDataLists.updatedDataList
-        }
-
-        setNonContactDataList(packagedDataLists.nonContactDataList)
-        setViewFormattedList(packagedDataLists.viewFormattedList)
     }
 
     /**
@@ -339,7 +325,7 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
             val resultPair = DefaultContacts.executeChanges(
                 context = applicationContext,
                 contentResolver = applicationContext.contentResolver,
-                originalCID = selectCID,
+                originalCID = selectCIDSnapshot,
                 originalDataList = dataListsSnapshot.originalDataList,
                 updatedDataList = cleanUpdatedDataList,
                 accountName = null,
@@ -351,10 +337,13 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
 
             if (success) {
                 if (selectCIDSnapshot != null) {
+                    Timber.e("$DBL: HERE HERE HERE HERE HERE")
+
                     setListsGivenPackagedLists(
                         DefaultContacts.getContactData(
                             contentResolver = applicationContext.contentResolver,
-                            contactID = selectCIDSnapshot
+                            contactID = selectCIDSnapshot,
+                            context = applicationContext
                         )
                     )
                 } else if (newRawCID != null) {
@@ -373,7 +362,8 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
                         setListsGivenPackagedLists(
                             DefaultContacts.getContactData(
                                 contentResolver = applicationContext.contentResolver,
-                                contactID = it
+                                contactID = it,
+                                context = applicationContext
                             )
                         )
                     }
@@ -411,6 +401,28 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
         return false
     }
 
+    /**
+     * Changes the blocked status of the contact in our database when the blocked button is pressed
+     * in the ViewContactFragment.
+     */
+    fun changeIsBlockedWrapper(viewContactBlockedStatus: ViewContactBlockedStatus)  {
+        CommonViewModelHelpers.changeIsBlocked(
+            applicationContext = applicationContext,
+            scope = scope,
+            selectCIDSnapshot = selectCID,
+            currentBlockedStatus = viewContactBlockedStatus.isBlocked
+        ) { actualBlockedStatus ->
+            val newViewContactBlockedStatus = viewContactBlockedStatus.copy(
+                isBlocked = actualBlockedStatus
+            )
+
+            replaceInViewFormattedDataList(
+                oldViewContactItem = viewContactBlockedStatus,
+                newViewContactItem = newViewContactBlockedStatus
+            )
+        }
+    }
+
     fun clearDataLists() {
         _selectCID = null
         originalDataList = mutableListOf()
@@ -422,24 +434,41 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
         Timber.e("$DBL: Clearing contact data lists!")
     }
 
+    private suspend fun setListsGivenPackagedLists(packagedDataLists: PackagedDataLists) {
+        originalUpdatedDataList = packagedDataLists.originalUpdatedDataList
+        originalDataList = packagedDataLists.originalDataList
+
+        /*
+        We don't use the set function here, since setNonContactDataList will already notify
+        the adapter after setting this. Prevents double blinking update.
+         */
+        mutexUpdated.withLock {
+            _updatedDataList = packagedDataLists.updatedDataList
+        }
+
+        setNonContactDataList(packagedDataLists.nonContactDataList)
+        setViewFormattedList(packagedDataLists.viewFormattedList)
+    }
+
+
     /**
      * TODO: Should we make these more generic extension functions? That is, add / remove to list
      *  by object reference? -> Maybe, maybe not. It would require wrapping the lists in an object
      *  or making list type enums, which is probably more cumbersome than having these few functions.
      */
-    suspend fun setUpdatedDataList(newUpdatedDataList: MutableList<ChangeContactItem>) {
+    private suspend fun setUpdatedDataList(newUpdatedDataList: MutableList<ChangeContactItem>) {
         mutexUpdated.withLock {
             _updatedDataList = newUpdatedDataList
             updatedIndicatorLiveData.postValue(UUID.randomUUID())
         }
     }
 
-    suspend fun setNonContactDataList(newNonContactDataList: List<ChangeContactItem>) {
+    private fun setNonContactDataList(newNonContactDataList: List<ChangeContactItem>) {
         _nonContactDataList = newNonContactDataList
         updatedIndicatorLiveData.postValue(UUID.randomUUID())
     }
 
-    suspend fun setViewFormattedList(newViewFormattedList: MutableList<ViewContactItem>) {
+    private suspend fun setViewFormattedList(newViewFormattedList: MutableList<ViewContactItem>) {
         /*
         Mutex check here is to prevent blinking from overlapping updates (e.g., contact observer
         update and submit changes update).
@@ -484,6 +513,19 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
             if (index >= 0) {
                 _updatedDataList.removeAt(index)
                 updatedIndicatorLiveData.postValue(UUID.randomUUID())
+            }
+        }
+    }
+
+    suspend fun replaceInViewFormattedDataList(
+        oldViewContactItem: ViewContactItem,
+        newViewContactItem: ViewContactItem
+    ) {
+        mutexFormatted.withLock {
+            val index = _viewFormattedList.indexOfFirst { it === oldViewContactItem }
+            if (index >= 0) {
+                _viewFormattedList[index] = newViewContactItem
+                viewFormattedIndicatorLiveData.postValue(UUID.randomUUID())
             }
         }
     }

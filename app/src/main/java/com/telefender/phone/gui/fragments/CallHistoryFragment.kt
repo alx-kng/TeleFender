@@ -6,24 +6,35 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.navigation.fragment.findNavController
+import com.telefender.phone.call_related.CallHelpers
 import com.telefender.phone.databinding.FragmentCallHistoryBinding
+import com.telefender.phone.gui.CommonIntentsForUI
 import com.telefender.phone.gui.MainActivity
 import com.telefender.phone.gui.adapters.CallHistoryAdapter
+import com.telefender.phone.gui.adapters.recycler_view_items.CallHistoryBlockedStatus
+import com.telefender.phone.gui.adapters.recycler_view_items.CallHistoryHeader
+import com.telefender.phone.gui.adapters.recycler_view_items.CallHistorySafetyStatus
+import com.telefender.phone.gui.adapters.recycler_view_items.common_types.SafetyStatus
+import com.telefender.phone.gui.model.ContactsViewModel
+import com.telefender.phone.gui.model.ContactsViewModelFactory
 import com.telefender.phone.gui.model.RecentsViewModel
 import com.telefender.phone.gui.model.RecentsViewModelFactory
-import java.text.SimpleDateFormat
-import java.util.*
+import com.telefender.phone.misc_helpers.DBL
+import timber.log.Timber
 
 
-/**
- * TODO: Actually check if is contact in [setupAppBar].
- */
 class CallHistoryFragment : Fragment() {
 
     private var _binding: FragmentCallHistoryBinding? = null
     private val binding get() = _binding!!
+
     private val recentsViewModel: RecentsViewModel by activityViewModels {
         RecentsViewModelFactory(requireActivity().application)
+    }
+
+    private val contactsViewModel: ContactsViewModel by activityViewModels {
+        ContactsViewModelFactory(requireActivity().application)
     }
 
     override fun onCreateView(
@@ -37,31 +48,129 @@ class CallHistoryFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        setupAppBar(true)
+        setupAppBar(recentsViewModel.getCurrentCID() != null)
         hideBottomNavigation()
 
-        val number = recentsViewModel.selectNumber
-
-        val locale = Locale.getDefault()
-        val simpleDate = SimpleDateFormat("MM/dd/yy", locale)
-        val date = Date(recentsViewModel.selectTime)
-        val time = simpleDate.format(date)
-
+        val applicationContext = requireContext().applicationContext
         val recyclerView = binding.recyclerView
 
-        val adapter = CallHistoryAdapter(requireContext().applicationContext, number, time)
+        val adapter = CallHistoryAdapter(
+            applicationContext = applicationContext,
+            photoOnClickListener = { item ->
+                Timber.e("$DBL: CallHistory photo onClick!")
+
+                when (item) {
+                    is CallHistoryHeader -> {
+                        // TODO: Implement the contact photo.
+                    }
+                    else -> {}
+                }
+            },
+            callOnClickListener = { item ->
+                Timber.e("$DBL: CallHistory call button onClick!")
+
+                when (item) {
+                    is CallHistoryHeader -> {
+                        CallHelpers.makeCall(
+                            context = applicationContext,
+                            number = item.associatedNumber
+                        )
+                    }
+                    else -> {}
+                }
+            },
+            messageOnClickListener = { item ->
+                Timber.e("$DBL: CallHistory message button onClick!")
+
+                when (item) {
+                    is CallHistoryHeader -> {
+                        CommonIntentsForUI.sendSMSIntent(
+                            activity = requireActivity(),
+                            number = item.associatedNumber
+                        )
+                    }
+                    else -> {}
+                }
+            },
+            emailOnClickListener = { item ->
+                Timber.e("$DBL: CallHistory email button onClick!")
+
+                when (item) {
+                    is CallHistoryHeader -> {
+                        item.primaryEmail?.let {
+                            CommonIntentsForUI.sendEmailIntent(
+                                activity = requireActivity(),
+                                email = it,
+                            )
+                        }
+                    }
+                    else -> {}
+                }
+            },
+            blockOnClickListener = { item ->
+                Timber.e("$DBL: CallHistory block button onClick!")
+
+                when (item) {
+                    is CallHistoryBlockedStatus -> {
+                        recentsViewModel.changeIsBlockedWrapper(callHistoryBlockedStatus = item)
+                    }
+                    else -> {}
+                }
+            },
+            spamOnClickListener = { item ->
+                Timber.e("$DBL: CallHistory spam button onClick!")
+
+                when (item) {
+                    is CallHistorySafetyStatus -> {
+                        recentsViewModel.changeSafetyStatusWrapper(
+                            callHistorySafetyStatus = item,
+                            newSafetyStatus = SafetyStatus.SPAM
+                        )
+                    }
+                    else -> {}
+                }
+            },
+            defaultOnClickListener = { item ->
+                Timber.e("$DBL: CallHistory default button onClick!")
+
+                when (item) {
+                    is CallHistorySafetyStatus -> {
+                        recentsViewModel.changeSafetyStatusWrapper(
+                            callHistorySafetyStatus = item,
+                            newSafetyStatus = SafetyStatus.DEFAULT
+                        )
+                    }
+                    else -> {}
+                }
+            },
+            safeOnClickListener = { item ->
+                Timber.e("$DBL: CallHistory safe button onClick!")
+
+                when (item) {
+                    is CallHistorySafetyStatus -> {
+                        recentsViewModel.changeSafetyStatusWrapper(
+                            callHistorySafetyStatus = item,
+                            newSafetyStatus = SafetyStatus.SAFE
+                        )
+                    }
+                    else -> {}
+                }
+            },
+        )
+
         // To disable recycler view blinking (smooth reloading experience).
         adapter.setHasStableIds(true)
         recyclerView.adapter = adapter
 
-        /**
-         * Observes call logs in recentViewModel while fragment is active and updates day logs
-         * correspondingly.
-         */
         adapter.submitList(recentsViewModel.dayLogs)
-        recentsViewModel.callLogs.observe(viewLifecycleOwner) {
-            recentsViewModel.updateDayLogs()
-            adapter.submitList(recentsViewModel.dayLogs)
+        recentsViewModel.dayLogIndicatorLiveData.observe(viewLifecycleOwner) {
+            adapter.submitList(recentsViewModel.dayLogs.toList())
+
+            // Updates button2 text to accurately reflect the Edit / Add once contact is loaded.
+            updateAppBar(isContact = recentsViewModel.getCurrentCID() != null)
+
+            // Preloads contactsViewModel in case of edit (smoother UI transition).
+            contactsViewModel.setDataLists(selectCID = recentsViewModel.getCurrentCID())
         }
     }
 
@@ -80,10 +189,44 @@ class CallHistoryFragment : Fragment() {
             // New app bar stuff
             act.displayUpButton(true)
             act.displayMoreMenu(false)
-            act.displayAppBarTextButton(show2 = true, text2 = if (isContact) "Edit" else "Add")
+
+            // Prevents blinking from Add to Edit when there is no header in the day logs yet.
+            if (!recentsViewModel.hasHeader()) {
+                act.displayAppBarTextButton()
+            } else {
+                act.displayAppBarTextButton(show2 = true, text2 = if (isContact) "Edit" else "Add")
+            }
 
             // Actually show app bar
             act.displayAppBar(true)
+        }
+    }
+
+    private fun updateAppBar(isContact: Boolean) {
+        if (activity is MainActivity) {
+            val act = (activity as MainActivity)
+
+            // Prevents blinking from Add to Edit when there is no header in the day logs yet.
+            if (!recentsViewModel.hasHeader()) {
+                act.displayAppBarTextButton()
+            } else if (isContact) {
+                act.displayAppBarTextButton(show2 = true, text2 = "Edit")
+                act.setAppBarTextButtonOnClickListener(
+                    onClickListener2 = {
+                        val action = CallHistoryFragmentDirections.actionCallHistoryFragmentToChangeContactFragment()
+                        findNavController().navigate(action)
+                    }
+                )
+            } else {
+                act.displayAppBarTextButton(show2 = true, text2 = "Add")
+                act.setAppBarTextButtonOnClickListener(
+                    onClickListener2 = {
+                        contactsViewModel.setDataLists(selectCID = null)
+                        val action = CallHistoryFragmentDirections.actionCallHistoryFragmentToChangeContactFragment()
+                        findNavController().navigate(action)
+                    }
+                )
+            }
         }
     }
 

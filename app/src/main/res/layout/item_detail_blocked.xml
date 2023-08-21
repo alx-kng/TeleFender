@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/item_view_contact_buttons"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingBottom="11dp">
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/item_view_contact_block_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="10dp"
+        android:insetTop="0dp"
+        android:text="@string/item_detail_block"
+        android:textSize="17sp"
+        android:textAllCaps="false"
+        android:textColor="@color/purple_200"
+        android:backgroundTint="@color/grey"
+        app:shapeAppearance="@style/ShapeAppearanceOverlay.Tele.Button.LessRounded"
+        />
+
+</LinearLayout>

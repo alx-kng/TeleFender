@@ -14,6 +14,8 @@ import java.time.Instant
 object RuleChecker {
 
     /**
+     * TODO: We need to actually reject calls from blocked contact numbers AND non-contact numbers.
+     *
      * TODO: Preliminary algo:
      *  - Check if we should create new scope or use applicationScope here.
      *  -
@@ -28,21 +30,22 @@ object RuleChecker {
      *  -
      *  - Check for premium mode?
      *
-     * Returns whether or not number should be allowed. Read "TeleFender - Algorithm Overview" for
-     * more info.
+     * Returns whether or not number should be allowed (safety-wise) along with whether the number
+     * should be flat out rejected (e.g., when a number is blocked as a contact OR non-contact).
+     * Read "TeleFender - Algorithm Overview" for more info.
      */
     suspend fun isSafe(
         context: Context,
         scope: CoroutineScope,
         number: String?
-    ): Boolean {
+    ): Pair<Boolean, Boolean> {
 
         //Requires that app is initialized and setup before using algorithm.
         if (!TeleHelpers.hasValidStatus(context)) {
             Timber.e("$DBL: " +
                 "isSafe() - Doesn't have valid status to use algorithm!")
 
-            return true
+            return Pair(true, false)
         }
 
         val repository = (context.applicationContext as App).repository
@@ -51,7 +54,7 @@ object RuleChecker {
         val normalizedNumber = TeleHelpers.normalizedNumber(number)
             ?: TeleHelpers.bareNumber(number)
 
-        if (normalizedNumber == TeleHelpers.UNKNOWN_NUMBER) return false
+        if (normalizedNumber == TeleHelpers.UNKNOWN_NUMBER) return Pair(false, false)
 
         val analyzedNumber: AnalyzedNumber
         val analyzed: Analyzed
@@ -59,7 +62,7 @@ object RuleChecker {
         val storedMap: StoredMap
 
         try {
-            analyzedNumber = repository.getAnalyzedNum(number = normalizedNumber)!!
+            analyzedNumber = repository.getAnalyzedNum(normalizedNumber = normalizedNumber)!!
             analyzed = analyzedNumber.getAnalyzed()
             parameters = repository.getParameters()!!
             storedMap = repository.getStoredMap()!!
@@ -70,7 +73,7 @@ object RuleChecker {
              */
             Timber.e("$DBL: isSafe() - Core data problem! ${e.message}")
             e.printStackTrace()
-            return true
+            return Pair(true, false)
         }
 
         /*
@@ -82,38 +85,39 @@ object RuleChecker {
             Timber.e("$DBL: " +
                 "isSafe() - Can't use algorithm since we haven't completed a full sync yet!")
 
-            return true
+            return Pair(true, false)
         }
 
-        if (analyzed.isBlocked) return false
+        // Should flat out reject blocked number (regardless of whether it's a contact or non-contact)
+        if (analyzed.isBlocked) return Pair(false, true)
 
-        if (analyzed.numSharedContacts > 0) return true
+        if (analyzed.numSharedContacts > 0) return Pair(true, false)
 
-        if (analyzed.numTreeContacts > 0) return true
+        if (analyzed.numTreeContacts > 0) return Pair(true, false)
 
-        if (analyzed.markedSafe) return true
+        if (analyzed.markedSafe) return Pair(true, false)
 
-        if (analyzed.maxIncomingDuration >= parameters.incomingGate) return true
+        if (analyzed.maxIncomingDuration >= parameters.incomingGate) return Pair(true, false)
 
-        if (analyzed.maxOutgoingDuration >= parameters.outgoingGate) return true
+        if (analyzed.maxOutgoingDuration >= parameters.outgoingGate) return Pair(true, false)
 
         analyzed.lastFreshOutgoingTime?.let {
-            if (currentTime - it < parameters.freshOutgoingExpirePeriod) return true
+            if (currentTime - it < parameters.freshOutgoingExpirePeriod) return Pair(true, false)
         }
 
-        if (analyzed.smsVerified) return true
+        if (analyzed.smsVerified) return Pair(true, false)
 
         /*
         If the checks reach here, and the current call mode is ALLOW_MODE, then we deem the number
         as unsafe. However, since the call is going through anyways, there's no need to SMS verify.
          */
-        if (CallManager.currentMode == HandleMode.ALLOW_MODE) return false
+        if (CallManager.currentMode == HandleMode.ALLOW_MODE) return Pair(false, false)
 
         // Used to silence the ringer during the wait time for the SMS verify result.
         AudioHelpers.setRingerMode(context, RingerMode.SILENT)
 
         // If should send sms request, then continue, otherwise just deem number unsafe.
-        if (!shouldSendSMSRequest(context, repository, normalizedNumber, analyzed, parameters)) return false
+        if (!shouldSendSMSRequest(context, repository, normalizedNumber, analyzed, parameters)) return Pair(false, false)
 
         scope.launch {
             RequestWrappers.smsVerify(
@@ -128,7 +132,7 @@ object RuleChecker {
         delay(parameters.smsImmediateWaitTime)
 
         val newAnalyzed = repository.getAnalyzedNum(normalizedNumber)?.getAnalyzed()
-            ?: return false
+            ?: return Pair(false, false)
 
         /*
         If not verified, then send another SMS request to server after a around minute. This is
@@ -138,7 +142,7 @@ object RuleChecker {
             SMSVerifyScheduler.initiateSMSVerifyWorker(context, normalizedNumber)
         }
 
-        return newAnalyzed.smsVerified
+        return Pair(newAnalyzed.smsVerified, false)
     }
 
     private suspend fun shouldSendSMSRequest(

@@ -1,4 +1,4 @@
-package com.telefender.phone.gui.adapters
+package com.telefender.phone.gui.adapters.custom_views
 
 import android.content.Context
 import android.util.AttributeSet

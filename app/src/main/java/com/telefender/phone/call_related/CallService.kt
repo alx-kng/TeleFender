@@ -17,6 +17,8 @@ import java.lang.ref.WeakReference
 
 
 /**
+ * TODO: LINGERING IN CALL SCREEN WHEN CALLING A BLANK NUMBER!!!!
+ *
  * TODO: LEAK IS HERE! --> Still haven't fixed it -> Pretty sure it's fixed -> Actual still detected
  *  some leaks on LeakCanary --> 5th thought, maybe we actually did fix the major leak, as the leak
  *  isn't detected on every call. It's possible that the OS just naturally has a small / delayed
@@ -86,18 +88,20 @@ class CallService : InCallService() {
          */
         if (call.stateCompat() == Call.STATE_RINGING) {
             scope.launch {
-                val isSafe = RuleChecker.isSafe(
+                val safetyPair = RuleChecker.isSafe(
                     context = this@CallService,
                     scope = scope,
                     number = call.number()
                 )
+                val isSafe = safetyPair.first
+                val shouldReject = safetyPair.second
 
                 Timber.e("$DBL: CallService - SAFE = $isSafe")
 
                 if (isSafe) {
                     safeCall()
                 } else {
-                    unsafeCall(call)
+                    unsafeCall(call, shouldReject)
                 }
             }
         } else {
@@ -137,7 +141,14 @@ class CallService : InCallService() {
      * TODO: Check insertCallDetail() works. Also, update response for unsafe calls in ALLOW_MODE,
      *  specifically in terms of showing UI.
      */
-    private fun unsafeCall(call: Call) {
+    private fun unsafeCall(call: Call, shouldReject: Boolean) {
+        if (shouldReject) {
+            Timber.e("$DBL: REJECT Action: Blocked call rejected!")
+            TeleCallDetails.insertCallDetail(this, call, true, CallLog.Calls.BLOCKED_TYPE)
+            CallManager.hangup()
+            return
+        }
+
         when(CallManager.currentMode) {
             HandleMode.BLOCK_MODE -> {
                 Timber.e("$DBL: BLOCK_MODE Action: Unsafe call blocked!")

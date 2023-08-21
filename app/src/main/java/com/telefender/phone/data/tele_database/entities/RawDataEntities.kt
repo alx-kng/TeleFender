@@ -6,8 +6,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
-import com.telefender.phone.gui.model.GroupedCallDetail
-import com.telefender.phone.gui.adapters.recycler_view_items.CallDetailItem
+import com.telefender.phone.gui.adapters.recycler_view_items.RecentsGroupedCallDetail
 import com.telefender.phone.misc_helpers.TeleHelpers
 
 
@@ -41,7 +40,7 @@ data class CallDetail(
     val callDirection: Int,
     val instanceNumber: String,
     val unallowed: Boolean = false
-) : CallDetailItem, TableEntity() {
+) : TableEntity() {
 
     override fun toJson() : String {
         val moshi = Moshi.Builder().build()
@@ -56,8 +55,10 @@ data class CallDetail(
             "unallowed: $unallowed normalizedNumber: $normalizedNumber"
     }
 
-    fun createGroup() : GroupedCallDetail {
-        return GroupedCallDetail(
+    fun createGroup() : RecentsGroupedCallDetail {
+        return RecentsGroupedCallDetail(
+            name = normalizedNumber,
+            normalizedNumber = normalizedNumber,
             rawNumber = rawNumber,
             callEpochDate = callEpochDate,
             callLocation = callLocation,

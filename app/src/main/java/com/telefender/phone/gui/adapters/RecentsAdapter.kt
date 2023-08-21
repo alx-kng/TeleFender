@@ -13,7 +13,7 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.telefender.phone.R
-import com.telefender.phone.gui.model.GroupedCallDetail
+import com.telefender.phone.gui.adapters.recycler_view_items.RecentsGroupedCallDetail
 import com.telefender.phone.misc_helpers.TeleHelpers
 import java.text.SimpleDateFormat
 import java.time.Instant
@@ -26,7 +26,7 @@ class RecentsAdapter(
     private val applicationContext: Context,
     private val viewClickListener: (String) -> Unit,
     private val infoClickListener: (String, Long) -> Unit
-) : ListAdapter<GroupedCallDetail, RecentsAdapter.RecentsViewHolder>(RecentsComparator()) {
+) : ListAdapter<RecentsGroupedCallDetail, RecentsAdapter.RecentsViewHolder>(RecentsComparator()) {
 
     class RecentsViewHolder(
         view: View,
@@ -34,7 +34,7 @@ class RecentsAdapter(
         infoClickAtPosition: (Int) -> Unit
     ) : RecyclerView.ViewHolder(view) {
 
-        val number: TextView = view.findViewById(R.id.item_number)
+        val displayName: TextView = view.findViewById(R.id.item_recents_display_name)
         val location: TextView = view.findViewById(R.id.item_location)
         val date: TextView = view.findViewById(R.id.item_call_time)
         val direction: ImageView = view.findViewById(R.id.item_direction)
@@ -51,12 +51,12 @@ class RecentsAdapter(
         }
     }
 
-    class RecentsComparator : DiffUtil.ItemCallback<GroupedCallDetail>() {
-        override fun areItemsTheSame(oldItem: GroupedCallDetail, newItem: GroupedCallDetail): Boolean {
+    class RecentsComparator : DiffUtil.ItemCallback<RecentsGroupedCallDetail>() {
+        override fun areItemsTheSame(oldItem: RecentsGroupedCallDetail, newItem: RecentsGroupedCallDetail): Boolean {
             return oldItem === newItem
         }
 
-        override fun areContentsTheSame(oldItem: GroupedCallDetail, newItem: GroupedCallDetail): Boolean {
+        override fun areContentsTheSame(oldItem: RecentsGroupedCallDetail, newItem: RecentsGroupedCallDetail): Boolean {
             return oldItem.callEpochDate == newItem.callEpochDate && oldItem.amount == newItem.amount
         }
     }
@@ -92,14 +92,14 @@ class RecentsAdapter(
      */
     override fun onBindViewHolder(holder: RecentsViewHolder, position: Int) {
         val current = getItem(position)
-        holder.number.text = getFormattedNumber(current.rawNumber, current.amount)
-        holder.number.setTextColor(ContextCompat.getColor(applicationContext, R.color.icon_white))
+        holder.displayName.text = getFormattedNumber(current.name, current.amount)
+        holder.displayName.setTextColor(ContextCompat.getColor(applicationContext, R.color.icon_white))
 
-        if (holder.number.currentTextColor != R.color.icon_white) {
-            holder.number.setTextColor(ContextCompat.getColor(applicationContext, R.color.icon_white))
+        if (holder.displayName.currentTextColor != R.color.icon_white) {
+            holder.displayName.setTextColor(ContextCompat.getColor(applicationContext, R.color.icon_white))
         }
         if (isRed(current.callDirection)) {
-            holder.number.setTextColor(ContextCompat.getColor(applicationContext, R.color.missed_red))
+            holder.displayName.setTextColor(ContextCompat.getColor(applicationContext, R.color.missed_red))
         }
 
         holder.location.text = current.callLocation ?: "Unknown location"

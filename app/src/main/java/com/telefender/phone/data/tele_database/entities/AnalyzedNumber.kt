@@ -71,30 +71,59 @@ data class Analyzed(
     val notifyGate: Int,
     val notifyWindow: List<Long>,
 
-    // For SMS verification
+    /** For SMS verification */
     val serverSentWindow: List<Long>, // List of times when server sent SMS verify messages.
     val clientSentAfterExpire: Boolean, // True if already sent SMS request to server after link expires.
 
-    // Important actions
+    /** Important actions */
     val smsVerified: Boolean,
+    /*
+    This is only really used for non-contact numbers. Moreover, this is usually complementary to
+    isBlocked. That is, if markedSafe is true, then isBlocked must be false, and if isBlocked is
+    true, then markedSafe must be false.
+     */
     val markedSafe: Boolean,
+    /*
+    Here's an in-depth explanation of isBlocked because its use in the code is a little confusing.
+    Basically, isBlocked is used for both by non-contacts and contacts.
+
+    1. In the non-contact case, isBlocked basically stands for both blocked and spam. The algorithm
+    will automatically reject these types of calls, but they are still allowed to be on the Notify
+    List (they just have a much higher notify gate). Moreover, for blocked calls on the Notify List
+    they have two possible high notify gate levels, verifiedSpamNotifyGate and superSpamNotifyGate.
+    Blocked calls have verifiedSpamNotifyGate to begin with, but if they are identified (and marked)
+    as spam again on the NotifyList or through some other manner, their notify gate will be bumped
+    up to superSpamNotifyGate.
+
+    2. In the contact case, isBlocked just means blocked in the normal sense. The algorithm will
+    also automatically reject these types of calls. The only thing of note is how we handle
+    blocking entire contacts. Firstly, if a number is marked blocked as a non-contact number, and
+    that number gets put in a contact, then isBlocked immediately resets to false. Secondly, if a
+    contact is blocked, then every number under it will be marked as isBlocked. Importantly, say
+    Contact A and Contact B both share Number C. If the flow of actions is
+
+    Block Contact A -> Block Contact B -> Unblock Number C
+
+    Then, Number C will be marked as unblocked, even though Contact A as a whole is still blocked.
+    This is because we want the blocked status to reflect the user's most recent wishes.
+     */
     val isBlocked: Boolean,
 
-    // General type
+    /** General type */
     val lastCallTime: Long? = null,
     val lastCallDirection: Int? = null,
     val lastCallDuration: Long? = null,
     val maxDuration: Long, // Only considers non-voicemail calls
     val avgDuration: Double, // Only considers non-voicemail calls
 
-    // Incoming subtype
+    /** Incoming subtype */
     val numIncoming: Int,
     val lastIncomingTime: Long? = null,
     val lastIncomingDuration: Long? = null,
     val maxIncomingDuration: Long,
     val avgIncomingDuration: Double,
 
-    // Outgoing subtype
+    /** Outgoing subtype */
     val numOutgoing: Int,
     val lastOutgoingTime: Long? = null,
     val lastFreshOutgoingTime: Long? = null, // Last outgoing time with no prior calls (within long period)
@@ -102,26 +131,26 @@ data class Analyzed(
     val maxOutgoingDuration: Long,
     val avgOutgoingDuration: Double,
 
-    // Voicemail subtype
+    /** Voicemail subtype */
     val numVoicemail: Int,
     val lastVoicemailTime: Long? = null,
     val lastVoicemailDuration: Long? = null,
     val maxVoicemailDuration: Long,
     val avgVoicemailDuration: Double,
 
-    // Missed subtype
+    /** Missed subtype */
     val numMissed: Int,
     val lastMissedTime: Long? = null,
 
-    // Rejected subtype
+    /** Rejected subtype */
     val numRejected: Int,
     val lastRejectedTime: Long? = null,
 
-    // Blocked subtype
+    /** Blocked subtype */
     val numBlocked: Int,
     val lastBlockedTime: Long? = null,
 
-    // Contact / Tree info
+    /** Contact / tree info */
     val numMarkedBlocked: Int, // for contacts only
     val numSharedContacts: Int,
     val numTreeContacts: Int,

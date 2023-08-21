@@ -339,13 +339,16 @@ class ChangeContactFragment : Fragment() {
 
                     /*
                     When submitting a Contact change, we want to bring the user to the ViewContact
-                    screen (while maintaining a clean / predictable backstack).
+                    screen or CallHistory screen (while maintaining a clean / predictable backstack).
                      */
                     val previousDestination = navController.previousBackStackEntry?.destination?.id
-                    if (previousDestination == R.id.viewContactFragment) {
+                    if (previousDestination == R.id.viewContactFragment
+                        || previousDestination == R.id.callHistoryFragment
+                    ) {
                         /*
-                        If the ChangeContactFragment was navigated to from the ViewContactFragment, then
-                        just do a back press to get back to the ViewContactFragment.
+                        If the ChangeContactFragment was navigated to from the ViewContactFragment,
+                        or CallHistoryFragment, then just do a back press to get back to the
+                        corresponding Fragment.
                          */
                         requireActivity().onBackPressedDispatcher.onBackPressed()
                     } else {

@@ -235,6 +235,14 @@ class MainActivity : AppCompatActivity() {
                  */
                 contactsViewModel.clearDataLists()
             }
+            R.id.callHistoryFragment -> {
+                /*
+                Clear CallHistory data lists when coming back from CallHistoryFragment (prevents
+                blinking update when pressing on another call log).
+                 */
+                recentsViewModel.clearCallHistoryLists()
+                contactsViewModel.clearDataLists()
+            }
         }
 
         val navigationHandled = navController.navigateUp() || super.onSupportNavigateUp()
@@ -321,7 +329,11 @@ class MainActivity : AppCompatActivity() {
 
             // Registers UI Call log observer (defined and unregistered in MainActivity)
             if (onCreate || callLogObserverUI == null) {
-                callLogObserverUI = CallLogObserverUI(Handler(Looper.getMainLooper()), recentsViewModel)
+                callLogObserverUI = CallLogObserverUI(
+                    handler = Handler(Looper.getMainLooper()),
+                    recentsViewModel = recentsViewModel
+                )
+
                 this.applicationContext.contentResolver.registerContentObserver(
                     android.provider.CallLog.Calls.CONTENT_URI,
                     false,
@@ -331,7 +343,12 @@ class MainActivity : AppCompatActivity() {
 
             // Registers Contacts observer (defined and unregistered in MainActivity)
             if (onCreate || contactObserver == null) {
-                contactObserver = ContactsObserver(Handler(Looper.getMainLooper()), contactsViewModel)
+                contactObserver = ContactsObserver(
+                    handler = Handler(Looper.getMainLooper()),
+                    contactsViewModel = contactsViewModel,
+                    recentsViewModel = recentsViewModel
+                )
+
                 this.applicationContext.contentResolver.registerContentObserver(
                     ContactsContract.Contacts.CONTENT_URI,
                     true,
@@ -405,15 +422,26 @@ class MainActivity : AppCompatActivity() {
                          */
                         contactsViewModel.clearDataLists()
                     }
+                    R.id.callHistoryFragment -> {
+                        /*
+                        Clear CallHistory data lists when coming back from CallHistoryFragment (prevents
+                        blinking update when pressing on another call log).
+                         */
+                        recentsViewModel.clearCallHistoryLists()
+                        contactsViewModel.clearDataLists()
+                    }
                     R.id.changeContactFragment -> {
                         /*
                         Clear data lists if not going back to ViewContactFragment (happens when
-                        cancelling a new contact). This prevents a blinking update when pressing on
-                        another contact. Don't clear lists when going back to ViewContactFragment,
-                        cause it still needs the lists.
+                        cancelling a new contact) and not going back to CallHistoryFragment. This
+                        prevents a blinking update when pressing on another contact or re-entering
+                        the edit screen (in the case of CallHistoryFragment). Don't clear lists
+                        when going back to ViewContactFragment, cause it still needs the lists.
                          */
                         val previousDestination = navController.previousBackStackEntry?.destination?.id
-                        if (previousDestination != R.id.viewContactFragment) {
+                        if (previousDestination != R.id.viewContactFragment
+                            && previousDestination != R.id.callHistoryFragment
+                        ) {
                             contactsViewModel.clearDataLists()
                         }
                     }
@@ -613,7 +641,7 @@ class MainActivity : AppCompatActivity() {
             super.onChange(selfChange)
             Timber.i("$DBL: OBSERVED NEW CALL LOG - UI - id = $id")
 
-            recentsViewModel.updateCallLogs()
+            recentsViewModel.onCallLogUpdate()
         }
     }
 
@@ -622,7 +650,8 @@ class MainActivity : AppCompatActivity() {
      */
     class ContactsObserver(
         handler: Handler,
-        private val contactsViewModel: ContactsViewModel
+        private val contactsViewModel: ContactsViewModel,
+        private val recentsViewModel: RecentsViewModel
     ) : ContentObserver(handler) {
 
         override fun deliverSelfNotifications(): Boolean {
@@ -631,9 +660,10 @@ class MainActivity : AppCompatActivity() {
 
         override fun onChange(selfChange: Boolean) {
             super.onChange(selfChange)
-            Timber.i("$DBL: ContactsFragment - New Contact!")
+            Timber.i("$DBL: ContactsFragment - New Change!")
 
             contactsViewModel.onContactsUpdate()
+            recentsViewModel.onContactsUpdate()
         }
     }
     

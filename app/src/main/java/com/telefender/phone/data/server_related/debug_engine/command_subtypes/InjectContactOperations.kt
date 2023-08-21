@@ -40,23 +40,23 @@ class InjectADDC(
 
 @JsonClass(generateAdapter = true)
 class InjectADDN(
-    val defaultCID: String,
+    val rawCID: String,
     val numbers: List<String>?
 ) : InjectDefaultOperation() {
 
     override fun toString(): String {
-        return "InjectADDN - defaultCID = $defaultCID, numbers = $numbers"
+        return "InjectADDN - rawCID = $rawCID, numbers = $numbers"
     }
 }
 
 @JsonClass(generateAdapter = true)
 class InjectUPDN(
-    val defaultCID: String,
+    val rawCID: String,
     val updates: List<NumberUpdate>?
 ) : InjectDefaultOperation() {
 
     override fun toString(): String {
-        return "InjectUPDN - defaultCID = $defaultCID, updates = $updates"
+        return "InjectUPDN - rawCID = $rawCID, updates = $updates"
     }
 }
 
@@ -72,22 +72,22 @@ class NumberUpdate(
 
 @JsonClass(generateAdapter = true)
 class InjectDELN(
-    val defaultCID: String,
+    val rawCID: String,
     val numbers: List<String>?
 ) : InjectDefaultOperation() {
 
     override fun toString(): String {
-        return "InjectDELN - defaultCID = $defaultCID, numbers = $numbers"
+        return "InjectDELN - rawCID = $rawCID, numbers = $numbers"
     }
 }
 
 @JsonClass(generateAdapter = true)
 class InjectDELC(
-    val defaultCID: String,
+    val rawCID: String,
 ) : InjectDefaultOperation() {
 
     override fun toString(): String {
-        return "InjectDELC - defaultCID = $defaultCID"
+        return "InjectDELC - rawCID = $rawCID"
     }
 }
 
@@ -102,7 +102,6 @@ fun String.toInjectDefaultOperation(type: InjectDefaultType) : InjectDefaultOper
             InjectDefaultType.INJ_UPDN -> InjectUPDN::class.java
             InjectDefaultType.INJ_DELN -> InjectDELN::class.java
             InjectDefaultType.INJ_DELC -> InjectDELC::class.java
-
         }
         val moshi = Moshi.Builder().build()
         val adapter = moshi.adapter(operationClass)

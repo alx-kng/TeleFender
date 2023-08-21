@@ -381,7 +381,7 @@ class InjectDefaultCommand(
                         RemoteDebug.enqueueData(
                             DefaultContacts.debugInsertNumber(
                                 contentResolver = contentResolver,
-                                rawContactID = injectDefaultOp.defaultCID,
+                                rawContactID = injectDefaultOp.rawCID,
                                 numbers = injectDefaultOp.numbers
                             ).toString()
                         )
@@ -390,7 +390,7 @@ class InjectDefaultCommand(
                         RemoteDebug.enqueueData(
                             DefaultContacts.debugUpdateNumber(
                                 contentResolver = contentResolver,
-                                rawContactID = injectDefaultOp.defaultCID,
+                                rawContactID = injectDefaultOp.rawCID,
                                 updates = injectDefaultOp.updates
                             ).toString()
                         )
@@ -399,16 +399,16 @@ class InjectDefaultCommand(
                         RemoteDebug.enqueueData(
                             DefaultContacts.debugDeleteNumber(
                                 contentResolver = contentResolver,
-                                rawContactID = injectDefaultOp.defaultCID,
+                                rawContactID = injectDefaultOp.rawCID,
                                 numbers = injectDefaultOp.numbers
                             ).toString()
                         )
                     }
                     is InjectDELC -> {
                         RemoteDebug.enqueueData(
-                            DefaultContacts.debugDeleteContact(
+                            DefaultContacts.debugDeleteRawContact(
                                 contentResolver = contentResolver,
-                                rawContactID = injectDefaultOp.defaultCID
+                                rawContactID = injectDefaultOp.rawCID
                             ).toString()
                         )
                     }

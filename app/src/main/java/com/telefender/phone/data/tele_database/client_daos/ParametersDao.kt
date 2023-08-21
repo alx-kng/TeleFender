@@ -38,7 +38,7 @@ interface ParametersDao : StoredMapDao {
                     seenGateIncrease = 1,
 
                     notifyWindowSize = 7,
-                    initialLastCallDropWindow = 20,
+                    initialLastCallDropWindow = 15,
                     seenWindowDecrease = 5,
                     qualifiedDropWindow = 7,
                     seenDropWindow = 7,

@@ -29,12 +29,12 @@
                 android:layout_marginStart="15dp"
                 android:importantForAccessibility="no"
                 tools:srcCompat="@drawable/ic_baseline_call_made_24"
-                app:layout_constraintBottom_toBottomOf="@id/item_number"
-                app:layout_constraintTop_toTopOf="@id/item_number"
+                app:layout_constraintBottom_toBottomOf="@id/item_recents_display_name"
+                app:layout_constraintTop_toTopOf="@id/item_recents_display_name"
                 app:layout_constraintStart_toStartOf="parent" />
 
             <TextView
-                android:id="@+id/item_number"
+                android:id="@+id/item_recents_display_name"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="15dp"
@@ -52,7 +52,7 @@
                 android:textSize="15sp"
                 android:textColor="@color/holding_grey"
                 tools:text="Tonawanda, NY"
-                app:layout_constraintTop_toBottomOf="@id/item_number"
+                app:layout_constraintTop_toBottomOf="@id/item_recents_display_name"
                 app:layout_constraintStart_toEndOf="@id/item_direction" />
 
             <TextView
@@ -71,7 +71,7 @@
                 android:id="@+id/item_call_info"
                 style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="35dp"
-                android:layout_height="35dp"
+                android:layout_height="match_parent"
                 app:icon="@drawable/ic_baseline_info_24"
                 app:iconGravity="textStart"
                 app:iconPadding="0dp"

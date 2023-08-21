@@ -214,16 +214,16 @@ class ClientRepository(
      **********************************************************************************************/
 
     /**
-     * Gets AnalyzedNumber given a number. Requires use of lock since it may initialize the
-     * AnalyzedNumber for the number if the row didn't previously exist.
+     * Gets AnalyzedNumber given a number (should be normalized). Requires use of lock since it may
+     * initialize the AnalyzedNumber for the number if the row didn't previously exist.
      *
      * NOTE: if not specified, instanceNumber is assumed to be user's number.
      */
     @WorkerThread
-    suspend fun getAnalyzedNum(number: String, instanceNumber: String? = null) : AnalyzedNumber? {
+    suspend fun getAnalyzedNum(normalizedNumber: String, instanceNumber: String? = null) : AnalyzedNumber? {
         return mutexLocks[MutexType.ANALYZED]!!.withLock {
             analyzedNumberDao.getAnalyzedNum(
-                normalizedNumber = number,
+                normalizedNumber = normalizedNumber,
                 instanceParam = instanceNumber
             )
         }
@@ -326,6 +326,11 @@ class ClientRepository(
     @WorkerThread
     suspend fun getAllContacts() : List<Contact> {
         return contactDao.getAllContacts()
+    }
+
+    @WorkerThread
+    suspend fun getContact(teleCID: String) : Contact? {
+        return contactDao.getContactRow(CID = teleCID)
     }
 
     /***********************************************************************************************

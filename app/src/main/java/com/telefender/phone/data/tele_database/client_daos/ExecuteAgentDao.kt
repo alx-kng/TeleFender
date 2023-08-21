@@ -449,11 +449,20 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                 var oldNotifyItem = getNotifyItem(normalizedNumber)
 
                 /*
+                TODO: Maybe increase notify gate if incoming / outgoing call isn't long enough.
+                 -> Scratch that for now, more complicated than we thought. For now, let users
+                 decide.
+
                 If [callDirection] is incoming or outgoing, then call is considered to be user
                 interaction with the notify item. So, notify window is cleared and notify item is
                 removed from notify list (if it exists).
                  */
                 if (isIncoming || isOutgoing) {
+                    /*
+                    Note that clearing the newNotifyWindow automatically prevents the number from
+                    immediately re-qualifying for the NotifyList in the later code (even if the
+                    number is eligible).
+                     */
                     newNotifyWindow = listOf()
 
                     // Remove number from notify list if it is currently on it.
@@ -684,6 +693,8 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
     }
 
     /**
+     * TODO: Maybe make a DELETE notify list action?
+     *
      * TODO: What the exact fuck is SafeAction.BLOCKED vs isBlocked in AnalyzedNumber ->
      *  numBlocked doesn't seem to increase.
      *
@@ -732,8 +743,6 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                     }
                     SafeAction.BLOCKED -> {
                         /*
-                        TODO: Can the number be isBlocked for non-contact?
-
                         If already blocked, increase notify gate by significant amount.
                         If not already blocked, increase notify gate to verified spam amount.
                          */
@@ -841,11 +850,14 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                         )
                         TeleHelpers.assert(updateAnalyzedSuccess, "nonContactUpdate() - updateAnalyzedNum()")
 
+                        // Prevents nextDropWindow from being less than 0.
+                        val nextDropWindowRaw = oldNotifyItem.nextDropWindow - parameters.seenWindowDecrease
+
                         val updateNotifySuccess = updateNotifyItem(
                             oldNotifyItem.copy(
                                 veryFirstSeenTime = oldNotifyItem.veryFirstSeenTime ?: currentTime,
                                 seenSinceLastCall = true,
-                                nextDropWindow = oldNotifyItem.nextDropWindow - parameters.seenWindowDecrease
+                                nextDropWindow = if (nextDropWindowRaw >= 0) nextDropWindowRaw else 0
                             )
                         )
                         TeleHelpers.assert(updateNotifySuccess, "nonContactUpdate() - updateNotifyItem()")
@@ -916,8 +928,9 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
          */
         val currBlockedStatus = contactBlocked(CID)
         if (currBlockedStatus == null || currBlockedStatus == blocked) {
-            Timber.e("$DBL: " +
-                "Duplicate cUpdate() for CID = $CID | instanceNumber = $instanceNumber | blocked = $blocked")
+            Timber.e("$DBL: %s%s",
+                "Duplicate cUpdate() for CID = $CID | instanceNumber = $instanceNumber | ",
+                "blocked = $blocked | currBlockStatus = $currBlockedStatus")
             return
         }
 
@@ -944,6 +957,26 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
                     normalizedNumber = normalizedNumber,
                     analyzed = oldAnalyzed.copy(
                         isBlocked = blocked,
+                        /*
+                        If the contact is blocked, then set the markedSafe value to false. Even
+                        though markedSafe is only used for non-contact numbers, we don't want the
+                        following case to occur:
+
+                        Mark safe -> Create contact -> Block -> Delete contact
+
+                        Which causes a non-contact number to be both marked safe and blocked, which
+                        creates confusion for the CallHistory UI. With the new logic, we would end
+                        up with a non-contact number with only isBlocked = true, which we could
+                        then simply treat as spam.
+
+                        NOTE: By this design, the following case:
+
+                        Mark safe -> Create contact -> Block -> Unblock -> Delete contact
+
+                        Would give us a non-contact number with markedSafe and isBlocked both as
+                        false, meaning we just use the default treatment (let algorithm decide).
+                         */
+                        markedSafe = if (blocked) false else oldAnalyzed.markedSafe,
                         numMarkedBlocked = oldAnalyzed.numMarkedBlocked + numBlockedDelta
                     )
                 )

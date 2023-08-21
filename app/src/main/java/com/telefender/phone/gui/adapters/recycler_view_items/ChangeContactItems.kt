@@ -6,6 +6,8 @@ import java.util.*
 
 
 /***************************************************************************************************
+ * TODO: Move ContactData to its own separate file and make a ViewContactData wrapper class.
+ *
  * For ChangeContactFragment / ChangeContactAdapter
  **************************************************************************************************/
 

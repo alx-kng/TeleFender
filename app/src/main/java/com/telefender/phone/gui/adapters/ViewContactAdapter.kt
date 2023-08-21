@@ -5,6 +5,7 @@ import android.content.res.ColorStateList
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
@@ -13,12 +14,11 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.telefender.phone.R
-import com.telefender.phone.gui.adapters.recycler_view_items.ViewContactData
-import com.telefender.phone.gui.adapters.recycler_view_items.ViewContactFooter
-import com.telefender.phone.gui.adapters.recycler_view_items.ViewContactHeader
-import com.telefender.phone.gui.adapters.recycler_view_items.ViewContactItem
+import com.telefender.phone.gui.adapters.recycler_view_items.*
+import com.telefender.phone.misc_helpers.DBL
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import timber.log.Timber
 
 
 class ViewContactAdapter (
@@ -27,14 +27,16 @@ class ViewContactAdapter (
     private val callOnClickListener: (ViewContactItem) -> Unit,
     private val messageOnClickListener: (ViewContactItem) -> Unit,
     private val emailOnClickListener: (ViewContactItem) -> Unit,
+    private val blockOnClickListener: (ViewContactItem) -> Unit,
     private val dataOnClickListener: (ViewContactItem) -> Unit,
 ) : ListAdapter<ViewContactItem, RecyclerView.ViewHolder>(CombinedComparator()) {
 
     val scope = CoroutineScope(Dispatchers.Default)
 
     val HEADER_VIEW_TYPE = 1
-    val DATA_VIEW_TYPE = 2
-    val FOOTER_VIEW_TYPE = 3
+    val BLOCKED_STATUS_VIEW_TYPE = 2
+    val DATA_VIEW_TYPE = 3
+    val FOOTER_VIEW_TYPE = 4
 
     class CombinedComparator : DiffUtil.ItemCallback<ViewContactItem>() {
 
@@ -45,7 +47,8 @@ class ViewContactAdapter (
         override fun areContentsTheSame(oldItem: ViewContactItem, newItem: ViewContactItem): Boolean {
             return when (oldItem) {
                 is ViewContactData -> newItem is ViewContactData && oldItem.contactData == newItem.contactData
-                is ViewContactHeader -> newItem is ViewContactHeader
+                is ViewContactHeader -> newItem is ViewContactHeader && oldItem == newItem
+                is ViewContactBlockedStatus -> newItem is ViewContactBlockedStatus && oldItem == newItem
                 is ViewContactFooter -> newItem is ViewContactFooter
             }
         }
@@ -59,11 +62,11 @@ class ViewContactAdapter (
         emailClickAtPosition: (Int) -> Unit,
     ) : RecyclerView.ViewHolder(view) {
 
-        val photoButton: MaterialButton = view.findViewById(R.id.item_view_contact_photo)
-        val nameTextView: TextView = view.findViewById(R.id.item_view_contact_display_name)
-        val callButton: MaterialButton = view.findViewById(R.id.item_view_contact_call_button)
-        val messageButton: MaterialButton = view.findViewById(R.id.item_view_contact_message_button)
-        val emailButton: MaterialButton = view.findViewById(R.id.item_view_contact_email_button)
+        val photoButton: MaterialButton = view.findViewById(R.id.item_detail_photo)
+        val nameTextView: TextView = view.findViewById(R.id.item_detail_display_name)
+        val callButton: MaterialButton = view.findViewById(R.id.item_detail_call_button)
+        val messageButton: MaterialButton = view.findViewById(R.id.item_detail_message_button)
+        val emailButton: MaterialButton = view.findViewById(R.id.item_detail_email_button)
 
         init {
             photoButton.setOnClickListener {
@@ -80,6 +83,21 @@ class ViewContactAdapter (
 
             emailButton.setOnClickListener {
                 emailClickAtPosition(adapterPosition)
+            }
+        }
+    }
+
+    class BlockedStatusViewHolder(
+        view: View,
+        blockClickAtPosition: (Int) -> Unit
+    ) : RecyclerView.ViewHolder(view) {
+
+        val parentView: LinearLayout = view.findViewById(R.id.item_view_contact_buttons)
+        val blockButton: MaterialButton = view.findViewById(R.id.item_view_contact_block_button)
+
+        init {
+            blockButton.setOnClickListener {
+                blockClickAtPosition(adapterPosition)
             }
         }
     }
@@ -118,6 +136,7 @@ class ViewContactAdapter (
     override fun getItemViewType(position: Int): Int {
         return when (getItem(position)) {
             is ViewContactHeader -> HEADER_VIEW_TYPE
+            is ViewContactBlockedStatus -> BLOCKED_STATUS_VIEW_TYPE
             is ViewContactData -> DATA_VIEW_TYPE
             is ViewContactFooter -> FOOTER_VIEW_TYPE
         }
@@ -130,13 +149,21 @@ class ViewContactAdapter (
         return when (viewType) {
             HEADER_VIEW_TYPE -> {
                 val adapterLayout = LayoutInflater.from(parent.context)
-                    .inflate(R.layout.item_view_contact_header, parent, false)
+                    .inflate(R.layout.item_detail_header, parent, false)
                 HeaderViewHolder(
                     view = adapterLayout,
                     photoClickAtPosition = { pos -> photoOnClickListener(getItem(pos)) },
                     callClickAtPosition = { pos -> callOnClickListener(getItem(pos)) },
                     messageClickAtPosition = { pos -> messageOnClickListener(getItem(pos)) },
                     emailClickAtPosition = { pos -> emailOnClickListener(getItem(pos)) },
+                )
+            }
+            BLOCKED_STATUS_VIEW_TYPE -> {
+                val adapterLayout = LayoutInflater.from(parent.context)
+                    .inflate(R.layout.item_detail_blocked, parent, false)
+                BlockedStatusViewHolder(
+                    view = adapterLayout,
+                    blockClickAtPosition = { pos -> blockOnClickListener(getItem(pos)) }
                 )
             }
             DATA_VIEW_TYPE-> {
@@ -164,6 +191,8 @@ class ViewContactAdapter (
         when (holder) {
             is HeaderViewHolder -> {
                 val current = getItem(position) as ViewContactHeader
+
+                Timber.e("$DBL: onBindViewHolder() - ViewContactHeader = $current")
 
                 /*
                 Only show the name TextView if there is a display name associated the contact.
@@ -223,6 +252,26 @@ class ViewContactAdapter (
                     holder.emailButton.isFocusable = true
                     holder.emailButton.iconTint = ColorStateList.valueOf(
                         ContextCompat.getColor(applicationContext, R.color.purple_200)
+                    )
+                }
+            }
+            is BlockedStatusViewHolder -> {
+                val current = getItem(position) as ViewContactBlockedStatus
+
+                /*
+                Sets the block button text and UI coloring according to the blocked status.
+                 */
+                if (current.isBlocked) {
+                    holder.blockButton.text = applicationContext.getString(R.string.item_detail_unblock)
+                    holder.blockButton.setTextColor(ContextCompat.getColor(applicationContext, R.color.icon_white))
+                    holder.blockButton.backgroundTintList = ColorStateList.valueOf(
+                        ContextCompat.getColor(applicationContext, R.color.purple_200)
+                    )
+                } else {
+                    holder.blockButton.text = applicationContext.getString(R.string.item_detail_block)
+                    holder.blockButton.setTextColor(ContextCompat.getColor(applicationContext, R.color.purple_200))
+                    holder.blockButton.backgroundTintList = ColorStateList.valueOf(
+                        ContextCompat.getColor(applicationContext, R.color.grey)
                     )
                 }
             }

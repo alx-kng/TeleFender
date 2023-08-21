@@ -23,7 +23,7 @@
             >
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/item_view_contact_photo"
+                android:id="@+id/item_detail_photo"
                 style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="65dp"
                 android:layout_height="65dp"
@@ -43,7 +43,7 @@
                 app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.Circle" />
 
             <TextView
-                android:id="@+id/item_view_contact_display_name"
+                android:id="@+id/item_detail_display_name"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
@@ -57,11 +57,11 @@
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
+            android:layout_marginBottom="8dp"
             >
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/item_view_contact_call_button"
+                android:id="@+id/item_detail_call_button"
                 style="?attr/materialButtonStyle"
                 android:layout_width="64dp"
                 android:layout_height="64dp"
@@ -72,14 +72,14 @@
                 app:iconPadding="0dp"
                 app:iconSize="36dp"
                 app:iconTint="@color/purple_200"
-                app:layout_constraintEnd_toStartOf="@id/item_view_contact_message_button"
+                app:layout_constraintEnd_toStartOf="@id/item_detail_message_button"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.Rounded"
                 />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/item_view_contact_message_button"
+                android:id="@+id/item_detail_message_button"
                 style="?attr/materialButtonStyle"
                 android:layout_width="64dp"
                 android:layout_height="64dp"
@@ -90,14 +90,14 @@
                 app:iconPadding="0dp"
                 app:iconSize="36dp"
                 app:iconTint="@color/purple_200"
-                app:layout_constraintEnd_toStartOf="@id/item_view_contact_email_button"
-                app:layout_constraintStart_toEndOf="@id/item_view_contact_call_button"
+                app:layout_constraintEnd_toStartOf="@id/item_detail_email_button"
+                app:layout_constraintStart_toEndOf="@id/item_detail_call_button"
                 app:layout_constraintTop_toTopOf="parent"
                 app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.Rounded"
                 />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/item_view_contact_email_button"
+                android:id="@+id/item_detail_email_button"
                 style="?attr/materialButtonStyle"
                 android:layout_width="64dp"
                 android:layout_height="64dp"
@@ -109,7 +109,7 @@
                 app:iconSize="36dp"
                 app:iconTint="@color/disabled_grey"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toEndOf="@id/item_view_contact_message_button"
+                app:layout_constraintStart_toEndOf="@id/item_detail_message_button"
                 app:layout_constraintTop_toTopOf="parent"
                 app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.Rounded"
                 />

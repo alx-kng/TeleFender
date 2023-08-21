@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/item_call_history_buttons"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:weightSum="3"
+    android:orientation="horizontal"
+    android:paddingBottom="11dp"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintTop_toTopOf="parent">
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/item_call_history_spam_button"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="1dp"
+        android:layout_weight="1"
+        android:insetTop="0dp"
+        android:padding="10dp"
+        android:text="@string/item_detail_spam"
+        android:textSize="17sp"
+        android:textAllCaps="false"
+        android:textColor="@color/purple_200"
+        android:backgroundTint="@color/grey"
+        app:shapeAppearance="@style/ShapeAppearanceOverlay.Tele.Button.LeftRounded"
+        />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/item_call_history_default_button"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:insetTop="0dp"
+        android:padding="10dp"
+        android:text="@string/item_detail_default"
+        android:textSize="17sp"
+        android:textAllCaps="false"
+        android:textColor="@color/purple_200"
+        android:backgroundTint="@color/grey"
+        app:shapeAppearance="@style/ShapeAppearanceOverlay.Tele.Button.Square"
+        />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/item_call_history_safe_button"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="1dp"
+        android:layout_weight="1"
+        android:insetTop="0dp"
+        android:padding="10dp"
+        android:text="@string/item_detail_safe"
+        android:textSize="17sp"
+        android:textAllCaps="false"
+        android:textColor="@color/icon_white"
+        android:backgroundTint="@color/grey"
+        tools:backgroundTint="@color/purple_200"
+        app:shapeAppearance="@style/ShapeAppearanceOverlay.Tele.Button.RightRounded"
+        />
+
+</LinearLayout>

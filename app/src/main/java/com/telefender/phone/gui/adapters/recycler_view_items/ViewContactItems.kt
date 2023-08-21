@@ -19,6 +19,10 @@ object ViewContactItemComparator : Comparator<ViewContactItem> {
         if (o1 is ViewContactHeader) return -1
         if (o2 is ViewContactHeader) return 1
 
+        // ViewContactBlockedStatus always goes after ViewContactHeader
+        if (o1 is ViewContactBlockedStatus) return -1
+        if (o2 is ViewContactBlockedStatus) return 1
+
         // ViewContactFooter always goes last.
         if (o1 is ViewContactFooter) return 1
         if (o2 is ViewContactFooter) return -1
@@ -39,6 +43,10 @@ data class ViewContactHeader(
     val displayName: String?,
     val primaryNumber: String?,
     val primaryEmail: String?
+) : ViewContactItem()
+
+data class ViewContactBlockedStatus(
+    var isBlocked: Boolean
 ) : ViewContactItem()
 
 /**

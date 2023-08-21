@@ -107,10 +107,16 @@ object DefaultContacts {
      * special manner, as we only want to retrieve the primary (displayed) name data row.
      */
     suspend fun getContactData(
+        context: Context,
         contentResolver: ContentResolver,
         contactID: String,
         rawContactID: String? = null
     ) : PackagedDataLists {
+        val repository = (context.applicationContext as App).repository
+        val instanceNumber = TeleHelpers.getUserNumberUncertain(context)
+        val teleCID = instanceNumber?.let {
+            TeleHelpers.defaultCIDToTeleCID(defaultCID = contactID, instanceNumber = it)
+        }
 
         val shouldUseRawCID = rawContactID != null
 
@@ -244,7 +250,13 @@ object DefaultContacts {
                     ?.value,
                 primaryEmail = updatedDataList
                     .find { it.mimeType == ContactDataMimeType.EMAIL }
-                    ?.value
+                    ?.value,
+            ),
+            ViewContactBlockedStatus(
+                // Blocked status is retrieved from our database if possible.
+                isBlocked = teleCID?.let {
+                    repository.getContact(teleCID = it)?.blocked
+                } ?: false
             ),
             ViewContactFooter()
         )
@@ -742,8 +754,110 @@ object DefaultContacts {
 
     /***********************************************************************************************
      * Existence queries. The following queries check the existence of a row in the database and
-     * are mostly used for the table synchronization process.
+     * are mostly used for the table synchronization process. Some of these queries also retrieve
+     * the existing row if possible (e.g., retrieve existing contact from number for call logs).
      **********************************************************************************************/
+
+    /**
+     * Returns a triple containing the Contact ID, primary display name, and first email given the
+     * [number]. May or may not exist.
+     */
+    fun getFirstFullContactFromNumber(
+        contentResolver: ContentResolver,
+        number: String
+    ) : Triple<String, String, String?>? {
+        val baseContact = getFirstBaseContactFromNumber(contentResolver, number)
+            ?: return null
+        val email = getFirstEmailFromCID(contentResolver, baseContact.first)
+
+        return Triple(baseContact.first, baseContact.second, email)
+    }
+
+    /**
+     * Returns a pair containing the Contact ID and primary display name given the [number]. May
+     * or may not exist.
+     */
+    private fun getFirstBaseContactFromNumber(
+        contentResolver: ContentResolver,
+        number: String
+    ) : Pair<String, String>? {
+        val normalizedNumber = TeleHelpers.normalizedNumber(number) ?: return null
+
+        val projection = arrayOf(
+            ContactsContract.Data.CONTACT_ID,
+            ContactsContract.Data.DISPLAY_NAME_PRIMARY
+        )
+
+        val selection = "${Phone.NORMALIZED_NUMBER} = ? OR " +
+            "${Phone.NUMBER} = ? "
+
+        try {
+            val cur = contentResolver.query(
+                ContactsContract.Data.CONTENT_URI,
+                projection,
+                selection,
+                arrayOf(
+                    normalizedNumber,
+                    number
+                ),
+                null
+            )
+
+            if (cur?.moveToFirst() == true) {
+                val contactID = cur.getStringOrNull(0)
+                val displayName = cur.getStringOrNull(1) ?: ""
+                cur.close()
+                return contactID?.let {
+                    Pair(contactID, displayName)
+                }
+            }
+
+
+            cur?.close()
+        } catch (e: Exception) {
+            Timber.e("$DBL: getFirstBaseContactFromNumber() Error! ${e.message}")
+            e.printStackTrace()
+        }
+
+        return null
+    }
+
+    /**
+     * Gets first email data (by lowest rowID) associated with given [defaultCID].
+     */
+    private fun getFirstEmailFromCID(
+        contentResolver: ContentResolver,
+        defaultCID: String
+    ) : String? {
+        val projection = arrayOf(
+            ContactsContract.CommonDataKinds.Email.ADDRESS
+        )
+
+        val selection = "${ContactsContract.Data.CONTACT_ID} = ? "
+
+        try {
+            val cur = contentResolver.query(
+                ContactsContract.Data.CONTENT_URI,
+                projection,
+                selection,
+                arrayOf(defaultCID),
+                null
+            )
+
+            if (cur?.moveToFirst() == true) {
+                val email = cur.getStringOrNull(0)
+                cur.close()
+                return email
+            }
+
+            cur?.close()
+        } catch (e: Exception) {
+            Timber.e("$DBL: getFirstEmailFromCID() Error! ${e.message}")
+            e.printStackTrace()
+        }
+
+        return null
+    }
 
     /**
      * TODO: Double check logic.
@@ -777,7 +891,7 @@ object DefaultContacts {
     }
 
     /**
-     * Check if contact exists in default database given the RawContact _ID (our defaultCID) and
+     * Check if contact exists in default database given the Contact _ID (our defaultCID) and
      * number (our rawNumber). Under the cover, it checks for existence of row in Data table.
      *
      * NOTE: If app doesn't have contact permissions, this code will throw an exception.
@@ -1873,7 +1987,7 @@ object DefaultContacts {
      *
      * NOTE: This is mostly used for the debug console.
      */
-    fun debugDeleteContact(
+    fun debugDeleteRawContact(
         contentResolver: ContentResolver,
         rawContactID: String
     ) : Boolean {
