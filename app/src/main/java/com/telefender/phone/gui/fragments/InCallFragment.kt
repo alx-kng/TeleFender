@@ -14,11 +14,13 @@ import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
 import com.telefender.phone.R
 import com.telefender.phone.call_related.*
+import com.telefender.phone.data.default_database.DefaultContacts
 import com.telefender.phone.databinding.FragmentInCallBinding
 import com.telefender.phone.gui.InCallActivity
 import com.telefender.phone.gui.IncomingCallActivity
 import com.telefender.phone.gui.model.InCallViewModel
 import com.telefender.phone.misc_helpers.DBL
+import com.telefender.phone.misc_helpers.TeleHelpers
 import timber.log.Timber
 
 /**
@@ -292,12 +294,13 @@ class InCallFragment : Fragment() {
     /**
      * TODO: Possibly replace Exception for safer code.
      *
-     * Returns the number of a Call object. Acts as helper to getNumberDisplay().
+     * Returns the number of a Call object. If number has linked contact, then contact name is used.
+     * Acts as helper to getNumberDisplay().
      */
-    private fun getNumber(call: Call?): String {
+    private fun getNumberDisplay(call: Call?): String {
         val temp: String? = call.number()
         val number = if (!temp.isNullOrEmpty()) {
-            temp
+            TeleHelpers.getContactName(requireContext(), temp) ?: temp
         } else {
             if (temp == null) {
                 throw Exception("Shouldn't have null number in single display.")
@@ -311,14 +314,14 @@ class InCallFragment : Fragment() {
 
     /**
      * Returns the number display string for a Connection. If the connection is a conference, then
-     * a different display string is used.
+     * a different display string is used. If number has linked contact, then contact name is used.
      */
     private fun getNumberDisplay(connection: Connection): String {
         return if (connection.isConference) {
             val conferenceSize = connection.call?.children?.size ?: 0
             "Conference (${conferenceSize} others)"
         } else {
-            getNumber(connection.call)
+            getNumberDisplay(connection.call)
         }
     }
 
@@ -442,7 +445,7 @@ class InCallFragment : Fragment() {
 
             } else {
                 binding.smallNumber.visibility = View.GONE
-                binding.numberOrContact.text = getNumber(CallManager.focusedCall)
+                binding.numberOrContact.text = getNumberDisplay(CallManager.focusedCall)
             }
         } else if (singleConference()) {
             // Single conference call.

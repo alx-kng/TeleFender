@@ -14,6 +14,7 @@ import androidx.lifecycle.Observer
 import com.telefender.phone.call_related.*
 import com.telefender.phone.databinding.ActivityIncomingCallBinding
 import com.telefender.phone.misc_helpers.DBL
+import com.telefender.phone.misc_helpers.TeleHelpers
 import com.telefender.phone.notifications.ActiveCallNotificationService
 import com.telefender.phone.notifications.IncomingCallService
 import kotlinx.coroutines.*
@@ -82,7 +83,10 @@ class IncomingCallActivity : AppCompatActivity() {
             }
         })
 
-        binding.displayNumber.text = CallManager.focusedCall.number() ?: "Unknown number"
+        val number = CallManager.focusedCall.number()
+        binding.displayNumber.text = number?.let {
+            TeleHelpers.getContactName(this, it)
+        } ?: number ?: "Unknown number"
 
         binding.answerIncoming.setOnClickListener {
             val service = IncomingCallService.context

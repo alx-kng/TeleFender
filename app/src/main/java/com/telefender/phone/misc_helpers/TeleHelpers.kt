@@ -6,9 +6,11 @@ import android.os.Build
 import android.provider.CallLog
 import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
+import androidx.core.content.ContentProviderCompat.requireContext
 import com.google.i18n.phonenumbers.PhoneNumberUtil
 import com.telefender.phone.App
 import com.telefender.phone.call_related.SimCarrier
+import com.telefender.phone.data.default_database.DefaultContacts
 import com.telefender.phone.data.tele_database.entities.NotifyItem
 import com.telefender.phone.data.tele_database.entities.Parameters
 import com.telefender.phone.permissions.Permissions
@@ -41,6 +43,18 @@ object TeleHelpers {
         instanceNumber: String
     ) : String {
         return UUID.nameUUIDFromBytes((defaultCID + instanceNumber).toByteArray()).toString()
+    }
+
+    fun getContactName(
+        context: Context,
+        number: String
+    ) : String? {
+        return normalizedNumber(number)?.let {
+            DefaultContacts.getFirstFullContactFromNumber(
+                contentResolver = context.contentResolver,
+                number = it
+            )?.second
+        }
     }
 
     /**
