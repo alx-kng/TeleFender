@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.app.Person.fromBundle
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
@@ -18,6 +19,8 @@ import timber.log.Timber
 
 
 /**
+ * TODO: MAKE DIALER INTENT-FILTER TO BE ABLE TO CLICK ON NUMBERS AND BRING THEM TO DIALER!
+ *
  * TODO: Make number display touchable / editable
  *
  * TODO: FUCKING PROBLEM WITH BACK BUTTON IN DIALER FRAGMENT
@@ -112,6 +115,16 @@ class DialerFragment : Fragment() {
             dialerViewModel.typeSymbol(dialerViewModel.asterisk)
             CallManager.keypad('*')
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        // Retrieve the phoneNumberKey argument from deep link if any
+//        val deepLinkNumber = DialerFragmentArgs.fromBundle(requireArguments()).phoneNumberKey
+//        if (deepLinkNumber != null) {
+//            dialerViewModel.setDialNumber(number = deepLinkNumber)
+//        }
     }
 
     override fun onDestroyView() {

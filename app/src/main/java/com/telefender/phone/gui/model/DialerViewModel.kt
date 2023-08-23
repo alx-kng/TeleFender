@@ -44,6 +44,10 @@ class DialerViewModel : ViewModel() {
         _dialNumber.value = _dialNumber.value + symbol.toString()
     }
 
+    fun setDialNumber(number: String) {
+        _dialNumber.postValue(number)
+    }
+
     fun deleteDigit() {
         if ((_dialNumber.value?.length ?: 0) > 0) {
             val lastIndex = _dialNumber.value?.length?.minus(1) ?: 0

@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.ContentObserver
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -23,6 +24,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat.getSystemService
+import androidx.databinding.DataBindingUtil.setContentView
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
@@ -31,11 +34,15 @@ import com.telefender.phone.R
 import com.telefender.phone.databinding.ActivityMainBinding
 import com.telefender.phone.gui.model.*
 import com.telefender.phone.misc_helpers.DBL
+import com.telefender.phone.misc_helpers.TeleHelpers
 import com.telefender.phone.misc_helpers.dpToPx
 import com.telefender.phone.permissions.PermissionRequestType
 import com.telefender.phone.permissions.Permissions
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import timber.log.Timber
+import java.sql.Time
 
 
 /**
@@ -157,6 +164,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+
+        handleTeleDeepLinkIntent(intent)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -179,6 +193,8 @@ class MainActivity : AppCompatActivity() {
         setupBottomNavigation()
 
         setupBackPress()
+
+        handleTeleDeepLinkIntent(intent)
     }
 
     /**
@@ -248,6 +264,49 @@ class MainActivity : AppCompatActivity() {
         val navigationHandled = navController.navigateUp() || super.onSupportNavigateUp()
         updateBottomHighlight()
         return navigationHandled
+    }
+
+    /**
+     * TODO: Should we allow navigation from other Activities (e.g., InCallActivity /
+     *  IncomingActivity)? -> Not super sure what we're doing currently.
+     */
+    private fun handleTeleDeepLinkIntent(intent: Intent?) {
+        val data: Uri? = intent?.data
+
+        Timber.e("$DBL: Data = $data")
+
+        CoroutineScope(Dispatchers.Default).launch {
+            // Extract the phone number from the deep link
+            if (TeleHelpers.hasValidStatus(
+                    context = this@MainActivity,
+                    initializedRequired = true,
+                    setupRequired = false,
+                    phoneStateRequired = true
+                )
+                && isTeleDeepLinkIntent(intent)
+                && data != null
+                && "tel" == data.scheme
+            ) {
+                val currentDestination = navController.currentDestination?.id
+                if (currentDestination == R.id.dialerFragment) {
+                    val phoneNumber = data.schemeSpecificPart
+                    dialerViewModel.setDialNumber(phoneNumber)
+
+                } else if (currentDestination != R.id.dialerFragment && currentDestination != null) {
+                    val phoneNumber = data.schemeSpecificPart
+                    dialerViewModel.setDialNumber(phoneNumber)
+                    navController.popBackStack()
+                    navController.navigate(R.id.dialerFragment)
+                }
+            }
+        }
+    }
+
+    private fun isTeleDeepLinkIntent(intent: Intent?) : Boolean {
+        return intent != null
+            && Intent.ACTION_VIEW == intent.action
+            && intent.data != null
+            && "tel" == intent.data!!.scheme
     }
 
     /**

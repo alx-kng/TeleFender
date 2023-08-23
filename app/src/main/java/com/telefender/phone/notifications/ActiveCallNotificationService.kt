@@ -18,6 +18,13 @@ import com.telefender.phone.notifications.NotificationChannels.IN_CALL_CHANNEL_I
 import timber.log.Timber
 
 /**
+ * TODO: ON VERY RARE OCCASIONS, THE ACTIVE CALL NOTIFICATION GETS GROUPED WITH THE UPDATING
+ *  TELEFENDER NOTIFICATION FOR SOME REASON. COULD BE SOMETHING WITH THE NOTIFICATION CHANNEL OR
+ *  SOMETHING.
+ *  ->
+ *  It's either being grouped with the Omega worker notification or debug worker notification, as
+ *  the other notification says "TeleFender updating.."
+ *
  * TODO: Notification UI handling for UNKNOWN numbers is faulty.
  *
  * TODO: LAYOUT TOO SMALL FOR LOWER CHANNEL IMPORTANCE LEVEL / SMALLER DEVICES -> Need dynamic /

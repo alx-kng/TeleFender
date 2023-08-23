@@ -152,7 +152,14 @@ class ChangeContactFragment : Fragment() {
                 Timber.e("$DBL: Delete contact onClick!")
 
                 contactsViewModel.deleteContact()
-                findNavController().popBackStack(R.id.contactsFragment, false)
+
+                val previousDestination = findNavController().previousBackStackEntry?.destination?.id
+                if (previousDestination == R.id.callHistoryFragment) {
+                    requireActivity().onBackPressedDispatcher.onBackPressed()
+                } else {
+                    findNavController().popBackStack(R.id.contactsFragment, false)
+                }
+
                 contactsViewModel.clearDataLists()
             }
         )

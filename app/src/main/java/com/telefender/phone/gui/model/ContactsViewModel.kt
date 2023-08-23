@@ -211,7 +211,10 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
      * Called when starting the ChangeContactFragment. Given the selected aggregate CID [selectCID],
      * this loads the corresponding data lists necessary for the UI.
      */
-    fun setDataLists(selectCID: String?) {
+    fun setDataLists(
+        selectCID: String?,
+        startingNumber: String? = null
+    ) {
         _selectCID = selectCID
 
         viewModelScope.launch(Dispatchers.Default) {
@@ -234,6 +237,15 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
                     ChangeContactAdder(ContactDataMimeType.ADDRESS),
                     ChangeContactFooter(),
                 )
+
+                startingNumber?.let {
+                    initialChangeUIList.add(4,
+                        ContactData.createNullPairContactData(
+                            mimeType = ContactDataMimeType.PHONE,
+                            value = startingNumber
+                        ),
+                    )
+                }
 
                 originalUpdatedDataList = mutableListOf()
                 originalDataList = mutableListOf()

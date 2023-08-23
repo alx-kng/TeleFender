@@ -53,7 +53,8 @@
         android:id="@+id/dialerFragment"
         android:name="com.telefender.phone.gui.fragments.DialerFragment"
         android:label="DialerFragment"
-        tools:layout="@layout/fragment_dialer"/>
+        tools:layout="@layout/fragment_dialer">
+    </fragment>
 
     <fragment
         android:id="@+id/recentsFragment"

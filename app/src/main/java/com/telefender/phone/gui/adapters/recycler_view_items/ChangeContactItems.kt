@@ -149,6 +149,7 @@ data class ContactData(
     companion object {
         fun createNullPairContactData(
             mimeType: ContactDataMimeType,
+            value: String? = null,
             columnInfo: Pair<Int, String>? = null
         ) : ContactData {
             return ContactData(
@@ -159,7 +160,7 @@ data class ContactData(
                     )
                 ),
                 mimeType = mimeType,
-                value = "",
+                value = value ?: "",
                 columnInfo = columnInfo
             )
         }

@@ -57,13 +57,19 @@
                 <!-- Handle links from other applications -->
                 <action android:name="android.intent.action.VIEW" />
                 <action android:name="android.intent.action.DIAL" />
+
                 <!-- Populate the system chooser -->
                 <category android:name="android.intent.category.DEFAULT" />
+
                 <!-- Handle links in browsers -->
                 <category android:name="android.intent.category.BROWSABLE" />
+
+                <!-- Handle links with telephone number URIs -->
                 <data android:scheme="tel" />
             </intent-filter>
 
+            <!-- Even though this looks similar to the intent filter above, it's actually very
+             important. It lets the OS know that the app is a valid default dialer! -->
             <intent-filter>
                 <action android:name="android.intent.action.DIAL" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -92,37 +98,6 @@
         <service
            android:name="androidx.work.impl.foreground.SystemForegroundService"
            android:foregroundServiceType="dataSync"
-            />
-
-        <service
-            android:name="com.telefender.phone.data.server_related.firebase.TeleFirebaseService"
-            android:exported="false"
-            >
-            <intent-filter>
-                <action android:name="com.google.firebase.MESSAGING_EVENT" />
-            </intent-filter>
-        </service>
-
-<!--        &lt;!&ndash; Set custom default icon. This is used when no icon is set for incoming notification messages.-->
-<!--        See README(https://goo.gl/l4GJaQ) for more. &ndash;&gt;-->
-<!--        <meta-data-->
-<!--            android:name="com.google.firebase.messaging.default_notification_icon"-->
-<!--            android:resource="@drawable/ic_alert_octagon_24" />-->
-<!--        &lt;!&ndash; Set color used with incoming notification messages. This is used when no color is set for the incoming-->
-<!--             notification message. See README(https://goo.gl/6BKBk7) for more. &ndash;&gt;-->
-<!--        <meta-data-->
-<!--            android:name="com.google.firebase.messaging.default_notification_color"-->
-<!--            android:resource="@color/colorAccent" />-->
-
-        <!-- TODO: Use our own channel. -->
-        <!-- Sets the notification channel that push notifications should go through. -->
-        <meta-data
-            android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="@string/default_notification_channel_id"
-            />
-        <meta-data
-            android:name="preloaded_fonts"
-            android:resource="@array/preloaded_fonts"
             />
 
         <service
@@ -160,5 +135,36 @@
             android:enabled="true"
             android:exported="true" />
 
+        <service
+            android:name="com.telefender.phone.data.server_related.firebase.TeleFirebaseService"
+            android:exported="false"
+            >
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!--        &lt;!&ndash; Set custom default icon. This is used when no icon is set for incoming notification messages.-->
+        <!--        See README(https://goo.gl/l4GJaQ) for more. &ndash;&gt;-->
+        <!--        <meta-data-->
+        <!--            android:name="com.google.firebase.messaging.default_notification_icon"-->
+        <!--            android:resource="@drawable/ic_alert_octagon_24" />-->
+        <!--        &lt;!&ndash; Set color used with incoming notification messages. This is used when no color is set for the incoming-->
+        <!--             notification message. See README(https://goo.gl/6BKBk7) for more. &ndash;&gt;-->
+        <!--        <meta-data-->
+        <!--            android:name="com.google.firebase.messaging.default_notification_color"-->
+        <!--            android:resource="@color/colorAccent" />-->
+
+        <!-- TODO: Use our own channel. -->
+        <!-- Sets the notification channel that push notifications should go through. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="@string/default_notification_channel_id"
+            />
+
+        <meta-data
+            android:name="preloaded_fonts"
+            android:resource="@array/preloaded_fonts"
+            />
     </application>
 </manifest>

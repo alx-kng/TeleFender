@@ -313,11 +313,15 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
                 number = selectNumberParam
             )
 
-            // Updates number name map in case of modification.
-            associatedContact?.second?.let { name ->
-                normalizedNum?.let {
-                    Timber.e("$DBL: New map change: number = $it, name = $name")
+            // Updates number name map and no contact set in case of modification.
+            val name = associatedContact?.second
+            normalizedNum?.let {
+                if (name == null) {
+                    numberNameMap.remove(key = it)
+                    noContactSet.add(element = it)
+                } else {
                     numberNameMap[it] = name
+                    noContactSet.remove(element = it)
                 }
             }
 

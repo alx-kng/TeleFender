@@ -24,6 +24,9 @@ import com.telefender.phone.misc_helpers.DBL
 import timber.log.Timber
 
 
+/**
+ * TODO: Pre-fill number when adding completely new contact.
+ */
 class CallHistoryFragment : Fragment() {
 
     private var _binding: FragmentCallHistoryBinding? = null
@@ -221,7 +224,10 @@ class CallHistoryFragment : Fragment() {
                 act.displayAppBarTextButton(show2 = true, text2 = "Add")
                 act.setAppBarTextButtonOnClickListener(
                     onClickListener2 = {
-                        contactsViewModel.setDataLists(selectCID = null)
+                        contactsViewModel.setDataLists(
+                            selectCID = null,
+                            startingNumber = recentsViewModel.selectNumber
+                        )
                         val action = CallHistoryFragmentDirections.actionCallHistoryFragmentToChangeContactFragment()
                         findNavController().navigate(action)
                     }
