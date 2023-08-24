@@ -36,7 +36,10 @@ object DataRequests {
         repository: ClientRepository,
         scope: CoroutineScope
     ) {
-        val url = "https://dev.scribblychat.com/callbook/downloadChanges"
+        val url = TeleHelpers.getServerModeUrl(
+            context = context,
+            baseURL = "scribblychat.com/callbook/downloadChanges"
+        )
         val instanceNumber = TeleHelpers.getUserNumberStored(context)
         val key = repository.getClientKey()
         val lastServerRowID = repository.getLastServerRowID()
@@ -85,7 +88,10 @@ object DataRequests {
             return
         }
 
-        val url = "https://dev.scribblychat.com/callbook/uploadChanges"
+        val url = TeleHelpers.getServerModeUrl(
+            context = context,
+            baseURL = "scribblychat.com/callbook/uploadChanges"
+        )
         val instanceNumber = TeleHelpers.getUserNumberStored(context)
         val key = repository.getClientKey()
         val uploadRequestJson: String
@@ -153,7 +159,10 @@ object DataRequests {
             return
         }
 
-        val url = "https://dev.scribblychat.com/callbook/uploadAnalyzedNumbers"
+        val url = TeleHelpers.getServerModeUrl(
+            context = context,
+            baseURL = "scribblychat.com/callbook/uploadAnalyzedNumbers"
+        )
         val instanceNumber = TeleHelpers.getUserNumberStored(context)
         val key = repository.getClientKey()
         val uploadRequestJson: String
@@ -221,7 +230,10 @@ object DataRequests {
             return
         }
 
-        val url = "https://dev.scribblychat.com/callbook/uploadErrorLog"
+        val url = TeleHelpers.getServerModeUrl(
+            context = context,
+            baseURL = "scribblychat.com/callbook/uploadErrorLog"
+        )
         val instanceNumber = TeleHelpers.getUserNumberStored(context)
         val key = repository.getClientKey()
         val uploadRequestJson: String
@@ -269,7 +281,10 @@ object DataRequests {
         scope: CoroutineScope,
         number: String
     ) {
-        val url = "https://dev.scribblychat.com/callbook/reqNumberVerify"
+        val url = TeleHelpers.getServerModeUrl(
+            context = context,
+            baseURL = "scribblychat.com/callbook/reqNumberVerify"
+        )
         val instanceNumber = TeleHelpers.getUserNumberStored(context)
         val key = repository.getClientKey()
 

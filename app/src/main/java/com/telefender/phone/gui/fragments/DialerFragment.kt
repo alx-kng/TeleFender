@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.core.app.Person.fromBundle
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -53,7 +54,12 @@ class DialerFragment : Fragment() {
         }
 
         binding.dialPhone.setOnClickListener {
-            CallHelpers.makeCall(requireContext(), dialerViewModel.dialNumber.value)
+            val number = dialerViewModel.dialNumber.value?.trim() ?: ""
+            if (number != "") {
+                CallHelpers.makeCall(requireContext(), dialerViewModel.dialNumber.value)
+            } else {
+                Toast.makeText(activity, "Not a valid number!", Toast.LENGTH_SHORT).show()
+            }
         }
 
         binding.dial0.setOnClickListener {
@@ -115,16 +121,6 @@ class DialerFragment : Fragment() {
             dialerViewModel.typeSymbol(dialerViewModel.asterisk)
             CallManager.keypad('*')
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
-
-        // Retrieve the phoneNumberKey argument from deep link if any
-//        val deepLinkNumber = DialerFragmentArgs.fromBundle(requireArguments()).phoneNumberKey
-//        if (deepLinkNumber != null) {
-//            dialerViewModel.setDialNumber(number = deepLinkNumber)
-//        }
     }
 
     override fun onDestroyView() {

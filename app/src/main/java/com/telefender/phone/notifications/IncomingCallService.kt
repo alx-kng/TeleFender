@@ -18,6 +18,7 @@ import com.telefender.phone.data.tele_database.TeleCallDetails
 import com.telefender.phone.gui.InCallActivity
 import com.telefender.phone.gui.IncomingCallActivity
 import com.telefender.phone.misc_helpers.DBL
+import com.telefender.phone.misc_helpers.TeleHelpers
 import com.telefender.phone.notifications.NotificationChannels.IN_CALL_CHANNEL_ID
 import kotlinx.coroutines.*
 import timber.log.Timber
@@ -328,7 +329,17 @@ class IncomingCallService : LifecycleService() {
                 setOnClickPendingIntent(R.id.incoming_notification_hangup_button, hangupPendingIntent)
             }
 
-            val notificationTitle = CallManager.focusedCall.number()
+            val number = CallManager.focusedCall.number()
+            val hasChildren = CallManager.focusedCall?.children != null
+            val notificationTitle = if (number != null) {
+                TeleHelpers.getContactName(applicationContext, number)
+                    ?: TeleHelpers.normalizedNumber(number)
+                    ?: number
+            } else if (hasChildren){
+                "Conference call (${CallManager.focusedCall?.children?.size})"
+            } else {
+                TeleHelpers.UNKNOWN_NUMBER
+            }
             val notificationText = "Incoming call"
 
             /*

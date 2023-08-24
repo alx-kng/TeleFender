@@ -300,7 +300,9 @@ class InCallFragment : Fragment() {
     private fun getNumberDisplay(call: Call?): String {
         val temp: String? = call.number()
         val number = if (!temp.isNullOrEmpty()) {
-            TeleHelpers.getContactName(requireContext(), temp) ?: temp
+            TeleHelpers.getContactName(requireContext(), temp)
+                ?: TeleHelpers.normalizedNumber(temp)
+                ?: temp
         } else {
             if (temp == null) {
                 throw Exception("Shouldn't have null number in single display.")

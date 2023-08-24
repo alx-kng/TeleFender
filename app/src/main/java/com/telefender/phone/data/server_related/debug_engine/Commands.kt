@@ -568,6 +568,32 @@ class ConsoleTestCommand(
                             TestContacts.printContactDataTable(context, contentResolver)
                         )
                     }
+                    ConsoleTestType.CHANGE_SERVER_MODE -> {
+                        val currentParameters = repository.getParameters()
+                        val newServerMode = (consoleTestOp as ChangeServerModeOp).newServerMode
+
+                        if (newServerMode != null && currentParameters != null) {
+                            repository.updateParameters(
+                                currentParameters.copy(currentServerMode = newServerMode)
+                            )
+                        }
+
+                        val actualServerMode = repository.getParameters()?.currentServerMode
+                        RemoteDebug.enqueueData("New server mode: $actualServerMode")
+                    }
+                    ConsoleTestType.SHOULD_VERIFY_SMS -> {
+                        val currentParameters = repository.getParameters()
+                        val newShouldVerifySMS = (consoleTestOp as ShouldVerifySMSOp).arg
+
+                        if (currentParameters != null) {
+                            repository.updateParameters(
+                                currentParameters.copy(shouldVerifySMS = newShouldVerifySMS)
+                            )
+                        }
+
+                        val actualShouldVerifySMS = repository.getParameters()?.shouldVerifySMS
+                        RemoteDebug.enqueueData("New should verify SMS: $actualShouldVerifySMS")
+                    }
                 }
 
                 break

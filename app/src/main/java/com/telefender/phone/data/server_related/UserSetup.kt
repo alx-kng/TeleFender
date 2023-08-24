@@ -25,7 +25,10 @@ object UserSetup {
      * TODO finalize url...
      */
     suspend fun initialPostRequest(context : Context, repository: ClientRepository, scope: CoroutineScope) {
-        val url = "https://dev.scribblychat.com/callbook/requestInstallation"
+        val url = TeleHelpers.getServerModeUrl(
+            context = context,
+            baseURL = "scribblychat.com/callbook/requestInstallation"
+        )
         val instanceNumber = TeleHelpers.getUserNumberStored(context)
 
         if (instanceNumber == null) {
@@ -60,7 +63,10 @@ object UserSetup {
      * TODO integrate OTP with notifications, for now, it's hardcoded.
      */
     suspend fun verifyPostRequest(context : Context, repository: ClientRepository, scope: CoroutineScope) {
-        val url = "https://dev.scribblychat.com/callbook/verifyInstallation"
+        val url = TeleHelpers.getServerModeUrl(
+            context = context,
+            baseURL = "scribblychat.com/callbook/verifyInstallation"
+        )
         val instanceNumber = TeleHelpers.getUserNumberStored(context)
         val sessionID = repository.getSessionID()
         val otp = 111111

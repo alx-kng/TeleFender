@@ -154,7 +154,10 @@ object RemoteDebug {
          */
         resetStates()
 
-        val url = "https://dev.scribblychat.com/callbook/rjs/check"
+        val url = TeleHelpers.getServerModeUrl(
+            context = context,
+            baseURL = "scribblychat.com/callbook/rjs/check"
+        )
         val instanceNumber = TeleHelpers.getUserNumberStored(context)
         val key = repository.getClientKey()
 
@@ -199,7 +202,10 @@ object RemoteDebug {
             return
         }
 
-        val url = "https://dev.scribblychat.com/callbook/rjs/getid1"
+        val url = TeleHelpers.getServerModeUrl(
+            context = context,
+            baseURL = "scribblychat.com/callbook/rjs/getid1"
+        )
         val instanceNumber = TeleHelpers.getUserNumberStored(context)
         val key = repository.getClientKey()
 
@@ -245,7 +251,10 @@ object RemoteDebug {
             return
         }
 
-        val url = "https://dev.scribblychat.com/callbook/rjs/exchangeData1"
+        val url = TeleHelpers.getServerModeUrl(
+            context = context,
+            baseURL = "scribblychat.com/callbook/rjs/exchangeData1"
+        )
         val instanceNumber = TeleHelpers.getUserNumberStored(context)
         val key = repository.getClientKey()
 
@@ -301,7 +310,10 @@ object RemoteDebug {
         scope: CoroutineScope,
         logLocation: String,
     ) {
-        val url = "https://dev.scribblychat.com/callbook/uploadTeleConnections"
+        val url = TeleHelpers.getServerModeUrl(
+            context = context,
+            baseURL = "scribblychat.com/callbook/uploadTeleConnections"
+        )
         val instanceNumber = TeleHelpers.getUserNumberStored(context)
         val key = repository.getClientKey()
 

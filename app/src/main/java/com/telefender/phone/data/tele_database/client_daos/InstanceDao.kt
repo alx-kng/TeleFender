@@ -6,8 +6,11 @@ import com.telefender.phone.data.tele_database.entities.Instance
 @Dao
 interface InstanceDao {
 
+    /**
+     * Inserts Contact and returns inserted rowID. Probably returns -1 if insert failure.
+     */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertInstanceNumber(vararg instances: Instance)
+    suspend fun insertInstanceNumber(instance: Instance) : Long
 
     /**
      * Returns a nullable Int that indicates whether the update was successful. If 1 is returned,
@@ -22,7 +25,7 @@ interface InstanceDao {
     suspend fun getAllInstance() : List<Instance>
 
     @Query("SELECT * FROM instance WHERE number = :number")
-    suspend fun getInstanceRow(number : String) : Instance
+    suspend fun getInstanceRow(number : String) : Instance?
     
     @Query("SELECT EXISTS (SELECT number FROM instance WHERE number = :instanceNumber)")
     suspend fun hasInstance(instanceNumber: String) : Boolean

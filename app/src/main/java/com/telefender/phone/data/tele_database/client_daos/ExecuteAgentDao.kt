@@ -1220,9 +1220,22 @@ interface ExecuteAgentDao: InstanceDao, ContactDao, ContactNumberDao, CallDetail
             throw NullPointerException("instanceNumber was null for insInsert")
         }
 
-        insertInstanceNumber(
-            Instance(instanceNumber)
+        /*
+        Prevents double insertion by checking if instance exists first.
+        Especially required since the section below will fail out for duplicate inserts.
+         */
+        if (hasInstance(instanceNumber)) {
+            Timber.e("$DBL: " +
+                "Duplicate insInsert() for instanceNumber = $instanceNumber")
+            return
+        }
+
+        val result = insertInstanceNumber(
+            Instance(number = instanceNumber)
         )
+
+        // insertContact() usually returns -1 if row wasn't inserted.
+        if (result < 0) throw Exception("insInsert() - insertInstanceNumber() failed!")
     }
 
     /**

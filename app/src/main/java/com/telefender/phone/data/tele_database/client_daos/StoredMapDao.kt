@@ -1,6 +1,7 @@
 package com.telefender.phone.data.tele_database.client_daos
 
 import androidx.room.*
+import com.telefender.phone.call_related.HandleMode
 import com.telefender.phone.data.tele_database.entities.StoredMap
 import com.telefender.phone.misc_helpers.TeleHelpers
 
@@ -24,7 +25,12 @@ interface StoredMapDao {
     suspend fun initStoredMap(userNumber: String) {
         if (getStoredMap() == null && userNumber != TeleHelpers.UNKNOWN_NUMBER) {
             // Initialize StoredMap with just userNumber.
-            insertStoredMapQuery(StoredMap(userNumber = userNumber))
+            insertStoredMapQuery(
+                StoredMap(
+                    userNumber = userNumber,
+                    currentHandleMode = HandleMode.ALLOW_MODE
+                )
+            )
         }
     }
 
@@ -48,7 +54,8 @@ interface StoredMapDao {
         lastLogSyncTime: Long? = null,
         lastLogFullSyncTime: Long? = null,
         lastContactFullSyncTime: Long? = null,
-        lastServerRowID: Long? = null
+        lastServerRowID: Long? = null,
+        handleMode: HandleMode? = null
     ) : Boolean {
         // Retrieves user number if possible and returns false if not.
         val userNumber = getUserNumber() ?: return false
@@ -64,7 +71,8 @@ interface StoredMapDao {
             lastLogSyncTime = lastLogSyncTime,
             lastLogFullSyncTime = lastLogFullSyncTime,
             lastContactFullSyncTime = lastContactFullSyncTime,
-            lastServerRowID = lastServerRowID
+            lastServerRowID = lastServerRowID,
+            handleMode = handleMode
         )
 
         return result == 1
@@ -117,6 +125,12 @@ interface StoredMapDao {
                 WHEN :lastServerRowID IS NOT NULL
                     THEN :lastServerRowID
                 ELSE lastServerRowID
+            END,
+        currentHandleMode = 
+            CASE
+                WHEN :handleMode IS NOT NULL
+                    THEN :handleMode
+                ELSE currentHandleMode
             END
         WHERE userNumber = :userNumber"""
     )
@@ -128,7 +142,8 @@ interface StoredMapDao {
         lastLogSyncTime: Long?,
         lastLogFullSyncTime: Long?,
         lastContactFullSyncTime: Long?,
-        lastServerRowID: Long?
+        lastServerRowID: Long?,
+        handleMode: HandleMode?
     ) : Int?
 
     /**

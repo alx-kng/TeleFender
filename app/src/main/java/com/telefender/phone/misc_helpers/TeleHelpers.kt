@@ -13,6 +13,7 @@ import com.telefender.phone.call_related.SimCarrier
 import com.telefender.phone.data.default_database.DefaultContacts
 import com.telefender.phone.data.tele_database.entities.NotifyItem
 import com.telefender.phone.data.tele_database.entities.Parameters
+import com.telefender.phone.data.tele_database.entities.ServerMode
 import com.telefender.phone.permissions.Permissions
 import timber.log.Timber
 import java.time.Instant
@@ -55,6 +56,19 @@ object TeleHelpers {
                 number = it
             )?.second
         }
+    }
+
+    /**
+     * Gets modified URL based off current server mode (e.g., dev, stage, production, etc.).
+     */
+    suspend fun getServerModeUrl(
+        context: Context,
+        baseURL: String
+    ) : String {
+        val repository = (context.applicationContext as App).repository
+        val parameters = repository.getParameters()
+        val urlPart = parameters?.currentServerMode?.urlPart ?: ServerMode.DEV.urlPart
+        return "https://$urlPart$baseURL"
     }
 
     /**
@@ -218,8 +232,7 @@ object TeleHelpers {
                 val protoNum = phoneUtil.parse(it, "US")
                 phoneUtil.format(protoNum, PhoneNumberUtil.PhoneNumberFormat.E164)
             } catch (e: Exception) {
-                e.printStackTrace()
-                Timber.i("$DBL: $number is either invalid or wonky!!")
+                Timber.e("$DBL: $number is either invalid or wonky!! Error = ${e.message}")
                 null
             }
         }

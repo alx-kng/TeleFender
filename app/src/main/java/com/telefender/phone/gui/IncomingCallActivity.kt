@@ -86,7 +86,9 @@ class IncomingCallActivity : AppCompatActivity() {
         val number = CallManager.focusedCall.number()
         binding.displayNumber.text = number?.let {
             TeleHelpers.getContactName(this, it)
-        } ?: number ?: "Unknown number"
+        } ?: TeleHelpers.normalizedNumber(number)
+            ?: number
+            ?: "Unknown number"
 
         binding.answerIncoming.setOnClickListener {
             val service = IncomingCallService.context

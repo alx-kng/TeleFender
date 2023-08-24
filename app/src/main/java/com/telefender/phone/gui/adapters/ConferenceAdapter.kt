@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
+import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -14,6 +15,7 @@ import com.telefender.phone.R
 import com.telefender.phone.call_related.CallManager
 import com.telefender.phone.call_related.connectTime
 import com.telefender.phone.call_related.number
+import com.telefender.phone.misc_helpers.TeleHelpers
 
 
 class ConferenceAdapter(
@@ -74,15 +76,18 @@ class ConferenceAdapter(
     fun getNumber(call: Call?): String {
         val temp: String? = call.number()
         val number = if (!temp.isNullOrEmpty()) {
-            temp
+            TeleHelpers.getContactName(context, temp)
+                ?: TeleHelpers.normalizedNumber(temp)
+                ?: temp
         } else {
             if (temp == null) {
-                throw Exception("Shouldn't have null number!")
+                throw Exception("Shouldn't have null number in single display.")
             } else {
                 "Unknown"
             }
         }
 
         return number
+
     }
 }

@@ -14,6 +14,7 @@ import com.telefender.phone.R
 import com.telefender.phone.call_related.*
 import com.telefender.phone.gui.InCallActivity
 import com.telefender.phone.misc_helpers.DBL
+import com.telefender.phone.misc_helpers.TeleHelpers
 import com.telefender.phone.notifications.NotificationChannels.IN_CALL_CHANNEL_ID
 import timber.log.Timber
 
@@ -175,8 +176,17 @@ class ActiveCallNotificationService : LifecycleService() {
                 setImageViewResource(R.id.active_notification_mute_button, currentMuteDrawable)
             }
 
-            val notificationTitle = CallManager.focusedCall.number()
-                ?: "Conference call (${CallManager.focusedCall?.children?.size ?: 0})"
+            val number = CallManager.focusedCall.number()
+            val hasChildren = CallManager.focusedCall?.children != null
+            val notificationTitle = if (number != null) {
+                TeleHelpers.getContactName(applicationContext, number)
+                    ?: TeleHelpers.normalizedNumber(number)
+                    ?: number
+            } else if (hasChildren){
+                "Conference call (${CallManager.focusedCall?.children?.size})"
+            } else {
+                TeleHelpers.UNKNOWN_NUMBER
+            }
             val notificationText = "Active call"
 
             /*

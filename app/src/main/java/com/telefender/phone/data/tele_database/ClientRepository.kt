@@ -2,6 +2,7 @@ package com.telefender.phone.data.tele_database
 
 import androidx.annotation.WorkerThread
 import androidx.sqlite.db.SimpleSQLiteQuery
+import com.telefender.phone.call_related.HandleMode
 import com.telefender.phone.data.server_related.json_classes.ServerData
 import com.telefender.phone.data.tele_database.TeleLocks.mutexLocks
 import com.telefender.phone.data.tele_database.client_daos.*
@@ -123,7 +124,8 @@ class ClientRepository(
         lastLogSyncTime: Long? = null,
         lastLogFullSyncTime: Long? = null,
         lastContactFullSyncTime: Long? = null,
-        lastServerRowID: Long? = null
+        lastServerRowID: Long? = null,
+        handleMode: HandleMode? = null
     ) : Boolean {
         return mutexLocks[MutexType.STORED_MAP]!!.withLock {
             storedMapDao.updateStoredMap(
@@ -133,7 +135,8 @@ class ClientRepository(
                 lastLogSyncTime = lastLogSyncTime,
                 lastLogFullSyncTime = lastLogFullSyncTime,
                 lastContactFullSyncTime = lastContactFullSyncTime,
-                lastServerRowID = lastServerRowID
+                lastServerRowID = lastServerRowID,
+                handleMode = handleMode
             )
         }
     }

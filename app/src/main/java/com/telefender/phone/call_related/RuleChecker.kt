@@ -152,6 +152,9 @@ object RuleChecker {
         analyzed: Analyzed,
         parameters: Parameters
     ) : Boolean {
+        // If SMS verification is disabled for this device, then don't even check.
+        if (!parameters.shouldVerifySMS) return false
+
         // We treat the current time as the informal callEpochTime for this current call.
         val currentTime = Instant.now().toEpochMilli()
 
