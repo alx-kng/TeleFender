@@ -20,6 +20,8 @@ import com.telefender.phone.gui.adapters.recycler_view_items.ContactData
 import com.telefender.phone.gui.adapters.recycler_view_items.ChangeContactAdder
 import com.telefender.phone.gui.model.ContactsViewModel
 import com.telefender.phone.gui.model.ContactsViewModelFactory
+import com.telefender.phone.gui.model.RecentsViewModel
+import com.telefender.phone.gui.model.RecentsViewModelFactory
 import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.diffStrings
 import kotlinx.coroutines.CoroutineScope
@@ -44,6 +46,10 @@ class ChangeContactFragment : Fragment() {
     private val contactsViewModel: ContactsViewModel by activityViewModels {
         ContactsViewModelFactory(requireActivity().application)
     }
+    private val recentsViewModel: RecentsViewModel by activityViewModels {
+        RecentsViewModelFactory(requireActivity().application)
+    }
+
 
     private var recyclerView: RecyclerView? = null
     private var adapter: ChangeContactAdapter? = null

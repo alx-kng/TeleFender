@@ -64,6 +64,7 @@ class RecentsFragment : Fragment() {
                 CallHelpers.makeCall(applicationContext, number)
             },
             { number, epochTime ->
+                Timber.e("$DBL: recents number = $number")
                 recentsViewModel.retrieveDayLogs(number, epochTime)
                 val action = RecentsFragmentDirections.actionRecentsFragmentToCallHistoryFragment()
                 findNavController().navigate(action)
@@ -77,6 +78,17 @@ class RecentsFragment : Fragment() {
         recentsViewModel.callLogs.observe(viewLifecycleOwner) {
             adapter.submitList(recentsViewModel.groupedCallLogs)
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+
+        /*
+        Prevents blinking update from previous data (e.g., when there is a contact
+        change that affects a number in the call logs, the call history should be
+        clean before entering the call history screen for that item).
+         */
+        recentsViewModel.clearCallHistoryLists()
     }
 
     override fun onDestroyView() {

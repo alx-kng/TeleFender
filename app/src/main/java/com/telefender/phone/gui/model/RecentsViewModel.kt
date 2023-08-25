@@ -16,11 +16,11 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
-import java.sql.Time
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.time.temporal.Temporal
 import java.util.*
 
 
@@ -50,6 +50,8 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
     /**********************************************************************************************
      * For RecentsFragment
      **********************************************************************************************/
+
+    private val groupBatchSize = 400
 
     private var _callLogs = MutableLiveData<List<CallDetail>>()
     val callLogs : LiveData<List<CallDetail>> = _callLogs
@@ -108,12 +110,14 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun onContactsUpdate() {
-        val job = dayLogFilter(
-            selectNumberParam = _selectNumber,
-            selectTimeParam = _selectTime
-        )
-
         viewModelScope.launch(Dispatchers.Default) {
+            recheckNumberNameMap()
+
+            val job = dayLogFilter(
+                selectNumberParam = _selectNumber,
+                selectTimeParam = _selectTime
+            )
+
             // Wait for dayLogFilter to finish so that the nameMap can be updated.
             job.join()
 
@@ -142,10 +146,42 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
     /**
      * TODO: Consider not querying all call logs when updating from observer for performance.
      * TODO: Consider canceling viewModelScope in onCleared() if the RecentsViewModel is destroyed.
+     * TODO: Maybe use paging one day
+     *
+     * Updates the call logs by (re)retrieving the default call logs and regrouping them.
+     *
+     * NOTE: Our current way of making this more smooth is by retrieving the call log cursor and
+     * grouping the call logs in batches rather than all at once. That way, at least the top
+     * call logs can show pretty quickly.
      */
     private fun updateCallLogs() {
         viewModelScope.launch(Dispatchers.Default) {
-            val tempLogs = DefaultCallDetails.getDefaultCallDetails(applicationContext)
+            val tempLogs = mutableListOf<CallDetail>()
+
+            DefaultCallDetails.getDefaultCallDetailCursor(applicationContext)?.use {
+                val instanceNumber = TeleHelpers.getUserNumberStored(applicationContext)
+                    ?: return@launch
+
+                var count = 0
+                while (it.moveToNext()) {
+                    tempLogs.add(
+                        DefaultCallDetails.currentCursorCallDetail(
+                            context = applicationContext,
+                            instanceNumber = instanceNumber,
+                            curs = it
+                        )
+                    )
+
+                    count++
+
+                    if (count == groupBatchSize) {
+                        groupCallLogs(tempLogs)
+                        _callLogs.postValue(tempLogs)
+                        count = 0
+                    }
+                }
+            }
+
             groupCallLogs(tempLogs)
 
             Timber.i("$DBL: ABOUT TO ASSIGN LOGS VALUE")
@@ -168,27 +204,7 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
             var currGroup: RecentsGroupedCallDetail? = null
 
             for (log in logs) {
-                val mappedContactName = numberNameMap[log.normalizedNumber]
-                val definitelyNoContact = noContactSet.contains(log.normalizedNumber)
-                val associatedContactName: String
-
-                if (mappedContactName == null && !definitelyNoContact) {
-                    val contactName = DefaultContacts.getFirstFullContactFromNumber(
-                        contentResolver = applicationContext.contentResolver,
-                        number = log.normalizedNumber
-                    )?.second
-
-                    if (contactName == null) {
-                        noContactSet.add(log.normalizedNumber)
-                    } else {
-                        numberNameMap[log.normalizedNumber] = contactName
-                    }
-
-                    associatedContactName = contactName ?: log.normalizedNumber
-                } else {
-                    // Definitely no contact OR has mapped contact name.
-                    associatedContactName = mappedContactName ?: log.normalizedNumber
-                }
+                val associatedContactName = getAssociatedContactName(log.normalizedNumber)
 
                 // If the log fits in the current group, then increment the group size.
                 if (prevLog != null && currGroup != null
@@ -199,12 +215,12 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
                     currGroup.amount = currGroup.amount + 1
                     currGroup.firstEpochID = log.callEpochDate
                     currGroup.callLocation = log.callLocation
-                    currGroup.name = associatedContactName
+                    currGroup.name = associatedContactName.first
                 } else {
                     // If the log doesn't fit in the current group, create a new group.
                     tempGroups.add(log.createGroup())
                     currGroup = tempGroups.last()
-                    currGroup.name = associatedContactName
+                    currGroup.name = associatedContactName.first
                 }
                 prevLog = log
             }
@@ -213,6 +229,49 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
         _groupedCallLogs = tempGroups
     }
 
+    private fun recheckNumberNameMap() {
+        val tempNoContactSet = noContactSet.toMutableSet()
+        val tempNumberNameMap = numberNameMap.toMutableMap()
+
+        noContactSet.clear()
+        numberNameMap.clear()
+
+        for (number in tempNoContactSet) {
+            getAssociatedContactName(number)
+        }
+
+        for (number in tempNumberNameMap.keys) {
+            getAssociatedContactName(number)
+        }
+    }
+
+    /**
+     * Gets associated contact name given the normalized number, second element in pair just
+     * indicates whether the contact exists, as we return the normalized number as the associated
+     * contact name if it doesn't exist.
+     */
+    private fun getAssociatedContactName(normalizedNumber: String) : Pair<String, Boolean> {
+        val mappedContactName = numberNameMap[normalizedNumber]
+        val definitelyNoContact = noContactSet.contains(normalizedNumber)
+
+        return if (mappedContactName == null && !definitelyNoContact) {
+            val contactName = DefaultContacts.getFirstFullContactFromNumber(
+                contentResolver = applicationContext.contentResolver,
+                number = normalizedNumber
+            )?.second
+
+            if (contactName == null) {
+                noContactSet.add(normalizedNumber)
+            } else {
+                numberNameMap[normalizedNumber] = contactName
+            }
+
+            Pair(contactName ?: normalizedNumber, contactName != null)
+        } else {
+            // Definitely no contact OR has mapped contact name.
+            Pair(mappedContactName ?: normalizedNumber, mappedContactName != null)
+        }
+    }
 
     /**
      * Retrieves the epoch milli range of the day containing [epochTime].
@@ -265,6 +324,8 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
      * day logs are then filtered out and assigned to [_dayLogs] in dayLogFilter().
      */
     fun retrieveDayLogs(number: String, epochTime: Long) {
+        Timber.e("$DBL: Retrieve day logs : $number")
+
         _selectNumber = number
         _selectTime = epochTime
         val milliInDay = 24 * 60 * 60 * 1000
@@ -296,7 +357,7 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
         return viewModelScope.launch(Dispatchers.Default) {
             val tempDayLogs: MutableList<CallHistoryItem> = _callLogs.value
                 ?.filter { it.callEpochDate in startOfDay..endOfDay}
-                ?.filter { it.rawNumber == selectNumber }
+                ?.filter { it.rawNumber == selectNumberParam }
                 ?.map { CallHistoryData(callDetail = it) }
                 ?.toMutableList()
                 ?: mutableListOf()

@@ -101,9 +101,10 @@ object TestContacts {
         val stringList = mutableListOf<String>()
 
         val projection = arrayOf(
-            ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
-            ContactsContract.Data.MIMETYPE,
+            ContactsContract.Data.CONTACT_ID,
             ContactsContract.Data.RAW_CONTACT_ID,
+            ContactsContract.Data._ID,
+            ContactsContract.Data.MIMETYPE,
             ContactsContract.Data.DATA1,
             ContactsContract.Data.DATA2,
             ContactsContract.Data.DATA3,
@@ -119,7 +120,6 @@ object TestContacts {
             ContactsContract.Data.DATA13,
             ContactsContract.Data.DATA14,
             ContactsContract.Data.DATA15,
-            ContactsContract.CommonDataKinds.Phone.NORMALIZED_NUMBER
         )
 
         try {
@@ -144,15 +144,16 @@ object TestContacts {
 //                    "data14 = ${cur.getString(16)} | data15 = ${cur.getString(17)}")
 
                 stringList.add("CONTACT DATA - " +
-                        "contact_ID = ${cur.getString(0)} | mime = ${cur.getString(1)} | " +
-                        "raw_contact_ID = ${cur.getString(2)} | data1 = ${cur.getString(3)} | " +
-                        "data2 = ${cur.getString(4)} | data3 = ${cur.getString(5)} | " +
-                        "data4 = ${cur.getString(6)} | data5 = ${cur.getString(7)} | " +
-                        "data6 = ${cur.getString(8)} | data7 = ${cur.getString(9)} | " +
-                        "data8 = ${cur.getString(10)} | data9 = ${cur.getString(11)} | " +
-                        "data10 = ${cur.getString(12)} | data11 = ${cur.getString(13)} | " +
-                        "data12 = ${cur.getString(14)} | data13 = ${cur.getString(15)} | " +
-                        "data14 = ${cur.getString(16)} | data15 = ${cur.getString(17)}"
+                        "contact_ID = ${cur.getString(0)} | raw_contact_ID = ${cur.getString(1)} |" +
+                        "data_ID = ${cur.getString(2)} | mime = ${cur.getString(3)} | " +
+                        "data1 = ${cur.getString(4)} | " +
+                        "data2 = ${cur.getString(5)} | data3 = ${cur.getString(6)} | " +
+                        "data4 = ${cur.getString(7)} | data5 = ${cur.getString(8)} | " +
+                        "data6 = ${cur.getString(9)} | data7 = ${cur.getString(10)} | " +
+                        "data8 = ${cur.getString(11)} | data9 = ${cur.getString(12)} | " +
+                        "data10 = ${cur.getString(13)} | data11 = ${cur.getString(14)} | " +
+                        "data12 = ${cur.getString(15)} | data13 = ${cur.getString(16)} | " +
+                        "data14 = ${cur.getString(17)} | data15 = ${cur.getString(18)}"
                 )
             }
 

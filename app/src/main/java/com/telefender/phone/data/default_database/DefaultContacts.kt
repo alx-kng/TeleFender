@@ -700,7 +700,7 @@ object DefaultContacts {
                 null
             )
 
-            cur!!.moveToFirst()
+            cur?.moveToFirst()
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -745,7 +745,8 @@ object DefaultContacts {
                 null,
                 null
             )
-            cur!!.moveToFirst()
+
+            cur?.moveToFirst()
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -788,8 +789,8 @@ object DefaultContacts {
             ContactsContract.Data.DISPLAY_NAME_PRIMARY
         )
 
-        val selection = "${Phone.NORMALIZED_NUMBER} = ? OR " +
-            "${Phone.NUMBER} = ? "
+        val selection = "(${Phone.MIMETYPE} = '${Phone.CONTENT_ITEM_TYPE}') AND " +
+            "(${Phone.NORMALIZED_NUMBER} = ? OR ${Phone.NUMBER} = ? )"
 
         try {
             val cur = contentResolver.query(

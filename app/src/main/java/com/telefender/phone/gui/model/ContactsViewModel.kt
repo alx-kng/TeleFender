@@ -349,8 +349,6 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
 
             if (success) {
                 if (selectCIDSnapshot != null) {
-                    Timber.e("$DBL: HERE HERE HERE HERE HERE")
-
                     setListsGivenPackagedLists(
                         DefaultContacts.getContactData(
                             contentResolver = applicationContext.contentResolver,

@@ -26,8 +26,6 @@ import java.lang.ref.WeakReference
 
 
 /**
- * TODO: Notification UI handling for UNKNOWN numbers is faulty.
- *
  * TODO: Check if silentHangup() / call detail database actually works.
  *
  * TODO: LAYOUT TOO SMALL FOR LOWER CHANNEL IMPORTANCE LEVEL / SMALLER DEVICES -> Need dynamic /
