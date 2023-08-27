@@ -6,7 +6,6 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.telefender.phone.data.tele_database.entities.Parameters
 import com.telefender.phone.data.tele_database.entities.ParametersWrapper
-import com.telefender.phone.data.tele_database.entities.ServerMode
 import com.telefender.phone.misc_helpers.TeleHelpers
 
 
@@ -32,7 +31,6 @@ interface ParametersDao : StoredMapDao {
                 Parameters(
                     shouldUploadAnalyzed = true,
                     shouldUploadLogs = false,
-                    currentServerMode = ServerMode.DEV,
 
                     initialNotifyGate = 2,
                     verifiedSpamNotifyGate = 7,

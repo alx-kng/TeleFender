@@ -15,7 +15,9 @@ import com.telefender.phone.data.tele_database.entities.ChangeLog
 import com.telefender.phone.data.tele_database.entities.TableType
 import com.telefender.phone.data.tele_database.entities.toChangeLog
 import com.telefender.phone.data.tele_database.entities.toTableType
-import com.telefender.phone.misc_helpers.DBL
+import com.telefender.phone.misc_helpers.*
+import com.telefender.phone.misc_helpers.SharedPreferenceHelpers.getServerMode
+import com.telefender.phone.misc_helpers.SharedPreferenceHelpers.setServerMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import timber.log.Timber
@@ -573,12 +575,13 @@ class ConsoleTestCommand(
                         val newServerMode = (consoleTestOp as ChangeServerModeOp).newServerMode
 
                         if (newServerMode != null && currentParameters != null) {
-                            repository.updateParameters(
-                                currentParameters.copy(currentServerMode = newServerMode)
+                            SharedPreferenceHelpers.setServerMode(
+                                context,
+                                newServerMode
                             )
                         }
 
-                        val actualServerMode = repository.getParameters()?.currentServerMode
+                        val actualServerMode = SharedPreferenceHelpers.getServerMode(context)
                         RemoteDebug.enqueueData("New server mode: $actualServerMode")
                     }
                     ConsoleTestType.SHOULD_VERIFY_SMS -> {

@@ -18,9 +18,19 @@
     <string name="contacts_title">Contacts</string>
     <string name="add_contact_title">Add Contact</string>
     <string name="dialer_title">Dialer</string>
+    <string name="privacy_policy_title">Privacy Policy</string>
+    <string name="verification_title">Setup</string>
     <string name="call_history_title">Call History</string>
+    <string name="initial_title">Welcome</string>
     <string name="keypad">Keypad</string>
     <string name="more_app_bar">More</string>
+
+    <string name="verification_text">We just sent a verification code to your number.</string>
+    <string name="number_fill_text">We\'ll need your number to get started.</string>
+
+    <string name="privacy_dialog_text">
+        To use TeleFender, you need to accept our privacy policy.\n\nIf you have any additional concerns about our privacy policy, please contact us for more information.
+    </string>
 
     <string name="channel_name">Incoming and active phone notification channel</string>
     <string name="channel_description">High-priority notification to show incoming and active calls</string>

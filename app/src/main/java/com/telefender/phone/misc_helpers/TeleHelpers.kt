@@ -6,14 +6,12 @@ import android.os.Build
 import android.provider.CallLog
 import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
-import androidx.core.content.ContentProviderCompat.requireContext
 import com.google.i18n.phonenumbers.PhoneNumberUtil
 import com.telefender.phone.App
 import com.telefender.phone.call_related.SimCarrier
 import com.telefender.phone.data.default_database.DefaultContacts
 import com.telefender.phone.data.tele_database.entities.NotifyItem
 import com.telefender.phone.data.tele_database.entities.Parameters
-import com.telefender.phone.data.tele_database.entities.ServerMode
 import com.telefender.phone.permissions.Permissions
 import timber.log.Timber
 import java.time.Instant
@@ -21,6 +19,8 @@ import java.util.*
 
 
 /**
+ * TODO: HANDLE HASHTAG NUMBERS TO OPEN LINKS
+ *
  * TODO: Consider adding retry amount to be used for entire app.
  *
  * Helper functions specifically for anything phone / database related.
@@ -56,19 +56,6 @@ object TeleHelpers {
                 number = it
             )?.second
         }
-    }
-
-    /**
-     * Gets modified URL based off current server mode (e.g., dev, stage, production, etc.).
-     */
-    suspend fun getServerModeUrl(
-        context: Context,
-        baseURL: String
-    ) : String {
-        val repository = (context.applicationContext as App).repository
-        val parameters = repository.getParameters()
-        val urlPart = parameters?.currentServerMode?.urlPart ?: ServerMode.DEV.urlPart
-        return "https://$urlPart$baseURL"
     }
 
     /**
@@ -220,11 +207,11 @@ object TeleHelpers {
      * TODO: Maybe combine normalizedNumber() and bareNumber()?
      *
      * Puts number in normalized E164 form (assuming US country code). If the number is invalid,
-     * an invalid message string is returned instead of null.
+     * an invalid message string is printed and the [bareNumber] is used instead.
      */
-    fun normalizedNumber(number : String?) : String? {
+    fun normalizedNumber(number : String?) : String {
         // Let bareNumber() handle # sign so that numbers like #225 aren't converted to +1225
-        if (number?.contains('#') == true) return null
+        if (number?.contains('#') == true) return bareNumber(number)
 
         val normalizedNum = number?.let {
             try {
@@ -232,11 +219,12 @@ object TeleHelpers {
                 val protoNum = phoneUtil.parse(it, "US")
                 phoneUtil.format(protoNum, PhoneNumberUtil.PhoneNumberFormat.E164)
             } catch (e: Exception) {
-                Timber.e("$DBL: $number is either invalid or wonky!! Error = ${e.message}")
+                Timber.i("$DBL: $number is either invalid or wonky!! Error = ${e.message}")
                 null
             }
         }
-        return normalizedNum
+
+        return normalizedNum ?: bareNumber(number)
     }
 
     /**

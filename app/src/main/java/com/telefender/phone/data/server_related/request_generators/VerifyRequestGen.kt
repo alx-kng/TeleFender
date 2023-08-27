@@ -1,5 +1,7 @@
 package com.telefender.phone.data.server_related.request_generators
 
+import android.content.Context
+import android.icu.lang.UCharacter.GraphemeClusterBreak.V
 import androidx.work.WorkInfo
 import com.android.volley.Response
 import com.telefender.phone.data.server_related.json_classes.DefaultResponse
@@ -11,6 +13,7 @@ import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWork
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.misc_helpers.DBL
+import com.telefender.phone.misc_helpers.SharedPreferenceHelpers
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,14 +34,14 @@ class VerifyRequestGen(
             method: Int,
             url: String,
             requestJson: String?,
-            repository: ClientRepository,
+            context: Context,
             scope: CoroutineScope
         ) : VerifyRequestGen {
 
             return VerifyRequestGen(
                 method = method,
                 url = url,
-                listener = verifyPostResponseHandler(repository, scope),
+                listener = verifyPostResponseHandler(context, scope),
                 errorListener = verifyPostErrorHandler(scope),
                 requestJson = requestJson
             )
@@ -47,7 +50,7 @@ class VerifyRequestGen(
 }
 
 private fun verifyPostResponseHandler(
-    repository: ClientRepository,
+    context: Context,
     scope: CoroutineScope
 ) : Response.Listener<String> {
 
@@ -60,19 +63,19 @@ private fun verifyPostResponseHandler(
 
         if (keyResponse != null && keyResponse.status == "ok" && keyResponse is KeyResponse) {
             /**
-             * Update StoredMap row with clientKey
+             * Update SharedPreferences with clientKey
              */
             scope.launch(Dispatchers.IO) {
-                repository.updateStoredMap(clientKey = keyResponse.key)
+                SharedPreferenceHelpers.setClientKey(context, keyResponse.key)
 
-                val key = repository.getClientKey()
+                val key = SharedPreferenceHelpers.getClientKey(context)
                 Timber.i("$DBL: key = $key")
 
-                ExperimentalWorkStates.generalizedSetState(WorkType.SETUP, null)
+                ExperimentalWorkStates.generalizedSetState(WorkType.VERIFY_POST, null)
             }
         } else {
             scope.launch(Dispatchers.IO) {
-                ExperimentalWorkStates.generalizedSetState(WorkType.SETUP, WorkInfo.State.FAILED)
+                ExperimentalWorkStates.generalizedSetState(WorkType.VERIFY_POST, WorkInfo.State.FAILED)
 
                 Timber.i("$DBL: VOLLEY: ERROR WHEN VERIFY INSTALLATION: ${keyResponse?.error}")
             }
@@ -84,7 +87,7 @@ private fun verifyPostErrorHandler(scope: CoroutineScope) = Response.ErrorListen
     scope.launch(Dispatchers.IO) {
         if (error.toString() != "null") {
             Timber.e("$DBL: VOLLEY $error")
-            ExperimentalWorkStates.generalizedSetState(WorkType.SETUP, WorkInfo.State.FAILED)
+            ExperimentalWorkStates.generalizedSetState(WorkType.VERIFY_POST, WorkInfo.State.FAILED)
         }
     }
 }

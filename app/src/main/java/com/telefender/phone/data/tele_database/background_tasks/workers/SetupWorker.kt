@@ -17,6 +17,7 @@ import timber.log.Timber
 import java.util.*
 import java.util.concurrent.TimeUnit
 
+
 object SetupScheduler {
 
     val setupTag = "setupWorker"
@@ -51,6 +52,9 @@ object SetupScheduler {
     }
 }
 
+/**
+ * TODO: May be deprecated now that we've changed the flow to be immediate.
+ */
 class CoroutineSetupWorker(
     val context: Context,
     params: WorkerParameters
@@ -81,13 +85,14 @@ class CoroutineSetupWorker(
             return Result.success()
         }
 
-        UserSetup.initialPostRequest(context, repository, scope)
+        UserSetup.initialPostRequest(context, scope, "")
 
         val success = ExperimentalWorkStates.generalizedWorkWaiter(
             workType = WorkType.SETUP,
             runningMsg = "SETUP WORKER",
             stopOnFail = true
         )
+
         if(success == false) {
             Timber.e("$DBL: SETUP WORKER RETRYING...")
             return Result.retry()

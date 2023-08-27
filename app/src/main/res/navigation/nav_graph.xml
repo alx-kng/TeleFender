@@ -3,7 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/dialerFragment">
+    app:startDestination="@id/dialerFragment"
+    >
 
     <action android:id="@+id/action_global_contactsFragment"
         app:destination="@id/contactsFragment"
@@ -21,6 +22,72 @@
         app:popUpToInclusive="true"/>
 
     <fragment
+        android:id="@+id/initialFragment"
+        android:name="com.telefender.phone.gui.fragments.InitialFragment"
+        android:label="SetupFragment"
+        tools:layout="@layout/fragment_initial"
+        >
+        <action
+            android:id="@+id/action_initialFragment_to_privacyPolicyFragment"
+            app:destination="@id/privacyPolicyFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right"
+            />
+    </fragment>
+
+    <fragment
+        android:id="@+id/privacyPolicyFragment"
+        android:name="com.telefender.phone.gui.fragments.PrivacyPolicyFragment"
+        android:label="PrivacyPolicyFragment"
+        tools:layout="@layout/fragment_privacy_policy"
+        >
+        <action
+            android:id="@+id/action_privacyPolicyFragment_to_numberFillFragment"
+            app:destination="@id/numberFillFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right"
+            />
+    </fragment>
+
+    <fragment
+        android:id="@+id/numberFillFragment"
+        android:name="com.telefender.phone.gui.fragments.NumberFillFragment"
+        android:label="NumberFillFragment"
+        tools:layout="@layout/fragment_number_fill"
+        >
+        <action
+            android:id="@+id/action_numberFillFragment_to_verificationFragment"
+            app:destination="@id/verificationFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right"
+            />
+    </fragment>
+
+    <fragment
+        android:id="@+id/verificationFragment"
+        android:name="com.telefender.phone.gui.fragments.VerificationFragment"
+        android:label="VerificationFragment"
+        tools:layout="@layout/fragment_verification"
+        >
+        <action
+            android:id="@+id/action_verificationFragment_to_dialerFragment"
+            app:destination="@id/dialerFragment"
+            app:popUpTo="@id/nav_graph"
+            app:popUpToInclusive="true"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right"
+            />
+    </fragment>
+
+    <fragment
         android:id="@+id/contactsFragment"
         android:name="com.telefender.phone.gui.fragments.ContactsFragment"
         android:label="ContactsFragment"
@@ -28,10 +95,18 @@
         <action
             android:id="@+id/action_contactsFragment_to_changeContactFragment"
             app:destination="@id/changeContactFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right"
             />
         <action
             android:id="@+id/action_contactsFragment_to_viewContactFragment"
             app:destination="@id/viewContactFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right"
             />
     </fragment>
 
@@ -63,7 +138,12 @@
         tools:layout="@layout/fragment_recents">
         <action
             android:id="@+id/action_recentsFragment_to_callHistoryFragment"
-            app:destination="@id/callHistoryFragment" />
+            app:destination="@id/callHistoryFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right"
+            />
     </fragment>
 
     <fragment
@@ -74,6 +154,10 @@
         <action
             android:id="@+id/action_callHistoryFragment_to_changeContactFragment"
             app:destination="@id/changeContactFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right"
             />
     </fragment>
 

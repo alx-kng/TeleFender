@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.role.RoleManager
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.database.ContentObserver
 import android.net.Uri
@@ -24,25 +25,21 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.core.content.ContextCompat.getSystemService
-import androidx.databinding.DataBindingUtil.setContentView
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
+import androidx.preference.PreferenceManager
 import com.telefender.phone.App
 import com.telefender.phone.R
 import com.telefender.phone.databinding.ActivityMainBinding
 import com.telefender.phone.gui.model.*
-import com.telefender.phone.misc_helpers.DBL
-import com.telefender.phone.misc_helpers.TeleHelpers
-import com.telefender.phone.misc_helpers.dpToPx
+import com.telefender.phone.misc_helpers.*
 import com.telefender.phone.permissions.PermissionRequestType
 import com.telefender.phone.permissions.Permissions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import timber.log.Timber
-import java.sql.Time
 
 
 /**
@@ -70,6 +67,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var navController: NavController
     private lateinit var binding: ActivityMainBinding
+
+    private val verificationViewModel : VerificationViewModel by viewModels {
+        VerificationViewModelFactory(this.application)
+    }
 
     private val recentsViewModel: RecentsViewModel by viewModels {
         RecentsViewModelFactory(this.application)
@@ -181,20 +182,16 @@ class MainActivity : AppCompatActivity() {
             .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         navController = navHostFragment.navController
 
-        setSupportActionBar(binding.topAppBar)
-        displayMoreMenu(false)
+        setStartDestination()
 
-        requestDefaultDialer()
+        setSupportActionBar(binding.topAppBarMain)
 
-        notificationChannelCreator()
-
-        setupObservers()
-
-        setupBottomNavigation()
-
-        setupBackPress()
-
-        handleTeleDeepLinkIntent(intent)
+        if (SharedPreferenceHelpers.getUserReady(this)) {
+            userReadyOnCreateSetup()
+        } else {
+//            PreferenceManager.getDefaultSharedPreferences(this)
+//                .registerOnSharedPreferenceChangeListener(userReadyListener)
+        }
     }
 
     /**
@@ -205,19 +202,16 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
 
-        updateBottomHighlight()
-
-        initializeDatabase()
-
-        /**
-         * Registers UI Call log observer if not registered before (in case permissions weren't
-         * granted before).
-         */
-        setupObservers(onCreate = false)
+        if (SharedPreferenceHelpers.getUserReady(this)) {
+            userReadyOnStartSetup()
+        }
     }
 
     override fun onDestroy() {
         unregisterObservers()
+
+//        PreferenceManager.getDefaultSharedPreferences(this)
+//            .unregisterOnSharedPreferenceChangeListener(userReadyListener)
 
         /*
         Seems like it needs to be after other code so that MainActivity isn't destroyed too early.
@@ -234,10 +228,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
-            R.id.more -> {
-                Timber.i("$DBL: MainActivity: More menu button pressed!")
-                return true
-            }
             else -> super.onOptionsItemSelected(item)
         }
     }
@@ -264,6 +254,51 @@ class MainActivity : AppCompatActivity() {
         val navigationHandled = navController.navigateUp() || super.onSupportNavigateUp()
         updateBottomHighlight()
         return navigationHandled
+    }
+
+    /**
+     * Makes the activity start in the right fragment depending on whether the beginning user setup
+     * (non-server setup) has already been done.
+     */
+    private fun setStartDestination() {
+        // Manually inflate the NavGraph and set the startDestination
+        val navGraph = navController.navInflater.inflate(R.navigation.nav_graph)
+        navGraph.setStartDestination(
+            if (SharedPreferenceHelpers.getUserReady(this))
+                R.id.dialerFragment
+            else
+                R.id.initialFragment
+        )
+        navController.graph = navGraph
+    }
+
+    fun userReadyOnCreateSetup() {
+        // TODO: why was this here?
+//        displayMoreMenu(false)
+
+        requestDefaultDialer()
+
+        notificationChannelCreator()
+
+        setupObservers()
+
+        setupBottomNavigation()
+
+        setupBackPress()
+
+        handleTeleDeepLinkIntent(intent)
+    }
+
+    fun userReadyOnStartSetup() {
+        updateBottomHighlight()
+
+        initializeDatabase()
+
+        /**
+         * Registers UI Call log observer if not registered before (in case permissions weren't
+         * granted before).
+         */
+        setupObservers(onCreate = false)
     }
 
     /**
@@ -426,6 +461,8 @@ class MainActivity : AppCompatActivity() {
      * recreate it (other problems arise as well).
      */
     private fun setupBottomNavigation() {
+        binding.bottomNavigation.selectedItemId = R.id.dialerFragment
+
         binding.bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.recentsFragment -> {
@@ -455,7 +492,6 @@ class MainActivity : AppCompatActivity() {
             }
             true
         }
-        binding.bottomNavigation.selectedItemId = R.id.dialerFragment
     }
 
     /**
@@ -564,11 +600,11 @@ class MainActivity : AppCompatActivity() {
 
         if (show1) {
             // Gets rid of the extra space on the left of the button when there is no title.
-            binding.topAppBar.setContentInsetsRelative(0, pixelInset)
+            binding.topAppBarMain.setContentInsetsRelative(0, pixelInset)
             binding.appBarTextButton1.visibility = View.VISIBLE
             binding.appBarTextButton1.text = text1
         } else {
-            binding.topAppBar.setContentInsetsRelative(pixelInset, pixelInset)
+            binding.topAppBarMain.setContentInsetsRelative(pixelInset, pixelInset)
             binding.appBarTextButton1.visibility = View.GONE
         }
 
@@ -614,7 +650,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun displayMoreMenu(show: Boolean) {
-        binding.topAppBar.menu.findItem(R.id.more).isVisible = show
+        binding.appBarMoreButton.visibility = if (show) View.VISIBLE else View.GONE
     }
 
     fun displayUpButton(show: Boolean) {
@@ -622,17 +658,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun setTitle(appBarTitle: String) {
-        binding.topAppBar.title = appBarTitle
+        binding.topAppBarMain.title = appBarTitle
     }
 
     fun displayAppBar(show: Boolean) {
         if (show) {
-            if (binding.topAppBar.visibility != View.VISIBLE) {
-                binding.topAppBar.visibility = View.VISIBLE
+            if (binding.topAppBarMain.visibility != View.VISIBLE) {
+                binding.topAppBarMain.visibility = View.VISIBLE
             }
         } else {
-            if (binding.topAppBar.visibility != View.GONE) {
-                binding.topAppBar.visibility = View.GONE
+            if (binding.topAppBarMain.visibility != View.GONE) {
+                binding.topAppBarMain.visibility = View.GONE
             }
         }
     }

@@ -2,7 +2,7 @@ package com.telefender.phone.data.server_related.debug_engine.command_subtypes
 
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
-import com.telefender.phone.data.tele_database.entities.toServerMode
+import com.telefender.phone.data.server_related.toServerModeFromServerStr
 
 
 enum class ConsoleTestType(val serverString: String, val requiresParam: Boolean = false) {
@@ -45,7 +45,7 @@ class ExampleOp(val arg: String) : ConsoleTestOperation() {
 
 @JsonClass(generateAdapter = true)
 class ChangeServerModeOp(val arg: String) : ConsoleTestOperation() {
-    val newServerMode = arg.toServerMode()
+    val newServerMode = arg.toServerModeFromServerStr()
 
     override fun toString(): String {
         return "ChangeServerModeOp - arg = $arg!"

@@ -22,7 +22,9 @@ import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.gui.InCallActivity
 import com.telefender.phone.gui.IncomingCallActivity
 import com.telefender.phone.misc_helpers.DBL
+import com.telefender.phone.misc_helpers.SharedPreferenceHelpers
 import com.telefender.phone.misc_helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.SharedPreferenceHelpers.getServerModeUrl
 import com.telefender.phone.notifications.ActiveCallNotificationService
 import com.telefender.phone.notifications.IncomingCallService
 import kotlinx.coroutines.CoroutineScope
@@ -154,7 +156,7 @@ object RemoteDebug {
          */
         resetStates()
 
-        val url = TeleHelpers.getServerModeUrl(
+        val url = SharedPreferenceHelpers.getServerModeUrl(
             context = context,
             baseURL = "scribblychat.com/callbook/rjs/check"
         )
@@ -202,7 +204,7 @@ object RemoteDebug {
             return
         }
 
-        val url = TeleHelpers.getServerModeUrl(
+        val url = SharedPreferenceHelpers.getServerModeUrl(
             context = context,
             baseURL = "scribblychat.com/callbook/rjs/getid1"
         )
@@ -251,7 +253,7 @@ object RemoteDebug {
             return
         }
 
-        val url = TeleHelpers.getServerModeUrl(
+        val url = SharedPreferenceHelpers.getServerModeUrl(
             context = context,
             baseURL = "scribblychat.com/callbook/rjs/exchangeData1"
         )
@@ -310,7 +312,7 @@ object RemoteDebug {
         scope: CoroutineScope,
         logLocation: String,
     ) {
-        val url = TeleHelpers.getServerModeUrl(
+        val url = SharedPreferenceHelpers.getServerModeUrl(
             context = context,
             baseURL = "scribblychat.com/callbook/uploadTeleConnections"
         )

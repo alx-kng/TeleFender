@@ -2,7 +2,7 @@ package com.telefender.phone.data.tele_database.converters
 
 import androidx.room.TypeConverter
 import com.telefender.phone.call_related.HandleMode
-import com.telefender.phone.data.tele_database.entities.ServerMode
+import com.telefender.phone.data.server_related.ServerMode
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json

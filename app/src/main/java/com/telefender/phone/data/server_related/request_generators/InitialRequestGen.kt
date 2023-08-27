@@ -13,6 +13,7 @@ import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWork
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.misc_helpers.DBL
+import com.telefender.phone.misc_helpers.SharedPreferenceHelpers
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,14 +35,13 @@ class InitialRequestGen(
             url: String,
             requestJson: String?,
             context: Context,
-            repository: ClientRepository,
             scope: CoroutineScope
         ) : InitialRequestGen {
 
             return InitialRequestGen(
                 method = method,
                 url = url,
-                listener = initialPostResponseHandler(context, repository, scope),
+                listener = initialPostResponseHandler(context, scope),
                 errorListener = initialPostErrorHandler(scope),
                 requestJson = requestJson
             )
@@ -51,7 +51,6 @@ class InitialRequestGen(
 
 private fun initialPostResponseHandler(
     context: Context,
-    repository: ClientRepository,
     scope: CoroutineScope
 ) : Response.Listener<String> {
 
@@ -69,19 +68,19 @@ private fun initialPostResponseHandler(
 
         if (setupSessionResponse != null && setupSessionResponse.status == "ok" && setupSessionResponse is SetupSessionResponse) {
             /**
-             * Create StoredMap row containing instance number and sessionID
+             * Store sessionID in SharedPreferences. Used for verify post request.
              */
             scope.launch(Dispatchers.IO) {
-                repository.updateStoredMap(sessionID = setupSessionResponse.sessionID)
+                SharedPreferenceHelpers.setSessionID(context, setupSessionResponse.sessionID)
 
-                val sessionID = repository.getSessionID()
+                val sessionID = SharedPreferenceHelpers.getSessionID(context)
                 Timber.i("$DBL: sessionID = $sessionID")
 
-                UserSetup.verifyPostRequest(context, repository, scope)
+                ExperimentalWorkStates.generalizedSetState(WorkType.INITIAL_POST, null)
             }
         } else {
             scope.launch(Dispatchers.IO) {
-                ExperimentalWorkStates.generalizedSetState(WorkType.SETUP, WorkInfo.State.FAILED)
+                ExperimentalWorkStates.generalizedSetState(WorkType.INITIAL_POST, WorkInfo.State.FAILED)
 
                 Timber.i("$DBL: VOLLEY: ERROR WHEN REQUEST INSTALLATION: ${setupSessionResponse?.error}")
             }
@@ -93,7 +92,7 @@ private fun initialPostErrorHandler(scope: CoroutineScope) = Response.ErrorListe
     scope.launch(Dispatchers.IO) {
         if (error.toString() != "null") {
             Timber.e("$DBL: VOLLEY $error")
-            ExperimentalWorkStates.generalizedSetState(WorkType.SETUP, WorkInfo.State.FAILED)
+            ExperimentalWorkStates.generalizedSetState(WorkType.INITIAL_POST, WorkInfo.State.FAILED)
         }
     }
 }

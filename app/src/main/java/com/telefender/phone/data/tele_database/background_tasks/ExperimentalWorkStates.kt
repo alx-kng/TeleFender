@@ -42,6 +42,8 @@ enum class WorkType(val isWorker : Boolean = false) {
 
     // Post requests
     SETUP,
+    INITIAL_POST,
+    VERIFY_POST,
 
     DOWNLOAD_POST,
     UPLOAD_CHANGE_POST,

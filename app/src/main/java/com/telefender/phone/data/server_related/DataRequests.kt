@@ -12,7 +12,9 @@ import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
 import com.telefender.phone.data.tele_database.entities.ChangeLog
 import com.telefender.phone.misc_helpers.DBL
+import com.telefender.phone.misc_helpers.SharedPreferenceHelpers
 import com.telefender.phone.misc_helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.SharedPreferenceHelpers.getServerModeUrl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -36,7 +38,7 @@ object DataRequests {
         repository: ClientRepository,
         scope: CoroutineScope
     ) {
-        val url = TeleHelpers.getServerModeUrl(
+        val url = SharedPreferenceHelpers.getServerModeUrl(
             context = context,
             baseURL = "scribblychat.com/callbook/downloadChanges"
         )
@@ -88,7 +90,7 @@ object DataRequests {
             return
         }
 
-        val url = TeleHelpers.getServerModeUrl(
+        val url = SharedPreferenceHelpers.getServerModeUrl(
             context = context,
             baseURL = "scribblychat.com/callbook/uploadChanges"
         )
@@ -159,7 +161,7 @@ object DataRequests {
             return
         }
 
-        val url = TeleHelpers.getServerModeUrl(
+        val url = SharedPreferenceHelpers.getServerModeUrl(
             context = context,
             baseURL = "scribblychat.com/callbook/uploadAnalyzedNumbers"
         )
@@ -230,7 +232,7 @@ object DataRequests {
             return
         }
 
-        val url = TeleHelpers.getServerModeUrl(
+        val url = SharedPreferenceHelpers.getServerModeUrl(
             context = context,
             baseURL = "scribblychat.com/callbook/uploadErrorLog"
         )
@@ -281,7 +283,7 @@ object DataRequests {
         scope: CoroutineScope,
         number: String
     ) {
-        val url = TeleHelpers.getServerModeUrl(
+        val url = SharedPreferenceHelpers.getServerModeUrl(
             context = context,
             baseURL = "scribblychat.com/callbook/reqNumberVerify"
         )

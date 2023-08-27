@@ -24,10 +24,7 @@ import com.telefender.phone.data.tele_database.background_tasks.workers.SetupSch
 import com.telefender.phone.data.tele_database.client_daos.*
 import com.telefender.phone.data.tele_database.converters.Converters
 import com.telefender.phone.data.tele_database.entities.*
-import com.telefender.phone.misc_helpers.DBL
-import com.telefender.phone.misc_helpers.DatabaseLogger
-import com.telefender.phone.misc_helpers.PrintTypes
-import com.telefender.phone.misc_helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.*
 import com.telefender.phone.permissions.Permissions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -169,8 +166,15 @@ abstract class ClientDatabase : RoomDatabase() {
         // Don't continue if initialization wasn't successful.
         if (!isInitialized()) return
 
-        SetupScheduler.initiateSetupWorker(context)
-        ExperimentalWorkStates.generalizedWorkWaiter(WorkType.SETUP)
+        val repository = (context.applicationContext as App).repository
+        val sharedPrefClientKey = SharedPreferenceHelpers.getClientKey(context)
+
+        if (sharedPrefClientKey != null) {
+            repository.updateStoredMap(clientKey = sharedPrefClientKey)
+        }
+
+//        SetupScheduler.initiateSetupWorker(context)
+//        ExperimentalWorkStates.generalizedWorkWaiter(WorkType.SETUP)
     }
 
     /**

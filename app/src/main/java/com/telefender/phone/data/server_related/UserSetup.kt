@@ -9,9 +9,9 @@ import com.telefender.phone.data.server_related.request_generators.InitialReques
 import com.telefender.phone.data.server_related.request_generators.VerifyRequestGen
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
-import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.misc_helpers.DBL
+import com.telefender.phone.misc_helpers.SharedPreferenceHelpers
 import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import org.json.JSONException
@@ -24,19 +24,15 @@ object UserSetup {
      * TODO: Set retry amount.
      * TODO finalize url...
      */
-    suspend fun initialPostRequest(context : Context, repository: ClientRepository, scope: CoroutineScope) {
-        val url = TeleHelpers.getServerModeUrl(
+    fun initialPostRequest(
+        context : Context,
+        scope: CoroutineScope,
+        instanceNumber: String
+    ) {
+        val url = SharedPreferenceHelpers.getServerModeUrl(
             context = context,
             baseURL = "scribblychat.com/callbook/requestInstallation"
         )
-        val instanceNumber = TeleHelpers.getUserNumberStored(context)
-
-        if (instanceNumber == null) {
-            Timber.i("$DBL: VOLLEY: ERROR - INSTANCE NUMBER is null")
-
-            ExperimentalWorkStates.generalizedSetState(WorkType.SETUP, WorkInfo.State.FAILED)
-            return
-        }
 
         val requestJson : String = DefaultRequest(instanceNumber).toJson()
 
@@ -48,7 +44,6 @@ object UserSetup {
                 url = url,
                 requestJson = requestJson,
                 context = context,
-                repository = repository,
                 scope = scope
             )
 
@@ -62,20 +57,23 @@ object UserSetup {
     /**
      * TODO integrate OTP with notifications, for now, it's hardcoded.
      */
-    suspend fun verifyPostRequest(context : Context, repository: ClientRepository, scope: CoroutineScope) {
-        val url = TeleHelpers.getServerModeUrl(
+    suspend fun verifyPostRequest(
+        context : Context,
+        scope: CoroutineScope,
+        otp: Int
+    ) {
+        val url = SharedPreferenceHelpers.getServerModeUrl(
             context = context,
             baseURL = "scribblychat.com/callbook/verifyInstallation"
         )
-        val instanceNumber = TeleHelpers.getUserNumberStored(context)
-        val sessionID = repository.getSessionID()
-        val otp = 111111
+        val instanceNumber = SharedPreferenceHelpers.getInstanceNumber(context)
+        val sessionID = SharedPreferenceHelpers.getSessionID(context)
 
         if (instanceNumber == null || sessionID == null) {
             Timber.i("$DBL: " +
                 "VOLLEY: ERROR - INSTANCE NUMBER = $instanceNumber | SETUP_SESSION ID = $sessionID")
 
-            ExperimentalWorkStates.generalizedSetState(WorkType.SETUP, WorkInfo.State.FAILED)
+            ExperimentalWorkStates.generalizedSetState(WorkType.VERIFY_POST, WorkInfo.State.FAILED)
             return
         }
 
@@ -88,7 +86,7 @@ object UserSetup {
                 method = Request.Method.POST,
                 url = url,
                 requestJson = verifyRequestJson,
-                repository = repository,
+                context = context,
                 scope = scope
             )
 

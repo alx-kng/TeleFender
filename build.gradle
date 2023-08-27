@@ -57,8 +57,9 @@ ext {
     // Room
     roomVersion = '2.5.1'
 
-    // DataStore
+    // DataStore / SharedPreference
     dataStoreVersion = '1.0.0'
+    sharedPreferenceVersion = '1.2.1'
 
     // Moshi
     moshiVersion = '1.14.0'

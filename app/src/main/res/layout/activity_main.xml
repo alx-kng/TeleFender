@@ -16,54 +16,69 @@
             android:layout_height="wrap_content">
 
             <com.google.android.material.appbar.AppBarLayout
+                android:id="@+id/app_bar_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                />
+
+            <com.google.android.material.appbar.MaterialToolbar
+                android:id="@+id/top_app_bar_main"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                android:background="@color/black"
+                app:layout_anchor="@+id/app_bar_layout"
+                app:layout_anchorGravity="center"
+                app:menu="@menu/top_app_bar"
+                app:theme="@style/ThemeOverlay.Tele.ActionBar"
+                app:title="Dialer"
+                app:titleTextColor="@color/white"
                 >
 
-                <com.google.android.material.appbar.MaterialToolbar
-                    android:id="@+id/topAppBar"
-                    android:layout_width="match_parent"
-                    android:layout_height="?attr/actionBarSize"
-                    android:background="@color/black"
-                    app:title="Dialer"
-                    app:titleTextColor="@color/white"
-                    app:menu="@menu/top_app_bar"
-                    app:theme="@style/ThemeOverlay.Tele.ActionBar"
-                    >
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/app_bar_text_button_1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="start"
+                    android:background="?android:selectableItemBackground"
+                    android:foreground="?android:selectableItemBackground"
+                    android:gravity="center"
+                    android:textColor="@color/white"
+                    android:textSize="17sp"
+                    android:visibility="gone"
+                    tools:text="Cancel"
+                    tools:visibility="visible"
+                    />
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/app_bar_text_button_1"
-                        android:layout_width="wrap_content"
-                        android:layout_height="match_parent"
-                        android:layout_gravity="left"
-                        android:gravity="center"
-                        android:foreground="?android:selectableItemBackground"
-                        android:background="?android:selectableItemBackground"
-                        android:visibility="gone"
-                        android:textSize="17sp"
-                        android:textColor="@color/white"
-                        tools:visibility="visible"
-                        tools:text="Cancel"
-                        />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/app_bar_more_button"
+                    android:layout_width="30dp"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="end"
+                    android:background="?android:selectableItemBackground"
+                    android:foreground="?android:selectableItemBackground"
+                    android:gravity="center"
+                    app:icon="@drawable/ic_baseline_more_vert_24"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp"
+                    app:iconSize="25dp"
+                    app:iconTint="@color/white"
+                    />
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/app_bar_text_button_2"
-                        android:layout_width="wrap_content"
-                        android:layout_height="match_parent"
-                        android:layout_gravity="right"
-                        android:gravity="center"
-                        android:foreground="?android:selectableItemBackground"
-                        android:background="?android:selectableItemBackground"
-                        android:visibility="gone"
-                        android:textSize="17sp"
-                        android:textColor="@color/white"
-                        tools:visibility="visible"
-                        tools:text="Add"
-                        />
-
-                </com.google.android.material.appbar.MaterialToolbar>
-
-            </com.google.android.material.appbar.AppBarLayout>
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/app_bar_text_button_2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="end"
+                    android:background="?android:selectableItemBackground"
+                    android:foreground="?android:selectableItemBackground"
+                    android:gravity="center"
+                    android:textColor="@color/white"
+                    android:textSize="17sp"
+                    android:visibility="gone"
+                    tools:text="Add"
+                    tools:visibility="visible"
+                    />
+            </com.google.android.material.appbar.MaterialToolbar>
 
         </androidx.coordinatorlayout.widget.CoordinatorLayout>
 

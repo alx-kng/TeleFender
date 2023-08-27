@@ -18,6 +18,70 @@ object RequestWrappers {
     const val retryDelayTime = 5000L // In milliseconds
 
     /**
+     * Initial contact with server to get sessionKey and have sms sent to user. Retries the request
+     * here if something goes wrong. Returns whether or not the post was successful.
+     */
+    suspend fun initialPost(
+        context: Context,
+        scope: CoroutineScope,
+        instanceNumber: String
+    ) : Boolean {
+        for (i in 1..retryAmount) {
+            ExperimentalWorkStates.generalizedSetState(WorkType.INITIAL_POST, WorkInfo.State.RUNNING)
+            UserSetup.initialPostRequest(context, scope, instanceNumber)
+
+            val success = ExperimentalWorkStates.generalizedWorkWaiter(
+                workType = WorkType.INITIAL_POST,
+                runningMsg = "INITIAL_POST",
+                stopOnFail = true,
+                certainFinish = true
+            )
+            /*
+            Success can be null in the odd case that the request somehow finishes by the time the
+            waiter is called.
+             */
+            if (success == true || success == null) return true
+            Timber.i("$DBL: INITIAL_POST RETRYING")
+            delay(retryDelayTime)
+        }
+
+        return false
+    }
+
+    /**
+     * TODO: Separate out the server issues from wrong OTP.
+     *
+     * Second contact with server to verify OTP and get clientKey. Retries the request here if
+     * something goes wrong. Returns whether or not the post was successful.
+     */
+    suspend fun verifyPost(
+        context: Context,
+        scope: CoroutineScope,
+        otp: Int
+    ) : Boolean {
+        for (i in 1..1) {
+            ExperimentalWorkStates.generalizedSetState(WorkType.VERIFY_POST, WorkInfo.State.RUNNING)
+            UserSetup.verifyPostRequest(context, scope, otp)
+
+            val success = ExperimentalWorkStates.generalizedWorkWaiter(
+                workType = WorkType.VERIFY_POST,
+                runningMsg = "VERIFY_POST",
+                stopOnFail = true,
+                certainFinish = true
+            )
+            /*
+            Success can be null in the odd case that the request somehow finishes by the time the
+            waiter is called.
+             */
+            if (success == true || success == null) return true
+            Timber.i("$DBL: VERIFY_POST RETRYING")
+            delay(retryDelayTime)
+        }
+
+        return false
+    }
+
+    /**
      * Downloads ServerData from server. Retries the request here if something goes wrong.
      */
     suspend fun downloadData(
