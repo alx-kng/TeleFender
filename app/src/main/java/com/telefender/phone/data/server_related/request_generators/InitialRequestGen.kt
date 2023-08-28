@@ -10,6 +10,7 @@ import com.telefender.phone.data.server_related.json_classes.SetupSessionRespons
 import com.telefender.phone.data.server_related.json_classes.toServerResponse
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
+import com.telefender.phone.data.tele_database.background_tasks.FailureState
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.misc_helpers.DBL
@@ -92,7 +93,11 @@ private fun initialPostErrorHandler(scope: CoroutineScope) = Response.ErrorListe
     scope.launch(Dispatchers.IO) {
         if (error.toString() != "null") {
             Timber.e("$DBL: VOLLEY $error")
-            ExperimentalWorkStates.generalizedSetState(WorkType.INITIAL_POST, WorkInfo.State.FAILED)
+            ExperimentalWorkStates.generalizedSetState(
+                workType = WorkType.INITIAL_POST,
+                workState = WorkInfo.State.FAILED,
+                failureState = FailureState.SERVER_FAILURE
+            )
         }
     }
 }

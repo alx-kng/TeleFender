@@ -8,6 +8,10 @@ import androidx.lifecycle.ViewModelProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 
+
+/**
+ * TODO: Don't let keyboard cover edit text view.
+ */
 class VerificationViewModel(app: Application) : AndroidViewModel(app) {
 
     @SuppressLint("StaticFieldLeak")

@@ -10,6 +10,7 @@ import com.telefender.phone.data.server_related.json_classes.ServerResponseType
 import com.telefender.phone.data.server_related.json_classes.toServerResponse
 import com.telefender.phone.data.tele_database.ClientRepository
 import com.telefender.phone.data.tele_database.background_tasks.ExperimentalWorkStates
+import com.telefender.phone.data.tele_database.background_tasks.FailureState
 import com.telefender.phone.data.tele_database.background_tasks.WorkStates
 import com.telefender.phone.data.tele_database.background_tasks.WorkType
 import com.telefender.phone.misc_helpers.DBL
@@ -87,7 +88,11 @@ private fun verifyPostErrorHandler(scope: CoroutineScope) = Response.ErrorListen
     scope.launch(Dispatchers.IO) {
         if (error.toString() != "null") {
             Timber.e("$DBL: VOLLEY $error")
-            ExperimentalWorkStates.generalizedSetState(WorkType.VERIFY_POST, WorkInfo.State.FAILED)
+            ExperimentalWorkStates.generalizedSetState(
+                workType = WorkType.VERIFY_POST,
+                workState = WorkInfo.State.FAILED,
+                failureState = FailureState.SERVER_FAILURE
+            )
         }
     }
 }

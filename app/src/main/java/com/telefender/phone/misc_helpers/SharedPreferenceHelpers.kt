@@ -111,15 +111,15 @@ object SharedPreferenceHelpers {
         baseURL: String
     ) : String {
         val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
-        val urlPart = sharedPreferences.getString(SharedPreferenceKey.SERVER_MODE_URL.keyString, ServerMode.DEV.urlPart)
+        val urlPart = sharedPreferences.getString(SharedPreferenceKey.SERVER_MODE_URL.keyString, ServerMode.TEST.urlPart)
         return "https://$urlPart$baseURL"
     }
 
 
     fun getServerMode(context: Context) : ServerMode {
         val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
-        val urlPart = sharedPreferences.getString(SharedPreferenceKey.SERVER_MODE_URL.keyString, ServerMode.DEV.urlPart)
-        return urlPart?.toServerModeFromUrlPart() ?: ServerMode.DEV
+        val urlPart = sharedPreferences.getString(SharedPreferenceKey.SERVER_MODE_URL.keyString, ServerMode.TEST.urlPart)
+        return urlPart?.toServerModeFromUrlPart() ?: ServerMode.TEST
     }
 
     /**

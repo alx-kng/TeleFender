@@ -64,8 +64,13 @@ enum class WorkType(val isWorker : Boolean = false) {
     EXECUTE_CHANGES
 }
 
+enum class FailureState {
+    NORMAL,
+    SERVER_FAILURE
+}
+
 /**
- * TODO: Get rid of SUCCEEDED. Unnecessary. -> Double check
+ * TODO: Improve [FailureState]
  */
 object ExperimentalWorkStates {
 
@@ -84,6 +89,12 @@ object ExperimentalWorkStates {
      * Work states that only consider one instance of work.
      */
     private val generalizedStates: Array<WorkInfo.State?> = Array(WorkType.values().size) { null }
+
+    /**
+     * Provides some extra information on any sort of work failure. Is linked with the regular
+     * [generalizedStates].
+     */
+    private val generalizedFailureStates: Array<FailureState?> = Array(WorkType.values().size) { null }
 
     /**
      * Waiter counters used in generalized worker waiters to decide what state to set upon finishing.
@@ -425,6 +436,7 @@ object ExperimentalWorkStates {
     suspend fun generalizedSetState(
         workType: WorkType,
         workState: WorkInfo.State?,
+        failureState: FailureState? = null,
         context: Context? = null,
         tag: String? = null,
     ) {
@@ -452,6 +464,11 @@ object ExperimentalWorkStates {
         generalized work instance regardless.
          */
         stateMutex.withLock {
+            // Provides more info on what failed.
+            if (workState == WorkInfo.State.FAILED) {
+                generalizedFailureStates[workType.ordinal] = failureState
+            }
+
             generalizedStates[workType.ordinal] = workState
         }
 

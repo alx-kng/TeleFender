@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
@@ -61,15 +62,19 @@ class NumberFillFragment : Fragment() {
             )
 
             scope.launch {
-                RequestWrappers.initialPost(
+                val success = RequestWrappers.initialPost(
                     context = requireContext(),
                     scope = scope,
                     instanceNumber = normalizedInstanceNumber
                 )
-            }
 
-            val action = NumberFillFragmentDirections.actionNumberFillFragmentToVerificationFragment()
-            findNavController().navigate(action)
+                if (success) {
+                    val action = NumberFillFragmentDirections.actionNumberFillFragmentToVerificationFragment()
+                    findNavController().navigate(action)
+                } else {
+                    Toast.makeText(activity, "Oops! Something went wrong. Please try again!", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 

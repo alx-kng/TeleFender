@@ -77,6 +77,8 @@ class VerificationFragment : Fragment() {
                                 findNavController().navigate(action)
                             }
                         } else {
+                            Toast.makeText(activity, "Oops! Something went wrong. Please try again!", Toast.LENGTH_SHORT).show()
+
                             setDone()
                         }
                     }
