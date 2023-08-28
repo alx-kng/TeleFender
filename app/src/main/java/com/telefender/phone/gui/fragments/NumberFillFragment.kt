@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
@@ -20,6 +21,7 @@ import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 
@@ -52,30 +54,52 @@ class NumberFillFragment : Fragment() {
 
         binding.numberFillCard.setOnClickListener {
             val inputNumber = binding.numberFillEdit.text.toString()
-            verificationViewModel.setManualInstanceNumber(number = inputNumber)
 
-            val normalizedInstanceNumber = TeleHelpers.normalizedNumber(inputNumber)
+            if (inputNumber.trim() != "") {
+                setLoading()
 
-            SharedPreferenceHelpers.setInstanceNumber(
-                context = requireContext(),
-                instanceNumber = normalizedInstanceNumber
-            )
+                verificationViewModel.setManualInstanceNumber(number = inputNumber)
+                val normalizedInstanceNumber = TeleHelpers.normalizedNumber(inputNumber)
 
-            scope.launch {
-                val success = RequestWrappers.initialPost(
+                SharedPreferenceHelpers.setInstanceNumber(
                     context = requireContext(),
-                    scope = scope,
                     instanceNumber = normalizedInstanceNumber
                 )
 
-                if (success) {
-                    val action = NumberFillFragmentDirections.actionNumberFillFragmentToVerificationFragment()
-                    findNavController().navigate(action)
-                } else {
-                    Toast.makeText(activity, "Oops! Something went wrong. Please try again!", Toast.LENGTH_SHORT).show()
+                scope.launch {
+                    val success = RequestWrappers.initialPost(
+                        context = requireContext(),
+                        scope = scope,
+                        instanceNumber = normalizedInstanceNumber
+                    )
+
+                    withContext(Dispatchers.Main) {
+                        if (success) {
+                            setDone()
+
+                            val action = NumberFillFragmentDirections.actionNumberFillFragmentToVerificationFragment()
+                            findNavController().navigate(action)
+                        } else {
+                            Toast.makeText(activity, "Oops! Something went wrong. Please try again!", Toast.LENGTH_SHORT).show()
+
+                            setDone()
+                        }
+                    }
                 }
+            } else {
+                Toast.makeText(activity, "Please enter a valid number!", Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    private fun setLoading() {
+        binding.numberFillProgressBar.visibility = View.VISIBLE
+        binding.numberFillCardText.setTextColor(ContextCompat.getColor(requireContext(), R.color.disabled_grey))
+    }
+
+    private fun setDone() {
+        binding.numberFillProgressBar.visibility = View.GONE
+        binding.numberFillCardText.setTextColor(ContextCompat.getColor(requireContext(), R.color.icon_white))
     }
 
     override fun onDestroyView() {

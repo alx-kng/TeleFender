@@ -78,16 +78,41 @@
                 app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.CardView.Rounded"
                 >
 
-                <TextView
-                    android:id="@+id/number_fill_card_text"
+                <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:fontFamily="@font/maven_pro"
-                    android:text="Continue"
-                    android:textColor="@color/icon_white"
-                    android:textSize="20sp"
+                    android:orientation="horizontal"
                     android:gravity="center"
-                    />
+                    >
+
+                    <TextView
+                        android:id="@+id/number_fill_card_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:fontFamily="@font/maven_pro"
+                        android:text="Continue"
+                        android:textColor="@color/icon_white"
+                        android:textSize="20sp"
+                        android:gravity="center"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        />
+
+
+                    <ProgressBar
+                        android:id="@+id/number_fill_progress_bar"
+                        android:visibility="gone"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:layout_marginEnd="10dp"
+                        android:indeterminate="true"
+                        android:gravity="end"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
 
             </com.google.android.material.card.MaterialCardView>
 
