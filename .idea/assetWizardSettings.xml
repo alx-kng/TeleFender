@@ -24,7 +24,7 @@
                                             <option name="values">
                                               <map>
                                                 <entry key="color" value="000000" />
-                                                <entry key="imagePath" value="C:\Users\alexk\AppData\Local\Temp\ic_android_black_24dp.xml" />
+                                                <entry key="imagePath" value="/private/var/folders/3q/qmbr312j2119phy_sg031fn80000gn/T/ic_android_black_24dp.xml" />
                                               </map>
                                             </option>
                                           </PersistentState>
@@ -67,7 +67,7 @@
                                           <PersistentState>
                                             <option name="values">
                                               <map>
-                                                <entry key="imagePath" value="C:\Users\alexk\Downloads\ic_launcher_background.xml" />
+                                                <entry key="imagePath" value="$PROJECT_DIR$/app/src/main/res/drawable-v24/ic_launcher_background.xml" />
                                               </map>
                                             </option>
                                           </PersistentState>
@@ -78,7 +78,7 @@
                                           <PersistentState>
                                             <option name="values">
                                               <map>
-                                                <entry key="imagePath" value="C:\Users\alexk\AppData\Local\Temp\ic_android_black_24dp.xml" />
+                                                <entry key="imagePath" value="/private/var/folders/3q/qmbr312j2119phy_sg031fn80000gn/T/ic_android_black_24dp.xml" />
                                               </map>
                                             </option>
                                           </PersistentState>
@@ -90,8 +90,8 @@
                                             <option name="values">
                                               <map>
                                                 <entry key="color" value="000000" />
-                                                <entry key="imagePath" value="C:\Users\alexk\Downloads\ic_launcher_foreground.xml" />
-                                                <entry key="scalingPercent" value="47" />
+                                                <entry key="imagePath" value="$PROJECT_DIR$/app/src/main/res/drawable/ic_telefender_icon.xml" />
+                                                <entry key="scalingPercent" value="104" />
                                               </map>
                                             </option>
                                           </PersistentState>
@@ -135,7 +135,7 @@
                                             <option name="values">
                                               <map>
                                                 <entry key="color" value="000000" />
-                                                <entry key="imagePath" value="C:\Users\alexk\AppData\Local\Temp\ic_android_black_24dp.xml" />
+                                                <entry key="imagePath" value="/private/var/folders/3q/qmbr312j2119phy_sg031fn80000gn/T/ic_android_black_24dp.xml" />
                                               </map>
                                             </option>
                                           </PersistentState>
@@ -179,7 +179,7 @@
                                             <option name="values">
                                               <map>
                                                 <entry key="color" value="000000" />
-                                                <entry key="imagePath" value="C:\Users\alexk\AppData\Local\Temp\ic_android_black_24dp.xml" />
+                                                <entry key="imagePath" value="/private/var/folders/3q/qmbr312j2119phy_sg031fn80000gn/T/ic_android_black_24dp.xml" />
                                               </map>
                                             </option>
                                           </PersistentState>
@@ -243,7 +243,7 @@
                                           <PersistentState>
                                             <option name="values">
                                               <map>
-                                                <entry key="imagePath" value="C:\Users\alexk\AppData\Local\Temp\ic_android_black_24dp.xml" />
+                                                <entry key="imagePath" value="/private/var/folders/3q/qmbr312j2119phy_sg031fn80000gn/T/ic_android_black_24dp.xml" />
                                               </map>
                                             </option>
                                           </PersistentState>
@@ -322,9 +322,10 @@
                         </option>
                         <option name="values">
                           <map>
+                            <entry key="assetSourceType" value="FILE" />
                             <entry key="color" value="ffffff" />
-                            <entry key="outputName" value="ic_baseline_remove_24" />
-                            <entry key="sourceFile" value="/C:\Users\alexk\Downloads\alert-octagon-svgrepo-com.svg" />
+                            <entry key="outputName" value="ic_telefender_icon" />
+                            <entry key="sourceFile" value="$USER_HOME$/Downloads/correct_icon.svg" />
                           </map>
                         </option>
                       </PersistentState>

@@ -1,18 +1,17 @@
 package com.telefender.phone.gui.fragments
 
-import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import com.telefender.phone.R
 import com.telefender.phone.data.server_related.RequestWrappers
-import com.telefender.phone.databinding.FragmentNumberFillBinding
 import com.telefender.phone.databinding.FragmentVerificationBinding
 import com.telefender.phone.gui.MainActivity
 import com.telefender.phone.gui.model.VerificationViewModel
@@ -24,6 +23,9 @@ import kotlinx.coroutines.*
 import timber.log.Timber
 
 
+/**
+ * TODO: Prevent keyboard from covering edit text.
+ */
 class VerificationFragment : Fragment() {
 
     private var _binding: FragmentVerificationBinding? = null

@@ -57,7 +57,7 @@ class PrivacyPolicyFragment : Fragment() {
             webViewClient = WebViewClient()
 
             // Load a URL
-            loadUrl("https://test.scribblychat.com/privacy.html")
+            loadUrl("file:///android_res/raw/privacy_policy.html")
         }
     }
 

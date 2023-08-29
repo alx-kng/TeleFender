@@ -25,6 +25,9 @@ import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 
+/**
+ * TODO: Prevent keyboard from covering edit text.
+ */
 class NumberFillFragment : Fragment() {
 
     private var _binding: FragmentNumberFillBinding? = null
