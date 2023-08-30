@@ -39,6 +39,7 @@
             android:layout_height="wrap_content"
             android:background="@color/grey"
             android:textSize="16sp"
+            android:textColor="@color/icon_white"
             />
     </com.google.android.material.textfield.TextInputLayout>
 

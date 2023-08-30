@@ -6,7 +6,6 @@ import android.app.NotificationManager
 import android.app.role.RoleManager
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.database.ContentObserver
 import android.net.Uri
@@ -28,7 +27,6 @@ import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
-import androidx.preference.PreferenceManager
 import com.telefender.phone.App
 import com.telefender.phone.R
 import com.telefender.phone.databinding.ActivityMainBinding
@@ -188,10 +186,9 @@ class MainActivity : AppCompatActivity() {
 
         if (SharedPreferenceHelpers.getUserReady(this)) {
             userReadyOnCreateSetup()
-        } else {
-//            PreferenceManager.getDefaultSharedPreferences(this)
-//                .registerOnSharedPreferenceChangeListener(userReadyListener)
         }
+
+        dialerViewModel.setFromInCall(fromInCall = false)
     }
 
     /**
@@ -209,9 +206,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         unregisterObservers()
-
-//        PreferenceManager.getDefaultSharedPreferences(this)
-//            .unregisterOnSharedPreferenceChangeListener(userReadyListener)
 
         /*
         Seems like it needs to be after other code so that MainActivity isn't destroyed too early.
@@ -249,6 +243,8 @@ class MainActivity : AppCompatActivity() {
                 recentsViewModel.clearCallHistoryLists()
                 contactsViewModel.clearDataLists()
             }
+
+
         }
 
         val navigationHandled = navController.navigateUp() || super.onSupportNavigateUp()

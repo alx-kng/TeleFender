@@ -1,0 +1,7 @@
+<!-- res/color/bottom_navigation_item_color.xml -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Color when an item is selected -->
+    <item android:color="@color/purple_200" android:state_checked="true"/>
+    <!-- Color when an item is not selected -->
+    <item android:color="@color/holding_grey"/>
+</selector>

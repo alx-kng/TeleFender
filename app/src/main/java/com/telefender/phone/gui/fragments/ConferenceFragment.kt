@@ -12,6 +12,10 @@ import com.telefender.phone.call_related.stateCompat
 import com.telefender.phone.databinding.FragmentConferenceBinding
 import com.telefender.phone.gui.adapters.ConferenceAdapter
 
+
+/**
+ * TODO: Get better animations one day.
+ */
 class ConferenceFragment : Fragment() {
 
     private var _binding: FragmentConferenceBinding? = null

@@ -4,7 +4,6 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <data>
-
         <variable
             name="viewModel"
             type="com.telefender.phone.gui.model.DialerViewModel" />
@@ -13,19 +12,19 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="@color/black"
         tools:context=".DialerFragment"
-        tools:background="@color/black"
         >
 
         <TextView
             android:id="@+id/dial_number"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="70dp"
+            android:layout_marginTop="45dp"
             android:fontFamily="sans-serif"
             android:text="@{viewModel.dialNumber}"
-            android:textSize="40sp"
             android:textColor="@color/icon_white"
+            android:textSize="40sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
@@ -39,190 +38,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/dial_number"
-            app:layout_constraintVertical_bias="0.40">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/dial_1"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="@dimen/dial_button_width"
-                android:layout_height="@dimen/dial_button_height"
-                android:background="?android:selectableItemBackground"
-                android:foreground="?android:selectableItemBackground"
-                android:text="1"
-                android:textSize="@dimen/dial_button_text"
-                android:textColor="@color/purple_200"
-                app:layout_constraintEnd_toStartOf="@id/dial_2"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/dial_2"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="@dimen/dial_button_width"
-                android:layout_height="@dimen/dial_button_height"
-                android:layout_marginStart="@dimen/dial_width_margin"
-                android:foreground="?android:selectableItemBackground"
-                android:background="?android:selectableItemBackground"
-                android:text="2"
-                android:textSize="@dimen/dial_button_text"
-                android:textColor="@color/purple_200"
-                app:layout_constraintEnd_toStartOf="@id/dial_3"
-                app:layout_constraintStart_toEndOf="@id/dial_1"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/dial_3"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="@dimen/dial_button_width"
-                android:layout_height="@dimen/dial_button_height"
-                android:layout_marginStart="@dimen/dial_width_margin"
-                android:foreground="?android:selectableItemBackground"
-                android:background="?android:selectableItemBackground"
-                android:text="3"
-                android:textSize="@dimen/dial_button_text"
-                android:textColor="@color/purple_200"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toEndOf="@id/dial_2"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/dial_4"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="@dimen/dial_button_width"
-                android:layout_height="@dimen/dial_button_height"
-                android:layout_marginTop="@dimen/dial_height_margin"
-                android:foreground="?android:selectableItemBackground"
-                android:background="?android:selectableItemBackground"
-                android:text="4"
-                android:textSize="@dimen/dial_button_text"
-                android:textColor="@color/purple_200"
-                app:layout_constraintEnd_toEndOf="@id/dial_1"
-                app:layout_constraintStart_toStartOf="@id/dial_1"
-                app:layout_constraintTop_toBottomOf="@id/dial_1" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/dial_5"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="@dimen/dial_button_width"
-                android:layout_height="@dimen/dial_button_height"
-                android:layout_marginTop="@dimen/dial_height_margin"
-                android:foreground="?android:selectableItemBackground"
-                android:background="?android:selectableItemBackground"
-                android:text="5"
-                android:textSize="@dimen/dial_button_text"
-                android:textColor="@color/purple_200"
-                app:layout_constraintEnd_toEndOf="@id/dial_2"
-                app:layout_constraintStart_toStartOf="@id/dial_2"
-                app:layout_constraintTop_toBottomOf="@id/dial_2" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/dial_6"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="@dimen/dial_button_width"
-                android:layout_height="@dimen/dial_button_height"
-                android:layout_marginTop="@dimen/dial_height_margin"
-                android:foreground="?android:selectableItemBackground"
-                android:background="?android:selectableItemBackground"
-                android:text="6"
-                android:textSize="@dimen/dial_button_text"
-                android:textColor="@color/purple_200"
-                app:layout_constraintEnd_toEndOf="@id/dial_3"
-                app:layout_constraintStart_toStartOf="@id/dial_3"
-                app:layout_constraintTop_toBottomOf="@id/dial_3" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/dial_7"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="@dimen/dial_button_width"
-                android:layout_height="@dimen/dial_button_height"
-                android:layout_marginTop="@dimen/dial_height_margin"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?android:selectableItemBackground"
-                android:background="?android:selectableItemBackground"
-                android:text="7"
-                android:textSize="@dimen/dial_button_text"
-                android:textColor="@color/purple_200"
-                app:layout_constraintEnd_toEndOf="@id/dial_4"
-                app:layout_constraintStart_toStartOf="@id/dial_4"
-                app:layout_constraintTop_toBottomOf="@id/dial_4" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/dial_8"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="@dimen/dial_button_width"
-                android:layout_height="@dimen/dial_button_height"
-                android:layout_marginTop="@dimen/dial_height_margin"
-                android:foreground="?android:selectableItemBackground"
-                android:background="?android:selectableItemBackground"
-                android:text="8"
-                android:textSize="@dimen/dial_button_text"
-                android:textColor="@color/purple_200"
-                app:layout_constraintEnd_toEndOf="@id/dial_5"
-                app:layout_constraintStart_toStartOf="@id/dial_5"
-                app:layout_constraintTop_toBottomOf="@id/dial_5" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/dial_9"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="@dimen/dial_button_width"
-                android:layout_height="@dimen/dial_button_height"
-                android:layout_marginTop="@dimen/dial_height_margin"
-                android:foreground="?android:selectableItemBackground"
-                android:background="?android:selectableItemBackground"
-                android:text="9"
-                android:textSize="@dimen/dial_button_text"
-                android:textColor="@color/purple_200"
-                app:layout_constraintEnd_toEndOf="@id/dial_6"
-                app:layout_constraintStart_toStartOf="@id/dial_6"
-                app:layout_constraintTop_toBottomOf="@id/dial_6" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/dial_asterisk"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="@dimen/dial_button_width"
-                android:layout_height="@dimen/dial_button_height"
-                android:layout_marginTop="@dimen/dial_height_margin"
-                android:foreground="?android:selectableItemBackground"
-                android:background="?android:selectableItemBackground"
-                android:gravity="center"
-                android:text="✱"
-                android:textSize="@dimen/dial_button_text"
-                android:textColor="@color/purple_200"
-                app:layout_constraintEnd_toEndOf="@id/dial_7"
-                app:layout_constraintStart_toStartOf="@id/dial_7"
-                app:layout_constraintTop_toBottomOf="@id/dial_7" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/dial_0"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="@dimen/dial_button_width"
-                android:layout_height="@dimen/dial_button_height"
-                android:layout_marginTop="@dimen/dial_height_margin"
-                android:foreground="?android:selectableItemBackground"
-                android:background="?android:selectableItemBackground"
-                android:text="0"
-                android:textSize="@dimen/dial_button_text"
-                android:textColor="@color/purple_200"
-                app:layout_constraintEnd_toEndOf="@id/dial_8"
-                app:layout_constraintStart_toStartOf="@id/dial_8"
-                app:layout_constraintTop_toBottomOf="@id/dial_8" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/dial_pound"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="@dimen/dial_button_width"
-                android:layout_height="@dimen/dial_button_height"
-                android:layout_marginTop="@dimen/dial_height_margin"
-                android:foreground="?android:selectableItemBackground"
-                android:background="?android:selectableItemBackground"
-                android:text="#"
-                android:textSize="@dimen/dial_button_text"
-                android:textColor="@color/purple_200"
-                app:layout_constraintEnd_toEndOf="@id/dial_9"
-                app:layout_constraintStart_toStartOf="@id/dial_9"
-                app:layout_constraintTop_toBottomOf="@id/dial_9" />
+            app:layout_constraintVertical_bias="0.30">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/dial_phone"
@@ -241,10 +57,9 @@
                 app:iconPadding="0dp"
                 app:iconSize="40dp"
                 app:iconTint="@color/white"
-                app:layout_constraintEnd_toEndOf="@id/dial_0"
-                app:layout_constraintHorizontal_bias="0.488"
-                app:layout_constraintStart_toStartOf="@id/dial_0"
-                app:layout_constraintTop_toBottomOf="@id/dial_0"
+                app:layout_constraintEnd_toEndOf="@id/dial_0_layout"
+                app:layout_constraintStart_toStartOf="@id/dial_0_layout"
+                app:layout_constraintTop_toBottomOf="@id/dial_0_layout"
                 app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.Circle" />
 
             <com.google.android.material.button.MaterialButton
@@ -252,6 +67,7 @@
                 style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="@dimen/call_button"
                 android:layout_height="@dimen/call_button"
+                android:layout_marginTop="@dimen/dial_phone_margin"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:onClick="@{() -> viewModel.deleteDigit()}"
                 android:onLongClick="@{() -> viewModel.deleteAll()}"
@@ -261,10 +77,527 @@
                 app:iconPadding="0dp"
                 app:iconSize="40dp"
                 app:iconTint="@color/purple_200"
-                app:layout_constraintEnd_toEndOf="@id/dial_pound"
-                app:layout_constraintStart_toStartOf="@id/dial_pound"
-                app:layout_constraintTop_toTopOf="@id/dial_phone"
-                app:layout_constraintBottom_toBottomOf="@id/dial_phone"/>
+                app:layout_constraintEnd_toEndOf="@id/dial_pound_layout"
+                app:layout_constraintStart_toStartOf="@id/dial_pound_layout"
+                app:layout_constraintTop_toBottomOf="@id/dial_pound_layout"/>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/dial_1_layout"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/black"
+                android:clickable="true"
+                android:focusable="true"
+                app:layout_constraintEnd_toStartOf="@id/dial_2_layout"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                >
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingTop="@dimen/dial_padding_top"
+                    >
+
+                    <TextView
+                        android:id="@+id/dial_1"
+                        android:layout_width="@dimen/dial_button_width"
+                        android:layout_height="@dimen/dial_button_height"
+                        android:gravity="center"
+                        android:text="1"
+                        android:textColor="@color/purple_200"
+                        android:textSize="@dimen/dial_button_text"
+                        />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text=""
+                        android:textColor="@color/icon_white"
+                        android:textSize="15sp"
+                        android:visibility="invisible"
+                        />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/dial_2_layout"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/black"
+                android:clickable="true"
+                android:focusable="true"
+                app:layout_constraintEnd_toStartOf="@id/dial_3_layout"
+                app:layout_constraintStart_toEndOf="@id/dial_1_layout"
+                app:layout_constraintTop_toTopOf="parent"
+                >
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingTop="@dimen/dial_padding_top"
+                    >
+
+                    <TextView
+                        android:id="@+id/dial_2"
+                        android:layout_width="@dimen/dial_button_width"
+                        android:layout_height="@dimen/dial_button_height"
+                        android:layout_marginStart="@dimen/dial_width_margin"
+                        android:gravity="center"
+                        android:text="2"
+                        android:textColor="@color/purple_200"
+                        android:textSize="@dimen/dial_button_text"
+                        />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="A B C"
+                        android:textColor="@color/icon_white"
+                        android:textSize="15sp"
+                        />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/dial_3_layout"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/black"
+                android:clickable="true"
+                android:focusable="true"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf="@id/dial_2_layout"
+                app:layout_constraintTop_toTopOf="parent"
+                >
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingTop="@dimen/dial_padding_top"
+                    >
+
+                    <TextView
+                        android:id="@+id/dial_3"
+                        android:layout_width="@dimen/dial_button_width"
+                        android:layout_height="@dimen/dial_button_height"
+                        android:layout_marginStart="@dimen/dial_width_margin"
+                        android:gravity="center"
+                        android:text="3"
+                        android:textColor="@color/purple_200"
+                        android:textSize="@dimen/dial_button_text"
+                        />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="D E F"
+                        android:textColor="@color/icon_white"
+                        android:textSize="15sp"
+                        />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/dial_4_layout"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/black"
+                android:clickable="true"
+                android:focusable="true"
+                app:layout_constraintEnd_toEndOf="@id/dial_1_layout"
+                app:layout_constraintStart_toStartOf="@id/dial_1_layout"
+                app:layout_constraintTop_toBottomOf="@id/dial_1_layout"
+                >
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingTop="@dimen/dial_padding_top"
+                    >
+
+                    <TextView
+                        android:id="@+id/dial_4"
+                        android:layout_width="@dimen/dial_button_width"
+                        android:layout_height="@dimen/dial_button_height"
+                        android:layout_marginTop="@dimen/dial_height_margin"
+                        android:gravity="center"
+                        android:text="4"
+                        android:textColor="@color/purple_200"
+                        android:textSize="@dimen/dial_button_text"
+                        />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="G H I"
+                        android:textColor="@color/icon_white"
+                        android:textSize="15sp"
+                        />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/dial_5_layout"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/black"
+                android:clickable="true"
+                android:focusable="true"
+                app:layout_constraintEnd_toEndOf="@id/dial_2_layout"
+                app:layout_constraintStart_toStartOf="@id/dial_2_layout"
+                app:layout_constraintTop_toBottomOf="@id/dial_2_layout"
+                >
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingTop="@dimen/dial_padding_top"
+                    >
+
+                    <TextView
+                        android:id="@+id/dial_5"
+                        android:layout_width="@dimen/dial_button_width"
+                        android:layout_height="@dimen/dial_button_height"
+                        android:layout_marginTop="@dimen/dial_height_margin"
+                        android:gravity="center"
+                        android:text="5"
+                        android:textColor="@color/purple_200"
+                        android:textSize="@dimen/dial_button_text"
+                        />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="J K L"
+                        android:textColor="@color/icon_white"
+                        android:textSize="15sp"
+                        />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/dial_6_layout"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/black"
+                android:clickable="true"
+                android:focusable="true"
+                app:layout_constraintEnd_toEndOf="@id/dial_3_layout"
+                app:layout_constraintStart_toStartOf="@id/dial_3_layout"
+                app:layout_constraintTop_toBottomOf="@id/dial_3_layout"
+                >
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingTop="@dimen/dial_padding_top"
+                    >
+
+                    <TextView
+                        android:id="@+id/dial_6"
+                        android:layout_width="@dimen/dial_button_width"
+                        android:layout_height="@dimen/dial_button_height"
+                        android:layout_marginTop="@dimen/dial_height_margin"
+                        android:gravity="center"
+                        android:text="6"
+                        android:textColor="@color/purple_200"
+                        android:textSize="@dimen/dial_button_text"
+                        />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="M N O"
+                        android:textColor="@color/icon_white"
+                        android:textSize="15sp"
+                        />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/dial_7_layout"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/black"
+                android:clickable="true"
+                android:focusable="true"
+                app:layout_constraintEnd_toEndOf="@id/dial_4_layout"
+                app:layout_constraintStart_toStartOf="@id/dial_4_layout"
+                app:layout_constraintTop_toBottomOf="@id/dial_4_layout"
+                >
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingTop="@dimen/dial_padding_top"
+                    >
+
+                    <TextView
+                        android:id="@+id/dial_7"
+                        android:layout_width="@dimen/dial_button_width"
+                        android:layout_height="@dimen/dial_button_height"
+                        android:layout_marginTop="@dimen/dial_height_margin"
+                        android:gravity="center"
+                        android:text="7"
+                        android:textColor="@color/purple_200"
+                        android:textSize="@dimen/dial_button_text"
+                        />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="P Q R S"
+                        android:textColor="@color/icon_white"
+                        android:textSize="15sp"
+                        />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/dial_8_layout"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/black"
+                android:clickable="true"
+                android:focusable="true"
+                app:layout_constraintEnd_toEndOf="@id/dial_5_layout"
+                app:layout_constraintStart_toStartOf="@id/dial_5_layout"
+                app:layout_constraintTop_toBottomOf="@id/dial_5_layout"
+                >
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingTop="@dimen/dial_padding_top"
+                    >
+
+                    <TextView
+                        android:id="@+id/dial_8"
+                        android:layout_width="@dimen/dial_button_width"
+                        android:layout_height="@dimen/dial_button_height"
+                        android:layout_marginTop="@dimen/dial_height_margin"
+                        android:gravity="center"
+                        android:text="8"
+                        android:textColor="@color/purple_200"
+                        android:textSize="@dimen/dial_button_text"
+                        />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="T U V"
+                        android:textColor="@color/icon_white"
+                        android:textSize="15sp"
+                        />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/dial_9_layout"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/black"
+                android:clickable="true"
+                android:focusable="true"
+                app:layout_constraintEnd_toEndOf="@id/dial_6_layout"
+                app:layout_constraintStart_toStartOf="@id/dial_6_layout"
+                app:layout_constraintTop_toBottomOf="@id/dial_6_layout"
+                >
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingTop="@dimen/dial_padding_top"
+                    >
+
+                    <TextView
+                        android:id="@+id/dial_9"
+                        android:layout_width="@dimen/dial_button_width"
+                        android:layout_height="@dimen/dial_button_height"
+                        android:layout_marginTop="@dimen/dial_height_margin"
+                        android:gravity="center"
+                        android:text="9"
+                        android:textColor="@color/purple_200"
+                        android:textSize="@dimen/dial_button_text"
+                        />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="W X Y Z"
+                        android:textColor="@color/icon_white"
+                        android:textSize="15sp"
+                        />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/dial_asterisk_layout"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/black"
+                android:clickable="true"
+                android:focusable="true"
+                app:layout_constraintEnd_toEndOf="@id/dial_7_layout"
+                app:layout_constraintStart_toStartOf="@id/dial_7_layout"
+                app:layout_constraintTop_toBottomOf="@id/dial_7_layout"
+                >
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingTop="@dimen/dial_padding_top"
+                    >
+
+                    <TextView
+                        android:id="@+id/dial_asterisk"
+                        android:layout_width="@dimen/dial_button_width"
+                        android:layout_height="@dimen/dial_button_height"
+                        android:layout_marginTop="@dimen/dial_height_margin"
+                        android:gravity="center"
+                        android:text="✱"
+                        android:textColor="@color/purple_200"
+                        android:textSize="@dimen/dial_button_text"
+                        />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="@string/add_active"
+                        android:textColor="@color/icon_white"
+                        android:textSize="15sp"
+                        android:visibility="invisible"
+                        />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/dial_0_layout"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/black"
+                android:clickable="true"
+                android:focusable="true"
+                app:layout_constraintEnd_toEndOf="@id/dial_8_layout"
+                app:layout_constraintStart_toStartOf="@id/dial_8_layout"
+                app:layout_constraintTop_toBottomOf="@id/dial_8_layout"
+                >
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingTop="@dimen/dial_padding_top"
+                    >
+
+                    <TextView
+                        android:id="@+id/dial_0"
+                        android:layout_width="@dimen/dial_button_width"
+                        android:layout_height="@dimen/dial_button_height"
+                        android:layout_marginTop="@dimen/dial_height_margin"
+                        android:gravity="center"
+                        android:text="0"
+                        android:textColor="@color/purple_200"
+                        android:textSize="@dimen/dial_button_text"
+                        />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="+"
+                        android:textColor="@color/icon_white"
+                        android:textSize="15sp"
+                        />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/dial_pound_layout"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/black"
+                android:clickable="true"
+                android:focusable="true"
+                app:layout_constraintEnd_toEndOf="@id/dial_9_layout"
+                app:layout_constraintStart_toStartOf="@id/dial_9_layout"
+                app:layout_constraintTop_toBottomOf="@id/dial_9_layout"
+                >
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingTop="@dimen/dial_padding_top"
+                    >
+
+                    <TextView
+                        android:id="@+id/dial_pound"
+                        android:layout_width="@dimen/dial_button_width"
+                        android:layout_height="@dimen/dial_button_height"
+                        android:layout_marginTop="@dimen/dial_height_margin"
+                        android:gravity="center"
+                        android:text="#"
+                        android:textColor="@color/purple_200"
+                        android:textSize="@dimen/dial_button_text"
+                        />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="@string/add_active"
+                        android:textColor="@color/icon_white"
+                        android:textSize="15sp"
+                        android:visibility="invisible"
+                        />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 

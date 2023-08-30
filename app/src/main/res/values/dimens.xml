@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <dimen name="dial_button_height">75dp</dimen>
+    <dimen name="dial_button_height">55dp</dimen>
     <dimen name="dial_button_width">105dp</dimen>
     <dimen name="dial_width_margin">0dp</dimen>
     <dimen name="dial_height_margin">0dp</dimen>
-    <dimen name="dial_phone_margin">17dp</dimen>
+    <dimen name="dial_padding_top">10dp</dimen>
+    <dimen name="dial_phone_margin">30dp</dimen>
+
     <dimen name="call_history_info_button">40dp</dimen>
     <dimen name="call_button">60dp</dimen>
     <dimen name="log_info_button">25dp</dimen>

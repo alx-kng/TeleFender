@@ -242,6 +242,27 @@
                       </LayoutPositions>
                     </value>
                   </entry>
+                  <entry key="dialerFragment2">
+                    <value>
+                      <LayoutPositions>
+                        <option name="myPosition">
+                          <Point>
+                            <option name="x" value="-137" />
+                            <option name="y" value="471" />
+                          </Point>
+                        </option>
+                        <option name="myPositions">
+                          <map>
+                            <entry key="action_dialerFragment2_to_inCallFragment">
+                              <value>
+                                <LayoutPositions />
+                              </value>
+                            </entry>
+                          </map>
+                        </option>
+                      </LayoutPositions>
+                    </value>
+                  </entry>
                   <entry key="inCallFragment">
                     <value>
                       <LayoutPositions>
@@ -250,6 +271,15 @@
                             <option name="x" value="-269" />
                             <option name="y" value="-10" />
                           </Point>
+                        </option>
+                        <option name="myPositions">
+                          <map>
+                            <entry key="action_inCallFragment_to_conferenceFragment">
+                              <value>
+                                <LayoutPositions />
+                              </value>
+                            </entry>
+                          </map>
                         </option>
                       </LayoutPositions>
                     </value>

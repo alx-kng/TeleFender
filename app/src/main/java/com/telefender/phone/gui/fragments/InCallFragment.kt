@@ -9,21 +9,26 @@ import android.view.ViewGroup
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
 import com.telefender.phone.R
 import com.telefender.phone.call_related.*
-import com.telefender.phone.data.default_database.DefaultContacts
 import com.telefender.phone.databinding.FragmentInCallBinding
 import com.telefender.phone.gui.InCallActivity
 import com.telefender.phone.gui.IncomingCallActivity
+import com.telefender.phone.gui.MainActivity
+import com.telefender.phone.gui.model.DialerViewModel
 import com.telefender.phone.gui.model.InCallViewModel
 import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import timber.log.Timber
 
+
 /**
+ * TODO: Get better animations one day.
+ *
  * TODO: Speakerphone issue, should reset to non-speaker after call finishes, or at least make
  *  sure that speaker button color more accurately reflects state. Thought we fixed this before,
  *  but apparently not.
@@ -32,7 +37,9 @@ class InCallFragment : Fragment() {
 
     private var _binding: FragmentInCallBinding? = null
     private val binding get() = _binding!!
+
     private val inCallViewModel: InCallViewModel by viewModels()
+    private val dialerViewModel : DialerViewModel by activityViewModels()
 
     /**
      * TODO: Conference count doesn't update correctly (not sure if fixed).
@@ -82,6 +89,8 @@ class InCallFragment : Fragment() {
 
         // Need to observe forever so that observer still runs when activity is not showing.
         CallManager.focusedConnection.observeForever(observer)
+
+        dialerViewModel.setFromInCall(fromInCall = true)
 
         /*******************************************************************************************
          * On click listeners for multi-display. Should swap calls if the holding call is pressed.
@@ -171,13 +180,15 @@ class InCallFragment : Fragment() {
         }
 
         binding.keypadActive.setOnClickListener {
-            Timber.i("$DBL: Keypad button pressed!")
+            val action = InCallFragmentDirections.actionInCallFragmentToDialerFragment2()
+            findNavController().navigate(action)
         }
     }
 
     override fun onStart() {
         super.onStart()
         updateCallerDisplay()
+        setupAppBar()
     }
 
     override fun onDestroyView() {
@@ -573,6 +584,15 @@ class InCallFragment : Fragment() {
         } else {
             binding.mergeActive.iconTint = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.disabled_grey))
             binding.mergeText.setTextColor(ContextCompat.getColor(requireContext(), R.color.disabled_grey))
+        }
+    }
+
+    private fun setupAppBar() {
+        if (activity is InCallActivity) {
+            Timber.i("$DBL: InCallFragment - setupAppBar()!")
+
+            val act = activity as InCallActivity
+            act.revertAppBar()
         }
     }
 }

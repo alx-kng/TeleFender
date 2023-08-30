@@ -17,6 +17,10 @@
             android:id="@+id/action_inCallFragment_to_conferenceFragment"
             app:destination="@id/conferenceFragment"
             />
+        <action
+            android:id="@+id/action_inCallFragment_to_dialerFragment2"
+            app:destination="@id/dialerFragment2"
+            />
     </fragment>
 
     <fragment
@@ -24,6 +28,14 @@
         android:name="com.telefender.phone.gui.fragments.ConferenceFragment"
         android:label="ConferenceFragment"
         tools:layout="@layout/fragment_conference"
+        >
+    </fragment>
+
+    <fragment
+        android:id="@+id/dialerFragment2"
+        android:name="com.telefender.phone.gui.fragments.DialerFragment"
+        android:label="DialerFragment"
+        tools:layout="@layout/fragment_dialer"
         >
     </fragment>
 

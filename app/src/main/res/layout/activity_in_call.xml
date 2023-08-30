@@ -14,6 +14,64 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
+        <androidx.coordinatorlayout.widget.CoordinatorLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            >
+
+            <com.google.android.material.appbar.AppBarLayout
+                android:id="@+id/app_bar_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                />
+
+            <com.google.android.material.appbar.MaterialToolbar
+                android:id="@+id/top_app_bar_in_call"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                android:background="@color/black"
+                app:layout_anchor="@+id/app_bar_layout"
+                app:layout_anchorGravity="center"
+                app:menu="@menu/top_app_bar"
+                app:theme="@style/ThemeOverlay.Tele.ActionBar"
+                app:title="Dialer"
+                app:titleTextColor="@color/white"
+                android:visibility="gone"
+                >
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/app_bar_text_button_1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="start"
+                    android:background="?android:selectableItemBackground"
+                    android:foreground="?android:selectableItemBackground"
+                    android:gravity="center"
+                    android:textColor="@color/white"
+                    android:textSize="17sp"
+                    android:visibility="gone"
+                    tools:text="Cancel"
+                    tools:visibility="visible"
+                    />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/app_bar_text_button_2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="end"
+                    android:background="?android:selectableItemBackground"
+                    android:foreground="?android:selectableItemBackground"
+                    android:gravity="center"
+                    android:textColor="@color/white"
+                    android:textSize="17sp"
+                    android:visibility="gone"
+                    tools:text="Add"
+                    tools:visibility="visible"
+                    />
+            </com.google.android.material.appbar.MaterialToolbar>
+
+        </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
         <androidx.fragment.app.FragmentContainerView
             android:id="@+id/nav_host_fragment"
             android:name="androidx.navigation.fragment.NavHostFragment"

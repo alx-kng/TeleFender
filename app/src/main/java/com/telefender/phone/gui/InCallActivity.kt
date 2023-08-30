@@ -4,6 +4,9 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
+import android.view.View
 import android.view.WindowManager
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
@@ -11,7 +14,6 @@ import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import com.telefender.phone.R
-import com.telefender.phone.call_related.CallService
 import com.telefender.phone.databinding.ActivityInCallBinding
 import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.notifications.ActiveCallNotificationService
@@ -74,6 +76,8 @@ class InCallActivity : AppCompatActivity() {
             }
         })
 
+        setSupportActionBar(binding.topAppBarInCall)
+
         inCallOverLockScreen()
     }
 
@@ -87,6 +91,21 @@ class InCallActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.top_app_bar, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    override fun onSupportNavigateUp(): Boolean {
+        return navController.navigateUp() || super.onSupportNavigateUp()
+    }
+
     private fun inCallOverLockScreen() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
@@ -95,6 +114,32 @@ class InCallActivity : AppCompatActivity() {
                 WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
             )
         }
+    }
+
+    fun displayUpButton(show: Boolean) {
+        supportActionBar?.setDisplayHomeAsUpEnabled(show)
+    }
+
+    fun setTitle(appBarTitle: String) {
+        binding.topAppBarInCall.title = appBarTitle
+    }
+
+    fun displayAppBar(show: Boolean) {
+        if (show) {
+            if (binding.topAppBarInCall.visibility != View.VISIBLE) {
+                binding.topAppBarInCall.visibility = View.VISIBLE
+            }
+        } else {
+            if (binding.topAppBarInCall.visibility != View.GONE) {
+                binding.topAppBarInCall.visibility = View.GONE
+            }
+        }
+    }
+
+    fun revertAppBar() {
+        setTitle("")
+        displayUpButton(false)
+        displayAppBar(false)
     }
 
     companion object {
