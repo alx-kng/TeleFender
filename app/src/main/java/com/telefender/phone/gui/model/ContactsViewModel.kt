@@ -166,7 +166,7 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
         tempDivided.sortWith(BaseContactItemComparator)
 
         // Removes the first divider since the sticky header overlay always has the top header.
-        tempDivided.removeFirst()
+        tempDivided.removeFirstOrNull()
 
         // Always add footer to end of list.
         tempDivided.add(BaseFooter)

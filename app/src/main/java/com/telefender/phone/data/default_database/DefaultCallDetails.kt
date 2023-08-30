@@ -81,13 +81,19 @@ object DefaultCallDetails{
 
             val sortOrder = "${CallLog.Calls.DATE} DESC"
 
-            val curs : Cursor? = context.contentResolver.query(
-                CallLog.Calls.CONTENT_URI,
-                projection,
-                null,
-                null,
-                sortOrder
-            )
+            var curs : Cursor? = null
+
+            try {
+                curs = context.contentResolver.query(
+                    CallLog.Calls.CONTENT_URI,
+                    projection,
+                    null,
+                    null,
+                    sortOrder
+                )
+            } catch (e: Exception) {
+                Timber.e("$DBL: getDefaultCallDetailCursor() - ${e.message}")
+            }
 
             Timber.i("$DBL: CALL CURSOR RETRIEVAL FINISHED")
             return@withContext curs
