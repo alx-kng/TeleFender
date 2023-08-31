@@ -114,11 +114,6 @@ object CallManager {
      */
     val debugScope = CoroutineScope(Dispatchers.IO)
 
-    // TODO: Store current block mode in database.
-    private var _currentMode = HandleMode.SILENCE_MODE
-    val currentMode : HandleMode
-        get() = _currentMode
-
     /**
      * Contains the last answered Call object. Used to smoothly update UI in InCallFragment's
      * updateCallerDisplay().

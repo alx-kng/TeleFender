@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.core.content.ContextCompat.startActivity
 import com.telefender.phone.misc_helpers.DBL
 import timber.log.Timber
 
@@ -50,6 +51,21 @@ object CommonIntentsForUI {
         } else {
             // No email app found
             Toast.makeText(activity, "No email app found!", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun openLink(
+        activity: Activity,
+        url: String
+    ) {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+
+        // Ensure that there's a browser to handle the intent
+        if (intent.resolveActivity(activity.packageManager) != null) {
+            activity.startActivity(intent)
+        } else {
+            // Handle the error. For instance, show a Toast that there's no browser.
+            Toast.makeText(activity, "No browser available to open the link.", Toast.LENGTH_SHORT).show()
         }
     }
 }

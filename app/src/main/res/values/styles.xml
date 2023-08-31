@@ -13,6 +13,11 @@
         <item name="cornerSize">50%</item>
     </style>
 
+    <style name="ShapeAppearanceOverlay.Tele.Button.VeryRounded" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50dp</item>
+    </style>
+
     <style name="ShapeAppearanceOverlay.Tele.Button.Rounded" parent="">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">15dp</item>
@@ -56,6 +61,10 @@
 
     <style name="ThemeOverlay.Tele.ActionBar" parent="@style/ThemeOverlay.AppCompat.ActionBar">
         <item name="colorControlNormal">@color/icon_white</item>
+    </style>
+
+    <style name="TransparentDialog" parent="Theme.AppCompat.Light.Dialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
     </style>
 
 </resources>

@@ -111,9 +111,13 @@ class IncomingCallService : LifecycleService() {
          * if call isn't already disconnected or connected.
          */
         safe = intent?.extras?.getBoolean("Safe") ?: true
-        if (!safe && CallManager.currentMode == HandleMode.SILENCE_MODE) {
-            scope.launch {
-                silenceHangup()
+        scope.launch {
+            if (!safe
+                && TeleHelpers.currentHandleMode(this@IncomingCallService) == HandleMode.SILENCE_MODE
+            ) {
+                scope.launch {
+                    silenceHangup()
+                }
             }
         }
         return super.onStartCommand(intent, flags, startId)

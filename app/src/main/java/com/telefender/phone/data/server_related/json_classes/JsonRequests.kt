@@ -3,8 +3,6 @@ package com.telefender.phone.data.server_related.json_classes
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
-import com.telefender.phone.call_related.CallManager.currentMode
-import com.telefender.phone.call_related.CallManager.lastAnsweredCall
 import com.telefender.phone.data.tele_database.entities.AnalyzedNumber
 import com.telefender.phone.data.tele_database.entities.CallDetail
 import com.telefender.phone.data.tele_database.entities.ChangeLog

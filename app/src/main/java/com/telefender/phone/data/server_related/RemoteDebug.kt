@@ -334,7 +334,7 @@ object RemoteDebug {
                     logLocation = logLocation,
                     calls = calls.map { it.toSimpleString() },
                     connections = connections.map { it.toString() },
-                    currentMode = currentMode.serverString,
+                    currentMode = TeleHelpers.currentHandleMode(context).serverString,
                     focusedCall = focusedCall.toSimpleString(),
                     focusedConnection = focusedConnection.value.toString(),
                     lastAnsweredCall = lastAnsweredCall.toSimpleString(),

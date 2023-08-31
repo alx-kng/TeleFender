@@ -30,6 +30,8 @@ import androidx.navigation.ui.AppBarConfiguration
 import com.telefender.phone.App
 import com.telefender.phone.R
 import com.telefender.phone.databinding.ActivityMainBinding
+import com.telefender.phone.gui.fragments.dialogs.PrivacyDialogFragment
+import com.telefender.phone.gui.fragments.dialogs.SettingsDialogFragment
 import com.telefender.phone.gui.model.*
 import com.telefender.phone.misc_helpers.*
 import com.telefender.phone.permissions.PermissionRequestType
@@ -645,8 +647,23 @@ class MainActivity : AppCompatActivity() {
         binding.appBarTextButton2.setOnClickListener(onClickListener2)
     }
 
+    fun setMoreButtonOnClickListener(
+        onClickListener: ((View)->Unit)? = null ,
+    ) {
+        if (onClickListener == null) {
+            binding.appBarMoreButton.setOnClickListener {
+                SettingsDialogFragment().show(supportFragmentManager, "settingsDialog")
+            }
+        } else {
+            binding.appBarMoreButton.setOnClickListener(onClickListener)
+        }
+    }
+
+
     fun displayMoreMenu(show: Boolean) {
         binding.appBarMoreButton.visibility = if (show) View.VISIBLE else View.GONE
+//        binding.topAppBarMain.menu.findItem(R.id.more).isVisible = show
+
     }
 
     fun displayUpButton(show: Boolean) {
@@ -701,6 +718,7 @@ class MainActivity : AppCompatActivity() {
         displayAppBarTextButton() // Hides all text buttons
         setEnabledAppBarTextButton() // Re-enables all text buttons
         setAppBarTextButtonOnClickListener() // Resets onClick listener to do nothing.
+        setMoreButtonOnClickListener() // Resets onClick listener to bring up settings dialog.
     }
 
     /**

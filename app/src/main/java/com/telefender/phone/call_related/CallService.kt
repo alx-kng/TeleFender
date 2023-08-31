@@ -9,6 +9,7 @@ import com.telefender.phone.data.tele_database.background_tasks.workers.CatchSyn
 import com.telefender.phone.gui.InCallActivity
 import com.telefender.phone.gui.IncomingCallActivity
 import com.telefender.phone.misc_helpers.DBL
+import com.telefender.phone.misc_helpers.TeleHelpers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -127,7 +128,7 @@ class CallService : InCallService() {
         super.onCallRemoved(call)
     }
 
-    private fun safeCall() {
+    private suspend fun safeCall() {
         /*
         Only need to set the ringer mode back to normal if changed in the first place. We know if
         the ringer mode was changed in RuleChecker if the app has Do Not Disturb permissions.
@@ -141,7 +142,7 @@ class CallService : InCallService() {
      * TODO: Check insertCallDetail() works. Also, update response for unsafe calls in ALLOW_MODE,
      *  specifically in terms of showing UI.
      */
-    private fun unsafeCall(call: Call, shouldReject: Boolean) {
+    private suspend fun unsafeCall(call: Call, shouldReject: Boolean) {
         if (shouldReject) {
             Timber.e("$DBL: REJECT Action: Blocked call rejected!")
             TeleCallDetails.insertCallDetail(this, call, true, CallLog.Calls.BLOCKED_TYPE)
@@ -149,7 +150,7 @@ class CallService : InCallService() {
             return
         }
 
-        when(CallManager.currentMode) {
+        when(TeleHelpers.currentHandleMode(this@CallService)) {
             HandleMode.BLOCK_MODE -> {
                 Timber.e("$DBL: BLOCK_MODE Action: Unsafe call blocked!")
                 TeleCallDetails.insertCallDetail(this, call, true, CallLog.Calls.BLOCKED_TYPE)
@@ -162,7 +163,7 @@ class CallService : InCallService() {
             }
             HandleMode.ALLOW_MODE -> {
                 Timber.e("$DBL: ALLOW_MODE Action: Unsafe call allowed!")
-                IncomingCallActivity.start(this, true)
+                IncomingCallActivity.start(this, false)
             }
         }
     }

@@ -17,8 +17,8 @@
         android:layout_marginStart="10dp"
         android:layout_weight="1"
         android:textColor="@color/icon_white"
-        tools:text="Placeholder Title"
         android:textSize="16dp"
+        tools:text="Placeholder Title"
         />
 
     <LinearLayout

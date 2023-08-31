@@ -111,7 +111,7 @@ object RuleChecker {
         If the checks reach here, and the current call mode is ALLOW_MODE, then we deem the number
         as unsafe. However, since the call is going through anyways, there's no need to SMS verify.
          */
-        if (CallManager.currentMode == HandleMode.ALLOW_MODE) return Pair(false, false)
+        if (TeleHelpers.currentHandleMode(context) == HandleMode.ALLOW_MODE) return Pair(false, false)
 
         // Used to silence the ringer during the wait time for the SMS verify result.
         AudioHelpers.setRingerMode(context, RingerMode.SILENT)

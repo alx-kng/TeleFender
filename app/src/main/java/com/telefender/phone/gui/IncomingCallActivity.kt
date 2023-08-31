@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
+import android.view.View
 import android.view.WindowManager
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
@@ -69,6 +70,8 @@ class IncomingCallActivity : AppCompatActivity() {
         // Sets created
         _running = true
 
+        val safe = intent?.extras?.getBoolean("Safe") ?: true
+
         showOverLockScreen()
 
         // Need to observe forever so that observer still runs when activity is not showing.
@@ -87,8 +90,8 @@ class IncomingCallActivity : AppCompatActivity() {
         binding.displayNumber.text = number?.let {
             TeleHelpers.getContactName(this, it)
         } ?: TeleHelpers.normalizedNumber(number)
-            ?: number
-            ?: "Unknown number"
+
+        binding.displaySpamInfo.visibility = if (safe) View.GONE else View.VISIBLE
 
         binding.answerIncoming.setOnClickListener {
             val service = IncomingCallService.context

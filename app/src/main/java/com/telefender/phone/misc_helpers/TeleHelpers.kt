@@ -8,10 +8,12 @@ import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
 import com.google.i18n.phonenumbers.PhoneNumberUtil
 import com.telefender.phone.App
+import com.telefender.phone.call_related.HandleMode
 import com.telefender.phone.call_related.SimCarrier
 import com.telefender.phone.data.default_database.DefaultContacts
 import com.telefender.phone.data.tele_database.entities.NotifyItem
 import com.telefender.phone.data.tele_database.entities.Parameters
+import com.telefender.phone.data.tele_database.entities.defaultHandleMode
 import com.telefender.phone.permissions.Permissions
 import timber.log.Timber
 import java.time.Instant
@@ -84,6 +86,14 @@ object TeleHelpers {
         val setupCondition = !setupRequired || repository.hasClientKey()
 
         return databaseCondition && setupCondition
+    }
+
+    /**
+     * Returns current handle mode stored in database.
+     */
+    suspend fun currentHandleMode(context: Context) : HandleMode {
+        val repository = (context.applicationContext as App).repository
+        return repository.getStoredMap()?.currentHandleMode ?: defaultHandleMode
     }
 
     /**

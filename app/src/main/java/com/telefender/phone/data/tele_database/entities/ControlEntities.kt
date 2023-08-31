@@ -36,6 +36,8 @@ data class StoredMap(
     }
 }
 
+val defaultHandleMode = HandleMode.ALLOW_MODE
+
 @JsonClass(generateAdapter = true)
 @Entity(tableName = "parameters")
 data class ParametersWrapper(
