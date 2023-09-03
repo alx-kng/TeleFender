@@ -25,7 +25,7 @@ object DefaultCallDetails{
     suspend fun getDefaultCallDetails(context: Context): MutableList<CallDetail> {
         return withContext(Dispatchers.IO) {
             // If user number retrieval fails somehow, return empty list.
-            val instanceNumber = TeleHelpers.getUserNumberStored(context)
+            val instanceNumber = TeleHelpers.getUserNumberUncertain(context)
                 ?: return@withContext mutableListOf()
 
             val projection = arrayOf(
@@ -69,7 +69,7 @@ object DefaultCallDetails{
     suspend fun getDefaultCallDetailCursor(context: Context): Cursor? {
         return withContext(Dispatchers.IO) {
             // If user number retrieval fails somehow, return null cursor.
-            TeleHelpers.getUserNumberStored(context) ?: return@withContext null
+            TeleHelpers.getUserNumberUncertain(context) ?: return@withContext null
 
             val projection = arrayOf(
                 CallLog.Calls.NUMBER,

@@ -2,28 +2,40 @@ package com.telefender.phone.gui.model
 
 import android.annotation.SuppressLint
 import android.app.Application
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import androidx.lifecycle.*
+import kotlinx.coroutines.*
 
 
-/**
- * TODO: Don't let keyboard cover edit text view.
- */
 class VerificationViewModel(app: Application) : AndroidViewModel(app) {
 
     @SuppressLint("StaticFieldLeak")
     private val applicationContext = getApplication<Application>().applicationContext
     private val scope = CoroutineScope(Dispatchers.IO)
 
+    private val resendStartCount = 20
+
     private var _manualInstanceNumber: String? = null
     val manualInstanceNumber: String?
         get() = _manualInstanceNumber
 
+    private val _resendCountDown = MutableLiveData(resendStartCount)
+    val resendCountDown : LiveData<String> = _resendCountDown.map { seconds ->
+        "${seconds}s"
+    }
+
     fun setManualInstanceNumber(number: String) {
         _manualInstanceNumber = number
+    }
+
+    suspend fun startCountDown() {
+        _resendCountDown.postValue(resendStartCount)
+
+        var pseudoCounter = resendStartCount
+        while (pseudoCounter > 0) {
+            delay(1000)
+            pseudoCounter--
+            _resendCountDown.postValue(pseudoCounter)
+        }
     }
 }
 

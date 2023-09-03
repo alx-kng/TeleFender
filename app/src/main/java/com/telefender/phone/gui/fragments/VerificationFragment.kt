@@ -1,11 +1,11 @@
 package com.telefender.phone.gui.fragments
 
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -18,14 +18,11 @@ import com.telefender.phone.gui.model.VerificationViewModel
 import com.telefender.phone.gui.model.VerificationViewModelFactory
 import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.SharedPreferenceHelpers
-import com.telefender.phone.misc_helpers.SharedPreferenceKey
+import com.telefender.phone.misc_helpers.UserSetupStage
 import kotlinx.coroutines.*
 import timber.log.Timber
 
 
-/**
- * TODO: Prevent keyboard from covering edit text.
- */
 class VerificationFragment : Fragment() {
 
     private var _binding: FragmentVerificationBinding? = null
@@ -34,7 +31,8 @@ class VerificationFragment : Fragment() {
         VerificationViewModelFactory(requireActivity().application)
     }
 
-    private val scope = CoroutineScope(Dispatchers.IO)
+    private val postScope = CoroutineScope(Dispatchers.IO)
+    private val resendScope = CoroutineScope(Dispatchers.IO)
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -50,43 +48,73 @@ class VerificationFragment : Fragment() {
         setupAppBar()
         hideBottomNavigation()
 
+        binding.apply {
+            viewModel = verificationViewModel
+            lifecycleOwner = viewLifecycleOwner
+        }
+
+        showTimerResend()
+
+        resendScope.launch {
+            verificationViewModel.startCountDown()
+
+            withContext(Dispatchers.Main) {
+                showActiveResend()
+            }
+        }
+
         binding.verificationCard.setOnClickListener {
             val inputCode = binding.verificationEdit.text.toString().toIntOrNull()
 
             if (inputCode != null) {
                 setLoading()
 
-                scope.launch {
+                postScope.launch {
                     RequestWrappers.verifyPost(
                         context = requireContext(),
-                        scope = scope,
+                        scope = postScope,
                         otp = inputCode
                     )
 
-                    withContext(Dispatchers.Main) {
-                        val clientKey = SharedPreferenceHelpers.getClientKey(requireContext())
-                        if (clientKey != null) {
-                            SharedPreferenceHelpers.setUserReady(requireContext(), userReady = true)
-
-                            val act = requireActivity()
-                            if (act is MainActivity) {
-                                act.userReadyOnCreateSetup()
-                                act.userReadyOnStartSetup()
-
-                                setDone()
-
-                                val action = VerificationFragmentDirections.actionVerificationFragmentToDialerFragment()
-                                findNavController().navigate(action)
-                            }
-                        } else {
-                            Toast.makeText(activity, "Oops! Something went wrong. Please try again!", Toast.LENGTH_SHORT).show()
-
-                            setDone()
-                        }
-                    }
+                    verifyPostOnResult()
                 }
             } else {
                 Toast.makeText(activity, "Please enter a valid OTP!", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        binding.verificationResendCard.setOnClickListener {
+            showTimerResend()
+
+            resendScope.launch {
+                verificationViewModel.startCountDown()
+
+                withContext(Dispatchers.Main) {
+                    showActiveResend()
+                }
+            }
+
+            resendScope.launch {
+                val normalizedInstanceNumber = SharedPreferenceHelpers.getInstanceNumber(requireContext())
+
+                if (normalizedInstanceNumber != null) {
+                    val success = RequestWrappers.initialPost(
+                        context = requireContext(),
+                        scope = resendScope,
+                        instanceNumber = normalizedInstanceNumber
+                    )
+
+                    withContext(Dispatchers.Main) {
+                        if (!success) {
+                            Toast.makeText(activity, "Oops! Something went wrong. Please try again!", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(activity, "Oops! It seems like you didn't input a number! " +
+                            "Please go back to the previous page and try again!", Toast.LENGTH_LONG).show()
+                    }
+                }
             }
         }
     }
@@ -96,14 +124,67 @@ class VerificationFragment : Fragment() {
         _binding = null
     }
 
+    // TODO: FIX THIS FOR PERMISSION FRAGMENT
+    private suspend fun verifyPostOnResult() {
+        withContext(Dispatchers.Main) {
+            val clientKey = SharedPreferenceHelpers.getClientKey(requireContext())
+            if (clientKey != null) {
+                SharedPreferenceHelpers.setUserSetupStage(
+                    context = requireContext(),
+                    userSetupStage = UserSetupStage.PERMISSIONS
+                )
+
+                val act = requireActivity()
+                if (act is MainActivity) {
+                    resendScope.cancel()
+
+                    val action = VerificationFragmentDirections.actionVerificationFragmentToPermissionFragment()
+                    findNavController().navigate(action)
+                }
+            } else {
+                Toast.makeText(activity, "Oops! Something went wrong. Please try again!", Toast.LENGTH_SHORT).show()
+
+                setDone()
+            }
+        }
+    }
+
     private fun setLoading() {
         binding.verificationProgressBar.visibility = View.VISIBLE
-        binding.verificationCardText.setTextColor(ContextCompat.getColor(requireContext(), R.color.disabled_grey))
+        binding.verificationCard.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.grey))
+        binding.verificationCardText.setTextColor(ContextCompat.getColor(requireContext(), R.color.purple_200))
     }
 
     private fun setDone() {
         binding.verificationProgressBar.visibility = View.GONE
+        binding.verificationCard.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.purple_200))
         binding.verificationCardText.setTextColor(ContextCompat.getColor(requireContext(), R.color.icon_white))
+    }
+
+    /**
+     * NOTE: We use nullable [_binding] in case of quick switching between screens, which may lead
+     * [_binding] to become null.
+     */
+    private fun showActiveResend() {
+        _binding?.verificationResendCard?.isClickable = true
+        _binding?.verificationResendCard?.isFocusable = true
+        _binding?.verificationResendCard?.visibility = View.VISIBLE
+        _binding?.verificationResendTimer?.visibility = View.GONE
+        _binding?.verificationResendIcon?.iconTint = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.icon_white))
+        _binding?.verificationResendText?.setTextColor(ContextCompat.getColor(requireContext(), R.color.icon_white))
+    }
+
+    /**
+     * NOTE: We use nullable [_binding] in case of quick switching between screens, which may lead
+     * [_binding] to become null.
+     */
+    private fun showTimerResend() {
+        _binding?.verificationResendCard?.isClickable = false
+        _binding?.verificationResendCard?.isFocusable = false
+        _binding?.verificationResendCard?.visibility = View.VISIBLE
+        _binding?.verificationResendTimer?.visibility = View.VISIBLE
+        _binding?.verificationResendIcon?.iconTint = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.disabled_grey))
+        _binding?.verificationResendText?.setTextColor(ContextCompat.getColor(requireContext(), R.color.disabled_grey))
     }
 
     private fun setupAppBar() {

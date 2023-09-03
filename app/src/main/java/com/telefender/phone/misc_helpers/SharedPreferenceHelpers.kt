@@ -7,7 +7,7 @@ import com.telefender.phone.data.server_related.toServerModeFromUrlPart
 
 
 enum class SharedPreferenceKey(val keyString: String) {
-    USER_READY("userReady"),
+    USER_SETUP_STAGE("userSetupStage"),
     SERVER_MODE_URL("serverModeUrl"),
     SESSION_ID("sessionID"),
     INSTANCE_NUMBER("instanceNumber"),
@@ -15,19 +15,21 @@ enum class SharedPreferenceKey(val keyString: String) {
 }
 
 object SharedPreferenceHelpers {
+
     /**
-     * Sets user ready SharedPreference.
+     * Sets user setup stage SharedPreference (e.g., INITIAL, PERMISSIONS, etc.).
      */
-    fun setUserReady(
+    fun setUserSetupStage(
         context: Context,
-        userReady: Boolean
+        userSetupStage: UserSetupStage
     ) {
         val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
         val editor = sharedPreferences.edit()
 
-        editor.putBoolean(SharedPreferenceKey.USER_READY.keyString, userReady)
+        editor.putString(SharedPreferenceKey.USER_SETUP_STAGE.keyString, userSetupStage.serverString)
         editor.apply()
     }
+
 
     /**
      * Sets session ID SharedPreference.
@@ -86,13 +88,16 @@ object SharedPreferenceHelpers {
     }
 
     /**
-     * Gets user ready SharedPreference.
+     * Gets user setup stage SharedPreference (e.g., INITIAL, PERMISSIONS, etc.).
      */
-    fun getUserReady(context: Context) : Boolean {
+    fun getUserSetupStage(context: Context) : UserSetupStage {
         val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
-        return sharedPreferences.getBoolean(SharedPreferenceKey.USER_READY.keyString, false)
+        val serverString = sharedPreferences.getString(
+            SharedPreferenceKey.USER_SETUP_STAGE.keyString,
+            UserSetupStage.INITIAL.serverString
+        )
+        return serverString?.toUserSetupStageFromServerStr() ?: UserSetupStage.INITIAL
     }
-
 
     /**
      * Gets session ID SharedPreference.
@@ -111,14 +116,20 @@ object SharedPreferenceHelpers {
         baseURL: String
     ) : String {
         val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
-        val urlPart = sharedPreferences.getString(SharedPreferenceKey.SERVER_MODE_URL.keyString, ServerMode.TEST.urlPart)
+        val urlPart = sharedPreferences.getString(
+            SharedPreferenceKey.SERVER_MODE_URL.keyString,
+            ServerMode.TEST.urlPart
+        )
         return "https://$urlPart$baseURL"
     }
 
 
     fun getServerMode(context: Context) : ServerMode {
         val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
-        val urlPart = sharedPreferences.getString(SharedPreferenceKey.SERVER_MODE_URL.keyString, ServerMode.TEST.urlPart)
+        val urlPart = sharedPreferences.getString(
+            SharedPreferenceKey.SERVER_MODE_URL.keyString,
+            ServerMode.TEST.urlPart
+        )
         return urlPart?.toServerModeFromUrlPart() ?: ServerMode.TEST
     }
 

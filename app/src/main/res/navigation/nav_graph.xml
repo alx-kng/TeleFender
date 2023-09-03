@@ -76,7 +76,25 @@
         tools:layout="@layout/fragment_verification"
         >
         <action
-            android:id="@+id/action_verificationFragment_to_dialerFragment"
+            android:id="@+id/action_verificationFragment_to_permissionFragment"
+            app:destination="@id/permissionFragment"
+            app:popUpTo="@id/nav_graph"
+            app:popUpToInclusive="true"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right"
+            />
+    </fragment>
+
+    <fragment
+        android:id="@+id/permissionFragment"
+        android:name="com.telefender.phone.gui.fragments.PermissionFragment"
+        android:label="PermissionFragment"
+        tools:layout="@layout/fragment_permission"
+        >
+        <action
+            android:id="@+id/action_permissionFragment_to_dialerFragment"
             app:destination="@id/dialerFragment"
             app:popUpTo="@id/nav_graph"
             app:popUpToInclusive="true"

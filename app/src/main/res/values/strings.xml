@@ -20,18 +20,25 @@
     <string name="keypad_title">Keypad</string>
     <string name="dialer_title">Dialer</string>
     <string name="privacy_policy_title">Privacy Policy</string>
+    <string name="permission_title">Setup</string>
     <string name="verification_title">Setup</string>
     <string name="call_history_title">Call History</string>
     <string name="initial_title">Welcome</string>
     <string name="keypad">Keypad</string>
     <string name="more_app_bar">More</string>
 
+    <string name="permission_big_text">Last step!</string>
+    <string name="permission_small_text">In order for TeleFender to function properly, we just need you to allow a couple permissions.</string>
+    <string name="permission_dialer_small_text">Setting TeleFender as the default dialer app will allow the app to make and receive calls just like the default phone app. Essentially, we\'re replacing the default phone app. Don\'t worry though, you can always switch back to the default phone app by entering the default phone app or deleting TeleFender.</string>
+    <string name="permission_disturb_small_text">Allowing TeleFender to have the Do Not Disturb permission makes it possible for the app to actually silence any unwanted calls (if you so choose).\n\nWhen you press the \"Allow Do Not Disturb\" button, you will be redirected to the Settings app. There, you should scroll down until you see "TeleFender", where you can then toggle on / off the Do Not Disturb permission.</string>
+    <string name="permission_continue_text">After you allow both permissions, go ahead and press Continue!</string>
+
     <string name="verification_text">We just sent a verification code to your number.</string>
     <string name="number_fill_text">We\'ll need your number to get started.</string>
 
-    <string name="privacy_dialog_text">
-        To use TeleFender, you need to accept our privacy policy.\n\nIf you have any additional concerns about our privacy policy, please contact us for more information.
-    </string>
+    <string name="privacy_dialog_text">To use TeleFender, you need to accept our privacy policy.\n\nIf you have any additional concerns about our privacy policy, please contact us for more information.</string>
+
+    <string name="disturb_dialog_text">In order for TeleFender to silence any unwanted calls we will need the Do Not Disturb permission.\n\nWhen you press the \"Allow Do Not Disturb\" button, you will be redirected to the Settings app. There, you should scroll down until you see "TeleFender", where you can then toggle on / off the Do Not Disturb permission.\n\nOnce you\'ve granted the permission, you will be able to select the \"Silence\" mode.</string>
 
     <string name="channel_name">Incoming and active phone notification channel</string>
     <string name="channel_description">High-priority notification to show incoming and active calls</string>

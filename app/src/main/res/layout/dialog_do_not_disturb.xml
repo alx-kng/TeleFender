@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- res/layout/dialog_custom.xml -->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/grey_rounded"
+    android:paddingTop="8dp"
+    android:paddingBottom="16dp"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    >
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        android:orientation="horizontal"
+        >
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/disturbCloseButton"
+            style="?attr/materialButtonStyle"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:backgroundTint="@color/grey"
+            android:foreground="?android:selectableItemBackground"
+            app:icon="@drawable/ic_baseline_close_24"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            app:iconSize="24dp"
+            app:iconTint="@color/icon_white"
+            />
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/disturbDialogText"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:gravity="center_vertical"
+        android:text="@string/disturb_dialog_text"
+        android:textColor="@color/icon_white"
+        android:textSize="18sp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/disturbDialogButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:padding="10dp"
+        android:text="Allow Do Not Disturb"
+        android:textSize="17sp"
+        android:textAllCaps="false"
+        android:textColor="@color/icon_white"
+        android:backgroundTint="@color/purple_200"
+        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.Rounded"
+        />
+
+</LinearLayout>

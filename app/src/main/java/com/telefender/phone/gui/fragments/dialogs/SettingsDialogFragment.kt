@@ -13,8 +13,10 @@ import com.telefender.phone.R
 import com.telefender.phone.call_related.HandleMode
 import com.telefender.phone.databinding.DialogSettingsBinding
 import com.telefender.phone.gui.CommonIntentsForUI
+import com.telefender.phone.gui.MainActivity
 import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
+import com.telefender.phone.permissions.Permissions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -22,6 +24,10 @@ import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 
+/**
+ * TODO: Request Do Not Disturb permission if silence is pressed and don't have permission (for case
+ *  where user removes permission from app after setup - which does require do not disturb permission).
+ */
 class SettingsDialogFragment : DialogFragment() {
 
     private var _binding: DialogSettingsBinding? = null
@@ -51,9 +57,13 @@ class SettingsDialogFragment : DialogFragment() {
         }
 
         binding.handleSilenceOption.setOnClickListener {
-            scope.launch {
-                updateHandleMode(HandleMode.SILENCE_MODE)
-                updateHandleModeColors()
+            if (Permissions.hasDoNotDisturbPermission(requireContext())) {
+                scope.launch {
+                    updateHandleMode(HandleMode.SILENCE_MODE)
+                    updateHandleModeColors()
+                }
+            } else {
+                DoNotDisturbDialog().show(parentFragmentManager, "doNotDisturbDialog")
             }
         }
 
@@ -83,6 +93,18 @@ class SettingsDialogFragment : DialogFragment() {
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
+
+
+        if (activity is MainActivity) {
+            val act = activity as MainActivity
+
+            val job = act.checkValidHandleMode()
+
+            scope.launch {
+                job.join()
+                updateHandleModeColors()
+            }
+        }
     }
 
     override fun onDestroyView() {

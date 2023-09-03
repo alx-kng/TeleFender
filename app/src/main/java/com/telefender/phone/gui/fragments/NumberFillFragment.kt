@@ -1,5 +1,6 @@
 package com.telefender.phone.gui.fragments
 
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -52,6 +53,8 @@ class NumberFillFragment : Fragment() {
         setupAppBar()
         hideBottomNavigation()
 
+        setDone()
+
         // Set to previous value if it exists.
         binding.numberFillEdit.setText(verificationViewModel.manualInstanceNumber)
 
@@ -78,8 +81,6 @@ class NumberFillFragment : Fragment() {
 
                     withContext(Dispatchers.Main) {
                         if (success) {
-                            setDone()
-
                             val action = NumberFillFragmentDirections.actionNumberFillFragmentToVerificationFragment()
                             findNavController().navigate(action)
                         } else {
@@ -97,11 +98,13 @@ class NumberFillFragment : Fragment() {
 
     private fun setLoading() {
         binding.numberFillProgressBar.visibility = View.VISIBLE
-        binding.numberFillCardText.setTextColor(ContextCompat.getColor(requireContext(), R.color.disabled_grey))
+        binding.numberFillCard.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.grey))
+        binding.numberFillCardText.setTextColor(ContextCompat.getColor(requireContext(), R.color.purple_200))
     }
 
     private fun setDone() {
         binding.numberFillProgressBar.visibility = View.GONE
+        binding.numberFillCard.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.purple_200))
         binding.numberFillCardText.setTextColor(ContextCompat.getColor(requireContext(), R.color.icon_white))
     }
 

@@ -110,10 +110,6 @@ abstract class ClientDatabase : RoomDatabase() {
                     database.initCoreDatabase(context)
                     database.waitForInitialization(context, scope)
 
-                    /*
-                    User setup goes before rest of database, because that may take a long time.
-                    Note that userSetup() uses a waiter, so everything after it should be setup.
-                     */
                     database.userSetup(context)
 
                     // Rest of database initialization only requires that the core is initialized.
@@ -172,9 +168,6 @@ abstract class ClientDatabase : RoomDatabase() {
         if (sharedPrefClientKey != null) {
             repository.updateStoredMap(clientKey = sharedPrefClientKey)
         }
-
-//        SetupScheduler.initiateSetupWorker(context)
-//        ExperimentalWorkStates.generalizedWorkWaiter(WorkType.SETUP)
     }
 
     /**
@@ -297,9 +290,7 @@ abstract class ClientDatabase : RoomDatabase() {
             delay(500)
             Timber.i("$DBL: getDatabase() - USER SETUP = FALSE")
 
-            if (ExperimentalWorkStates.generalizedGetState(WorkType.SETUP) == null) {
-                SetupScheduler.initiateSetupWorker(context)
-            }
+            userSetup(context)
         }
         Timber.i("$DBL: getDatabase() - USER SETUP = TRUE")
     }
@@ -389,7 +380,7 @@ abstract class ClientDatabase : RoomDatabase() {
                     Timber.e("$DBL: SIM CARRIER = '${TeleHelpers.getSimCarrier(context)}'")
 
                     // TODO: Probably need to restart firebase initialization process too.
-                    // Waits for / restarts core database initialization and user setup.
+                    // Waits for / restarts core database initialization and setup.
                     instanceTemp.waitForInitialization(context, scope)
                     instanceTemp.waitForSetup(context)
 

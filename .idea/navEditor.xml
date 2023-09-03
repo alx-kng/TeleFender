@@ -96,8 +96,8 @@
                       <LayoutPositions>
                         <option name="myPosition">
                           <Point>
-                            <option name="x" value="-421" />
-                            <option name="y" value="-548" />
+                            <option name="x" value="-84" />
+                            <option name="y" value="-545" />
                           </Point>
                         </option>
                       </LayoutPositions>
@@ -136,6 +136,27 @@
                         <option name="myPositions">
                           <map>
                             <entry key="action_numberFillFragment_to_verificationFragment">
+                              <value>
+                                <LayoutPositions />
+                              </value>
+                            </entry>
+                          </map>
+                        </option>
+                      </LayoutPositions>
+                    </value>
+                  </entry>
+                  <entry key="permissionFragment">
+                    <value>
+                      <LayoutPositions>
+                        <option name="myPosition">
+                          <Point>
+                            <option name="x" value="-391" />
+                            <option name="y" value="-548" />
+                          </Point>
+                        </option>
+                        <option name="myPositions">
+                          <map>
+                            <entry key="action_permissionFragment_to_dialerFragment">
                               <value>
                                 <LayoutPositions />
                               </value>
@@ -195,6 +216,15 @@
                             <option name="x" value="-734" />
                             <option name="y" value="-548" />
                           </Point>
+                        </option>
+                        <option name="myPositions">
+                          <map>
+                            <entry key="action_verificationFragment_to_permissionFragment">
+                              <value>
+                                <LayoutPositions />
+                              </value>
+                            </entry>
+                          </map>
                         </option>
                       </LayoutPositions>
                     </value>

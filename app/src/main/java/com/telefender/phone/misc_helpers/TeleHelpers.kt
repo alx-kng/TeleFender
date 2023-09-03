@@ -120,7 +120,7 @@ object TeleHelpers {
      *  -> Found solution. Look in Permissions. SUMMARIZE.
      *
      * Gets user's phone number. Tries to retrieve from own database before resorting to retrieving
-     * using permissions.
+     * from SharedPreferences or using permissions.
      */
     @SuppressLint("MissingPermission")
     suspend fun getUserNumberUncertain(context: Context) : String? {
@@ -128,8 +128,13 @@ object TeleHelpers {
 
         return databaseNumber ?:
             if (!Permissions.hasPhoneStatePermissions(context)) {
-                Timber.e("$DBL: User number was null due to lack of permissions!!!")
-                return null
+                val sharedPrefInstanceNumber = SharedPreferenceHelpers.getInstanceNumber(context)
+                if (sharedPrefInstanceNumber != null) {
+                    return sharedPrefInstanceNumber
+                } else {
+                    Timber.e("$DBL: User number was null due to lack of permissions!!!")
+                    return null
+                }
             } else {
                 val tMgr = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
                 val sMgr = context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE) as SubscriptionManager
@@ -147,7 +152,7 @@ object TeleHelpers {
                     tMgr.line1Number
                 }
 
-                return normalizedNumber(number) ?: bareNumber(number)
+                return normalizedNumber(number)
             }
     }
 

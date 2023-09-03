@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    >
+
+    <data>
+    </data>
+
+    <ScrollView
+        android:layout_height="match_parent"
+        android:layout_width="match_parent"
+        android:background="@color/black"
+        >
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingLeft="20dp"
+            android:paddingRight="20dp"
+            android:paddingBottom="100dp"
+            >
+
+            <TextView
+                android:id="@+id/permission_big_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="120dp"
+                android:fontFamily="@font/maven_pro"
+                android:gravity="center"
+                android:text="@string/permission_big_text"
+                android:textColor="@color/icon_white"
+                android:textSize="30sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                />
+
+            <TextView
+                android:id="@+id/permission_small_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="60dp"
+                android:fontFamily="@font/maven_pro"
+                android:gravity="center"
+                android:text="@string/permission_small_text"
+                android:textColor="@color/icon_white"
+                android:textSize="18sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/permission_big_text"
+                />
+
+            <TextView
+                android:id="@+id/permission_dialer_small_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="60dp"
+                android:fontFamily="@font/maven_pro"
+                android:gravity="left"
+                android:text="@string/permission_dialer_small_text"
+                android:textColor="@color/icon_white"
+                android:textSize="18sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/permission_small_text"
+                />
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/permission_dialer_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="30dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:backgroundTint="@color/purple_200"
+                app:contentPadding="10dp"
+                app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.CardView.Rounded"
+                app:layout_constraintTop_toBottomOf="@id/permission_dialer_small_text"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                >
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal"
+                    >
+
+                    <TextView
+                        android:id="@+id/permission_dialer_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:fontFamily="@font/maven_pro"
+                        android:text="Set to Default Dialer"
+                        android:textColor="@color/icon_white"
+                        android:textSize="20sp"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toStartOf="@id/permission_dialer_check"
+                        />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/permission_dialer_check"
+                        style="?attr/materialButtonStyle"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:clickable="false"
+                        android:focusable="false"
+                        android:backgroundTint="@color/purple_200"
+                        android:insetLeft="0dp"
+                        android:insetTop="0dp"
+                        android:insetRight="0dp"
+                        android:insetBottom="0dp"
+                        android:padding="0dp"
+                        app:icon="@drawable/ic_baseline_check_box_outline_blank_24"
+                        app:iconGravity="textStart"
+                        app:iconPadding="0dp"
+                        app:iconSize="30dp"
+                        app:iconTint="@color/icon_white"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:id="@+id/permission_disturb_small_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="30dp"
+                android:fontFamily="@font/maven_pro"
+                android:gravity="left"
+                android:text="@string/permission_disturb_small_text"
+                android:textColor="@color/icon_white"
+                android:textSize="18sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/permission_dialer_card"
+                />
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/permission_disturb_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="30dp"
+
+                android:clickable="true"
+                android:focusable="true"
+                android:backgroundTint="@color/purple_200"
+                app:contentPadding="10dp"
+                app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.CardView.Rounded"
+                app:layout_constraintTop_toBottomOf="@id/permission_disturb_small_text"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                >
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal"
+                    >
+
+                    <TextView
+                        android:id="@+id/permission_disturb_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:fontFamily="@font/maven_pro"
+                        android:text="Allow Do Not Disturb"
+                        android:textColor="@color/icon_white"
+                        android:textSize="20sp"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toStartOf="@id/permission_disturb_check"
+                        />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/permission_disturb_check"
+                        style="?attr/materialButtonStyle"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:clickable="false"
+                        android:focusable="false"
+                        android:backgroundTint="@color/purple_200"
+                        android:insetLeft="0dp"
+                        android:insetTop="0dp"
+                        android:insetRight="0dp"
+                        android:insetBottom="0dp"
+                        android:padding="0dp"
+                        app:icon="@drawable/ic_baseline_check_box_outline_blank_24"
+                        app:iconGravity="textStart"
+                        app:iconPadding="0dp"
+                        app:iconSize="30dp"
+                        app:iconTint="@color/icon_white"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:id="@+id/permission_continue_small_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="30dp"
+                android:fontFamily="@font/maven_pro"
+                android:gravity="left"
+                android:text="@string/permission_continue_text"
+                android:textColor="@color/icon_white"
+                android:textSize="18sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/permission_disturb_card"
+                />
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/permission_continue_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="30dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:backgroundTint="@color/grey"
+                app:contentPadding="10dp"
+                app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.CardView.Rounded"
+                app:layout_constraintTop_toBottomOf="@id/permission_continue_small_text"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                >
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal"
+                    >
+
+                    <TextView
+                        android:id="@+id/permission_continue_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:fontFamily="@font/maven_pro"
+                        android:text="Continue"
+                        android:textColor="@color/purple_200"
+                        android:textSize="20sp"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </ScrollView>
+
+</layout>

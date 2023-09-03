@@ -159,7 +159,7 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
             val tempLogs = mutableListOf<CallDetail>()
 
             DefaultCallDetails.getDefaultCallDetailCursor(applicationContext)?.use {
-                val instanceNumber = TeleHelpers.getUserNumberStored(applicationContext)
+                val instanceNumber = TeleHelpers.getUserNumberUncertain(applicationContext)
                     ?: return@launch
 
                 var count = 0

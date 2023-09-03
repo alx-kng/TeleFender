@@ -57,7 +57,7 @@
                     android:background="?android:selectableItemBackground"
                     android:foreground="?android:selectableItemBackground"
                     android:gravity="center"
-                    app:icon="@drawable/ic_baseline_more_vert_24"
+                    app:icon="@drawable/ic_baseline_settings_24"
                     app:iconGravity="textStart"
                     app:iconPadding="0dp"
                     app:iconSize="25dp"

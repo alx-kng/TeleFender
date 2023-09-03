@@ -23,14 +23,16 @@ import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import com.telefender.phone.App
 import com.telefender.phone.R
+import com.telefender.phone.call_related.HandleMode
+import com.telefender.phone.data.tele_database.entities.defaultHandleMode
 import com.telefender.phone.databinding.ActivityMainBinding
-import com.telefender.phone.gui.fragments.dialogs.PrivacyDialogFragment
 import com.telefender.phone.gui.fragments.dialogs.SettingsDialogFragment
 import com.telefender.phone.gui.model.*
 import com.telefender.phone.misc_helpers.*
@@ -38,12 +40,12 @@ import com.telefender.phone.permissions.PermissionRequestType
 import com.telefender.phone.permissions.Permissions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
 
 /**
- *
  * TODO: YOU LISTEN TO ME!!!! THERE IS A LEAK IN THE CONTACTS OBSERVER!!!
  *  FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
  *
@@ -68,6 +70,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var navController: NavController
     private lateinit var binding: ActivityMainBinding
 
+    private val scope = CoroutineScope(Dispatchers.Default)
+
+    private val permissionViewModel : PermissionViewModel by viewModels {
+        PermissionViewModelFactory(this.application)
+    }
+
     private val verificationViewModel : VerificationViewModel by viewModels {
         VerificationViewModelFactory(this.application)
     }
@@ -86,12 +94,17 @@ class MainActivity : AppCompatActivity() {
     private var contactObserver: ContactsObserver? = null
 
     /**
+     * TODO: We may have to comment out the core alt permissions, as apparently they may not be
+     *  allowed when default dialer is not accepted (as per google developer policy).
+     *
      * TODO: Should request regular call log / phone permissions if user denies default dialer
      *  permissions (to stop app from crashing in recents and contacts). Find better user flow.
      *   -> basic coreAltPermissions() called, but we probably need to do more.
      *   -> Maybe we shouldn't immediately request all and only request permissions on screens
      *   that need it (e.g., if user tries to enter contacts screen, then first request contact
      *   permissions).
+     *
+     * TODO: Document the notification permission more.
      *
      * Result for default dialer request made in [requestDefaultDialer]. If the default dialer is
      * accepted, we then ask for phone state permissions (read comment in code below).
@@ -107,11 +120,11 @@ class MainActivity : AppCompatActivity() {
              */
             if (Build.VERSION.SDK_INT > Build.VERSION_CODES.Q) {
                 Permissions.phoneStatePermissions(this)
-            } else {
-                Permissions.doNotDisturbPermission(this)
             }
+
+            permissionViewModel.setIsDefaultDialer(true)
         } else {
-            Permissions.coreAltPermissions(this)
+            permissionViewModel.setIsDefaultDialer(false)
         }
 
         Permissions.notificationPermission(this, this)
@@ -156,7 +169,7 @@ class MainActivity : AppCompatActivity() {
                 Timber.i("$DBL: PHONE_STATE Permissions result!")
 
                 if (grantResults.first() == PackageManager.PERMISSION_GRANTED) {
-                    Permissions.doNotDisturbPermission(this)
+                    Timber.i("$DBL: PHONE_STATE Permission GRANTED!")
                 }
             }
             PermissionRequestType.NOTIFICATIONS.requestCode -> {
@@ -186,8 +199,9 @@ class MainActivity : AppCompatActivity() {
 
         setSupportActionBar(binding.topAppBarMain)
 
-        if (SharedPreferenceHelpers.getUserReady(this)) {
-            userReadyOnCreateSetup()
+        when (SharedPreferenceHelpers.getUserSetupStage(this)) {
+            UserSetupStage.COMPLETE -> completedSetupOnCreate()
+            else -> {}
         }
 
         dialerViewModel.setFromInCall(fromInCall = false)
@@ -201,8 +215,9 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
 
-        if (SharedPreferenceHelpers.getUserReady(this)) {
-            userReadyOnStartSetup()
+        when (SharedPreferenceHelpers.getUserSetupStage(this)) {
+            UserSetupStage.COMPLETE -> completedSetupOnStart()
+            else -> {}
         }
     }
 
@@ -262,18 +277,24 @@ class MainActivity : AppCompatActivity() {
         // Manually inflate the NavGraph and set the startDestination
         val navGraph = navController.navInflater.inflate(R.navigation.nav_graph)
         navGraph.setStartDestination(
-            if (SharedPreferenceHelpers.getUserReady(this))
-                R.id.dialerFragment
-            else
-                R.id.initialFragment
+            when (SharedPreferenceHelpers.getUserSetupStage(this)) {
+                UserSetupStage.INITIAL -> R.id.initialFragment
+                UserSetupStage.PERMISSIONS -> R.id.permissionFragment
+                UserSetupStage.COMPLETE -> R.id.dialerFragment
+            }
         )
         navController.graph = navGraph
     }
 
-    fun userReadyOnCreateSetup() {
+    fun completedSetupOnCreate() {
         // TODO: why was this here?
 //        displayMoreMenu(false)
 
+        /*
+        We request the default dialer here again (even though the user should've granted the dialer
+        in the setup process) just in case the default dialer permission was revoked (e.g., going
+        back to the default phone app).
+         */
         requestDefaultDialer()
 
         notificationChannelCreator()
@@ -287,7 +308,7 @@ class MainActivity : AppCompatActivity() {
         handleTeleDeepLinkIntent(intent)
     }
 
-    fun userReadyOnStartSetup() {
+    fun completedSetupOnStart() {
         updateBottomHighlight()
 
         initializeDatabase()
@@ -297,6 +318,8 @@ class MainActivity : AppCompatActivity() {
          * granted before).
          */
         setupObservers(onCreate = false)
+
+        checkValidHandleMode()
     }
 
     /**
@@ -306,7 +329,7 @@ class MainActivity : AppCompatActivity() {
     private fun handleTeleDeepLinkIntent(intent: Intent?) {
         val data: Uri? = intent?.data
 
-        Timber.e("$DBL: Data = $data")
+        Timber.e("$DBL: Deep Link Data = $data")
 
         CoroutineScope(Dispatchers.Default).launch {
             // Extract the phone number from the deep link
@@ -361,7 +384,7 @@ class MainActivity : AppCompatActivity() {
      * Offers to replace default dialer, automatically makes requesting permissions
      * separately unnecessary.
      */
-    private fun requestDefaultDialer() {
+    fun requestDefaultDialer() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             if (!Permissions.isDefaultDialer(this)) {
                 val roleManager = getSystemService(Context.ROLE_SERVICE) as RoleManager
@@ -557,6 +580,23 @@ class MainActivity : AppCompatActivity() {
 
         app.applicationScope.launch {
             app.repository.dummyQuery()
+        }
+    }
+
+    /**
+     * If the user gets rid of the Do Not Disturb permission and the app is on Silence mode, we
+     * need to change the handle mode in the database back to the default mode, so that the app
+     * works as expected.
+     */
+    fun checkValidHandleMode() : Job {
+        return scope.launch {
+            val currentHandleMode = TeleHelpers.currentHandleMode(this@MainActivity)
+            if (!Permissions.hasDoNotDisturbPermission(this@MainActivity)
+                && currentHandleMode == HandleMode.SILENCE_MODE
+            ) {
+                val repository = (this@MainActivity.applicationContext as App).repository
+                repository.updateStoredMap(handleMode = defaultHandleMode)
+            }
         }
     }
 

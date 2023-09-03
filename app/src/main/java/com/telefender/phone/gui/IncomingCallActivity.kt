@@ -70,8 +70,6 @@ class IncomingCallActivity : AppCompatActivity() {
         // Sets created
         _running = true
 
-        val safe = intent?.extras?.getBoolean("Safe") ?: true
-
         showOverLockScreen()
 
         // Need to observe forever so that observer still runs when activity is not showing.
@@ -91,6 +89,7 @@ class IncomingCallActivity : AppCompatActivity() {
             TeleHelpers.getContactName(this, it)
         } ?: TeleHelpers.normalizedNumber(number)
 
+        val safe = intent?.extras?.getBoolean("Safe") ?: true
         binding.displaySpamInfo.visibility = if (safe) View.GONE else View.VISIBLE
 
         binding.answerIncoming.setOnClickListener {
@@ -143,6 +142,7 @@ class IncomingCallActivity : AppCompatActivity() {
          */
         val powerManager = getSystemService(POWER_SERVICE) as PowerManager
         val screenOn = powerManager.isInteractive
+        val keyguardManager = getSystemService(KEYGUARD_SERVICE) as KeyguardManager
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
@@ -153,8 +153,8 @@ class IncomingCallActivity : AppCompatActivity() {
                  * Makes sure to not dismiss keyguard if already dismissed. Otherwise, the keyguard
                  * pops up again. Keyguard is already dismissed if InCallActivity is running.
                  */
-                if (!InCallActivity.running) {
-                    val keyguardManager = getSystemService(KEYGUARD_SERVICE) as KeyguardManager
+                if (keyguardManager.isKeyguardLocked || keyguardManager.isKeyguardSecure) {
+                    Timber.e("$DBL: Keyguard try to dismiss!")
                     keyguardManager.requestDismissKeyguard(this, null)
                 }
             }
