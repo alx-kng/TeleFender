@@ -112,11 +112,17 @@ abstract class ClientDatabase : RoomDatabase() {
 
                     database.userSetup(context)
 
+                    Timber.e("$DBL: USER SETUP FINISHED!")
+
                     // Rest of database initialization only requires that the core is initialized.
                     database.initRestOfDatabase(context)
 
+                    Timber.e("$DBL: REST OF DATABASE FINISHED!")
+
                     // Firebase token retrieval and subsequent server upload requires user setup.
                     database.initFirebase(context)
+
+                    Timber.e("$DBL: FIREBASE FINISHED!")
 
                     firstTimeAccess = false
                 }
@@ -320,6 +326,8 @@ abstract class ClientDatabase : RoomDatabase() {
         private var INSTANCE: ClientDatabase? = null
 
         /**
+         * TODO: WAITING FOR REST OF DATABASE FOREVER! -> VERY OCCASIONALLY, FIND OUT!
+         *
          * TODO: YOU LISTEN TO ME RIGHT NOW!!! FIND OUT WHAT HAPPENS IF YOU CALL BEFORE USER SETUP
          *  FINISHES AND THE SYNC OBSERVER IS LAUNCHED. FROM PRELIMINARY TESTING, IT SEEMS LIKE
          *  THE DATABASE CAN STILL BE ACCESSED EVEN BEFORE THE SETUP / getDatabase() returns.
