@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
+import com.telefender.phone.R
 import com.telefender.phone.call_related.CallHelpers
 import com.telefender.phone.databinding.FragmentCallHistoryBinding
 import com.telefender.phone.gui.CommonIntentsForUI
@@ -25,7 +26,11 @@ import timber.log.Timber
 
 
 /**
- * TODO: Pre-fill number when adding completely new contact.
+ * TODO: THERE MAY STILL BE A PROBLEM WITH "EDIT" SHOWING FOR NON-CONTACT NUMBERS. KEEP CHECKING!
+ *  -> Think it might be fixed actually, but double check!
+ *
+ * TODO: CallHistoryFragment VERY VERY VERY OCCASIONALLY SHOWS BLANK AFTER DOING SOME SORT OF
+ *  ACTION (unsure). Only happened once, but look out for it.
  */
 class CallHistoryFragment : Fragment() {
 
@@ -177,6 +182,11 @@ class CallHistoryFragment : Fragment() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        updateAppBar(recentsViewModel.getCurrentCID() != null)
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
@@ -209,12 +219,16 @@ class CallHistoryFragment : Fragment() {
         if (activity is MainActivity) {
             val act = (activity as MainActivity)
 
+            act.displayUpButton(true)
+            act.displayMoreMenu(false)
+
             // Prevents blinking from Add to Edit when there is no header in the day logs yet.
             if (!recentsViewModel.hasHeader()) {
                 act.displayAppBarTextButton()
             } else if (isContact) {
                 act.displayAppBarTextButton(show2 = true, text2 = "Edit")
                 act.setAppBarTextButtonOnClickListener(
+                    fragment2 = R.id.callHistoryFragment,
                     onClickListener2 = {
                         val action = CallHistoryFragmentDirections.actionCallHistoryFragmentToChangeContactFragment()
                         findNavController().navigate(action)
@@ -223,6 +237,7 @@ class CallHistoryFragment : Fragment() {
             } else {
                 act.displayAppBarTextButton(show2 = true, text2 = "Add")
                 act.setAppBarTextButtonOnClickListener(
+                    fragment2 = R.id.callHistoryFragment,
                     onClickListener2 = {
                         contactsViewModel.setDataLists(
                             selectCID = null,

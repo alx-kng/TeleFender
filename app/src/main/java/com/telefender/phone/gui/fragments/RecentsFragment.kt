@@ -22,6 +22,8 @@ import timber.log.Timber
 
 
 /**
+ * TODO: Occasionally crashes on Android 10 for some reason when entering CallHistoryFragment
+ *
  * TODO: Do an all and missed section at top of recents screen.
  *
  * TODO: Handle case where permissions aren't given (or default dialer isn't granted).
@@ -91,6 +93,11 @@ class RecentsFragment : Fragment() {
         recentsViewModel.clearCallHistoryLists()
     }
 
+    override fun onResume() {
+        super.onResume()
+        updateAppBar()
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
@@ -110,6 +117,14 @@ class RecentsFragment : Fragment() {
 
             // Actually show app bar
             act.displayAppBar(true)
+        }
+    }
+
+    private fun updateAppBar() {
+        if (activity is MainActivity) {
+            val act = activity as MainActivity
+
+            act.setTitle(getString(R.string.recents_title))
         }
     }
 

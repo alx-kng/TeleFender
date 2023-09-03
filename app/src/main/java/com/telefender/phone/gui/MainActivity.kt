@@ -688,11 +688,37 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun setAppBarTextButtonOnClickListener(
+        fragment1: Int = -1,
+        fragment2: Int = -1,
         onClickListener1: (View)->Unit = {},
         onClickListener2: (View)->Unit = {}
     ) {
-        binding.appBarTextButton1.setOnClickListener(onClickListener1)
-        binding.appBarTextButton2.setOnClickListener(onClickListener2)
+        binding.appBarTextButton1.setOnClickListener {
+            Timber.e("$DBL: onClick1 - Fragment = ${getCurrentDestination(fragment1)} - id = $fragment1")
+
+            if (navController.currentDestination?.id == fragment1) {
+                onClickListener1(it)
+            }
+        }
+        binding.appBarTextButton2.setOnClickListener {
+            Timber.e("$DBL: onClick2 - Fragment = ${getCurrentDestination(fragment2)} - id = $fragment2")
+
+            if (navController.currentDestination?.id == fragment2) {
+                onClickListener2(it)
+            }
+        }
+    }
+
+    fun getCurrentDestination(id: Int) : String {
+        return when (id) {
+            R.id.contactsFragment -> "CONTACTS"
+            R.id.callHistoryFragment -> "CALL HISTORY"
+            R.id.viewContactFragment -> "VIEW CONTACT"
+            R.id.dialerFragment -> "DIALER"
+            R.id.changeContactFragment -> "CHANGE CONTACT"
+            R.id.recentsFragment -> "RECENTS"
+            else -> "SOME OTHER FRAGMENT"
+        }
     }
 
     fun setMoreButtonOnClickListener(
@@ -760,6 +786,7 @@ class MainActivity : AppCompatActivity() {
      * it.
      */
     fun revertAppBar() {
+        Timber.e("$DBL: REVERT APP BAR!")
         setTitle("")
         displayUpButton(false)
         displayMoreMenu(true)

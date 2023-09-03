@@ -91,6 +91,11 @@ class ContactsFragment : Fragment() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        updateAppBar()
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
@@ -106,9 +111,22 @@ class ContactsFragment : Fragment() {
             act.revertAppBar()
 
             // New app bar stuff
+            updateAppBar()
+
+            // Actually show app bar
+            act.displayAppBar(true)
+        }
+    }
+
+    private fun updateAppBar() {
+        if (activity is MainActivity) {
+            val act = activity as MainActivity
+
+            // New app bar stuff
             act.setTitle(getString(R.string.contacts_title))
             act.displayAppBarTextButton(show2 = true, text2 = "Add")
             act.setAppBarTextButtonOnClickListener(
+                fragment2 = R.id.contactsFragment,
                 onClickListener2 = {
                     contactsViewModel.setDataLists(selectCID = null)
                     val action = ContactsFragmentDirections.actionContactsFragmentToChangeContactFragment()
@@ -117,9 +135,6 @@ class ContactsFragment : Fragment() {
             )
 
             act.setEnabledAppBarTextButton(enabled2 = Permissions.isDefaultDialer(requireContext()))
-
-            // Actually show app bar
-            act.displayAppBar(true)
         }
     }
 

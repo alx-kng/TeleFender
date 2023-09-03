@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
+import com.telefender.phone.R
 import com.telefender.phone.call_related.CallHelpers
 import com.telefender.phone.databinding.FragmentViewContactBinding
 import com.telefender.phone.gui.CommonIntentsForUI
@@ -162,6 +163,11 @@ class ViewContactFragment : Fragment() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        updateAppBar()
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
@@ -175,19 +181,29 @@ class ViewContactFragment : Fragment() {
             act.revertAppBar()
 
             // New app bar stuff
+            updateAppBar()
+
+            // Actually show app bar
+            act.displayAppBar(true)
+        }
+    }
+
+    private fun updateAppBar() {
+        if (activity is MainActivity) {
+            val act = (activity as MainActivity)
+
+            // New app bar stuff
             act.displayUpButton(true)
             act.displayMoreMenu(false)
             act.displayAppBarTextButton(show2 = true, text2 = "Edit")
 
             act.setAppBarTextButtonOnClickListener(
+                fragment2 = R.id.viewContactFragment,
                 onClickListener2 = {
                     val action = ViewContactFragmentDirections.actionViewContactFragmentToChangeContactFragment()
                     findNavController().navigate(action)
                 }
             )
-
-            // Actually show app bar
-            act.displayAppBar(true)
         }
     }
 

@@ -196,6 +196,11 @@ class ChangeContactFragment : Fragment() {
         adapter?.registerAdapterDataObserver(adapterObserver)
     }
 
+    override fun onResume() {
+        super.onResume()
+        setupAppBar()
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         adapter?.unregisterAdapterDataObserver(adapterObserver)
@@ -326,12 +331,23 @@ class ChangeContactFragment : Fragment() {
     private fun setupAppBar() {
         if (activity is MainActivity) {
             val act = activity as MainActivity
-            val navController = findNavController()
 
             // Cleans old app bar before setting up new app bar
             act.revertAppBar()
 
             // New app bar stuff
+            updateAppBar()
+
+            // Actually show app bar
+            act.displayAppBar(true)
+        }
+    }
+
+    private fun updateAppBar() {
+        if (activity is MainActivity) {
+            val act = activity as MainActivity
+            val navController = findNavController()
+
             act.displayMoreMenu(show = false)
 
             act.displayAppBarTextButton(
@@ -342,6 +358,8 @@ class ChangeContactFragment : Fragment() {
             )
 
             act.setAppBarTextButtonOnClickListener(
+                fragment1 = R.id.changeContactFragment,
+                fragment2 = R.id.changeContactFragment,
                 onClickListener1 = {
                     requireActivity().onBackPressedDispatcher.onBackPressed()
                 },
@@ -351,36 +369,40 @@ class ChangeContactFragment : Fragment() {
                     contactsViewModel.submitChanges()
 
                     /*
-                    When submitting a Contact change, we want to bring the user to the ViewContact
-                    screen or CallHistory screen (while maintaining a clean / predictable backstack).
+                    When switching quickly between fragments, the onClickListeners can sometimes
+                    linger into the new fragment, making the navigation actions dangerous. So, we
+                    put an extra check here.
                      */
-                    val previousDestination = navController.previousBackStackEntry?.destination?.id
-                    if (previousDestination == R.id.viewContactFragment
-                        || previousDestination == R.id.callHistoryFragment
-                    ) {
+                    if (navController.currentDestination?.id == R.id.changeContactFragment) {
                         /*
-                        If the ChangeContactFragment was navigated to from the ViewContactFragment,
-                        or CallHistoryFragment, then just do a back press to get back to the
-                        corresponding Fragment.
+                        When submitting a Contact change, we want to bring the user to the ViewContact
+                        screen or CallHistory screen (while maintaining a clean / predictable backstack).
                          */
-                        requireActivity().onBackPressedDispatcher.onBackPressed()
-                    } else {
-                        /*
-                        If the ChangeContactFragment wasn't navigated to from the
-                        ViewContactFragment, then navigate to the ViewContactFragment while making
-                        sure to remove the ChangeContactFragment from the backstack (e.g., we don't
-                        want back button to take user back to edit screen). Moreover,
-                         */
-                        val action = ChangeContactFragmentDirections.actionChangeContactFragmentToViewContactFragment()
-                        navController.navigate(action)
+                        val previousDestination = navController.previousBackStackEntry?.destination?.id
+                        if (previousDestination == R.id.viewContactFragment
+                            || previousDestination == R.id.callHistoryFragment
+                        ) {
+                            /*
+                            If the ChangeContactFragment was navigated to from the ViewContactFragment,
+                            or CallHistoryFragment, then just do a back press to get back to the
+                            corresponding Fragment.
+                             */
+                            requireActivity().onBackPressedDispatcher.onBackPressed()
+                        } else {
+                            /*
+                            If the ChangeContactFragment wasn't navigated to from the
+                            ViewContactFragment, then navigate to the ViewContactFragment while making
+                            sure to remove the ChangeContactFragment from the backstack (e.g., we don't
+                            want back button to take user back to edit screen). Moreover,
+                             */
+                            val action = ChangeContactFragmentDirections.actionChangeContactFragmentToViewContactFragment()
+                            navController.navigate(action)
+                        }
                     }
                 }
             )
 
-            act.setEnabledAppBarTextButton(enabled2 = false)
-
-            // Actually show app bar
-            act.displayAppBar(true)
+//            act.setEnabledAppBarTextButton(enabled2 = false)
         }
     }
 

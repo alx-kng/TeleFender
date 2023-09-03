@@ -38,6 +38,11 @@ class InitialFragment : Fragment() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        setupAppBar()
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

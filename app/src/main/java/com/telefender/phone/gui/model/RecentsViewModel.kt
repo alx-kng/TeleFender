@@ -22,6 +22,7 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.temporal.Temporal
 import java.util.*
+import java.util.Locale.filter
 
 
 /**
@@ -62,6 +63,9 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
 
     private val numberNameMap = mutableMapOf<String, String>()
     private val noContactSet = mutableSetOf<String>()
+
+    private val logMutex = Mutex()
+    private val mapMutex = Mutex()
 
     /**********************************************************************************************
      * For CallHistoryFragment
@@ -176,7 +180,9 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
 
                     if (count == groupBatchSize) {
                         groupCallLogs(tempLogs)
-                        _callLogs.postValue(tempLogs)
+                        logMutex.withLock {
+                            _callLogs.postValue(tempLogs)
+                        }
                         count = 0
                     }
                 }
@@ -185,7 +191,9 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
             groupCallLogs(tempLogs)
 
             Timber.i("$DBL: ABOUT TO ASSIGN LOGS VALUE")
-            _callLogs.postValue(tempLogs)
+            logMutex.withLock {
+                _callLogs.postValue(tempLogs)
+            }
         }
     }
 
@@ -229,12 +237,14 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
         _groupedCallLogs = tempGroups
     }
 
-    private fun recheckNumberNameMap() {
+    private suspend fun recheckNumberNameMap() {
         val tempNoContactSet = noContactSet.toMutableSet()
         val tempNumberNameMap = numberNameMap.toMutableMap()
 
-        noContactSet.clear()
-        numberNameMap.clear()
+        mapMutex.withLock {
+            noContactSet.clear()
+            numberNameMap.clear()
+        }
 
         for (number in tempNoContactSet) {
             getAssociatedContactName(number)
@@ -250,7 +260,7 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
      * indicates whether the contact exists, as we return the normalized number as the associated
      * contact name if it doesn't exist.
      */
-    private fun getAssociatedContactName(normalizedNumber: String) : Pair<String, Boolean> {
+    private suspend fun getAssociatedContactName(normalizedNumber: String) : Pair<String, Boolean> {
         val mappedContactName = numberNameMap[normalizedNumber]
         val definitelyNoContact = noContactSet.contains(normalizedNumber)
 
@@ -260,10 +270,12 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
                 number = normalizedNumber
             )?.second
 
-            if (contactName == null) {
-                noContactSet.add(normalizedNumber)
-            } else {
-                numberNameMap[normalizedNumber] = contactName
+            mapMutex.withLock {
+                if (contactName == null) {
+                    noContactSet.add(normalizedNumber)
+                } else {
+                    numberNameMap[normalizedNumber] = contactName
+                }
             }
 
             Pair(contactName ?: normalizedNumber, contactName != null)
@@ -355,8 +367,11 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
         selectTimeParam: Long,
     ) : Job {
         return viewModelScope.launch(Dispatchers.Default) {
-            val tempDayLogs: MutableList<CallHistoryItem> = _callLogs.value
-                ?.filter { it.callEpochDate in startOfDay..endOfDay}
+            val firstFilter = logMutex.withLock {
+                _callLogs.value?.filter { it.callEpochDate in startOfDay..endOfDay}
+            }
+
+            val tempDayLogs: MutableList<CallHistoryItem> = firstFilter
                 ?.filter { it.rawNumber == selectNumberParam }
                 ?.map { CallHistoryData(callDetail = it) }
                 ?.toMutableList()
@@ -376,13 +391,15 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
 
             // Updates number name map and no contact set in case of modification.
             val name = associatedContact?.second
-            normalizedNum.let {
-                if (name == null) {
-                    numberNameMap.remove(key = it)
-                    noContactSet.add(element = it)
-                } else {
-                    numberNameMap[it] = name
-                    noContactSet.remove(element = it)
+            mapMutex.withLock {
+                normalizedNum.let {
+                    if (name == null) {
+                        numberNameMap.remove(key = it)
+                        noContactSet.add(element = it)
+                    } else {
+                        numberNameMap[it] = name
+                        noContactSet.remove(element = it)
+                    }
                 }
             }
 
