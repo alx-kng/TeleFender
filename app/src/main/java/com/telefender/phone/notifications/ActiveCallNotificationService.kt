@@ -15,6 +15,7 @@ import com.telefender.phone.call_related.*
 import com.telefender.phone.gui.InCallActivity
 import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.formatCutoff
 import com.telefender.phone.notifications.NotificationChannels.IN_CALL_CHANNEL_ID
 import timber.log.Timber
 
@@ -187,6 +188,7 @@ class ActiveCallNotificationService : LifecycleService() {
             } else {
                 TeleHelpers.UNKNOWN_NUMBER
             }
+
             val notificationText = "Active call"
 
             /*
@@ -203,7 +205,7 @@ class ActiveCallNotificationService : LifecycleService() {
              */
             if (CallManager.focusedConnection.value != null) {
                 contentView.apply {
-                    setTextViewText(R.id.active_notification_title, notificationTitle)
+                    setTextViewText(R.id.active_notification_title, notificationTitle.formatCutoff(14))
                     setTextViewText(R.id.active_notification_text, notificationText)
                 }
             }

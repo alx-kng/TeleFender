@@ -2,6 +2,7 @@ package com.telefender.phone.misc_helpers
 
 import android.content.Context
 import java.time.Instant
+import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
@@ -58,4 +59,19 @@ fun diffStrings(s1: String, s2: String): List<Pair<Char?, Char?>> {
     }
 
     return diff
+}
+
+/**
+ * TODO: Make better cutoff based off length rather than actual character count (as different
+ *  characters depending on the font have different lengths).
+ *
+ * Cuts off long string and adds ...
+ */
+fun String.formatCutoff(maxLength: Int) : String {
+    val lastIndex = min(this.length, maxLength) - 1
+    return if (this.length <= 15) {
+        this
+    } else {
+        "${this.substring(0..lastIndex)} . . ."
+    }
 }

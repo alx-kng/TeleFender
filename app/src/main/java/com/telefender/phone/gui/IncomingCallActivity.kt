@@ -16,6 +16,7 @@ import com.telefender.phone.call_related.*
 import com.telefender.phone.databinding.ActivityIncomingCallBinding
 import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.formatCutoff
 import com.telefender.phone.notifications.ActiveCallNotificationService
 import com.telefender.phone.notifications.IncomingCallService
 import kotlinx.coroutines.*
@@ -87,7 +88,7 @@ class IncomingCallActivity : AppCompatActivity() {
         val number = CallManager.focusedCall.number()
         binding.displayNumber.text = number?.let {
             TeleHelpers.getContactName(this, it)
-        } ?: TeleHelpers.normalizedNumber(number)
+        }?.formatCutoff(50) ?: TeleHelpers.normalizedNumber(number)
 
         val safe = intent?.extras?.getBoolean("Safe") ?: true
         binding.displaySpamInfo.visibility = if (safe) View.GONE else View.VISIBLE

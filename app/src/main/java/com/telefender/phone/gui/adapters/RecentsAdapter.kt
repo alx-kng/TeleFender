@@ -15,6 +15,7 @@ import com.google.android.material.button.MaterialButton
 import com.telefender.phone.R
 import com.telefender.phone.gui.adapters.recycler_view_items.RecentsGroupedCallDetail
 import com.telefender.phone.misc_helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.formatCutoff
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.LocalDateTime
@@ -92,7 +93,7 @@ class RecentsAdapter(
      */
     override fun onBindViewHolder(holder: RecentsViewHolder, position: Int) {
         val current = getItem(position)
-        holder.displayName.text = getFormattedNumber(current.name, current.amount)
+        holder.displayName.text = getFormattedNumber(current.name.formatCutoff(12), current.amount)
         holder.displayName.setTextColor(ContextCompat.getColor(applicationContext, R.color.icon_white))
 
         if (holder.displayName.currentTextColor != R.color.icon_white) {

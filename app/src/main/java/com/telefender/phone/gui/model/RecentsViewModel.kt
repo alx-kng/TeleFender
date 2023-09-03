@@ -376,7 +376,7 @@ class RecentsViewModel(app: Application) : AndroidViewModel(app) {
 
             // Updates number name map and no contact set in case of modification.
             val name = associatedContact?.second
-            normalizedNum?.let {
+            normalizedNum.let {
                 if (name == null) {
                     numberNameMap.remove(key = it)
                     noContactSet.add(element = it)

@@ -23,6 +23,7 @@ import com.telefender.phone.gui.model.DialerViewModel
 import com.telefender.phone.gui.model.InCallViewModel
 import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.formatCutoff
 import timber.log.Timber
 
 
@@ -311,9 +312,8 @@ class InCallFragment : Fragment() {
     private fun getNumberDisplay(call: Call?): String {
         val temp: String? = call.number()
         val number = if (!temp.isNullOrEmpty()) {
-            TeleHelpers.getContactName(requireContext(), temp)
+            TeleHelpers.getContactName(requireContext(), temp)?.formatCutoff(15)
                 ?: TeleHelpers.normalizedNumber(temp)
-                ?: temp
         } else {
             if (temp == null) {
                 throw Exception("Shouldn't have null number in single display.")

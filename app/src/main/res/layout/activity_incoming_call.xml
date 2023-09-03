@@ -36,6 +36,7 @@
             tools:text="716-710-2601"
             android:textColor="@color/white"
             android:textSize="35sp"
+            android:gravity="center"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/incoming_text"

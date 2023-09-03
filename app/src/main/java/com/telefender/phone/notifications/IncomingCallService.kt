@@ -19,6 +19,7 @@ import com.telefender.phone.gui.InCallActivity
 import com.telefender.phone.gui.IncomingCallActivity
 import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
+import com.telefender.phone.misc_helpers.formatCutoff
 import com.telefender.phone.notifications.NotificationChannels.IN_CALL_CHANNEL_ID
 import kotlinx.coroutines.*
 import timber.log.Timber
@@ -336,12 +337,12 @@ class IncomingCallService : LifecycleService() {
             val notificationTitle = if (number != null) {
                 TeleHelpers.getContactName(applicationContext, number)
                     ?: TeleHelpers.normalizedNumber(number)
-                    ?: number
             } else if (hasChildren){
                 "Conference call (${CallManager.focusedCall?.children?.size})"
             } else {
                 TeleHelpers.UNKNOWN_NUMBER
             }
+
             val notificationText = "Incoming call"
 
             /*
@@ -353,7 +354,7 @@ class IncomingCallService : LifecycleService() {
             Updates the title / text of the notification.
              */
             contentView.apply {
-                setTextViewText(R.id.incoming_notification_title, notificationTitle)
+                setTextViewText(R.id.incoming_notification_title, notificationTitle.formatCutoff(17))
                 setTextViewText(R.id.incoming_notification_text, notificationText)
             }
 
