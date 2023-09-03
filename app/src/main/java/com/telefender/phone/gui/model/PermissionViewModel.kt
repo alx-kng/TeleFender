@@ -20,18 +20,18 @@ class PermissionViewModel(app: Application) : AndroidViewModel(app) {
     val hasDoNotDisturb : LiveData<Boolean> = _hasDoNotDisturb
 
     val isDefaultDialerDirect : Boolean
-        get() = _isDefaultDialer.value ?: Permissions.isDefaultDialer(applicationContext)
+        get() = _isDefaultDialer.value ?: Permissions.isDefaultDialerCompat(applicationContext)
 
     val hasDoNotDisturbDirect : Boolean
         get() = _hasDoNotDisturb.value ?: Permissions.hasDoNotDisturbPermission(applicationContext)
 
     init {
-        _isDefaultDialer.value = Permissions.isDefaultDialer(applicationContext)
+        _isDefaultDialer.value = Permissions.isDefaultDialerCompat(applicationContext)
         _hasDoNotDisturb.value = Permissions.hasDoNotDisturbPermission(applicationContext)
     }
 
-    fun setIsDefaultDialer(value: Boolean) {
-        _isDefaultDialer.value = value
+    fun updateIsDefaultDialer() {
+        _isDefaultDialer.value = Permissions.isDefaultDialerCompat(applicationContext)
     }
 
     fun startCheckingDoNotDisturb() {

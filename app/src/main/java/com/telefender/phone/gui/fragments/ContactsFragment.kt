@@ -16,6 +16,7 @@ import com.telefender.phone.gui.decoration.ContactHeaderDecoration
 import com.telefender.phone.gui.model.ContactsViewModel
 import com.telefender.phone.gui.model.ContactsViewModelFactory
 import com.telefender.phone.misc_helpers.DBL
+import com.telefender.phone.permissions.Permissions
 import timber.log.Timber
 
 
@@ -114,6 +115,8 @@ class ContactsFragment : Fragment() {
                     findNavController().navigate(action)
                 }
             )
+
+            act.setEnabledAppBarTextButton(enabled2 = Permissions.isDefaultDialer(requireContext()))
 
             // Actually show app bar
             act.displayAppBar(true)

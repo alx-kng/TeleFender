@@ -61,9 +61,9 @@ object CommonIntentsForUI {
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
 
         // Ensure that there's a browser to handle the intent
-        if (intent.resolveActivity(activity.packageManager) != null) {
+        try {
             activity.startActivity(intent)
-        } else {
+        } catch (e: Exception) {
             // Handle the error. For instance, show a Toast that there's no browser.
             Toast.makeText(activity, "No browser available to open the link.", Toast.LENGTH_SHORT).show()
         }

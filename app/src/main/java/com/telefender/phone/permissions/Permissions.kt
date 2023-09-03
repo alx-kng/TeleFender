@@ -11,6 +11,7 @@ import android.provider.Settings
 import android.telecom.TelecomManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.content.getSystemService
 import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.misc_helpers.TeleHelpers
 import timber.log.Timber
@@ -37,6 +38,23 @@ object Permissions {
         READ_PHONE_NUMBERS
     }
 
+    private val coreAltPermissionArray = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        arrayOf(
+            phoneStatePermission,
+            READ_CALL_LOG,
+            READ_CONTACTS,
+        )
+    }  else {
+        arrayOf(
+            phoneStatePermission,
+            READ_CALL_LOG,
+            READ_CONTACTS,
+            WRITE_CONTACTS,
+            READ_PHONE_NUMBERS,
+            CALL_PHONE
+        )
+    }
+
     /**
      * Returns whether or not App has all the permissions in provided permission array
      */
@@ -49,6 +67,19 @@ object Permissions {
             }
         }
         return true
+    }
+
+    /**
+     * NOTE: It's necessary to check core alt permissions for Android 9, as the default dialer
+     * is always granted to the app for some reason, but the corresponding permissions (e.g.,
+     * phone state, call log) are not given.
+     */
+    fun isDefaultDialerCompat(context: Context) : Boolean {
+        return if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
+            isDefaultDialer(context)
+        } else {
+            isDefaultDialer(context) && hasCoreAltPermissions(context)
+        }
     }
 
     /**
@@ -71,39 +102,26 @@ object Permissions {
     fun coreAltPermissions(activity: Activity) {
         Timber.i("$DBL: coreAltPermissions() called")
 
-        val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            arrayOf(
-                phoneStatePermission,
-                READ_CALL_LOG,
-                READ_CONTACTS,
-            )
-        }  else {
-            arrayOf(
-                phoneStatePermission,
-                READ_CALL_LOG,
-                READ_CONTACTS,
-                WRITE_CONTACTS,
-                READ_PHONE_NUMBERS,
-                CALL_PHONE
-            )
-        }
-
-        if (!hasPermissions(activity, permissions)) {
+        if (!hasPermissions(activity, coreAltPermissionArray)) {
             ActivityCompat.requestPermissions(
                 activity,
-                permissions,
+                coreAltPermissionArray,
                 PermissionRequestType.CORE_ALT.requestCode
             )
         } 
     }
 
+    fun hasCoreAltPermissions(context: Context) : Boolean {
+        return hasPermissions(context, coreAltPermissionArray)
+    }
+
     fun hasLogPermissions(context: Context) : Boolean {
-        return isDefaultDialer(context)
+        return isDefaultDialerCompat(context)
             || hasPermissions(context, arrayOf(READ_CALL_LOG))
     }
 
     fun hasContactPermissions(context: Context) : Boolean {
-        return isDefaultDialer(context)
+        return isDefaultDialerCompat(context)
             || hasPermissions(context, arrayOf(READ_CONTACTS))
     }
 
@@ -125,7 +143,7 @@ object Permissions {
      * from immediately receiving the READ_PHONE_NUMBERS permission (SDK > 29 = Android 10).
      */
     fun hasPhoneStatePermissions(context: Context) : Boolean {
-        return isDefaultDialer(context)
+        return isDefaultDialerCompat(context)
             && hasPermissions(context, arrayOf(phoneStatePermission))
     }
 
@@ -178,7 +196,7 @@ object Permissions {
      * the permissions (regardless of build version).
      */
     fun hasNotificationPermission(context: Context) : Boolean {
-        return isDefaultDialer(context)
+        return isDefaultDialerCompat(context)
             || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
             || hasPermissions(context, arrayOf(POST_NOTIFICATIONS))
     }

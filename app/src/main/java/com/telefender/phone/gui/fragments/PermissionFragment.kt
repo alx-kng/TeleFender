@@ -46,6 +46,7 @@ class PermissionFragment : Fragment() {
 
         setupAppBar()
         hideBottomNavigation()
+        setupButtons()
 
         permissionViewModel.startCheckingDoNotDisturb()
 
@@ -96,7 +97,29 @@ class PermissionFragment : Fragment() {
         _binding = null
     }
 
+    private fun setupButtons() {
+        binding.permissionDialerCheck.setIconResource(
+            if (permissionViewModel.isDefaultDialerDirect) {
+                R.drawable.ic_baseline_check_box_24
+            } else {
+                R.drawable.ic_baseline_check_box_outline_blank_24
+            }
+        )
+
+        binding.permissionDisturbCheck.setIconResource(
+            if (permissionViewModel.hasDoNotDisturbDirect) {
+                R.drawable.ic_baseline_check_box_24
+            } else {
+                R.drawable.ic_baseline_check_box_outline_blank_24
+            }
+        )
+
+        updateContinueEnabled()
+    }
+
     private fun defaultDialerUIChange(isDefaultDialer: Boolean) {
+        Timber.e("$DBL: UPDATE UI - isDialer = $isDefaultDialer")
+
         binding.permissionDialerCheck.setIconResource(
             if (isDefaultDialer) {
                 R.drawable.ic_baseline_check_box_24
@@ -132,8 +155,6 @@ class PermissionFragment : Fragment() {
             // New app bar stuff
             act.setTitle(getString(R.string.permission_title))
             act.displayMoreMenu(false)
-
-            updateContinueEnabled()
 
             // Actually show app bar
             act.displayAppBar(true)

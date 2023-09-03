@@ -23,7 +23,6 @@ import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
@@ -111,6 +110,8 @@ class MainActivity : AppCompatActivity() {
      */
     private val startForResult = registerForActivityResult(ActivityResultContracts.StartActivityForResult())
     { result: ActivityResult ->
+        Timber.e("$DBL: REQUEST RESULT! - CODE = ${result.resultCode}")
+
         if (result.resultCode == Activity.RESULT_OK) {
             /*
             Due to a bug that prevents the default dialer from receiving the READ_PHONE_NUMBERS
@@ -121,10 +122,17 @@ class MainActivity : AppCompatActivity() {
             if (Build.VERSION.SDK_INT > Build.VERSION_CODES.Q) {
                 Permissions.phoneStatePermissions(this)
             }
+        }
 
-            permissionViewModel.setIsDefaultDialer(true)
-        } else {
-            permissionViewModel.setIsDefaultDialer(false)
+        permissionViewModel.updateIsDefaultDialer()
+
+        /**
+         * It's necessary to request core alt permissions for Android 9, as the default dialer
+         * is always granted to the app for some reason, but the corresponding permissions (e.g.,
+         * phone state, call log) are not given.
+         */
+        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.P) {
+            Permissions.coreAltPermissions(this)
         }
 
         Permissions.notificationPermission(this, this)
@@ -158,12 +166,14 @@ class MainActivity : AppCompatActivity() {
             PermissionRequestType.CORE_ALT.requestCode -> {
                 Timber.i("$DBL: CORE_ALT Permissions result!")
 
+                if (Build.VERSION.SDK_INT == Build.VERSION_CODES.P) {
+                    permissionViewModel.updateIsDefaultDialer()
+                }
+
                 // Makes sure all permissions in CORE_ALT were granted.
                 for (result in grantResults) {
                     if (result != PackageManager.PERMISSION_GRANTED) return
                 }
-
-                Permissions.doNotDisturbPermission(this)
             }
             PermissionRequestType.PHONE_STATE.requestCode -> {
                 Timber.i("$DBL: PHONE_STATE Permissions result!")
@@ -260,8 +270,6 @@ class MainActivity : AppCompatActivity() {
                 recentsViewModel.clearCallHistoryLists()
                 contactsViewModel.clearDataLists()
             }
-
-
         }
 
         val navigationHandled = navController.navigateUp() || super.onSupportNavigateUp()
@@ -394,9 +402,9 @@ class MainActivity : AppCompatActivity() {
                 startForResult.launch(intent)
             }
         } else {
-            if (!Permissions.isDefaultDialer(this)
-                || !Permissions.hasPhoneStatePermissions(this)
-            ) {
+            if (!Permissions.isDefaultDialerCompat(this)) {
+                Timber.e("$DBL: REQUEST DIALER - is dialer = ${Permissions.isDefaultDialer(this)} - hasPhoneState = ${Permissions.hasPhoneStatePermissions(this)} - call logs = ${Permissions.hasLogPermissions(this)}")
+
                 val intent = Intent(TelecomManager.ACTION_CHANGE_DEFAULT_DIALER)
                     .putExtra(TelecomManager.EXTRA_CHANGE_DEFAULT_DIALER_PACKAGE_NAME, packageName)
 
