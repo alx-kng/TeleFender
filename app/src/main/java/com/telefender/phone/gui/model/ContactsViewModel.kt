@@ -301,11 +301,11 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
     fun submitChanges() {
         val selectCIDSnapshot = _selectCID
         val dataListsSnapshot = PackagedDataLists(
-            originalUpdatedDataList = originalUpdatedDataList,
-            updatedDataList = _updatedDataList,
-            originalDataList = originalDataList,
-            nonContactDataList = _nonContactDataList,
-            viewFormattedList = _viewFormattedList
+            originalUpdatedDataList = originalUpdatedDataList.toMutableList(),
+            updatedDataList = _updatedDataList.toMutableList(),
+            originalDataList = originalDataList.toMutableList(),
+            nonContactDataList = _nonContactDataList.toList(),
+            viewFormattedList = _viewFormattedList.toMutableList()
         )
 
         scope.launch {
@@ -325,6 +325,16 @@ class ContactsViewModel(app: Application) : AndroidViewModel(app) {
             Timber.i("$DBL: originalUpdatedDataList = ${dataListsSnapshot.originalUpdatedDataList}")
 
             if (dataListsSnapshot.originalUpdatedDataList == pureContactData) {
+                Timber.e("$DBL: submitChanges() - nothing changed!")
+                setUpdatedDataList(
+                    dataListsSnapshot.updatedDataList
+                        .filterNot {
+                            it is ContactData
+                                && it.value.trim() == ""
+                                && it.mimeType != ContactDataMimeType.NAME
+                        }
+                        .toMutableList()
+                )
                 return@launch
             }
 
