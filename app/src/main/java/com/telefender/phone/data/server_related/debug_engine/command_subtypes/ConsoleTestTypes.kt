@@ -18,7 +18,8 @@ enum class ConsoleTestType(val serverString: String, val requiresParam: Boolean 
     LOG_CONTACTS_RAW(serverString = "log_contacts_raw"),
     LOG_CONTACTS_DATA(serverString = "log_contacts_data"),
     CHANGE_SERVER_MODE(serverString = "change_server_mode", requiresParam = true),
-    SHOULD_VERIFY_SMS(serverString = "should_sms", requiresParam = true)
+    SHOULD_VERIFY_SMS(serverString = "should_sms", requiresParam = true),
+    SHOULD_UPLOAD_CALL_STATE(serverString = "upload_call_state", requiresParam = true)
 }
 
 /**
@@ -60,6 +61,14 @@ class ShouldVerifySMSOp(val arg: Boolean) : ConsoleTestOperation() {
     }
 }
 
+@JsonClass(generateAdapter = true)
+class ShouldUploadCallState(val arg: Boolean) : ConsoleTestOperation() {
+
+    override fun toString(): String {
+        return "ShouldUploadCallState - arg = $arg!"
+    }
+}
+
 /**
  * Converts argument into [ConsoleTestOperation] given the [ConsoleTestType].
  * Need to put try-catch around any sort of Moshi string-to-object function.
@@ -70,6 +79,7 @@ fun String.toConsoleTestOperation(type: ConsoleTestType) : ConsoleTestOperation?
             ConsoleTestType.EXAMPLE -> ExampleOp::class.java
             ConsoleTestType.CHANGE_SERVER_MODE -> ChangeServerModeOp::class.java
             ConsoleTestType.SHOULD_VERIFY_SMS -> ShouldVerifySMSOp::class.java
+            ConsoleTestType.SHOULD_UPLOAD_CALL_STATE -> ShouldUploadCallState::class.java
             else -> return null
         }
         val moshi = Moshi.Builder().build()

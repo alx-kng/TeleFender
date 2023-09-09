@@ -597,6 +597,19 @@ class ConsoleTestCommand(
                         val actualShouldVerifySMS = repository.getParameters()?.shouldVerifySMS
                         RemoteDebug.enqueueData("New should verify SMS: $actualShouldVerifySMS")
                     }
+                    ConsoleTestType.SHOULD_UPLOAD_CALL_STATE -> {
+                        val currentParameters = repository.getParameters()
+                        val newShouldUploadCallState = (consoleTestOp as ShouldUploadCallState).arg
+
+                        if (currentParameters != null) {
+                            repository.updateParameters(
+                                currentParameters.copy(shouldDebugCallState = newShouldUploadCallState)
+                            )
+                        }
+
+                        val actualShouldUploadCallState = repository.getParameters()?.shouldDebugCallState
+                        RemoteDebug.enqueueData("New should upload call state: $actualShouldUploadCallState")
+                    }
                 }
 
                 break

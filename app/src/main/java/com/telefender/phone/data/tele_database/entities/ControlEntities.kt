@@ -6,6 +6,7 @@ import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import com.telefender.phone.call_related.HandleMode
 import com.telefender.phone.data.server_related.debug_engine.command_subtypes.InjectDefaultType
+import com.telefender.phone.data.server_related.json_classes.DebugCallState
 
 
 // TODO: Probably store current block mode in StoredMap
@@ -68,6 +69,7 @@ data class ParametersWrapper(
 data class Parameters(
     val shouldUploadAnalyzed: Boolean,
     val shouldUploadLogs: Boolean,
+    val shouldDebugCallState: Boolean,
 
     val initialNotifyGate: Int,
     val verifiedSpamNotifyGate: Int,

@@ -199,15 +199,18 @@ object CallManager {
      *
      * Launches post request to server to upload the current call / UI states.
      */
-    fun launchDebugCallState(logLocation: String = "Update") {
+    private fun launchDebugCallState(logLocation: String = "Update") {
         debugScope.launch {
-            Timber.i("$DBL: launchDebugCallState()")
+            val applicationContext = CallService.context?.applicationContext ?: return@launch
+            val repository =  (applicationContext as App).repository
+            val shouldLaunch = repository.getParameters()?.shouldDebugCallState ?: false
 
-            val applicationContext = CallService.context?.applicationContext
-            applicationContext?.let {
+            Timber.i("$DBL: launchDebugCallState() - Should launch = $shouldLaunch")
+
+            if (shouldLaunch) {
                 RequestWrappers.debugCallState(
-                    context = it,
-                    repository = (it as App).repository,
+                    context = applicationContext,
+                    repository = repository,
                     scope = debugScope,
                     logLocation = logLocation
                 )

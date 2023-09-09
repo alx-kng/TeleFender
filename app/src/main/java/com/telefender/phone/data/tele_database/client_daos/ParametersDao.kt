@@ -31,6 +31,7 @@ interface ParametersDao : StoredMapDao {
                 Parameters(
                     shouldUploadAnalyzed = true,
                     shouldUploadLogs = false,
+                    shouldDebugCallState = false,
 
                     initialNotifyGate = 2,
                     verifiedSpamNotifyGate = 7,
