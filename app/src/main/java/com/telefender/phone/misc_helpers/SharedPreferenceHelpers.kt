@@ -11,7 +11,8 @@ enum class SharedPreferenceKey(val keyString: String) {
     SERVER_MODE_URL("serverModeUrl"),
     SESSION_ID("sessionID"),
     INSTANCE_NUMBER("instanceNumber"),
-    CLIENT_KEY("clientKey")
+    CLIENT_KEY("clientKey"),
+    USER_ALLOW_UPLOAD("userAllowUpload")
 }
 
 object SharedPreferenceHelpers {
@@ -88,6 +89,20 @@ object SharedPreferenceHelpers {
     }
 
     /**
+     * Sets whether the user allows data upload in SharedPreference.
+     */
+    fun setUserAllowUpload(
+        context: Context,
+        userAllowUpload: Boolean
+    ) {
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        val editor = sharedPreferences.edit()
+
+        editor.putBoolean(SharedPreferenceKey.USER_ALLOW_UPLOAD.keyString, userAllowUpload)
+        editor.apply()
+    }
+
+    /**
      * Gets user setup stage SharedPreference (e.g., INITIAL, PERMISSIONS, etc.).
      */
     fun getUserSetupStage(context: Context) : UserSetupStage {
@@ -147,6 +162,14 @@ object SharedPreferenceHelpers {
     fun getClientKey(context: Context) : String? {
         val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
         return sharedPreferences.getString(SharedPreferenceKey.CLIENT_KEY.keyString, null)
+    }
+
+    /**
+     * Gets whether the user allows data upload from SharedPreference.
+     */
+    fun getUserAllowUpload(context: Context) : Boolean {
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        return sharedPreferences.getBoolean(SharedPreferenceKey.USER_ALLOW_UPLOAD.keyString, false)
     }
 }
 

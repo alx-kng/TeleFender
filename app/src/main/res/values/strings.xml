@@ -28,10 +28,11 @@
     <string name="more_app_bar">More</string>
 
     <string name="permission_big_text">Last step!</string>
-    <string name="permission_small_text">In order for TeleFender to function properly, we just need you to allow a couple permissions.</string>
+    <string name="permission_small_text">In order for TeleFender to function properly, we just need you to allow a few permissions.</string>
     <string name="permission_dialer_small_text">Setting TeleFender as the default dialer app will allow the app to make and receive calls just like the default phone app. Essentially, we\'re replacing the default phone app. Consequently, we will also be able to access your contacts and call logs. Don\'t worry though, you can always switch back to the default phone app by entering the default phone app or deleting TeleFender.</string>
     <string name="permission_disturb_small_text">Allowing TeleFender to have the Do Not Disturb permission makes it possible for the app to actually silence any unwanted calls (if you so choose).\n\nWhen you press the \"Allow Do Not Disturb\" button, you will be redirected to the Settings app. There, you should scroll down until you see "TeleFender", where you can then toggle on / off the Do Not Disturb permission.</string>
-    <string name="permission_continue_text">After you allow both permissions, go ahead and press Continue!</string>
+    <string name="permission_log_small_text">In order for our algorithm to function correctly, we collect some information from your call logs / contacts to be analyzed on our servers. Although, we want to emphasize that we do NOT upload any revealing information such as the name, location, etc., and we do NOT share this data with any third party. This data is used purely to detect / prevent spam calls.</string>
+    <string name="permission_continue_text">After you allow all three permissions, go ahead and press Continue!</string>
 
     <string name="verification_text">We just sent a verification code to your number.</string>
     <string name="number_fill_text">We\'ll need your number to get started.</string>

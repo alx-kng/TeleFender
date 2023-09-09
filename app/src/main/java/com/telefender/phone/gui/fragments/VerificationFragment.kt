@@ -150,12 +150,16 @@ class VerificationFragment : Fragment() {
     }
 
     private fun setLoading() {
+        binding.verificationCard.isClickable = false
+        binding.verificationCard.isFocusable = false
         binding.verificationProgressBar.visibility = View.VISIBLE
         binding.verificationCard.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.grey))
         binding.verificationCardText.setTextColor(ContextCompat.getColor(requireContext(), R.color.purple_200))
     }
 
     private fun setDone() {
+        binding.verificationCard.isClickable = true
+        binding.verificationCard.isFocusable = true
         binding.verificationProgressBar.visibility = View.GONE
         binding.verificationCard.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.purple_200))
         binding.verificationCardText.setTextColor(ContextCompat.getColor(requireContext(), R.color.icon_white))

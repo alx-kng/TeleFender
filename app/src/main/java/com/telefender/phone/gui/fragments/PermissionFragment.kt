@@ -66,6 +66,15 @@ class PermissionFragment : Fragment() {
             }
         }
 
+        binding.permissionLogCard.setOnClickListener {
+            SharedPreferenceHelpers.setUserAllowUpload(
+                context = requireContext(),
+                userAllowUpload = !SharedPreferenceHelpers.getUserAllowUpload(requireContext())
+            )
+
+            allowUploadUIChange(SharedPreferenceHelpers.getUserAllowUpload(requireContext()))
+        }
+
         binding.permissionContinueCard.setOnClickListener {
             if (activity is MainActivity) {
                 val act = activity as MainActivity
@@ -114,6 +123,14 @@ class PermissionFragment : Fragment() {
             }
         )
 
+        binding.permissionLogCheck.setIconResource(
+            if (SharedPreferenceHelpers.getUserAllowUpload(requireContext())) {
+                R.drawable.ic_baseline_check_box_24
+            } else {
+                R.drawable.ic_baseline_check_box_outline_blank_24
+            }
+        )
+
         updateContinueEnabled()
     }
 
@@ -143,6 +160,18 @@ class PermissionFragment : Fragment() {
         updateContinueEnabled()
     }
 
+    private fun allowUploadUIChange(userAllowUpload: Boolean) {
+        binding.permissionLogCheck.setIconResource(
+            if (userAllowUpload) {
+                R.drawable.ic_baseline_check_box_24
+            } else {
+                R.drawable.ic_baseline_check_box_outline_blank_24
+            }
+        )
+
+        updateContinueEnabled()
+    }
+
     private fun setupAppBar() {
         if (activity is MainActivity) {
             Timber.i("$DBL: PermissionFragment - setupAppBar()!")
@@ -162,7 +191,10 @@ class PermissionFragment : Fragment() {
     }
 
     private fun updateContinueEnabled() {
-        val validSetup = permissionViewModel.isDefaultDialerDirect && permissionViewModel.hasDoNotDisturbDirect
+        val validSetup = permissionViewModel.isDefaultDialerDirect
+            && permissionViewModel.hasDoNotDisturbDirect
+            && SharedPreferenceHelpers.getUserAllowUpload(requireContext())
+
         binding.permissionContinueCard.isClickable = validSetup
         binding.permissionContinueCard.isFocusable = validSetup
         binding.permissionContinueText.setTextColor(

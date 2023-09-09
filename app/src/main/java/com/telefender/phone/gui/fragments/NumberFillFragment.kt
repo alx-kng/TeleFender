@@ -97,12 +97,16 @@ class NumberFillFragment : Fragment() {
     }
 
     private fun setLoading() {
+        binding.numberFillCard.isClickable = false
+        binding.numberFillCard.isFocusable = false
         binding.numberFillProgressBar.visibility = View.VISIBLE
         binding.numberFillCard.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.grey))
         binding.numberFillCardText.setTextColor(ContextCompat.getColor(requireContext(), R.color.purple_200))
     }
 
     private fun setDone() {
+        binding.numberFillCard.isClickable = true
+        binding.numberFillCard.isFocusable = true
         binding.numberFillProgressBar.visibility = View.GONE
         binding.numberFillCard.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.purple_200))
         binding.numberFillCardText.setTextColor(ContextCompat.getColor(requireContext(), R.color.icon_white))

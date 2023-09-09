@@ -21,6 +21,8 @@ import java.util.*
 
 
 /**
+ * TODO: Implement new voicemail detection algorithm.
+ *
  * TODO: HANDLE HASHTAG NUMBERS TO OPEN LINKS
  *
  * TODO: Consider adding retry amount to be used for entire app.
@@ -294,6 +296,10 @@ object TeleHelpers {
     }
 
     /**
+     * TODO: WE CAN CHECK FOR VOICEMAIL BY POSSIBLY TAGGING ALL CALLS THAT WERE HANDLED BY US
+     *  (WHILE OUR APP IS THE DEFAULT DIALER). THIS WAY, THE NON-TAGGED CALLS (PAST OUR
+     *  INITIALIZATION DATE) CAN JUST BE CONSIDERED AS VOICEMAIL.
+     *
      * TODO: Find a way to check for voicemails in carriers such as T-Mobile.
      *
      * TODO: Unfortunately, this seems to only work on Verizon phones as of now. T-Mobile phones
