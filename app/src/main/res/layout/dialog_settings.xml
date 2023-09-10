@@ -114,18 +114,42 @@
 
     </LinearLayout>
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/report_issue_button"
+    <LinearLayout
+        android:id="@+id/other_buttons"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
-        android:padding="10dp"
-        android:text="Report an issue"
-        android:textSize="17sp"
-        android:textAllCaps="false"
-        android:textColor="@color/icon_white"
-        android:backgroundTint="@color/purple_200"
-        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.Rounded"
-        />
+        android:weightSum="2"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/report_issue_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="20dp"
+            android:padding="10dp"
+            android:text="Report an issue"
+            android:textSize="17sp"
+            android:textAllCaps="false"
+            android:textColor="@color/icon_white"
+            android:backgroundTint="@color/purple_200"
+            app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.Rounded"
+            />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/privacy_policy_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="10dp"
+            android:text="Privacy Policy"
+            android:textSize="17sp"
+            android:textAllCaps="false"
+            android:textColor="@color/white"
+            android:backgroundTint="@color/purple_200"
+            app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Tele.Button.Rounded"
+            />
+
+
+    </LinearLayout>
 
 </LinearLayout>

@@ -12,6 +12,7 @@ import com.telefender.phone.R
 import com.telefender.phone.databinding.FragmentPrivacyPolicyBinding
 import com.telefender.phone.gui.MainActivity
 import com.telefender.phone.gui.fragments.dialogs.PrivacyDialogFragment
+import com.telefender.phone.gui.fragments.web_views.CustomWebViewClient
 import com.telefender.phone.misc_helpers.DBL
 import timber.log.Timber
 
@@ -54,7 +55,7 @@ class PrivacyPolicyFragment : Fragment() {
             settings.javaScriptEnabled = true
 
             // Optional: Set WebViewClient to ensure URLs open within the WebView
-            webViewClient = WebViewClient()
+            webViewClient = CustomWebViewClient()
 
             // Load a URL
             loadUrl("file:///android_res/raw/privacy_policy.html")

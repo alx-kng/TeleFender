@@ -79,6 +79,10 @@ class SettingsDialogFragment : DialogFragment() {
             CommonIntentsForUI.openLink(requireActivity(), "https://telefender.com/contactus.html")
         }
 
+        binding.privacyPolicyButton.setOnClickListener {
+            CommonIntentsForUI.openLink(requireActivity(), "https://telefender.com/privacy.html")
+        }
+
         binding.settingCloseButton.setOnClickListener {
             // Dismiss the dialog when the close button is clicked.
             dismiss()
