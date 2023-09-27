@@ -2,8 +2,13 @@ package com.telefender.phone.gui
 
 import android.content.Context
 import android.content.Intent
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -19,6 +24,7 @@ import com.telefender.phone.misc_helpers.DBL
 import com.telefender.phone.notifications.ActiveCallNotificationService
 import timber.log.Timber
 import java.lang.ref.WeakReference
+
 
 /**
  * TODO: SOMETIMES IN-CALL ACTIVITY DOESN'T CLOSE CORRECTLY!! Probably some observer related
@@ -40,6 +46,12 @@ class InCallActivity : AppCompatActivity() {
     private lateinit var navController: NavController
     private lateinit var binding: ActivityInCallBinding
 
+    private lateinit var sensorManager: SensorManager
+    private lateinit var proximitySensor: Sensor
+    private lateinit var powerManager: PowerManager
+    private lateinit var wakeLock: PowerManager.WakeLock
+    private lateinit var proximitySensorListener: SensorEventListener
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -55,6 +67,9 @@ class InCallActivity : AppCompatActivity() {
         // Lets IncomingCallActivity know that InCallActivity is already running.
         _running = true
         _contexts.add(WeakReference(this))
+
+        powerManager = getSystemService(POWER_SERVICE) as PowerManager
+        wakeLock = powerManager.newWakeLock(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK, "tag:proximity")
 
         /**
          * Don't allow back press when in InCallFragment.
@@ -79,6 +94,22 @@ class InCallActivity : AppCompatActivity() {
         setSupportActionBar(binding.topAppBarInCall)
 
         inCallOverLockScreen()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (!wakeLock.isHeld) {
+            wakeLock.acquire(10 * 60 * 1000L /*10 minutes*/)
+            Timber.e("$DBL: Acquiring wake lock!")
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (wakeLock.isHeld) {
+            wakeLock.release()
+            Timber.e("$DBL: Releasing wake lock!")
+        }
     }
 
     override fun onDestroy() {
