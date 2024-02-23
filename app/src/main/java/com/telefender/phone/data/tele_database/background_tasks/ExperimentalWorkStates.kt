@@ -71,6 +71,8 @@ enum class FailureState {
 
 /**
  * TODO: Improve [FailureState]
+ *
+ * TODO: Double check for race conditions.
  */
 object ExperimentalWorkStates {
 
@@ -327,18 +329,16 @@ object ExperimentalWorkStates {
         }
 
         while(true) {
-            while(localizedHasOtherRunning(workType, workKey)) {
-                if (runningMsg != null) {
-                    Timber.i("$DBL: compete() - %s",
-                        "workType = $workType, workKey = $workKey - $runningMsg")
-                }
-                delay(500)
-            }
-
             queueMutex.withLock {
                 stateMutex.withLock {
-                    // If first in queue, then remove from UUID from queue, set state to RUNNING.
-                    if (competeQueue.peek() == workKey || competeQueue.peek() == null) {
+                    if (localizedHasOtherRunning(workType, workKey)) {
+                        if (runningMsg != null) {
+                            Timber.i("$DBL: compete() - %s",
+                                "workType = $workType, workKey = $workKey - $runningMsg")
+                        }
+                        delay(500)
+                    } else if (competeQueue.peek() == workKey || competeQueue.peek() == null) {
+                        // If first in queue, then remove from UUID from queue, set state to RUNNING.
                         competeQueue.poll()
                         localizedStates[workType.ordinal][workKey] = WorkInfo.State.RUNNING
 
